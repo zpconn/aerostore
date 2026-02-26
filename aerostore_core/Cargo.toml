@@ -9,3 +9,4 @@ aerostore_macros = { path = "../aerostore_macros" }
 
 [dev-dependencies]
 aerostore_macros = { path = "../aerostore_macros" }
+tokio = { version = "1.44", features = ["macros", "rt-multi-thread", "sync", "time"] }
