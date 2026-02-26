@@ -176,6 +176,36 @@ cargo test --release --test wal_crash_recovery -- --nocapture
 cargo test --release --test ingest_watch_ttl -- --nocapture
 ```
 
+### Lock-Free Concurrency Verification
+
+The concurrency suite lives in:
+
+- `aerostore_core/tests/test_concurrency.rs`
+
+It contains two specialized tests:
+
+- `loom_validates_cas_update_and_index_pointer_swaps`
+  - Uses `loom` model checking to explore thread interleavings around CAS update + index-head publication.
+  - Verifies no ABA/cycle in the modeled version chain and that index publication never exposes partially linked rows.
+- `hyperfeed_gc_stress_reclaims_dead_versions_without_memory_leaks`
+  - Long-running stress test (`#[ignore]` by default).
+  - Spawns a fast writer that updates a single `FlightState` altitude 100,000 times.
+  - Runs concurrent slow readers pinned to older snapshots so writers are never blocked.
+  - Asserts exactly `99,999` dead versions are reclaimed after readers release snapshots.
+  - Uses a custom `Drop` tracker to validate drop-accounting for reclaimed versions.
+
+Run loom test (default test run includes this one):
+
+```bash
+cargo test -p aerostore_core --test test_concurrency -- --nocapture
+```
+
+Run the full 100k-update GC stress test:
+
+```bash
+cargo test -p aerostore_core --test test_concurrency --release -- --ignored --nocapture
+```
+
 ## Benchmarks (test-based)
 
 These are implemented as Rust test targets that print timing info and assert behavior.
