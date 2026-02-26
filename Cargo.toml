@@ -10,3 +10,4 @@ edition = "2021"
 
 [workspace.dependencies]
 crossbeam = "0.8"
+crossbeam-skiplist = "0.1"

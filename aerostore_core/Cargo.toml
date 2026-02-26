@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 crossbeam = { workspace = true }
+crossbeam-skiplist = { workspace = true }
 aerostore_macros = { path = "../aerostore_macros" }
 
 [dev-dependencies]

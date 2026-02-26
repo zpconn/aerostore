@@ -181,18 +181,43 @@ where
         V: Clone,
     {
         let guard = &epoch::pin();
+        self.read_visible_ref_with_guard(key, tx, guard)
+            .map(|row| row.clone())
+    }
+
+    pub fn read_visible_ref_with_guard<'g>(
+        &self,
+        key: &K,
+        tx: &Transaction,
+        guard: &'g Guard,
+    ) -> Option<&'g V> {
         let entry = self.find_entry(key, guard)?;
         let entry_ref = unsafe { entry.as_ref()? };
         let mut cursor = entry_ref.head.load(Ordering::Acquire, guard);
 
         while let Some(row) = unsafe { cursor.as_ref() } {
             if is_visible(row, tx.txid, &tx.snapshot) {
-                return Some(row.value.clone());
+                return Some(&row.value);
             }
             cursor = row.next.load(Ordering::Acquire, guard);
         }
 
         None
+    }
+
+    pub fn all_keys(&self) -> Vec<K> {
+        let guard = &epoch::pin();
+        let mut keys = Vec::new();
+
+        for bucket in self.buckets.iter() {
+            let mut entry_cursor = bucket.load(Ordering::Acquire, guard);
+            while let Some(entry_ref) = unsafe { entry_cursor.as_ref() } {
+                keys.push(entry_ref.key.clone());
+                entry_cursor = entry_ref.next.load(Ordering::Acquire, guard);
+            }
+        }
+
+        keys
     }
 
     pub fn commit(&self, tx_manager: &TransactionManager, tx: &Transaction) -> usize {
