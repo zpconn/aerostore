@@ -2,6 +2,7 @@
 members = [
     "aerostore_core",
     "aerostore_macros",
+    "aerostore_tcl",
 ]
 resolver = "2"
 
