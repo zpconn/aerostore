@@ -69,12 +69,18 @@ where
     where
         F: IntoIndexValue + Send + Sync + 'static,
     {
+        let extractor: IndexExtractor<V> = Arc::new(move |row| extractor(row).into_index_value());
+        self.create_index_with_extractor(field, extractor);
+    }
+
+    pub fn create_index_with_extractor(
+        &mut self,
+        field: &'static str,
+        extractor: Arc<dyn Fn(&V) -> IndexValue + Send + Sync>,
+    ) {
         self.indexes
             .insert(field, Arc::new(SecondaryIndex::<K>::new(field)));
-        self.extractors.insert(
-            field,
-            Arc::new(move |row| extractor(row).into_index_value()),
-        );
+        self.extractors.insert(field, extractor);
     }
 
     pub fn insert(&self, key: K, value: V, tx: &Transaction) -> Result<(), MvccError> {
@@ -131,6 +137,29 @@ where
 
     pub fn commit(&self, tx_manager: &TransactionManager, tx: &Transaction) -> usize {
         self.table.commit(tx_manager, tx)
+    }
+
+    pub fn read_visible(&self, key: &K, tx: &Transaction) -> Option<V>
+    where
+        V: Clone,
+    {
+        self.table.read_visible(key, tx)
+    }
+
+    pub fn snapshot_rows(&self, tx: &Transaction) -> Vec<(K, V)>
+    where
+        V: Clone,
+    {
+        let keys = self.table.all_keys();
+        let mut rows = Vec::with_capacity(keys.len());
+
+        for key in keys {
+            if let Some(value) = self.table.read_visible(&key, tx) {
+                rows.push((key, value));
+            }
+        }
+
+        rows
     }
 
     pub fn query(&self) -> QueryBuilder<'_, K, V, S> {

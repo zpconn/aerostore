@@ -67,6 +67,27 @@ impl TransactionManager {
 
     pub fn begin(&self) -> Transaction {
         let txid = GLOBAL_TXID.fetch_add(1, Ordering::AcqRel);
+        self.begin_with_assigned_txid(txid)
+    }
+
+    pub fn begin_with_txid(&self, txid: TxId) -> Transaction {
+        let mut current = GLOBAL_TXID.load(Ordering::Acquire);
+        while current <= txid {
+            match GLOBAL_TXID.compare_exchange(
+                current,
+                txid.saturating_add(1),
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            ) {
+                Ok(_) => break,
+                Err(observed) => current = observed,
+            }
+        }
+
+        self.begin_with_assigned_txid(txid)
+    }
+
+    fn begin_with_assigned_txid(&self, txid: TxId) -> Transaction {
         let node_ptr = Box::into_raw(Box::new(ActiveTxnNode::new(txid)));
         self.push_active(node_ptr);
 
