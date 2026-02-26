@@ -16,3 +16,4 @@ ryu = "1.0"
 
 [dev-dependencies]
 aerostore_macros = { path = "../aerostore_macros" }
+loom = "0.7"
