@@ -1,0 +1,12 @@
+[workspace]
+members = [
+    "aerostore_core",
+    "aerostore_macros",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+
+[workspace.dependencies]
+crossbeam = "0.8"
