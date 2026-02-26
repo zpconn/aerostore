@@ -17,10 +17,14 @@ use crate::index::{IndexValue, IntoIndexValue};
 use crate::mvcc::MvccError;
 use crate::query::QueryEngine;
 use crate::txn::{Transaction, TransactionManager, TxId};
+use crate::watch::{
+    spawn_ttl_sweeper, ChangeKind, FilteredSubscription, RowChange, TableWatch, TtlSweeper,
+};
 
 const WAL_FILE_NAME: &str = "wal.log";
 const CHECKPOINT_FILE_NAME: &str = "checkpoint.dat";
 const WAL_CHANNEL_CAPACITY: usize = 16_384;
+const WATCH_CHANNEL_CAPACITY: usize = 16_384;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum WalOperation<K, V> {
@@ -316,6 +320,7 @@ where
     tx_manager: Arc<TransactionManager>,
     engine: Arc<QueryEngine<K, V>>,
     wal: WalWriter,
+    watch: TableWatch<K, V>,
     wal_path: PathBuf,
     checkpoint_path: PathBuf,
     commit_barrier: Arc<RwLock<()>>,
@@ -352,6 +357,7 @@ where
             tx_manager,
             engine: Arc::new(engine),
             wal,
+            watch: TableWatch::with_capacity(WATCH_CHANNEL_CAPACITY),
             wal_path,
             checkpoint_path,
             commit_barrier: Arc::new(RwLock::new(())),
@@ -408,7 +414,9 @@ where
             writes: tx.writes,
         };
         self.wal.append(&record).await?;
-        Ok(self.engine.commit(&self.tx_manager, &tx.inner))
+        let reclaimed = self.engine.commit(&self.tx_manager, &tx.inner);
+        self.publish_write_events(record.txid, &record.writes);
+        Ok(reclaimed)
     }
 
     pub fn read_visible(&self, key: &K, tx: &DurableTransaction<K, V>) -> Option<V> {
@@ -417,6 +425,67 @@ where
 
     pub fn engine(&self) -> &Arc<QueryEngine<K, V>> {
         &self.engine
+    }
+
+    pub fn subscribe_changes(&self) -> tokio::sync::broadcast::Receiver<RowChange<K, V>> {
+        self.watch.subscribe()
+    }
+
+    pub fn subscribe_filtered<F>(&self, filter: F) -> FilteredSubscription<K, V>
+    where
+        F: Fn(&RowChange<K, V>) -> bool + Send + Sync + 'static,
+    {
+        self.watch.subscribe_filtered(filter)
+    }
+
+    pub fn watch_key(&self, key: K) -> FilteredSubscription<K, V>
+    where
+        K: Eq,
+    {
+        self.watch.watch_key(key)
+    }
+
+    pub fn start_ttl_sweeper<F>(
+        self: &Arc<Self>,
+        interval: Duration,
+        ttl: Duration,
+        updated_at_unix_secs: F,
+    ) -> TtlSweeper
+    where
+        F: Fn(&V) -> u64 + Send + Sync + 'static,
+    {
+        spawn_ttl_sweeper(Arc::clone(self), interval, ttl, updated_at_unix_secs)
+    }
+
+    pub async fn prune_expired(
+        &self,
+        ttl: Duration,
+        now_unix_secs: u64,
+        updated_at_unix_secs: &(dyn Fn(&V) -> u64 + Send + Sync),
+    ) -> io::Result<usize> {
+        let ttl_secs = ttl.as_secs();
+        let mut tx = self.begin();
+        let rows = self.engine.snapshot_rows(tx.tx());
+        let mut removed = 0_usize;
+
+        for (key, value) in rows {
+            let updated_at = updated_at_unix_secs(&value);
+            if now_unix_secs.saturating_sub(updated_at) <= ttl_secs {
+                continue;
+            }
+
+            if self.delete(&mut tx, &key).is_ok() {
+                removed += 1;
+            }
+        }
+
+        if removed == 0 {
+            self.abort(tx);
+            return Ok(0);
+        }
+
+        self.commit(tx).await?;
+        Ok(removed)
     }
 
     pub async fn checkpoint_now(&self) -> io::Result<usize> {
@@ -518,6 +587,32 @@ where
 
         self.checkpointer_shutdown = Some(shutdown_tx);
         self.checkpointer_task = Some(handle);
+    }
+
+    fn publish_write_events(&self, txid: TxId, writes: &[WalOperation<K, V>]) {
+        for op in writes {
+            let change = match op {
+                WalOperation::Insert { key, value } => RowChange {
+                    txid,
+                    key: key.clone(),
+                    kind: ChangeKind::Insert,
+                    value: Some(value.clone()),
+                },
+                WalOperation::Update { key, value } => RowChange {
+                    txid,
+                    key: key.clone(),
+                    kind: ChangeKind::Update,
+                    value: Some(value.clone()),
+                },
+                WalOperation::Delete { key } => RowChange {
+                    txid,
+                    key: key.clone(),
+                    kind: ChangeKind::Delete,
+                    value: None,
+                },
+            };
+            self.watch.publish(change);
+        }
     }
 }
 
