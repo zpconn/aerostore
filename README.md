@@ -15,6 +15,22 @@ It combines lock-free shared-memory data structures with PostgreSQL-inspired MVC
 6. Periodic checkpoints save a compact current state so restart is fast: load checkpoint, replay remaining WAL, rebuild indexes.
 7. Tcl scripts call into this engine directly in-process (`FlightState search`, `FlightState ingest_tsv`) without network or IPC overhead.
 
+Common query types you can run:
+
+- Exact match: `= field value` (for example, one flight ID).
+- Range filters: `>`, `<` (for example, altitude bands).
+- Set membership: `in field {a b c}`.
+- Pattern match: `match field UAL*` (glob-style prefix/wildcard matching).
+- Sorting and paging: `-sort`, `-limit`, `-offset`, `-desc` / `-asc`.
+
+Why these queries are fast (intuitively):
+
+- If a filter is on an indexed field, Aerostore uses SkipList indexes first to pull a much smaller candidate set instead of scanning everything.
+- Only rows visible to your transaction snapshot are returned, so you get consistent answers even while writers are updating.
+- Extra filters (like `match`) are applied after candidate narrowing, so expensive checks run on fewer rows.
+- `-limit` lets execution stop early once enough qualifying rows are found.
+- In Tcl mode, query execution is in-process, so there is no socket/IPC round trip per query.
+
 As of February 27, 2026, this repo includes:
 
 - V1 in-process MVCC + durable WAL/checkpoint/recovery path.
