@@ -24,6 +24,27 @@ puts "ingest: $ingest_result"
 
 set count [FlightState search -compare {{> altitude 10000}} -sort lat -limit 50]
 puts "search altitude>10000 count: $count"
+if {$count != 3} {
+    error "expected altitude>10000 count to be 3, got $count"
+}
+
+set complex_count [FlightState search \
+    -compare {{> altitude 10000} {< altitude 36000} {in flight {UAL123 AAL456 SWA321}}} \
+    -sort altitude \
+    -limit 10]
+puts "complex STAPI-style search count: $complex_count"
+if {$complex_count != 3} {
+    error "expected complex STAPI-style count to be 3, got $complex_count"
+}
+
+if {[catch {FlightState search -compare {{> altitude}} -limit 5} malformed_err]} {
+    puts "malformed query rejected as expected: $malformed_err"
+    if {![string match "TCL_ERROR:*" $malformed_err]} {
+        error "expected malformed query error to start with TCL_ERROR:, got '$malformed_err'"
+    }
+} else {
+    error "expected malformed query to return TCL_ERROR, but it succeeded"
+}
 
 # Coverage hooks for upcoming synchronous_commit and retry-loop integration.
 # These are optional so the script remains compatible with current builds.

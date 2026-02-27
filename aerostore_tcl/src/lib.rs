@@ -758,7 +758,12 @@ unsafe fn set_string_result(interp: *mut clib::Tcl_Interp, message: &str) {
 }
 
 unsafe fn set_error(interp: *mut clib::Tcl_Interp, message: &str) -> c_int {
-    set_string_result(interp, message);
+    let formatted = if message.starts_with("TCL_ERROR:") {
+        message.to_string()
+    } else {
+        format!("TCL_ERROR: {}", message)
+    };
+    set_string_result(interp, formatted.as_str());
     clib::TCL_ERROR as c_int
 }
 

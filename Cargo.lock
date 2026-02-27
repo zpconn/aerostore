@@ -15,6 +15,7 @@ dependencies = [
  "libc",
  "loom",
  "memchr",
+ "nom",
  "rkyv",
  "ryu",
  "serde",
