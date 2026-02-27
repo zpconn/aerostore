@@ -17,4 +17,9 @@ libc = "0.2"
 
 [dev-dependencies]
 aerostore_macros = { path = "../aerostore_macros" }
+criterion = "0.5"
 loom = "0.7"
+
+[[bench]]
+name = "procarray_snapshot"
+harness = false

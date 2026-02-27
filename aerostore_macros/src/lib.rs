@@ -45,11 +45,7 @@ pub fn speedtable(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let user_fields: Vec<_> = named_fields
         .named
         .iter()
-        .filter_map(|f| {
-            f.ident
-                .clone()
-                .map(|ident| (ident, f.ty.clone()))
-        })
+        .filter_map(|f| f.ident.clone().map(|ident| (ident, f.ty.clone())))
         .collect();
 
     let arg_idents: Vec<_> = user_fields.iter().map(|(ident, _)| ident).collect();

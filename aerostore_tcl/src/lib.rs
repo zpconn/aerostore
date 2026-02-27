@@ -7,8 +7,8 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use aerostore_core::{
-    DurableDatabase, Field, IngestError, IndexDefinition, SortDirection, TsvColumns,
-    TsvDecodeError, TsvDecoder, bulk_upsert_tsv,
+    bulk_upsert_tsv, DurableDatabase, Field, IndexDefinition, IngestError, SortDirection,
+    TsvColumns, TsvDecodeError, TsvDecoder,
 };
 use crossbeam::epoch;
 use serde::{Deserialize, Serialize};
@@ -41,14 +41,7 @@ struct FlightState {
 }
 
 impl FlightState {
-    fn new(
-        flight_id: String,
-        lat: f64,
-        lon: f64,
-        altitude: i32,
-        gs: u16,
-        updated_at: u64,
-    ) -> Self {
+    fn new(flight_id: String, lat: f64, lon: f64, altitude: i32, gs: u16, updated_at: u64) -> Self {
         Self {
             flight_id,
             lat,
@@ -134,14 +127,7 @@ impl TsvDecoder<String, FlightState> for FlightTsvDecoder {
         let gs = cols.expect_u16()?;
         let updated_at = cols.expect_u64()?;
 
-        let row = FlightState::new(
-            flight_id.clone(),
-            lat,
-            lon,
-            altitude,
-            gs,
-            updated_at,
-        );
+        let row = FlightState::new(flight_id.clone(), lat, lon, altitude, gs, updated_at);
 
         Ok((flight_id, row))
     }
@@ -316,7 +302,10 @@ unsafe fn aerostore_init_cmd_impl(
 
     Ok(set_ok_result(
         interp,
-        &format!("aerostore ready (dir={dir_msg}, txmgr={:p})", Arc::as_ptr(db)),
+        &format!(
+            "aerostore ready (dir={dir_msg}, txmgr={:p})",
+            Arc::as_ptr(db)
+        ),
     ))
 }
 

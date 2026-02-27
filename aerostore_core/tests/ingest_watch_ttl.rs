@@ -58,7 +58,9 @@ async fn bulk_tsv_upsert_watch_stream_and_ttl_pruning() {
         &dir,
         2048,
         Duration::from_secs(300),
-        vec![IndexDefinition::new("altitude", |row: &FlightRow| row.altitude)],
+        vec![IndexDefinition::new("altitude", |row: &FlightRow| {
+            row.altitude
+        })],
     )
     .await
     .expect("failed to open durable database");
@@ -82,7 +84,10 @@ async fn bulk_tsv_upsert_watch_stream_and_ttl_pruning() {
         .expect("broadcast closed");
     assert_eq!(inserted.kind, ChangeKind::Insert);
     assert_eq!(inserted.key, "UAL123");
-    assert_eq!(inserted.value.expect("insert value missing").altitude, 12_000);
+    assert_eq!(
+        inserted.value.expect("insert value missing").altitude,
+        12_000
+    );
 
     let second_batch = format!("UAL123\t37.62\t-122.39\t13250\t455\t{}\n", now);
     let stats = bulk_upsert_tsv(&db, second_batch.as_bytes(), 1, &FlightTsvDecoder)
@@ -97,7 +102,10 @@ async fn bulk_tsv_upsert_watch_stream_and_ttl_pruning() {
         .expect("broadcast closed");
     assert_eq!(updated.kind, ChangeKind::Update);
     assert_eq!(updated.key, "UAL123");
-    assert_eq!(updated.value.expect("update value missing").altitude, 13_250);
+    assert_eq!(
+        updated.value.expect("update value missing").altitude,
+        13_250
+    );
 
     let _ttl = db.start_ttl_sweeper(
         Duration::from_millis(25),

@@ -2,7 +2,11 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::mem::{align_of, size_of};
 use std::ptr::{self, NonNull};
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+
+use crate::procarray::{
+    ProcArray, ProcArrayError, ProcArrayRegistration, ProcSnapshot, PROCARRAY_SLOTS,
+};
 
 const SHM_HEADER_MAGIC: u32 = 0xA3E0_5202;
 const SHM_HEADER_ALIGN: u32 = 64;
@@ -186,6 +190,8 @@ struct ShmHeader {
     magic: u32,
     capacity: u32,
     data_start: u32,
+    next_txid: AtomicU64,
+    proc_array: ProcArray,
     head: AtomicU32,
 }
 
@@ -194,6 +200,9 @@ pub struct ShmArena {
     len: usize,
     header: NonNull<ShmHeader>,
 }
+
+unsafe impl Send for ShmArena {}
+unsafe impl Sync for ShmArena {}
 
 impl ShmArena {
     pub fn new(byte_len: usize) -> Result<Self, ShmError> {
@@ -240,6 +249,8 @@ impl ShmArena {
                 magic: SHM_HEADER_MAGIC,
                 capacity: byte_len as u32,
                 data_start,
+                next_txid: AtomicU64::new(1),
+                proc_array: ProcArray::new(),
                 head: AtomicU32::new(data_start),
             });
         }
@@ -286,6 +297,45 @@ impl ShmArena {
         } else {
             None
         }
+    }
+
+    #[inline]
+    pub fn proc_array(&self) -> &ProcArray {
+        &self
+            .header_ref()
+            .expect("shared memory header was unexpectedly invalid")
+            .proc_array
+    }
+
+    #[inline]
+    pub fn global_txid(&self) -> &AtomicU64 {
+        &self
+            .header_ref()
+            .expect("shared memory header was unexpectedly invalid")
+            .next_txid
+    }
+
+    #[inline]
+    pub fn begin_transaction(&self) -> Result<ProcArrayRegistration, ProcArrayError> {
+        self.proc_array().begin_transaction(self.global_txid())
+    }
+
+    #[inline]
+    pub fn end_transaction(
+        &self,
+        registration: ProcArrayRegistration,
+    ) -> Result<(), ProcArrayError> {
+        self.proc_array().end_transaction(registration)
+    }
+
+    #[inline]
+    pub fn create_snapshot(&self) -> ProcSnapshot {
+        self.proc_array().create_snapshot(self.global_txid())
+    }
+
+    #[inline]
+    pub fn max_workers(&self) -> usize {
+        PROCARRAY_SLOTS
     }
 }
 

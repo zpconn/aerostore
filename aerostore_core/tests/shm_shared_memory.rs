@@ -16,7 +16,7 @@ struct SharedCounter {
 
 #[test]
 fn relptr_validates_null_bounds_and_alignment() {
-    let shm = ShmArena::new(4096).expect("failed to create shared arena");
+    let shm = ShmArena::new(64 << 10).expect("failed to create shared arena");
     let base = shm.mmap_base();
 
     let null_ptr = RelPtr::<u64>::null();
@@ -71,7 +71,7 @@ fn shared_chunked_arena_enforces_alignment_and_reports_oom() {
         previous_offset = offset;
     }
 
-    let tiny_shm = ShmArena::new(512).expect("failed to create tiny shared arena");
+    let tiny_shm = ShmArena::new(20 << 10).expect("failed to create tiny shared arena");
     let tiny_arena = tiny_shm.chunked_arena();
     let mut successful_allocations = 0_usize;
 
