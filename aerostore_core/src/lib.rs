@@ -8,6 +8,8 @@ pub mod query;
 pub mod shm;
 pub mod txn;
 pub mod wal;
+pub mod wal_ring;
+pub mod wal_writer;
 pub mod watch;
 
 pub use arena::{ChunkedArena, Table, VersionNode};
@@ -28,6 +30,13 @@ pub use txn::{Snapshot, Transaction, TransactionManager, TxId};
 pub use wal::{
     DurableDatabase, DurableTransaction, IndexDefinition, RecoveryStage, RecoveryStateMachine,
     WalOperation, WalRecord,
+};
+pub use wal_ring::{
+    deserialize_commit_record, serialize_commit_record, SharedWalRing, SynchronousCommit, WalRing,
+    WalRingCommit, WalRingError, WalRingWrite, SYNCHRONOUS_COMMIT_KEY,
+};
+pub use wal_writer::{
+    spawn_wal_writer_daemon, OccCommitter, SyncWalWriter, WalWriterDaemon, WalWriterError,
 };
 pub use watch::{
     spawn_ttl_sweeper, ChangeKind, FilteredSubscription, RowChange, TableWatch, TtlSweeper,

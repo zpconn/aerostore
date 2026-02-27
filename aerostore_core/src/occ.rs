@@ -93,6 +93,19 @@ impl<T: Copy> OccTransaction<T> {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OccCommittedWrite {
+    pub row_id: usize,
+    pub base_offset: u32,
+    pub new_offset: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OccCommitRecord {
+    pub txid: TxId,
+    pub writes: Vec<OccCommittedWrite>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
     RowOutOfBounds { row_id: usize, capacity: usize },
@@ -337,6 +350,10 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
     }
 
     pub fn commit(&self, tx: &mut OccTransaction<T>) -> Result<usize, Error> {
+        Ok(self.commit_with_record(tx)?.writes.len())
+    }
+
+    pub fn commit_with_record(&self, tx: &mut OccTransaction<T>) -> Result<OccCommitRecord, Error> {
         self.ensure_open(tx)?;
         let _lock = self.acquire_commit_lock()?;
 
@@ -352,19 +369,24 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             return Err(Error::SerializationFailure);
         }
 
-        self.publish_write_set(tx, &final_write_indices)?;
-        let applied = final_write_indices.len();
+        let writes = self.publish_write_set(tx, &final_write_indices)?;
+        let commit_record = OccCommitRecord {
+            txid: tx.txid,
+            writes,
+        };
 
         self.clear_local_sets(tx);
         self.finish_transaction(tx)?;
-        Ok(applied)
+        Ok(commit_record)
     }
 
     fn publish_write_set(
         &self,
         tx: &OccTransaction<T>,
         final_write_indices: &[usize],
-    ) -> Result<(), Error> {
+    ) -> Result<Vec<OccCommittedWrite>, Error> {
+        let mut published = Vec::with_capacity(final_write_indices.len());
+
         for idx in final_write_indices {
             let write = &tx.write_set[*idx];
             let slot = self.slot_ref(write.row_id)?;
@@ -393,9 +415,15 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             {
                 return Err(Error::SerializationFailure);
             }
+
+            published.push(OccCommittedWrite {
+                row_id: write.row_id,
+                base_offset,
+                new_offset,
+            });
         }
 
-        Ok(())
+        Ok(published)
     }
 
     fn has_write_base_conflict(
