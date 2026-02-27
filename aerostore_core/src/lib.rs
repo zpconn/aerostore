@@ -43,8 +43,9 @@ pub use wal_ring::{
     SynchronousCommit, WalRing, WalRingCommit, WalRingError, WalRingWrite, SYNCHRONOUS_COMMIT_KEY,
 };
 pub use wal_writer::{
-    read_wal_file, recover_occ_table_from_wal, spawn_wal_writer_daemon, OccCommitter,
-    OccRecoveryState, SyncWalWriter, WalWriterDaemon, WalWriterError,
+    read_wal_file, recover_occ_table_from_checkpoint_and_wal, recover_occ_table_from_wal,
+    spawn_wal_writer_daemon, write_occ_checkpoint_and_truncate_wal, OccCommitter, OccRecoveryState,
+    SyncWalWriter, WalWriterDaemon, WalWriterError,
 };
 pub use watch::{
     spawn_ttl_sweeper, ChangeKind, FilteredSubscription, RowChange, TableWatch, TtlSweeper,

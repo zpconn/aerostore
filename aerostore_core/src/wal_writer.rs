@@ -1,11 +1,11 @@
 use std::fmt;
-use std::fs::{File, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io::{self, BufWriter, Write};
 use std::os::fd::AsRawFd;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::occ::{Error as OccError, OccTable, OccTransaction};
 use crate::wal_ring::{
@@ -336,6 +336,122 @@ pub struct OccRecoveryState {
     pub max_txid: u64,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct OccCheckpointRow<T> {
+    row_id: u64,
+    value: T,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OccCheckpointFrame<T> {
+    version: u32,
+    max_txid: u64,
+    rows: Vec<OccCheckpointRow<T>>,
+}
+
+const OCC_CHECKPOINT_VERSION: u32 = 1;
+
+pub fn write_occ_checkpoint_and_truncate_wal<T: Copy + Send + Sync + 'static>(
+    table: &OccTable<T>,
+    checkpoint_path: impl AsRef<Path>,
+    wal_path: impl AsRef<Path>,
+) -> Result<usize, WalWriterError>
+where
+    T: Serialize,
+{
+    let snapshot_rows = table.snapshot_latest_rows()?;
+    let max_txid = table.current_global_txid().saturating_sub(1);
+
+    let rows = snapshot_rows
+        .into_iter()
+        .map(|(row_id, value)| OccCheckpointRow {
+            row_id: row_id as u64,
+            value,
+        })
+        .collect::<Vec<_>>();
+
+    let frame = OccCheckpointFrame {
+        version: OCC_CHECKPOINT_VERSION,
+        max_txid,
+        rows,
+    };
+    let bytes = bincode::serialize(&frame).map_err(|err| WalWriterError::Codec(err.to_string()))?;
+
+    let checkpoint_path = checkpoint_path.as_ref();
+    let tmp_path = checkpoint_path.with_extension("tmp");
+    fs::write(&tmp_path, &bytes)?;
+    fs::rename(&tmp_path, checkpoint_path)?;
+
+    let checkpoint_file = OpenOptions::new().read(true).open(checkpoint_path)?;
+    checkpoint_file.sync_all()?;
+
+    truncate_wal_file(wal_path)?;
+    Ok(frame.rows.len())
+}
+
+pub fn recover_occ_table_from_checkpoint_and_wal<T: Copy + Send + Sync + 'static>(
+    table: &OccTable<T>,
+    checkpoint_path: impl AsRef<Path>,
+    wal_path: impl AsRef<Path>,
+) -> Result<OccRecoveryState, WalWriterError>
+where
+    T: DeserializeOwned,
+{
+    let checkpoint_path = checkpoint_path.as_ref();
+    let mut checkpoint_applied = 0_usize;
+    let mut checkpoint_max_txid = 0_u64;
+
+    if checkpoint_path.exists() {
+        let bytes = fs::read(checkpoint_path)?;
+        let frame: OccCheckpointFrame<T> = bincode::deserialize(bytes.as_slice())
+            .map_err(|err| WalWriterError::Codec(err.to_string()))?;
+        if frame.version != OCC_CHECKPOINT_VERSION {
+            return Err(WalWriterError::Codec(format!(
+                "unsupported OCC checkpoint version {} (expected {})",
+                frame.version, OCC_CHECKPOINT_VERSION
+            )));
+        }
+
+        checkpoint_max_txid = frame.max_txid.max(1);
+        for row in frame.rows {
+            table.apply_recovered_write(row.row_id as usize, checkpoint_max_txid, row.value)?;
+            checkpoint_applied += 1;
+        }
+        table.advance_global_txid_floor(checkpoint_max_txid.saturating_add(1));
+    }
+
+    let commits = read_wal_file(wal_path)?;
+    let mut wal_records = 0_usize;
+    let mut wal_applied = 0_usize;
+    let mut max_txid = checkpoint_max_txid;
+
+    for commit in &commits {
+        if commit.txid <= checkpoint_max_txid {
+            continue;
+        }
+        wal_records += 1;
+        if commit.txid > max_txid {
+            max_txid = commit.txid;
+        }
+        for write in &commit.writes {
+            let value: T = bincode::deserialize(write.value_payload.as_slice())
+                .map_err(|err| WalWriterError::Codec(err.to_string()))?;
+            table.apply_recovered_write(write.row_id as usize, commit.txid, value)?;
+            wal_applied += 1;
+        }
+    }
+
+    if max_txid > 0 {
+        table.advance_global_txid_floor(max_txid.saturating_add(1));
+    }
+
+    Ok(OccRecoveryState {
+        wal_records,
+        applied_writes: checkpoint_applied + wal_applied,
+        max_txid,
+    })
+}
+
 pub fn read_wal_file(path: impl AsRef<Path>) -> Result<Vec<WalRingCommit>, WalWriterError> {
     let path = path.as_ref();
     if !path.exists() {
@@ -424,4 +540,15 @@ fn fdatasync(fd: libc::c_int) -> io::Result<()> {
     } else {
         Err(io::Error::last_os_error())
     }
+}
+
+fn truncate_wal_file(path: impl AsRef<Path>) -> io::Result<()> {
+    let path = path.as_ref();
+    let file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(path)?;
+    file.sync_all()?;
+    Ok(())
 }

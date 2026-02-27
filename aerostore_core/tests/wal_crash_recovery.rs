@@ -1,11 +1,16 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
 use aerostore_core::{
-    deserialize_commit_record, read_wal_file, recover_occ_table_from_wal, spawn_wal_writer_daemon,
+    deserialize_commit_record, read_wal_file, recover_occ_table_from_checkpoint_and_wal,
+    recover_occ_table_from_wal, spawn_wal_writer_daemon, write_occ_checkpoint_and_truncate_wal,
     IndexCompare, IndexValue, OccCommitter, OccTable, SecondaryIndex, SharedWalRing, ShmArena,
     WalWriterError,
 };
@@ -268,6 +273,116 @@ fn async_wal_daemon_crash_then_restart_preserves_replayable_wal_stream() {
         "expected post-restart wave to be durable (replayed={}, second_wave={})",
         replayed_commits,
         SECOND_WAVE
+    );
+
+    let _ = std::fs::remove_dir_all(data_dir);
+}
+
+#[test]
+fn checkpoint_compaction_truncates_wal_and_recovery_replays_checkpoint_plus_tail() {
+    let data_dir = tmp_data_dir();
+    std::fs::create_dir_all(&data_dir).expect("failed to create temp data dir");
+    let wal_path = data_dir.join("checkpoint_compaction.wal");
+    let checkpoint_path = data_dir.join("occ_checkpoint.dat");
+
+    let shm = std::sync::Arc::new(
+        ShmArena::new(32 << 20).expect("failed to create checkpoint compaction shm"),
+    );
+    let table = OccTable::<TclLikeRow>::new(std::sync::Arc::clone(&shm), 4)
+        .expect("failed to create checkpoint compaction table");
+    for row_id in 0..4 {
+        table
+            .seed_row(row_id, TclLikeRow::empty())
+            .expect("failed to seed checkpoint compaction row");
+    }
+
+    let mut committer = OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_synchronous(&wal_path)
+        .expect("failed to create checkpoint compaction committer");
+
+    let initial_rows = [
+        TclLikeRow::from_parts("UAL123", 12_000, 451),
+        TclLikeRow::from_parts("AAL456", 9_800, 380),
+    ];
+    for (row_id, row) in initial_rows.into_iter().enumerate() {
+        let mut tx = table
+            .begin_transaction()
+            .expect("begin_transaction failed for pre-checkpoint write");
+        table
+            .write(&mut tx, row_id, row)
+            .expect("write failed for pre-checkpoint write");
+        committer
+            .commit(&table, &mut tx)
+            .expect("commit failed for pre-checkpoint write");
+    }
+
+    let checkpoint_rows =
+        write_occ_checkpoint_and_truncate_wal(&table, &checkpoint_path, &wal_path)
+            .expect("checkpoint compaction should succeed");
+    assert!(
+        checkpoint_rows >= 2,
+        "checkpoint should capture at least live seeded rows, rows={}",
+        checkpoint_rows
+    );
+    let wal_size = std::fs::metadata(&wal_path)
+        .expect("wal metadata query failed after truncation")
+        .len();
+    assert_eq!(wal_size, 0, "checkpoint compaction must truncate WAL");
+
+    let post_checkpoint_rows = [
+        TclLikeRow::from_parts("UAL123", 18_000, 468),
+        TclLikeRow::from_parts("AAL456", 13_200, 401),
+    ];
+    for (row_id, row) in post_checkpoint_rows.into_iter().enumerate() {
+        let mut tx = table
+            .begin_transaction()
+            .expect("begin_transaction failed for post-checkpoint write");
+        table
+            .write(&mut tx, row_id, row)
+            .expect("write failed for post-checkpoint write");
+        committer
+            .commit(&table, &mut tx)
+            .expect("commit failed for post-checkpoint write");
+    }
+
+    drop(table);
+    drop(shm);
+
+    let recovered_shm = std::sync::Arc::new(
+        ShmArena::new(32 << 20).expect("failed to create checkpoint recovery shm"),
+    );
+    let recovered_table = OccTable::<TclLikeRow>::new(std::sync::Arc::clone(&recovered_shm), 4)
+        .expect("failed to create checkpoint recovery table");
+    for row_id in 0..4 {
+        recovered_table
+            .seed_row(row_id, TclLikeRow::empty())
+            .expect("failed to seed checkpoint recovery row");
+    }
+
+    let state =
+        recover_occ_table_from_checkpoint_and_wal(&recovered_table, &checkpoint_path, &wal_path)
+            .expect("checkpoint+wal recovery failed");
+    assert!(
+        state.applied_writes >= 2,
+        "checkpoint+wal recovery should apply writes"
+    );
+
+    let row0 = recovered_table
+        .latest_value(0)
+        .expect("latest_value failed for recovered row 0")
+        .expect("recovered row 0 unexpectedly missing");
+    let row1 = recovered_table
+        .latest_value(1)
+        .expect("latest_value failed for recovered row 1")
+        .expect("recovered row 1 unexpectedly missing");
+    assert_eq!(
+        row0,
+        TclLikeRow::from_parts("UAL123", 18_000, 468),
+        "row 0 should reflect post-checkpoint WAL tail"
+    );
+    assert_eq!(
+        row1,
+        TclLikeRow::from_parts("AAL456", 13_200, 401),
+        "row 1 should reflect post-checkpoint WAL tail"
     );
 
     let _ = std::fs::remove_dir_all(data_dir);
@@ -761,6 +876,138 @@ fn benchmark_occ_wal_replay_startup_throughput() {
     eprintln!(
         "occ_replay_benchmark: txns={} applied_writes={} elapsed={:?} throughput_writes_per_sec={:.2}",
         TXNS, recovery.applied_writes, elapsed, throughput
+    );
+
+    let _ = std::fs::remove_dir_all(data_dir);
+}
+
+#[test]
+fn checkpoint_under_write_load_remains_recoverable() {
+    const TOTAL_WRITES: usize = 2_000;
+
+    let data_dir = tmp_data_dir();
+    std::fs::create_dir_all(&data_dir).expect("failed to create temp data dir");
+    let wal_path = data_dir.join("checkpoint_under_load.wal");
+    let checkpoint_path = data_dir.join("checkpoint_under_load.dat");
+
+    let shm = Arc::new(ShmArena::new(64 << 20).expect("failed to create shared memory"));
+    let table =
+        Arc::new(OccTable::<u64>::new(Arc::clone(&shm), 1).expect("failed to create occ table"));
+    table.seed_row(0, 0_u64).expect("failed to seed row");
+
+    let committer = Arc::new(Mutex::new(
+        OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_synchronous(&wal_path)
+            .expect("failed to create synchronous committer"),
+    ));
+    let writer_done = Arc::new(AtomicBool::new(false));
+    let writer_error = Arc::new(Mutex::new(None::<String>));
+
+    let writer = {
+        let table = Arc::clone(&table);
+        let committer = Arc::clone(&committer);
+        let writer_done = Arc::clone(&writer_done);
+        let writer_error = Arc::clone(&writer_error);
+        thread::spawn(move || {
+            for _ in 0..TOTAL_WRITES {
+                let mut tx = match table.begin_transaction() {
+                    Ok(tx) => tx,
+                    Err(err) => {
+                        *writer_error.lock().expect("writer error lock poisoned") =
+                            Some(format!("begin_transaction failed: {}", err));
+                        break;
+                    }
+                };
+                let current = match table.read(&mut tx, 0) {
+                    Ok(Some(value)) => value,
+                    Ok(None) => {
+                        *writer_error.lock().expect("writer error lock poisoned") =
+                            Some("writer observed missing row".to_string());
+                        break;
+                    }
+                    Err(err) => {
+                        *writer_error.lock().expect("writer error lock poisoned") =
+                            Some(format!("writer read failed: {}", err));
+                        break;
+                    }
+                };
+                if let Err(err) = table.write(&mut tx, 0, current + 1) {
+                    *writer_error.lock().expect("writer error lock poisoned") =
+                        Some(format!("writer write failed: {}", err));
+                    break;
+                }
+                let commit_result = {
+                    let mut guard = committer.lock().expect("committer lock poisoned");
+                    guard.commit(&table, &mut tx)
+                };
+                if let Err(err) = commit_result {
+                    *writer_error.lock().expect("writer error lock poisoned") =
+                        Some(format!("writer commit failed: {}", err));
+                    break;
+                }
+            }
+            writer_done.store(true, Ordering::Release);
+        })
+    };
+
+    let mut checkpoint_passes = 0_usize;
+    while !writer_done.load(Ordering::Acquire) {
+        {
+            let _guard = committer.lock().expect("committer lock poisoned");
+            let _rows = write_occ_checkpoint_and_truncate_wal(&table, &checkpoint_path, &wal_path)
+                .expect("checkpoint under write load failed");
+        }
+        checkpoint_passes += 1;
+        thread::sleep(Duration::from_millis(2));
+    }
+
+    writer
+        .join()
+        .expect("writer thread panicked in checkpoint-under-load test");
+    if let Some(err) = writer_error
+        .lock()
+        .expect("writer error lock poisoned")
+        .clone()
+    {
+        panic!("{}", err);
+    }
+
+    {
+        let _guard = committer.lock().expect("committer lock poisoned");
+        let _ = write_occ_checkpoint_and_truncate_wal(&table, &checkpoint_path, &wal_path)
+            .expect("final checkpoint should succeed");
+    }
+
+    drop(table);
+    drop(shm);
+    drop(committer);
+
+    let recovered_shm =
+        Arc::new(ShmArena::new(64 << 20).expect("failed to create recovery shared memory"));
+    let recovered_table = OccTable::<u64>::new(Arc::clone(&recovered_shm), 1)
+        .expect("failed to create recovery occ table");
+    recovered_table
+        .seed_row(0, 0_u64)
+        .expect("failed to seed recovery row");
+
+    let recovery_state =
+        recover_occ_table_from_checkpoint_and_wal(&recovered_table, &checkpoint_path, &wal_path)
+            .expect("recovery should succeed after checkpoint under load");
+    let recovered = recovered_table
+        .latest_value(0)
+        .expect("latest_value failed after recovery")
+        .expect("recovered row unexpectedly missing");
+
+    assert_eq!(
+        recovered, TOTAL_WRITES as u64,
+        "recovered row value diverged after concurrent checkpoints"
+    );
+    assert!(
+        checkpoint_passes > 0,
+        "expected at least one checkpoint while writer was active"
+    );
+    assert!(
+        recovery_state.applied_writes >= 1,
+        "recovery metadata reported no applied writes"
     );
 
     let _ = std::fs::remove_dir_all(data_dir);

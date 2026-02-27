@@ -113,28 +113,39 @@ if {[catch {FlightState search -bogus value -limit 5} malformed_opt_err]} {
 set init_again [aerostore::init $data_dir]
 puts "reinit: $init_again"
 
-# Coverage hooks for upcoming synchronous_commit and retry-loop integration.
-# These are optional so the script remains compatible with current builds.
+puts "coverage: toggling aerostore.synchronous_commit on/off"
+set initial_mode [aerostore::get_config aerostore.synchronous_commit]
+puts "coverage: initial synchronous_commit mode = $initial_mode"
 
-if {[llength [info commands aerostore::set_config]] > 0 && [llength [info commands aerostore::get_config]] > 0} {
-    puts "coverage: toggling aerostore.synchronous_commit on/off"
-    aerostore::set_config aerostore.synchronous_commit off
-    set mode [aerostore::get_config aerostore.synchronous_commit]
-    puts "coverage: synchronous_commit now $mode"
-    aerostore::set_config aerostore.synchronous_commit on
-    set mode [aerostore::get_config aerostore.synchronous_commit]
-    puts "coverage: synchronous_commit restored to $mode"
-} else {
-    puts "coverage: skip synchronous_commit hook (aerostore::set_config/get_config not exported yet)"
+aerostore::set_config aerostore.synchronous_commit off
+set mode [aerostore::get_config aerostore.synchronous_commit]
+puts "coverage: synchronous_commit now $mode"
+if {$mode ne "off"} {
+    error "expected synchronous_commit=off after toggle, got $mode"
 }
 
-if {[llength [info commands aerostore::simulate_serialization_failure]] > 0} {
-    puts "coverage: checking retry-loop serialization failure signal"
-    if {[catch {aerostore::simulate_serialization_failure} err]} {
-        puts "coverage: serialization failure observed: $err"
-    } else {
-        puts "coverage: expected serialization failure but command succeeded"
+if {[catch {aerostore::checkpoint_now} checkpoint_err]} {
+    puts "coverage: checkpoint blocked while async as expected: $checkpoint_err"
+    if {![string match "TCL_ERROR:*" $checkpoint_err]} {
+        error "expected checkpoint async error to start with TCL_ERROR:, got '$checkpoint_err'"
     }
 } else {
-    puts "coverage: skip retry-loop hook (simulate_serialization_failure not exported yet)"
+    error "expected checkpoint to fail while synchronous_commit=off"
 }
+
+aerostore::set_config aerostore.synchronous_commit on
+set mode [aerostore::get_config aerostore.synchronous_commit]
+puts "coverage: synchronous_commit restored to $mode"
+if {$mode ne "on"} {
+    error "expected synchronous_commit=on after restore, got $mode"
+}
+
+aerostore::set_config aerostore.checkpoint_interval_secs 1
+set interval [aerostore::get_config aerostore.checkpoint_interval_secs]
+puts "coverage: checkpoint interval now $interval seconds"
+if {$interval != 1} {
+    error "expected checkpoint interval 1, got $interval"
+}
+
+set checkpoint_result [aerostore::checkpoint_now]
+puts "coverage: checkpoint result = $checkpoint_result"
