@@ -2,6 +2,7 @@ pub mod arena;
 pub mod index;
 pub mod ingest;
 pub mod mvcc;
+pub mod procarray;
 pub mod query;
 pub mod shm;
 pub mod txn;
@@ -14,6 +15,9 @@ pub use ingest::{
     bulk_upsert_tsv, IngestError, IngestStats, TsvColumns, TsvDecodeError, TsvDecoder,
 };
 pub use mvcc::{is_visible, MvccError, MvccTable, RowVersion};
+pub use procarray::{
+    ProcArray, ProcArrayError, ProcArrayRegistration, ProcSlot, ProcSnapshot, PROCARRAY_SLOTS,
+};
 pub use query::{Field, QueryBuilder, QueryEngine, SortDirection};
 pub use shm::{
     ChunkedArena as ShmChunkedArena, MmapBase, RelPtr, ShmAllocError, ShmArena, ShmError,

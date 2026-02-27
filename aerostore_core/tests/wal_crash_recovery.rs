@@ -4,9 +4,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use crossbeam::epoch;
 use serde::{Deserialize, Serialize};
 
-use aerostore_core::{
-    DurableDatabase, Field, IndexDefinition, RecoveryStage, SortDirection,
-};
+use aerostore_core::{DurableDatabase, Field, IndexDefinition, RecoveryStage, SortDirection};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 struct FlightRow {
