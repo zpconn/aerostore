@@ -5,6 +5,16 @@
 Aerostore is a Rust-first database prototype for high-ingest, high-concurrency flight/state workloads.  
 It combines lock-free shared-memory data structures with PostgreSQL-inspired MVCC/OCC semantics and Tcl in-process integration.
 
+## How It Works in Plain English
+
+1. All workers share one big memory area, so they are looking at the same database state.
+2. When a transaction changes a row, it writes a new version instead of overwriting the old one.
+3. Readers see a stable snapshot, so reads do not block writers and do not see half-finished updates.
+4. Before commit, Aerostore checks whether another transaction changed something you depended on; if yes, it aborts with a serialization failure so callers can retry safely.
+5. Committed changes are written to WAL for crash recovery, with configurable sync behavior (`on` for durability-first, `off` for throughput-first).
+6. Periodic checkpoints save a compact current state so restart is fast: load checkpoint, replay remaining WAL, rebuild indexes.
+7. Tcl scripts call into this engine directly in-process (`FlightState search`, `FlightState ingest_tsv`) without network or IPC overhead.
+
 As of February 27, 2026, this repo includes:
 
 - V1 in-process MVCC + durable WAL/checkpoint/recovery path.
