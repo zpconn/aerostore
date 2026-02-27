@@ -2,41 +2,42 @@
 
 <img width="500" height="500" alt="ChatGPT Image Feb 26, 2026, 06_15_42 PM" src="https://github.com/user-attachments/assets/3573ab8f-45b9-481c-bdcf-cb1186d73df0" />
 
-Aerostore is a lock-free, memory-resident Rust database prototype for high-concurrency flight/market workloads.
+Aerostore is a Rust prototype database for high-concurrency flight/market workloads.
 
-It combines:
+It currently includes:
 
-- MVCC row versioning with snapshot visibility rules inspired by PostgreSQL.
-- Skip-list secondary indexes for fast point/range lookup.
-- Durability primitives: append-only WAL, group commit, periodic checkpoint, and crash recovery.
-- High-throughput TSV bulk upsert ingestion.
-- Change streaming (pub-sub) and TTL pruning.
-- A Tcl `cdylib` bridge so Hyperfeed-style Tcl interpreters can query Rust state in-process.
-- POSIX shared-memory primitives (`mmap`, relative pointers, fork-safe CAS) for Aerostore V2.
+- Lock-free row version storage and query paths.
+- MVCC snapshot visibility semantics (PostgreSQL-inspired).
+- Shared-memory foundations for fork-heavy deployments (`mmap`, relative pointers).
+- Bounded ProcArray transaction tracking (256 slots, cache-line aligned).
+- A standalone optimistic concurrency (OCC/SSI) layer with savepoints.
+- Skip-list secondary indexing and typed query builder.
+- WAL + group commit + checkpoint + recovery.
+- TSV bulk upsert ingestion, pub-sub change streams, and TTL sweeper.
+- Tcl `cdylib` bridge for in-process Tcl access.
 
-## Current Repo State (February 27, 2026)
+## Current Status (as of February 27, 2026)
 
-What is implemented and passing today:
+Implemented and passing in release mode:
 
-- `aerostore_core` engine modules (`arena`, `mvcc`, `txn`, `index`, `query`, `wal`, `ingest`, `watch`, `shm`, `procarray`).
-- `aerostore_macros` `#[speedtable]` proc macro.
-- `aerostore_tcl` shared library bridge (`cdylib`) with Tcl commands.
-- Release-mode workspace test suite passing.
-- Long-running ignored GC stress test passing.
-- Criterion ProcArray snapshot benchmark passing strict `<50ns` guard on this machine.
+- `aerostore_core` modules: `arena`, `mvcc`, `txn`, `occ`, `procarray`, `index`, `query`, `shm`, `wal`, `ingest`, `watch`.
+- `aerostore_macros` `#[speedtable]` macro.
+- `aerostore_tcl` shared library bridge.
+- Full `aerostore_core` release test suite (including OCC write-skew test).
+- ProcArray Criterion benchmark with strict `<50ns` proof check.
 
 ## Workspace Layout
 
-- `aerostore_core/`: core engine, durability, shared memory, tests, benchmarks.
-- `aerostore_macros/`: `#[speedtable]` proc macro.
-- `aerostore_tcl/`: Tcl extension crate (`cdylib`) and demo script.
+- `aerostore_core/`: core engine + tests/benches.
+- `aerostore_macros/`: proc-macro crate.
+- `aerostore_tcl/`: Tcl extension crate (`cdylib`) and `test.tcl` demo.
 
-## Architecture Overview
+## Architecture
 
-### 1) Speedtable Macro + Lock-Free Arena
+### 1) Speedtable Macro + Arena Primitives
 
-- `#[speedtable]` injects hidden system columns (`_nullmask`, `_xmin`, `_xmax`) and null-bit helpers.
-- `ChunkedArena<T>` and `Table<K, V>` provide lock-free allocation and per-key version chains.
+- `#[speedtable]` injects hidden `_nullmask`, `_xmin`, `_xmax` fields.
+- `ChunkedArena<T>` and `Table<K, V>` provide lock-free allocation/chaining primitives.
 
 Key files:
 
@@ -44,12 +45,12 @@ Key files:
 - `aerostore_core/src/arena.rs`
 - `aerostore_core/tests/speedtable_arena_perf.rs`
 
-### 2) MVCC Engine (V1 Path)
+### 2) MVCC (V1 In-Process Path)
 
-- `TransactionManager` currently provides monotonic txids and in-flight tracking for the in-process durable path.
-- `MvccTable` keeps row version chains with `_xmin`/`_xmax` and compare-and-swap update/delete semantics.
-- `is_visible(...)` enforces snapshot visibility during reads and query execution.
-- Reclamation uses `crossbeam-epoch` deferred destruction.
+- `TransactionManager` provides txid assignment and active-transaction tracking.
+- `MvccTable` stores row version chains with `_xmin` and atomic `_xmax`.
+- `is_visible(...)` controls snapshot visibility.
+- Old versions are reclaimed with `crossbeam-epoch`.
 
 Key files:
 
@@ -57,12 +58,11 @@ Key files:
 - `aerostore_core/src/mvcc.rs`
 - `aerostore_core/tests/mvcc_tokio_concurrency.rs`
 
-### 3) Shared-Memory Foundation (V2 Path)
+### 3) Shared Memory + Relative Pointers (V2 Foundation)
 
-- `ShmArena` allocates process-shared memory via `mmap(MAP_SHARED | MAP_ANONYMOUS)`.
-- `RelPtr<T>` stores 32-bit relative offsets instead of absolute pointers.
-- Shared-memory `ChunkedArena` is a lock-free bump allocator returning only `RelPtr<T>`.
-- `ShmHeader` contains global txid and a bounded ProcArray.
+- `ShmArena` uses `mmap(MAP_SHARED | MAP_ANONYMOUS)`.
+- `RelPtr<T>` stores 32-bit offsets (not absolute pointers).
+- Shared-memory bump allocator returns `RelPtr<T>` for fork-safe access.
 
 Key files:
 
@@ -70,13 +70,12 @@ Key files:
 - `aerostore_core/tests/shm_fork.rs`
 - `aerostore_core/tests/shm_shared_memory.rs`
 
-### 4) Bounded ProcArray (PostgreSQL-Style Snapshot Tracking)
+### 4) Bounded ProcArray (PostgreSQL-Style)
 
-- Fixed-size `ProcArray` of 256 slots (`PROCARRAY_SLOTS = 256`).
-- Each slot is cache-line aligned (`#[repr(align(64))]`) to reduce false sharing.
-- `begin_transaction`: linear CAS claim of a `0` slot with a unique txid.
-- `end_transaction`: release slot back to `0` with release ordering.
-- `create_snapshot`: bounded scan over 256 slots, zero heap allocation, returns `(xmin, xmax, in_flight[])`.
+- Fixed `PROCARRAY_SLOTS = 256`.
+- `#[repr(align(64))]` slots to reduce false sharing.
+- CAS claim/release for begin/end transaction.
+- Snapshot creation scans fixed 256 slots with no heap allocation.
 
 Key files:
 
@@ -84,12 +83,31 @@ Key files:
 - `aerostore_core/tests/procarray_concurrency.rs`
 - `aerostore_core/benches/procarray_snapshot.rs`
 
-### 5) Secondary Index + Query Optimizer
+### 5) OCC / SSI Layer with Savepoints
 
-- Secondary indexes use `crossbeam_skiplist::SkipMap<IndexValue, SkipSet<RowId>>`.
-- Query filters support `eq`, `gt`, `lt`, `in_values`, plus `sort_by`, `limit`, and `offset`.
-- Optimizer uses an index when a filter maps to an indexed field; otherwise parallel-style sequential candidate collection.
-- Results always flow through MVCC visibility before returning rows.
+- New `OccTable<T>` + `OccTransaction<T>` in shared memory.
+- Process-local transaction state:
+  - `ReadSet`: `RelPtr<OccRow<T>>` + observed `xmin`.
+  - `WriteSet`: pending row mutations allocated in shared arena but not globally linked until commit.
+- Nested savepoints:
+  - `savepoint(name)` stores write-set length.
+  - `rollback_to(name)` truncates pending writes back to that point.
+- Commit does SSI-style validation under a shared-memory spinlock:
+  - Validates read-set rows for dangerous updates/deletes after snapshot start.
+  - On conflict: aborts and returns `Error::SerializationFailure`.
+  - On success: atomically publishes write pointers into global row heads.
+
+Key files:
+
+- `aerostore_core/src/occ.rs`
+- `aerostore_core/tests/occ_write_skew.rs`
+
+### 6) Index + Query Engine
+
+- Secondary indexes via `crossbeam_skiplist::SkipMap`.
+- Typed `QueryBuilder` supports `eq`, `gt`, `lt`, `in_values`, sorting, limits, offsets.
+- Uses indexed candidate selection when possible, otherwise sequential candidate scan.
+- Final visibility/filtering performed before returning rows.
 
 Key files:
 
@@ -97,25 +115,24 @@ Key files:
 - `aerostore_core/src/query.rs`
 - `aerostore_core/tests/query_index_benchmark.rs`
 
-### 6) Durability: WAL + Group Commit + Checkpoint + Recovery
+### 7) Durability (WAL + Group Commit + Checkpoint + Recovery)
 
-- WAL records are framed and serialized via `bincode`.
-- Group commit is handled by a background WAL writer task that batches commits and calls `sync_data`.
-- Commits return success only after WAL fsync-like durability step completes.
-- Checkpointer periodically snapshots visible rows to `checkpoint.dat` and truncates WAL.
-- Startup recovery loads checkpoint then replays remaining WAL records.
+- WAL records serialized with `bincode`.
+- Group commit via background async WAL writer and batched fsync-like `sync_data`.
+- Checkpointer writes `checkpoint.dat` and truncates WAL.
+- Recovery loads checkpoint then replays remaining WAL records.
 
 Key files:
 
 - `aerostore_core/src/wal.rs`
 - `aerostore_core/tests/wal_crash_recovery.rs`
 
-### 7) TSV Ingest + Change Streaming + TTL
+### 8) Ingest / Streaming / TTL
 
-- TSV parser uses `memchr` for delimiter scanning and typed decode helpers.
-- `bulk_upsert_tsv(...)` performs batched insert/update in durable transactions.
-- `TableWatch` publishes row-level change events via `tokio::sync::broadcast`.
-- TTL sweeper prunes expired rows based on an `updated_at` extractor.
+- TSV parser uses `memchr` and typed column decoders.
+- Bulk upsert commits batched durable transactions.
+- `TableWatch` publishes commit changes via `tokio::sync::broadcast`.
+- Background TTL sweeper prunes expired rows.
 
 Key files:
 
@@ -123,28 +140,27 @@ Key files:
 - `aerostore_core/src/watch.rs`
 - `aerostore_core/tests/ingest_watch_ttl.rs`
 
-### 8) Tcl FFI Bridge
+### 9) Tcl Bridge
 
-- `aerostore_tcl` builds as a `cdylib` and exports `Aerostore_Init` / `Aerostore_SafeInit`.
-- Uses process-global `OnceLock` DB/runtime so multiple interpreters share one memory-resident engine.
-- Tcl numeric argument conversion uses Tcl integer/double APIs (`Tcl_GetWideIntFromObj`, `Tcl_GetDoubleFromObj`) to avoid string-only paths.
-- `FlightState search` returns the number of matching rows.
+- `aerostore_tcl` exports `Aerostore_Init` / `Aerostore_SafeInit`.
+- Global `OnceLock` state shares a single DB/runtime across interpreters.
+- Tcl numeric values are parsed using Tcl native numeric APIs.
 
 Key files:
 
 - `aerostore_tcl/src/lib.rs`
 - `aerostore_tcl/test.tcl`
 
-## Prerequisites
+## Build Prerequisites
 
 ### Rust
 
 - Stable Rust toolchain (`cargo`, `rustc`).
 
-### Tcl Extension Build (optional)
+### Tcl bridge (optional)
 
 - Tcl 8.6 runtime/dev packages.
-- `clang` and `libclang` (needed by the Tcl C binding toolchain).
+- `clang` and `libclang`.
 
 Debian/Ubuntu example:
 
@@ -155,46 +171,50 @@ sudo apt-get install -y tcl tcl-dev clang libclang-dev
 
 ## Build
 
-Build everything:
-
 ```bash
 cargo build --workspace
 ```
 
-Build Tcl extension only:
+Tcl extension only:
 
 ```bash
 cargo build -p aerostore_tcl
 ```
 
-## Test and Benchmark Runbook
+## Test + Benchmark Runbook
 
-### Fast Full Regression (release)
+### Full release regression
 
 ```bash
 cargo test --workspace --release
 ```
 
-### Long GC Stress (ignored by default)
+### Long GC stress (ignored by default)
 
 ```bash
 cargo test -p aerostore_core --release --test test_concurrency -- --ignored --nocapture
 ```
 
-### ProcArray Criterion Benchmark (strict)
+### OCC write-skew serialization test
+
+```bash
+cargo test -p aerostore_core --release --test occ_write_skew -- --nocapture
+```
+
+### ProcArray benchmark (strict)
 
 ```bash
 cargo bench -p aerostore_core --bench procarray_snapshot -- --nocapture
 ```
 
-This benchmark asserts:
+This benchmark enforces:
 
-- snapshot average `< 50ns` for `txid=10` and `txid=10_000_000`
-- near-constant-time behavior between low/high txid ranges
+- `< 50ns` snapshot budget for low and high txid baselines.
+- Near-constant-time behavior (`txid=10` vs `txid=10_000_000`).
 
-Note: workspace bench profile is tuned for reproducible perf (`lto = "thin"`, `codegen-units = 1`).
+Bench profile is tuned in workspace config (`[profile.bench] lto="thin", codegen-units=1`).
 
-### Other Performance-Focused Targets
+### Other perf-oriented targets
 
 ```bash
 cargo test -p aerostore_core --release --test speedtable_arena_perf -- --nocapture
@@ -202,44 +222,37 @@ cargo test -p aerostore_core --release --test query_index_benchmark -- --nocaptu
 cargo test -p aerostore_core --release --test shm_benchmark -- --nocapture
 ```
 
-Optional worker control for arena allocation test:
+Optional worker override for arena benchmark:
 
 ```bash
 AEROSTORE_BENCH_WORKERS=8 cargo test -p aerostore_core --release --test speedtable_arena_perf -- --nocapture
 ```
 
-## Concurrency and Reliability Tests
+## Reliability/Concurrency Test Inventory
 
-`aerostore_core/tests/test_concurrency.rs`:
-
-- `loom_validates_cas_update_and_index_pointer_swaps`
-  - Model-checks interleavings around CAS update/index publication.
-  - Guards against memory-ordering regressions and ABA/cycle issues in modeled chains.
-- `hyperfeed_gc_stress_reclaims_dead_versions_without_memory_leaks` (ignored by default)
-  - Writer updates one row 100,000 times.
-  - Slow readers hold snapshots concurrently.
-  - Asserts exactly `99,999` dead versions reclaimed.
-  - Uses custom drop tracking to prove no leak in reclaimed generations.
-
-`aerostore_core/tests/procarray_concurrency.rs`:
-
-- Multi-thread begin/end/snapshot stress over bounded 256-slot ProcArray.
-- Forked-process stress ensures slots are released correctly across child processes.
+- `aerostore_core/tests/test_concurrency.rs`
+  - Loom model check for CAS ordering/pointer publication.
+  - 100k-update GC stress test with drop-accounting proof.
+- `aerostore_core/tests/procarray_concurrency.rs`
+  - Threaded + forked begin/end/snapshot stress for bounded ProcArray.
+- `aerostore_core/tests/occ_write_skew.rs`
+  - Classic write-skew simulation; verifies one commit and one `SerializationFailure`.
 
 ## Tcl Usage
 
-Run the demo script:
+Run demo:
 
 ```bash
 tclsh aerostore_tcl/test.tcl
 ```
 
-The script:
+The demo:
 
-- loads the extension (`package require aerostore`, with fallback direct `.so` load)
-- initializes DB state directory
-- ingests TSV rows
-- runs a filtered search
+1. Attempts `package require aerostore`.
+2. Falls back to loading `target/debug/libaerostore_tcl.so`.
+3. Initializes DB.
+4. Ingests sample TSV.
+5. Runs a filtered search.
 
 ### Tcl Commands
 
@@ -266,30 +279,39 @@ FlightState search \
   -offset 0
 ```
 
-Supported search options:
+Supported options:
 
-- `-compare` with operators `=`, `==`, `>`, `<`, `in`
+- `-compare` operators: `=`, `==`, `>`, `<`, `in`
 - `-sort <field>`
-- `-asc` or `-desc`
+- `-asc` / `-desc`
 - `-limit <n>`
 - `-offset <n>`
 
-Fields: `flight_id|flight|ident`, `altitude|alt`, `lat`, `lon|long|longitude`, `gs|groundspeed`, `updated_at|updated|ts`.
+Supported field aliases:
 
-## Durable On-Disk Artifacts
+- `flight_id|flight|ident`
+- `altitude|alt`
+- `lat`
+- `lon|long|longitude`
+- `gs|groundspeed`
+- `updated_at|updated|ts`
 
-For `DurableDatabase` data directories:
+## Durable Files
 
-- `wal.log`: append-only framed transaction records.
-- `checkpoint.dat`: checkpoint snapshot written by checkpointer/manual checkpoint.
+For `DurableDatabase` directories:
 
-Recovery order on startup:
+- `wal.log`: framed append-only transaction log.
+- `checkpoint.dat`: compact checkpoint snapshot.
 
-1. Load checkpoint.
+Startup recovery order:
+
+1. Load `checkpoint.dat`.
 2. Replay remaining WAL records.
-3. Resume normal operation.
+3. Continue normal service.
 
-## Known Caveats
+## Caveats / Integration Notes
 
-- The legacy `TransactionManager` path used by `DurableDatabase` is still the V1 in-process tracker; ProcArray currently lives in the shared-memory V2 path (`shm`/`procarray`) and is tested/benchmarked there.
-- Tcl demo fallback currently loads `target/debug/libaerostore_tcl.so`; adjust path for non-Linux or release artifacts.
+- OCC (`occ.rs`) is currently a standalone shared-memory concurrency layer and is not yet wired into the WAL/recovery/query/Tcl durable path.
+- `rollback_to` truncates local pending writes; shared-memory bump allocations are abandoned logically (not physically reclaimed immediately).
+- `DurableDatabase` still uses the V1 in-process `TransactionManager`/MVCC path.
+- Tcl demo fallback currently assumes Linux `.so` path (`target/debug/libaerostore_tcl.so`).

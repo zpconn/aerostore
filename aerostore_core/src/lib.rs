@@ -2,6 +2,7 @@ pub mod arena;
 pub mod index;
 pub mod ingest;
 pub mod mvcc;
+pub mod occ;
 pub mod procarray;
 pub mod query;
 pub mod shm;
@@ -15,6 +16,7 @@ pub use ingest::{
     bulk_upsert_tsv, IngestError, IngestStats, TsvColumns, TsvDecodeError, TsvDecoder,
 };
 pub use mvcc::{is_visible, MvccError, MvccTable, RowVersion};
+pub use occ::{Error as OccError, OccRow, OccTable, OccTransaction};
 pub use procarray::{
     ProcArray, ProcArrayError, ProcArrayRegistration, ProcSlot, ProcSnapshot, PROCARRAY_SLOTS,
 };
