@@ -8,6 +8,7 @@ Aerostore combines:
 
 - MVCC snapshot isolation inspired by PostgreSQL visibility semantics
 - Skip-list secondary indexes for fast range/equality lookups
+- POSIX shared-memory arena primitives for fork-safe process sharing
 - WAL + group commit + checkpoint + replay recovery
 - Zero-copy-ish TSV ingestion path for bulk upserts
 - Broadcast-style change streaming and TTL pruning
@@ -126,6 +127,18 @@ Relevant files:
 - `aerostore_tcl/src/lib.rs`
 - `aerostore_tcl/test.tcl`
 
+### 8) POSIX Shared Memory Foundation (Aerostore V2)
+
+- `ShmArena` provides a process-shared memory segment via `mmap(PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS)`.
+- `RelPtr<T>` stores a 32-bit byte offset (not a raw virtual address), so forked/independently mapped processes can safely resolve references using their local mapping base.
+- `ChunkedArena` (shared-memory variant) is a lock-free bump allocator driven by an `AtomicU32` head and returns only `RelPtr<T>`.
+- This avoids the Copy-On-Write breakage you get from raw heap pointers/`Arc`/absolute addresses across `fork()`.
+
+Relevant files:
+
+- `aerostore_core/src/shm.rs`
+- `aerostore_core/tests/shm_fork.rs`
+
 ## Build Prerequisites
 
 ### Rust
@@ -176,6 +189,7 @@ Run specific key tests:
 cargo test --release --test mvcc_tokio_concurrency -- --nocapture
 cargo test --release --test wal_crash_recovery -- --nocapture
 cargo test --release --test ingest_watch_ttl -- --nocapture
+cargo test --release --test shm_fork -- --nocapture
 ```
 
 ### Lock-Free Concurrency Verification

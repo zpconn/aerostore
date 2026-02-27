@@ -116,7 +116,10 @@ impl<T> ChunkedArena<T> {
 
         while !chunk_ptr.is_null() {
             let chunk = unsafe { &*chunk_ptr };
-            total += chunk.cursor.load(Ordering::Acquire).min(self.chunk_capacity);
+            total += chunk
+                .cursor
+                .load(Ordering::Acquire)
+                .min(self.chunk_capacity);
             chunk_ptr = chunk.next.load(Ordering::Acquire);
         }
 
@@ -149,7 +152,10 @@ impl<T> Drop for ChunkedArena<T> {
             let mut chunk_ptr = self.head;
             while !chunk_ptr.is_null() {
                 let chunk = Box::from_raw(chunk_ptr);
-                let used = chunk.cursor.load(Ordering::Acquire).min(self.chunk_capacity);
+                let used = chunk
+                    .cursor
+                    .load(Ordering::Acquire)
+                    .min(self.chunk_capacity);
                 for idx in 0..used {
                     ptr::drop_in_place((*chunk.slots[idx].get()).as_mut_ptr());
                 }
