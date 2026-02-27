@@ -1,8 +1,12 @@
 #![cfg(unix)]
 
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::Arc;
 
-use aerostore_core::{RelPtr, ShmAllocError, ShmArena};
+use aerostore_core::{
+    deserialize_commit_record, RelPtr, SharedWalRing, ShmAllocError, ShmArena, WalRingCommit,
+    WalRingWrite,
+};
 
 #[repr(C, align(64))]
 struct AlignedBlock {
@@ -12,6 +16,13 @@ struct AlignedBlock {
 #[repr(C)]
 struct SharedCounter {
     value: AtomicU32,
+}
+
+#[repr(C)]
+struct RingIntegrity {
+    count: AtomicU32,
+    sum: AtomicU64,
+    xor: AtomicU64,
 }
 
 #[test]
@@ -154,6 +165,149 @@ fn forked_children_cas_contention_reaches_exact_total() {
         counter.value.load(Ordering::Acquire),
         expected,
         "final CAS total diverged under multi-process contention"
+    );
+}
+
+#[test]
+fn forked_mpsc_ring_producers_preserve_message_integrity() {
+    const PRODUCERS: usize = 6;
+    const MESSAGES_PER_PRODUCER: usize = 300;
+    const TOTAL_MESSAGES: usize = PRODUCERS * MESSAGES_PER_PRODUCER;
+    const RING_SLOTS: usize = 128;
+    const RING_SLOT_BYTES: usize = 128;
+
+    let shm = Arc::new(ShmArena::new(8 << 20).expect("failed to create shared arena"));
+    let ring = SharedWalRing::<RING_SLOTS, RING_SLOT_BYTES>::create(Arc::clone(&shm))
+        .expect("failed to create shared wal ring");
+    let integrity_ptr = shm
+        .chunked_arena()
+        .alloc(RingIntegrity {
+            count: AtomicU32::new(0),
+            sum: AtomicU64::new(0),
+            xor: AtomicU64::new(0),
+        })
+        .expect("failed to allocate shared integrity block");
+
+    // Consumer process.
+    // SAFETY:
+    // `fork` duplicates process. Child exits via `_exit`.
+    let consumer_pid = unsafe { libc::fork() };
+    assert!(
+        consumer_pid >= 0,
+        "consumer fork failed: {}",
+        std::io::Error::last_os_error()
+    );
+    if consumer_pid == 0 {
+        let mut count = 0_u32;
+        let mut sum = 0_u64;
+        let mut xor = 0_u64;
+
+        loop {
+            match ring.pop_bytes() {
+                Ok(Some(payload)) => {
+                    let commit = match deserialize_commit_record(payload.as_slice()) {
+                        Ok(msg) => msg,
+                        Err(_) => unsafe { libc::_exit(61) },
+                    };
+                    count = count.wrapping_add(1);
+                    sum = sum.wrapping_add(commit.txid);
+                    xor ^= commit.txid;
+                    if count == TOTAL_MESSAGES as u32 {
+                        break;
+                    }
+                }
+                Ok(None) => {
+                    std::thread::yield_now();
+                    std::thread::sleep(std::time::Duration::from_micros(25));
+                }
+                Err(_) => unsafe { libc::_exit(62) },
+            }
+        }
+
+        let Some(integrity) = integrity_ptr.as_ref(shm.mmap_base()) else {
+            // SAFETY:
+            // child exits without unwinding.
+            unsafe { libc::_exit(63) };
+        };
+        integrity.count.store(count, Ordering::Release);
+        integrity.sum.store(sum, Ordering::Release);
+        integrity.xor.store(xor, Ordering::Release);
+
+        // SAFETY:
+        // child exits without unwinding.
+        unsafe { libc::_exit(0) };
+    }
+
+    let mut producer_pids = Vec::with_capacity(PRODUCERS);
+    for producer_idx in 0..PRODUCERS {
+        // SAFETY:
+        // `fork` duplicates process. Child exits via `_exit`.
+        let pid = unsafe { libc::fork() };
+        assert!(
+            pid >= 0,
+            "producer fork failed: {}",
+            std::io::Error::last_os_error()
+        );
+
+        if pid == 0 {
+            for seq in 0..MESSAGES_PER_PRODUCER {
+                let txid = ((producer_idx as u64) << 32) | (seq as u64 + 1);
+                let msg = WalRingCommit {
+                    txid,
+                    writes: vec![WalRingWrite {
+                        row_id: producer_idx as u64,
+                        base_offset: seq as u32,
+                        new_offset: seq as u32 + 1,
+                    }],
+                };
+
+                if ring.push_commit_record(&msg).is_err() {
+                    // SAFETY:
+                    // child exits without unwinding.
+                    unsafe { libc::_exit(71) };
+                }
+            }
+            // SAFETY:
+            // child exits without unwinding.
+            unsafe { libc::_exit(0) };
+        }
+
+        producer_pids.push(pid);
+    }
+
+    for pid in producer_pids {
+        wait_for_child(pid);
+    }
+    wait_for_child(consumer_pid);
+
+    let integrity = integrity_ptr
+        .as_ref(shm.mmap_base())
+        .expect("parent failed to resolve integrity block");
+
+    let mut expected_sum = 0_u64;
+    let mut expected_xor = 0_u64;
+    for producer_idx in 0..PRODUCERS {
+        for seq in 0..MESSAGES_PER_PRODUCER {
+            let txid = ((producer_idx as u64) << 32) | (seq as u64 + 1);
+            expected_sum = expected_sum.wrapping_add(txid);
+            expected_xor ^= txid;
+        }
+    }
+
+    assert_eq!(
+        integrity.count.load(Ordering::Acquire),
+        TOTAL_MESSAGES as u32,
+        "consumer did not receive all producer messages"
+    );
+    assert_eq!(
+        integrity.sum.load(Ordering::Acquire),
+        expected_sum,
+        "ring consumer checksum mismatch indicates corruption/loss"
+    );
+    assert_eq!(
+        integrity.xor.load(Ordering::Acquire),
+        expected_xor,
+        "ring consumer xor mismatch indicates corruption/loss"
     );
 }
 
