@@ -7,8 +7,9 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use aerostore_core::{
-    deserialize_commit_record, spawn_wal_writer_daemon, IndexValue, OccCommitter, OccTable,
-    SecondaryIndex, SharedWalRing, ShmArena, WalRingCommit, WalRingWrite, WalWriterDaemon,
+    deserialize_commit_record, spawn_wal_writer_daemon, IndexValue, LogicalDatabase,
+    LogicalDatabaseConfig, OccCommitter, OccTable, SecondaryIndex, SharedWalRing, ShmArena,
+    WalRingCommit, WalRingWrite, WalWriterDaemon,
 };
 use crossbeam_skiplist::SkipMap;
 use serde::{Deserialize, Serialize};
@@ -20,6 +21,8 @@ const RING_SLOT_BYTES: usize = 128;
 const TCL_BENCH_KEYS: usize = 64;
 const SAVEPOINT_CHURN_TXNS: usize = 5_000;
 const SAVEPOINT_CHURN_WRITES: usize = 6;
+const LOGICAL_RING_SLOTS: usize = 1024;
+const LOGICAL_RING_SLOT_BYTES: usize = 256;
 
 #[test]
 fn benchmark_async_synchronous_commit_modes() {
@@ -122,6 +125,27 @@ fn benchmark_async_synchronous_commit_modes_savepoint_churn() {
     assert!(
         ratio >= 10.0,
         "expected async savepoint churn throughput to be >=10x sync mode; observed {:.2}x",
+        ratio
+    );
+}
+
+#[test]
+fn benchmark_logical_async_vs_sync_commit_modes() {
+    let root = std::env::temp_dir().join("aerostore_logical_wal_benchmark");
+    fs::create_dir_all(&root).expect("failed to create logical wal benchmark directory");
+
+    let sync_tps = run_logical_benchmark(&root.join("sync"), true);
+    let async_tps = run_logical_benchmark(&root.join("async"), false);
+    let ratio = async_tps / sync_tps.max(1.0);
+
+    eprintln!(
+        "logical_wal_benchmark: txns={} sync_tps={:.2} async_tps={:.2} ratio={:.2}x",
+        TXNS, sync_tps, async_tps, ratio
+    );
+
+    assert!(
+        ratio >= 10.0,
+        "expected logical async synchronous_commit=off throughput to be >=10x sync mode; observed {:.2}x",
         ratio
     );
 }
@@ -562,4 +586,43 @@ fn remove_if_exists(path: &Path) {
     if path.exists() {
         let _ = fs::remove_file(path);
     }
+}
+
+fn run_logical_benchmark(data_dir: &Path, synchronous_commit: bool) -> f64 {
+    fs::create_dir_all(data_dir).expect("failed to create logical benchmark data dir");
+    remove_if_exists(&data_dir.join("aerostore_logical.wal"));
+    remove_if_exists(&data_dir.join("snapshot.dat"));
+
+    let db = LogicalDatabase::<LOGICAL_RING_SLOTS, LOGICAL_RING_SLOT_BYTES>::boot_from_disk(
+        LogicalDatabaseConfig {
+            data_dir: data_dir.to_path_buf(),
+            table_name: "flight_state".to_string(),
+            row_capacity: 1,
+            shm_bytes: 64 << 20,
+            synchronous_commit,
+        },
+    )
+    .expect("failed to boot logical benchmark database");
+
+    let start = Instant::now();
+    for i in 0..TXNS {
+        let payload = (i as u64).to_le_bytes();
+        db.upsert("UAL123", payload.as_slice())
+            .expect("logical benchmark upsert failed");
+    }
+    let elapsed = start.elapsed();
+
+    let final_payload = db
+        .payload_for_key("UAL123")
+        .expect("logical benchmark payload lookup failed")
+        .expect("logical benchmark key missing");
+    assert_eq!(
+        final_payload,
+        ((TXNS - 1) as u64).to_le_bytes().to_vec(),
+        "logical benchmark final payload mismatch"
+    );
+    db.shutdown()
+        .expect("failed to shutdown logical benchmark database");
+
+    TXNS as f64 / elapsed.as_secs_f64().max(f64::EPSILON)
 }
