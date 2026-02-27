@@ -2,7 +2,7 @@
 
 <img width="600" height="600" alt="Aerostore Logo" src="https://github.com/user-attachments/assets/7d64557f-9733-40b7-8f40-d251a48a5205" />
 
-Aerostore is a Rust-first, lock-free database prototype designed for high-ingest, high-concurrency market/flight data workloads.
+Aerostore is a Rust-first, lock-free shared-memory database prototype designed for high-ingest, high-concurrency market/flight data workloads.
 
 As of February 27, 2026, this repository contains a working hybrid architecture:
 
