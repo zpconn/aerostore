@@ -113,8 +113,7 @@ where
     F: Fn(&V) -> u64 + Send + Sync + 'static,
 {
     let (shutdown_tx, mut shutdown_rx) = oneshot::channel();
-    let updated_at_unix_secs: Arc<dyn Fn(&V) -> u64 + Send + Sync> =
-        Arc::new(updated_at_unix_secs);
+    let updated_at_unix_secs: Arc<dyn Fn(&V) -> u64 + Send + Sync> = Arc::new(updated_at_unix_secs);
 
     let task = tokio::spawn(async move {
         let mut ticker = time::interval(interval.max(Duration::from_millis(10)));

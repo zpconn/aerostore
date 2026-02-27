@@ -163,10 +163,7 @@ impl WalWriter {
     }
 }
 
-async fn run_wal_writer(
-    mut file: tokio::fs::File,
-    mut receiver: mpsc::Receiver<WalCommand>,
-) {
+async fn run_wal_writer(mut file: tokio::fs::File, mut receiver: mpsc::Receiver<WalCommand>) {
     let mut pending: Option<WalCommand> = None;
 
     loop {
@@ -381,7 +378,12 @@ where
         self.tx_manager.abort(&tx.inner);
     }
 
-    pub fn insert(&self, tx: &mut DurableTransaction<K, V>, key: K, value: V) -> Result<(), MvccError> {
+    pub fn insert(
+        &self,
+        tx: &mut DurableTransaction<K, V>,
+        key: K,
+        value: V,
+    ) -> Result<(), MvccError> {
         self.engine.insert(key.clone(), value.clone(), &tx.inner)?;
         tx.writes.push(WalOperation::Insert { key, value });
         Ok(())

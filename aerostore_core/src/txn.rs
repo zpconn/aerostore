@@ -55,6 +55,8 @@ unsafe impl Sync for Transaction {}
 
 pub struct TransactionManager {
     active_head: AtomicPtr<ActiveTxnNode>,
+    begin_started: AtomicU64,
+    begin_completed: AtomicU64,
 }
 
 impl TransactionManager {
@@ -62,6 +64,8 @@ impl TransactionManager {
     pub fn new() -> Self {
         Self {
             active_head: AtomicPtr::new(std::ptr::null_mut()),
+            begin_started: AtomicU64::new(0),
+            begin_completed: AtomicU64::new(0),
         }
     }
 
@@ -88,8 +92,10 @@ impl TransactionManager {
     }
 
     fn begin_with_assigned_txid(&self, txid: TxId) -> Transaction {
+        self.begin_started.fetch_add(1, Ordering::AcqRel);
         let node_ptr = Box::into_raw(Box::new(ActiveTxnNode::new(txid)));
         self.push_active(node_ptr);
+        self.begin_completed.fetch_add(1, Ordering::AcqRel);
 
         let snapshot = self.snapshot_for(txid);
         unsafe {
@@ -106,27 +112,39 @@ impl TransactionManager {
     }
 
     pub fn snapshot_for(&self, current_txid: TxId) -> Snapshot {
-        let xmax = GLOBAL_TXID.load(Ordering::Acquire);
-        let mut xmin = xmax;
-        let mut active = HashSet::new();
-
-        let mut current = self.active_head.load(Ordering::Acquire);
-        while !current.is_null() {
-            let node = unsafe { &*current };
-            if node.active.load(Ordering::Acquire) {
-                xmin = xmin.min(node.txid);
-                if node.txid != current_txid {
-                    active.insert(node.txid);
-                }
+        loop {
+            let began_before = self.begin_started.load(Ordering::Acquire);
+            let completed_before = self.begin_completed.load(Ordering::Acquire);
+            if began_before != completed_before {
+                std::hint::spin_loop();
+                continue;
             }
-            current = node.next.load(Ordering::Acquire);
-        }
 
-        if xmin == xmax {
-            xmin = current_txid;
-        }
+            let xmax = GLOBAL_TXID.load(Ordering::Acquire);
+            let mut xmin = xmax;
+            let mut active = HashSet::new();
 
-        Snapshot { xmin, xmax, active }
+            let mut current = self.active_head.load(Ordering::Acquire);
+            while !current.is_null() {
+                let node = unsafe { &*current };
+                if node.active.load(Ordering::Acquire) {
+                    xmin = xmin.min(node.txid);
+                    if node.txid != current_txid {
+                        active.insert(node.txid);
+                    }
+                }
+                current = node.next.load(Ordering::Acquire);
+            }
+
+            let began_after = self.begin_started.load(Ordering::Acquire);
+            let completed_after = self.begin_completed.load(Ordering::Acquire);
+            if began_before == began_after && completed_before == completed_after {
+                if xmin == xmax {
+                    xmin = current_txid;
+                }
+                return Snapshot { xmin, xmax, active };
+            }
+        }
     }
 
     #[inline]

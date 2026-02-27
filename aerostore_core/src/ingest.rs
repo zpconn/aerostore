@@ -51,7 +51,11 @@ impl<'a> TsvColumns<'a> {
         let rel = memchr(b'\t', &self.line[start..]);
         let end = rel.map(|idx| start + idx).unwrap_or(self.line.len());
 
-        self.cursor = if rel.is_some() { end + 1 } else { self.line.len() + 1 };
+        self.cursor = if rel.is_some() {
+            end + 1
+        } else {
+            self.line.len() + 1
+        };
         self.column_idx += 1;
         Some(&self.line[start..end])
     }
@@ -99,7 +103,10 @@ impl<'a> TsvColumns<'a> {
         if self.cursor > self.line.len() {
             Ok(())
         } else {
-            Err(TsvDecodeError::new(self.column_idx + 1, "unexpected extra columns"))
+            Err(TsvDecodeError::new(
+                self.column_idx + 1,
+                "unexpected extra columns",
+            ))
         }
     }
 }
@@ -124,7 +131,11 @@ impl fmt::Display for IngestError {
                 line,
                 column,
                 message,
-            } => write!(f, "decode error at line {}, column {}: {}", line, column, message),
+            } => write!(
+                f,
+                "decode error at line {}, column {}: {}",
+                line, column, message
+            ),
             IngestError::Mvcc(err) => write!(f, "mvcc error: {:?}", err),
             IngestError::Io(err) => write!(f, "io error: {}", err),
         }
@@ -224,11 +235,13 @@ where
         }
 
         let mut cols = TsvColumns::new(line);
-        let (key, value) = decoder.decode(&mut cols).map_err(|err| IngestError::Decode {
-            line: line_no,
-            column: err.column,
-            message: err.message,
-        })?;
+        let (key, value) = decoder
+            .decode(&mut cols)
+            .map_err(|err| IngestError::Decode {
+                line: line_no,
+                column: err.column,
+                message: err.message,
+            })?;
         cols.ensure_end().map_err(|err| IngestError::Decode {
             line: line_no,
             column: err.column,
