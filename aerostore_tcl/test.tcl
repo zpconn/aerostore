@@ -10,7 +10,8 @@ if {[catch {package require aerostore} version]} {
 }
 
 puts "Loaded aerostore package version: $version"
-puts [aerostore::init ./tmp/aerostore_tcl_demo]
+set data_dir ./tmp/aerostore_tcl_demo
+puts [aerostore::init $data_dir]
 
 set batch [join [list \
     "UAL123\t37.618805\t-122.375416\t35000\t451\t1709000000" \
@@ -37,6 +38,42 @@ if {$complex_count != 3} {
     error "expected complex STAPI-style count to be 3, got $complex_count"
 }
 
+set match_count [FlightState search -compare {{match flight UAL*}} -limit 10]
+puts "match flight UAL* count: $match_count"
+if {$match_count != 1} {
+    error "expected match count 1 after first ingest, got $match_count"
+}
+
+set second_batch [join [list \
+    "UAL123\t37.618805\t-122.375416\t35800\t459\t1709001000" \
+    "UAL555\t41.974200\t-87.907300\t41000\t472\t1709001001" \
+] "\n"]
+set second_ingest [FlightState ingest_tsv $second_batch 64]
+puts "second ingest: $second_ingest"
+
+set post_upsert_match [FlightState search -compare {{match ident UAL*}} -limit 10]
+puts "post-upsert match ident UAL* count: $post_upsert_match"
+if {$post_upsert_match != 2} {
+    error "expected UAL* count 2 after upsert batch, got $post_upsert_match"
+}
+
+set paged_desc_count [FlightState search \
+    -compare {{> alt 30000}} \
+    -sort alt \
+    -desc \
+    -offset 1 \
+    -limit 1]
+puts "paged descending altitude count: $paged_desc_count"
+if {$paged_desc_count != 1} {
+    error "expected paged descending count 1, got $paged_desc_count"
+}
+
+set high_alt_count [FlightState search -compare {{> altitude 35000}} -limit 10]
+puts "high altitude count (>35000): $high_alt_count"
+if {$high_alt_count != 2} {
+    error "expected high altitude count 2 after upsert batch, got $high_alt_count"
+}
+
 if {[catch {FlightState search -compare {{> altitude}} -limit 5} malformed_err]} {
     puts "malformed query rejected as expected: $malformed_err"
     if {![string match "TCL_ERROR:*" $malformed_err]} {
@@ -45,6 +82,10 @@ if {[catch {FlightState search -compare {{> altitude}} -limit 5} malformed_err]}
 } else {
     error "expected malformed query to return TCL_ERROR, but it succeeded"
 }
+
+# Re-init with the same directory to validate idempotent initialization semantics.
+set init_again [aerostore::init $data_dir]
+puts "reinit: $init_again"
 
 # Coverage hooks for upcoming synchronous_commit and retry-loop integration.
 # These are optional so the script remains compatible with current builds.
