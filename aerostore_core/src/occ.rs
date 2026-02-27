@@ -762,6 +762,17 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         Ok(Some(row.value))
     }
 
+    pub fn row_head_offset(&self, row_id: usize) -> Result<u32, Error> {
+        if row_id >= self.capacity() {
+            return Err(Error::RowOutOfBounds {
+                row_id,
+                capacity: self.capacity(),
+            });
+        }
+        let slot = self.slot_ref(row_id)?;
+        Ok(slot.head.load(Ordering::Acquire))
+    }
+
     pub fn apply_recovered_write(&self, row_id: usize, txid: TxId, value: T) -> Result<(), Error> {
         if row_id >= self.capacity() {
             return Err(Error::RowOutOfBounds {

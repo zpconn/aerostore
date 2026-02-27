@@ -21,6 +21,7 @@ nom = "7.1"
 aerostore_macros = { path = "../aerostore_macros" }
 criterion = "0.5"
 loom = "0.7"
+tempfile = "3.15"
 
 [[bench]]
 name = "procarray_snapshot"
