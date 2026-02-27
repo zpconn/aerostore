@@ -146,7 +146,9 @@ Primary code:
 ### 9. Tcl Bridge
 
 - `aerostore_tcl` exports `Aerostore_Init` / `Aerostore_SafeInit`.
-- Runtime + DB shared via `OnceLock` across interpreters.
+- Shared-memory OCC table + WAL ring writer are initialized once via `OnceLock` and shared by all interpreters in-process.
+- `FlightState search` is executed against the OCC snapshot path (planner + index routing + SSI read tracking).
+- `FlightState ingest_tsv` performs batched OCC upserts and commits through the WAL ring committer path.
 - FFI errors are normalized with `TCL_ERROR:` prefix.
 
 Primary code:
@@ -286,12 +288,15 @@ set count [FlightState search -compare {{> altitude 10000} {< altitude 36000} {i
 
 ## Durable On-Disk Files
 
-In a `DurableDatabase` directory:
+Current disk artifacts:
 
-- `wal.log`: framed append-only write-ahead log
-- `checkpoint.dat`: checkpoint image
+- V1 `DurableDatabase` path:
+  - `wal.log`: framed append-only write-ahead log
+  - `checkpoint.dat`: checkpoint image
+- Tcl OCC + WAL ring path:
+  - `aerostore.wal`: daemon-appended WAL stream from shared-memory ring commits
 
-Recovery order:
+V1 recovery order:
 
 1. load checkpoint
 2. replay WAL frames
@@ -299,9 +304,9 @@ Recovery order:
 
 ## Current Integration Boundaries
 
-- `DurableDatabase` is still the V1 MVCC path.
-- Shared-memory OCC + WAL ring components are implemented and validated but not yet fully wired into Tcl-facing durable query execution.
-- `stapi_parser.rs`/`planner.rs` are implemented in `aerostore_core` and covered by unit/integration tests; Tcl search currently still uses its existing `Tcl_Obj` option parsing path.
+- `DurableDatabase` remains the V1 MVCC durability path used by core recovery tests.
+- Tcl-facing query/ingest execution is now wired to shared-memory OCC + WAL ring commits (the previous README caveat has been resolved).
+- Tcl search option parsing still uses Tcl list-object decoding (`Tcl_ListObjGetElements`) before mapping into planner filters; direct raw STAPI string parsing is implemented in `aerostore_core::stapi_parser` and validated in unit tests.
 - `rollback_to(savepoint)` truncates pending write intent; abandoned shared-memory allocations are logical discards (not immediate compaction).
 
 ## License

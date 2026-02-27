@@ -38,6 +38,7 @@ dependencies = [
  "aerostore_core",
  "clib",
  "crossbeam",
+ "crossbeam-skiplist",
  "serde",
  "tcl",
  "tokio",
