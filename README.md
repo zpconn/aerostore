@@ -1,126 +1,128 @@
 # Aerostore
 
-Aerostore is a Rust-first, lock-free database prototype aimed at replacing Hyperfeed's legacy PostgreSQL state-store for high-ingest, high-concurrency flight data workloads.
+Aerostore is a Rust-first, lock-free database prototype designed to replace Hyperfeed's PostgreSQL + Speedtables stack for high-ingest, high-concurrency flight data workloads.
 
-As of February 27, 2026, the repository contains a working hybrid architecture:
+As of February 27, 2026, this repository contains a working hybrid architecture:
 
-- V1 in-process MVCC + durable WAL/checkpoint/recovery path.
-- V2 shared-memory (`mmap`) foundation for fork-heavy deployments.
-- PostgreSQL-style bounded `ProcArray` snapshot tracking.
+- V1 in-process MVCC engine with durable WAL/checkpoint/recovery.
+- V2 shared-memory (`mmap`) foundation for `fork()`-heavy deployments.
+- PostgreSQL-style bounded `ProcArray` for active transaction tracking.
 - Serializable OCC/SSI with savepoints and rollback-to-savepoint.
-- Lock-free SkipList secondary indexes + typed query planner.
-- Decoupled WAL ring primitives with optional async commit (`synchronous_commit=off` behavior).
-- Tcl `cdylib` bridge for in-process query and ingest calls.
+- SkipList secondary indexes and typed query execution.
+- STAPI parser/compiler modules for Speedtables-style query syntax.
+- Decoupled WAL ring + WAL writer daemon for `synchronous_commit=off` behavior.
+- Tcl `cdylib` bridge for in-process ingest/query commands.
 
 ## Workspace Layout
 
-- `aerostore_core/`: core engine, durability layers, tests, and benches.
+- `aerostore_core/`: core engine, durability, parser/planner, tests, benches.
 - `aerostore_macros/`: `#[speedtable]` schema macro crate.
-- `aerostore_tcl/`: Tcl extension crate (`cdylib`) and integration demo script.
+- `aerostore_tcl/`: Tcl extension crate (`cdylib`) and demo script.
 
 ## Current Module Inventory
 
 `aerostore_core/src` currently exports:
 
 - `arena.rs`: lock-free arena and version-chain table primitives.
-- `txn.rs`: transaction manager and snapshot data model (V1 MVCC path).
-- `mvcc.rs`: MVCC row visibility + version-chain operations.
-- `index.rs`: secondary index abstraction backed by `crossbeam_skiplist::SkipMap`.
-- `query.rs`: typed query builder, planner, and executor.
-- `wal.rs`: append-only WAL, group commit worker, checkpointing, recovery state machine.
-- `ingest.rs`: low-allocation TSV decode + bulk upsert.
-- `watch.rs`: commit-stream pub/sub and TTL sweeper.
-- `shm.rs`: shared memory arena (`mmap`) + relative pointers (`RelPtr<T>`).
-- `procarray.rs`: bounded 256-slot active transaction array.
-- `occ.rs`: shared-memory optimistic concurrency control (SSI validation + savepoints).
-- `wal_ring.rs`: lock-free shared-memory MPSC WAL ring + `rkyv` serialization helpers.
-- `wal_writer.rs`: forked WAL writer daemon + sync/async commit dispatcher.
+- `txn.rs`: transaction manager and snapshot model (V1 path).
+- `mvcc.rs`: MVCC visibility and row-version operations.
+- `index.rs`: SkipList secondary indexes.
+- `query.rs`: typed `QueryBuilder` planner/executor.
+- `stapi_parser.rs`: `nom` combinator parser for STAPI/Tcl-style query strings.
+- `planner.rs`: STAPI AST compiler and dynamic execution plan with index routing.
+- `shm.rs`: shared memory arena (`mmap`) + `RelPtr<T>`.
+- `procarray.rs`: bounded 256-slot active tx array.
+- `occ.rs`: shared-memory OCC/SSI with savepoints.
+- `wal.rs`: WAL, group commit, checkpointing, recovery.
+- `wal_ring.rs`: shared-memory MPSC ring + `rkyv` commit payload codec.
+- `wal_writer.rs`: forked WAL writer daemon + sync/async OCC commit sink.
+- `ingest.rs`: TSV bulk upsert pipeline.
+- `watch.rs`: pub/sub change streaming + TTL sweeper.
 
-## Architecture Overview
+## Architecture Summary
 
-### 1. Schema + Arena Primitives
+### 1. Schema + Arena Foundation
 
-- `#[speedtable]` macro injects hidden system columns (`_nullmask`, `_xmin`, `_xmax`) into rows.
-- `ChunkedArena<T>` and `Table<K, V>` provide lock-free allocation and version chaining for the baseline path.
+- `#[speedtable]` injects hidden system columns (`_nullmask`, `_xmin`, `_xmax`).
+- `ChunkedArena<T>` and `Table<K, V>` provide lock-free allocation + version chains.
 
 Primary code:
 
 - `aerostore_macros/src/lib.rs`
 - `aerostore_core/src/arena.rs`
 
-### 2. MVCC and Visibility (PostgreSQL-Inspired)
+### 2. MVCC Visibility (PostgreSQL-inspired)
 
-- `TransactionManager` issues monotonic txids and tracks active transactions.
-- `MvccTable` keeps version chains with atomic `_xmax`.
-- `is_visible(...)` enforces snapshot visibility.
-- Old versions are reclaimed via `crossbeam-epoch`.
+- Monotonic txids and active transaction tracking.
+- Version-chain visibility checks via `is_visible(...)`.
+- Deferred reclamation via `crossbeam-epoch`.
 
 Primary code:
 
 - `aerostore_core/src/txn.rs`
 - `aerostore_core/src/mvcc.rs`
 
-### 3. Shared Memory Foundation for `fork()`
+### 3. Shared Memory + Relative Pointer Model
 
-- `ShmArena` uses `mmap(MAP_SHARED | MAP_ANONYMOUS)`.
-- `RelPtr<T>` stores 32-bit offsets rather than absolute pointers.
-- Shared bump allocator returns `RelPtr<T>` so parent/child mappings remain valid even with different virtual base addresses.
+- `ShmArena` maps shared memory with `MAP_SHARED`.
+- `RelPtr<T>` stores offsets, not absolute pointers, so forked processes can safely dereference at different virtual base addresses.
 
 Primary code:
 
 - `aerostore_core/src/shm.rs`
 
-### 4. Bounded ProcArray (O(1) Snapshot Cost)
+### 4. Bounded ProcArray
 
-- Fixed active transaction table: `PROCARRAY_SLOTS = 256`.
-- Each slot is cache-line aligned (`#[repr(align(64))]`) to reduce false sharing.
-- Begin/end transaction use CAS claim/release over fixed slots.
-- Snapshot creation scans only 256 slots (bounded constant cost, no unbounded linked list).
+- Fixed `PROCARRAY_SLOTS = 256`.
+- Cache-line aligned slots to reduce false sharing.
+- CAS claim/release on begin/end transaction.
+- Snapshot creation has bounded constant work (scan 256 slots).
 
 Primary code:
 
 - `aerostore_core/src/procarray.rs`
 - `aerostore_core/benches/procarray_snapshot.rs`
 
-### 5. Serializable OCC/SSI with Savepoints
+### 5. OCC/SSI + Savepoints
 
-- `OccTransaction` keeps process-local `ReadSet` and `WriteSet`.
-- `savepoint(name)` records current write-set length.
-- `rollback_to(name)` truncates pending writes to that savepoint boundary.
-- `commit()` performs SSI validation under a short shared-memory spinlock.
-- Validation conflicts return `Error::SerializationFailure`.
-- Successful commits atomically publish staged versions into shared indexes.
+- Process-local read/write sets.
+- `savepoint(name)` and `rollback_to(name)` support nested partial rollback.
+- Commit phase validates read set and returns `SerializationFailure` on conflicts.
 
 Primary code:
 
 - `aerostore_core/src/occ.rs`
 
-### 6. Indexing and Query Planner
+### 6. Typed Query + STAPI Query Planning
 
-- Secondary indexes use lock-free SkipLists.
-- `QueryBuilder<T>` supports `eq`, `gt`, `lt`, `in_values`, sort, limit, and offset.
-- Planner selects indexed candidate path when possible, otherwise falls back to sequential scan.
-- All query paths pass rows through MVCC visibility checks before returning results.
+- Typed path: `QueryBuilder` + SkipList candidate routing.
+- STAPI path:
+  - `stapi_parser.rs` parses strings like
+    - `-compare {{match flight UAL*} {> alt 10000} {in typ {B738 A320}}} -sort alt -limit 50`
+  - AST: `Query { filters, sort, limit }`
+  - `planner.rs` compiles AST into executable filter plan.
+  - Indexed `=`/`>` filters route to SkipList first; remaining clauses run as closures.
+  - OCC execution path uses `OccTable::read(...)`, so rows are tracked in read-set for SSI validation.
 
 Primary code:
 
-- `aerostore_core/src/index.rs`
 - `aerostore_core/src/query.rs`
+- `aerostore_core/src/stapi_parser.rs`
+- `aerostore_core/src/planner.rs`
 
-### 7. Durability Paths
+### 7. Durability
 
-Aerostore currently has two durability-related stacks:
+Two durability stacks currently exist:
 
-- `wal.rs` path (integrated with `DurableDatabase`):
-  - framed append-only WAL (`wal.log`) via `bincode`
-  - group-commit writer task and commit acks
-  - periodic checkpoints (`checkpoint.dat`)
-  - restart recovery: checkpoint load then WAL replay
-- `wal_ring.rs` + `wal_writer.rs` path (shared-memory OCC-oriented primitives):
-  - lock-free MPSC ring in shared memory
-  - `rkyv` commit frame serialization
-  - dedicated daemon process drains ring and `fdatasync`s periodically
-  - `OccCommitter` supports synchronous and asynchronous commit modes
+- Integrated `DurableDatabase` stack (`wal.rs`):
+  - framed `wal.log` (`bincode`)
+  - background group commit
+  - periodic `checkpoint.dat`
+  - startup checkpoint + WAL replay
+- Shared-memory OCC durability primitives (`wal_ring.rs` + `wal_writer.rs`):
+  - lock-free MPSC ring
+  - daemonized WAL sink with periodic `fdatasync`
+  - `OccCommitter` supports sync and async commit modes
 
 Primary code:
 
@@ -128,26 +130,22 @@ Primary code:
 - `aerostore_core/src/wal_ring.rs`
 - `aerostore_core/src/wal_writer.rs`
 
-### 8. Ingestion, Event Streaming, and TTL
+### 8. Ingest / Streaming / TTL
 
-- TSV parser is optimized with `memchr` and typed decoders.
-- Bulk upsert writes are batched.
-- `TableWatch` emits row changes to subscribers through `tokio::sync::broadcast`.
-- TTL sweeper prunes rows older than a configured threshold.
+- High-speed TSV decode + batch upsert.
+- Broadcast watch stream on commits.
+- Background TTL sweeper.
 
 Primary code:
 
 - `aerostore_core/src/ingest.rs`
 - `aerostore_core/src/watch.rs`
 
-### 9. Tcl Extension Bridge
+### 9. Tcl Bridge
 
-- `aerostore_tcl` builds as a `cdylib` and exports `Aerostore_Init`/`Aerostore_SafeInit`.
-- Database/runtime are shared across interpreters via `OnceLock`.
-- Tcl command surface currently includes:
-  - `aerostore::init ?data_dir?`
-  - `FlightState ingest_tsv ...`
-  - `FlightState search ...`
+- `aerostore_tcl` exports `Aerostore_Init` / `Aerostore_SafeInit`.
+- Runtime + DB shared via `OnceLock` across interpreters.
+- FFI errors are normalized with `TCL_ERROR:` prefix.
 
 Primary code:
 
@@ -158,7 +156,7 @@ Primary code:
 
 ### Rust
 
-- Stable Rust toolchain (`cargo`, `rustc`).
+- Stable Rust (`cargo`, `rustc`).
 
 ### Tcl extension (optional)
 
@@ -186,130 +184,124 @@ Tcl extension only:
 cargo build -p aerostore_tcl
 ```
 
-## Test and Benchmark Runbook
+## Test + Benchmark Runbook
 
-### Full release regression
+### Full release suite
 
 ```bash
 cargo test --workspace --release -- --test-threads=1
 ```
 
-### Long-running lock-free GC stress (ignored by default)
+### Long-running GC stress (ignored by default)
 
 ```bash
 cargo test -p aerostore_core --release --test test_concurrency -- --ignored --test-threads=1
 ```
 
-### ProcArray constant-time proof benchmark
+### ProcArray constant-time benchmark
 
 ```bash
 cargo bench -p aerostore_core --bench procarray_snapshot
 ```
 
-This benchmark asserts:
+Assertions in benchmark:
 
-- snapshot creation remains under `50ns` at low and high txid baselines
-- snapshot time delta remains near-constant (`txid=10` vs `txid=10_000_000`)
+- snapshot latency under `50ns` at txid=10 and txid=10,000,000
+- near-constant delta between low/high txid runs
 
-### WAL ring throughput benchmark (`sync` vs `async`)
+### WAL sync vs async throughput benchmark
 
 ```bash
 cargo test -p aerostore_core --release --test wal_ring_benchmark benchmark_async_synchronous_commit_modes -- --exact --nocapture --test-threads=1
 ```
 
-Benchmark target:
+Target:
 
-- asynchronous mode (`synchronous_commit=off`) must be at least `10x` faster than synchronous mode
+- async mode (`synchronous_commit=off`) at least `10x` throughput vs sync mode
 
-### Additional performance-oriented suites
+### Query/index benchmarks
 
 ```bash
-cargo test -p aerostore_core --release --test speedtable_arena_perf -- --nocapture
-cargo test -p aerostore_core --release --test query_index_benchmark -- --nocapture
-cargo test -p aerostore_core --release --test shm_benchmark -- --nocapture
+cargo test -p aerostore_core --release --test query_index_benchmark -- --nocapture --test-threads=1
 ```
 
-## Reliability and Concurrency Test Coverage
+Includes:
+
+- typed query benchmark (existing)
+- STAPI parse+compile+execute benchmark (new)
+
+### Targeted reliability suites
+
+```bash
+cargo test -p aerostore_core --release --test occ_write_skew --test procarray_concurrency --test wal_crash_recovery --test shm_shared_memory -- --test-threads=1
+```
+
+## Reliability and Concurrency Coverage
 
 - `tests/test_concurrency.rs`
-  - loom model-check for CAS ordering and pointer publication
-  - Hyperfeed GC stress: 100,000 updates + slow readers + drop-accounting leak proof
+  - loom CAS publication model check
+  - 100,000-update GC stress + drop-accounting leak proof
 - `tests/mvcc_tokio_concurrency.rs`
-  - 50 reader transactions vs 50 writer transactions, no partial-update visibility
+  - 50-reader/50-writer partial-update visibility guard
 - `tests/procarray_concurrency.rs`
-  - threaded/forked begin-end stress
-  - OCC conflict pressure with WAL ring backpressure while ensuring slots release
+  - threaded/forked transaction slot stress
+  - OCC conflict + ring backpressure slot-release check
 - `tests/occ_write_skew.rs`
-  - classic serializable write-skew anomaly
-  - verifies one commit and one `SerializationFailure`
-  - runs in both synchronous and asynchronous commit modes
+  - baseline write-skew serializable failure proof
+  - planner-driven read variant proving SSI read-set integration
 - `tests/wal_crash_recovery.rs`
-  - checkpoint + WAL replay restoration
-  - async WAL daemon crash/restart replayability test
+  - checkpoint + WAL replay recovery
+  - WAL daemon crash/restart replayability
 - `tests/wal_ring_benchmark.rs`
-  - sync vs async commit throughput gate
-  - producer backpressure correctness and message integrity checks
+  - sync-vs-async throughput gate
+  - ring backpressure integrity checks
+- `tests/query_index_benchmark.rs`
+  - indexed query scan benchmark
+  - STAPI parse/compile/execute benchmark extension
 - `tests/shm_shared_memory.rs`
-  - forked CAS correctness
-  - forked multi-producer ring integrity (checksum/xor/count validation)
+  - forked CAS contention correctness
+  - forked ring producer integrity checks
 
-## Tcl Demo and Query Syntax
+## Tcl Demo
 
-Run demo:
+Run:
 
 ```bash
 tclsh aerostore_tcl/test.tcl
 ```
 
-The demo attempts `package require aerostore`, falls back to loading the built shared object, initializes a DB, ingests TSV rows, and runs a filtered/sorted search.
+The demo now validates:
 
-Example search:
+- basic ingest and search
+- complex STAPI-style search input
+- malformed search rejection with explicit `TCL_ERROR:` message
+
+Example query syntax:
 
 ```tcl
-set count [FlightState search -compare {{> altitude 10000}} -sort lat -limit 50]
+set count [FlightState search -compare {{> altitude 10000} {< altitude 36000} {in flight {UAL123 AAL456 SWA321}}} -sort altitude -limit 10]
 ```
 
-Supported search filters:
+## Durable On-Disk Files
 
-- `=`, `==`, `>`, `<`, `in`
+In a `DurableDatabase` directory:
 
-Supported options:
-
-- `-compare`
-- `-sort`
-- `-asc` or `-desc`
-- `-limit`
-- `-offset`
-
-Field aliases:
-
-- `flight_id`, `flight`, `ident`
-- `altitude`, `alt`
-- `lat`
-- `lon`, `long`, `longitude`
-- `gs`, `groundspeed`
-- `updated_at`, `updated`, `ts`
-
-## Durable Files on Disk
-
-For `DurableDatabase` data directories:
-
-- `wal.log`: framed append-only WAL segments.
-- `checkpoint.dat`: compact checkpoint state.
+- `wal.log`: framed append-only write-ahead log
+- `checkpoint.dat`: checkpoint image
 
 Recovery order:
 
-1. load `checkpoint.dat`
-2. replay remaining WAL frames
-3. resume normal service
+1. load checkpoint
+2. replay WAL frames
+3. serve traffic
 
-## Status and Known Integration Boundaries
+## Current Integration Boundaries
 
-- `DurableDatabase` currently runs on the V1 in-process MVCC stack.
-- Shared-memory OCC + WAL ring components are implemented and tested, but not yet fully wired into the Tcl-facing durable path.
-- `rollback_to(savepoint)` truncates local pending writes; abandoned shared-memory allocations are logically discarded (not immediately compacted).
-- `aerostore_tcl/test.tcl` includes optional hooks for future config/retry-loop commands and safely skips them if not exported yet.
+- `DurableDatabase` is still the V1 MVCC path.
+- Shared-memory OCC + WAL ring components are implemented and validated but not yet fully wired into Tcl-facing durable query execution.
+- `stapi_parser.rs`/`planner.rs` are implemented in `aerostore_core` and covered by unit/integration tests; Tcl search currently still uses its existing `Tcl_Obj` option parsing path.
+- `rollback_to(savepoint)` truncates pending write intent; abandoned shared-memory allocations are logical discards (not immediate compaction).
 
 ## License
 
-No license file has been added yet. Treat this repository as proprietary/internal unless a license is explicitly published.
+No license file is present yet. Treat this repository as proprietary/internal unless a license is explicitly added.
