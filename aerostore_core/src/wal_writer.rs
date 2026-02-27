@@ -137,6 +137,7 @@ pub fn spawn_wal_writer_daemon<const SLOTS: usize, const SLOT_BYTES: usize>(
     wal_path: impl AsRef<Path>,
 ) -> io::Result<WalWriterDaemon> {
     let wal_path = wal_path.as_ref().to_path_buf();
+    let parent_pid = unsafe { libc::getpid() };
 
     // SAFETY:
     // `fork` is used intentionally to emulate a dedicated WAL writer OS process.
@@ -146,6 +147,11 @@ pub fn spawn_wal_writer_daemon<const SLOTS: usize, const SLOT_BYTES: usize>(
     }
 
     if pid == 0 {
+        if arm_parent_death_signal(parent_pid).is_err() {
+            // SAFETY:
+            // child exits immediately without unwinding parent runtime state.
+            unsafe { libc::_exit(1) };
+        }
         let code = match wal_writer_daemon_loop(ring, &wal_path) {
             Ok(_) => 0_i32,
             Err(_) => 1_i32,
@@ -156,6 +162,34 @@ pub fn spawn_wal_writer_daemon<const SLOTS: usize, const SLOT_BYTES: usize>(
     }
 
     Ok(WalWriterDaemon { pid })
+}
+
+#[cfg(target_os = "linux")]
+fn arm_parent_death_signal(expected_parent: libc::pid_t) -> io::Result<()> {
+    // SAFETY:
+    // called in the child immediately after `fork` to ensure the WAL daemon receives
+    // SIGTERM if its parent process disappears (normal exit or crash), preventing
+    // orphaned background daemons in tests and CLI/Tcl hosts.
+    let rc = unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM) };
+    if rc != 0 {
+        return Err(io::Error::last_os_error());
+    }
+
+    // Handle the fork-to-prctl race where parent may have exited before we armed it.
+    let observed_parent = unsafe { libc::getppid() };
+    if observed_parent != expected_parent {
+        return Err(io::Error::new(
+            io::ErrorKind::Interrupted,
+            "parent exited before wal daemon armed PDEATHSIG",
+        ));
+    }
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "linux"))]
+fn arm_parent_death_signal(_expected_parent: libc::pid_t) -> io::Result<()> {
+    Ok(())
 }
 
 fn wal_writer_daemon_loop<const SLOTS: usize, const SLOT_BYTES: usize>(
