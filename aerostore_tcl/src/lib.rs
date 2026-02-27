@@ -1,8 +1,6 @@
-use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::os::raw::{c_char, c_int};
 use std::path::{Path, PathBuf};
-use std::ptr;
 use std::slice;
 use std::str;
 use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
@@ -10,12 +8,12 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 
 use aerostore_core::{
-    spawn_wal_writer_daemon, IngestStats, IndexCatalog, IndexValue, OccError, OccTable,
-    OccTransaction, PlannerError, QueryPlanner, SecondaryIndex, SharedWalRing, ShmArena,
-    SortDirection, StapiFilter, StapiQuery, StapiRow, StapiValue, TsvColumns, TsvDecodeError,
-    WalWriterError,
+    recover_occ_table_from_wal, spawn_wal_writer_daemon, IndexCatalog, IndexValue, IngestStats,
+    OccError, OccTable, OccTransaction, PlannerError, QueryPlanner, SecondaryIndex, SharedWalRing,
+    ShmArena, StapiRow, StapiValue, TsvColumns, TsvDecodeError, WalWriterError,
 };
 use crossbeam_skiplist::SkipMap;
+use serde::{Deserialize, Serialize};
 use tcl::Interp;
 
 const PACKAGE_NAME: &str = "aerostore";
@@ -35,7 +33,7 @@ type FlightDb = SharedFlightDb;
 static GLOBAL_DB: OnceLock<Arc<FlightDb>> = OnceLock::new();
 static GLOBAL_DB_DIR: OnceLock<String> = OnceLock::new();
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 struct FlightState {
     exists: u8,
     flight_id: [u8; FLIGHT_ID_BYTES],
@@ -68,8 +66,12 @@ impl FlightState {
         gs: u16,
         updated_at: u64,
     ) -> Result<Self, String> {
-        let encoded_id = encode_fixed_ascii::<FLIGHT_ID_BYTES>(flight_id)
-            .ok_or_else(|| format!("flight_id '{}' exceeds {} bytes", flight_id, FLIGHT_ID_BYTES))?;
+        let encoded_id = encode_fixed_ascii::<FLIGHT_ID_BYTES>(flight_id).ok_or_else(|| {
+            format!(
+                "flight_id '{}' exceeds {} bytes",
+                flight_id, FLIGHT_ID_BYTES
+            )
+        })?;
 
         Ok(Self {
             exists: 1,
@@ -126,78 +128,12 @@ impl StapiRow for FlightState {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-enum FieldName {
-    FlightId,
-    Altitude,
-    Lat,
-    Lon,
-    Gs,
-    UpdatedAt,
-}
-
-impl FieldName {
-    fn parse(name: &str) -> Option<Self> {
-        match name {
-            "flight" | "flight_id" | "ident" => Some(Self::FlightId),
-            "alt" | "altitude" => Some(Self::Altitude),
-            "lat" => Some(Self::Lat),
-            "lon" | "long" | "longitude" => Some(Self::Lon),
-            "gs" | "groundspeed" => Some(Self::Gs),
-            "updated_at" | "updated" | "ts" => Some(Self::UpdatedAt),
-            _ => None,
-        }
-    }
-
-    #[inline]
-    fn canonical_name(self) -> &'static str {
-        match self {
-            FieldName::FlightId => "flight_id",
-            FieldName::Altitude => "altitude",
-            FieldName::Lat => "lat",
-            FieldName::Lon => "lon",
-            FieldName::Gs => "gs",
-            FieldName::UpdatedAt => "updated_at",
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-enum ComparisonValue {
-    String(String),
-    I32(i32),
-    U16(u16),
-    U64(u64),
-    F64(f64),
-}
-
-#[derive(Clone, Debug)]
-enum Comparison {
-    Eq(FieldName, ComparisonValue),
-    Gt(FieldName, ComparisonValue),
-    Lt(FieldName, ComparisonValue),
-    In(FieldName, Vec<ComparisonValue>),
-    Match(FieldName, String),
-}
-
-struct SearchOptions {
-    comparisons: Vec<Comparison>,
-    sort_field: Option<FieldName>,
-    sort_direction: SortDirection,
+struct SearchRequest {
+    stapi: String,
     limit: Option<usize>,
     offset: usize,
-}
-
-impl Default for SearchOptions {
-    fn default() -> Self {
-        Self {
-            comparisons: Vec::new(),
-            sort_field: None,
-            sort_direction: SortDirection::Asc,
-            limit: None,
-            offset: 0,
-        }
-    }
+    sort_desc: bool,
+    has_sort: bool,
 }
 
 struct FlightTsvDecoder;
@@ -277,8 +213,7 @@ impl FlightIndexes {
         }
 
         let row_key = row.flight_id_string();
-        self.flight_id
-            .remove(&IndexValue::String(row_key), &row_id);
+        self.flight_id.remove(&IndexValue::String(row_key), &row_id);
 
         self.altitude
             .remove(&IndexValue::I64(row.altitude as i64), &row_id);
@@ -297,8 +232,7 @@ impl FlightIndexes {
         }
 
         let row_key = row.flight_id_string();
-        self.flight_id
-            .insert(IndexValue::String(row_key), row_id);
+        self.flight_id.insert(IndexValue::String(row_key), row_id);
 
         self.altitude
             .insert(IndexValue::I64(row.altitude as i64), row_id);
@@ -306,8 +240,7 @@ impl FlightIndexes {
         self.lat.insert(IndexValue::I64(row.lat_scaled), row_id);
         self.lon.insert(IndexValue::I64(row.lon_scaled), row_id);
         if let Ok(updated_at) = i64::try_from(row.updated_at) {
-            self.updated_at
-                .insert(IndexValue::I64(updated_at), row_id);
+            self.updated_at.insert(IndexValue::I64(updated_at), row_id);
         }
     }
 }
@@ -327,8 +260,13 @@ struct SharedFlightDb {
 
 impl SharedFlightDb {
     fn open(data_dir: &Path) -> Result<Self, String> {
-        std::fs::create_dir_all(data_dir)
-            .map_err(|err| format!("failed to create data dir '{}': {}", data_dir.display(), err))?;
+        std::fs::create_dir_all(data_dir).map_err(|err| {
+            format!(
+                "failed to create data dir '{}': {}",
+                data_dir.display(),
+                err
+            )
+        })?;
 
         let shm = Arc::new(
             ShmArena::new(DEFAULT_SHM_ARENA_BYTES)
@@ -348,20 +286,39 @@ impl SharedFlightDb {
         let indexes = FlightIndexes::new();
         let planner = QueryPlanner::new(indexes.as_catalog());
 
+        let wal_path = data_dir.join(WAL_FILE_NAME);
+        let _recovery = recover_occ_table_from_wal(&table, &wal_path)
+            .map_err(|err| format!("failed to recover OCC state from WAL: {}", err))?;
+
+        let key_index = SkipMap::new();
+        let mut next_row_id = 0_usize;
+        for row_id in 0..DEFAULT_ROW_CAPACITY {
+            let row = table
+                .latest_value(row_id)
+                .map_err(|err| format!("failed to inspect recovered row {}: {}", row_id, err))?
+                .ok_or_else(|| format!("seeded row {} unexpectedly missing", row_id))?;
+            if row.exists == 0 {
+                continue;
+            }
+            indexes.insert_row(row_id, &row);
+            key_index.insert(row.flight_id_string(), row_id);
+            next_row_id = next_row_id.max(row_id + 1);
+        }
+
         let ring = SharedWalRing::<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>::create(Arc::clone(&shm))
             .map_err(|err| format!("failed to create shared WAL ring: {}", err))?;
-        let wal_path = data_dir.join(WAL_FILE_NAME);
         let wal_daemon = spawn_wal_writer_daemon(ring.clone(), &wal_path)
             .map_err(|err| format!("failed to spawn WAL writer daemon: {}", err))?;
-        let committer = aerostore_core::OccCommitter::<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>::new_asynchronous(
-            ring.clone(),
-        );
+        let committer =
+            aerostore_core::OccCommitter::<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>::new_asynchronous(
+                ring.clone(),
+            );
 
         Ok(Self {
             table,
             planner,
-            key_index: SkipMap::new(),
-            next_row_id: AtomicUsize::new(0),
+            key_index,
+            next_row_id: AtomicUsize::new(next_row_id),
             row_capacity: DEFAULT_ROW_CAPACITY,
             indexes,
             committer: Mutex::new(committer),
@@ -371,11 +328,10 @@ impl SharedFlightDb {
         })
     }
 
-    fn search_count(&self, options: SearchOptions) -> Result<usize, String> {
-        let query = options_to_stapi_query(&options)?;
+    fn search_count(&self, request: SearchRequest) -> Result<usize, String> {
         let plan = self
             .planner
-            .compile(&query)
+            .compile_from_stapi(request.stapi.as_str())
             .map_err(|err| format_planner_error(err))?;
 
         let mut tx = self
@@ -393,15 +349,12 @@ impl SharedFlightDb {
 
         rows.retain(|row| row.exists != 0);
 
-        if let Some(sort_field) = options.sort_field {
-            rows.sort_unstable_by(|left, right| compare_rows(sort_field, left, right));
-            if matches!(options.sort_direction, SortDirection::Desc) {
-                rows.reverse();
-            }
+        if request.has_sort && request.sort_desc {
+            rows.reverse();
         }
 
-        let start = options.offset.min(rows.len());
-        let end = options
+        let start = request.offset.min(rows.len());
+        let end = request
             .limit
             .map(|limit| start.saturating_add(limit).min(rows.len()))
             .unwrap_or(rows.len());
@@ -614,17 +567,6 @@ fn scale_coord(value: f64) -> i64 {
     (value * 1_000_000.0).round() as i64
 }
 
-fn compare_rows(field: FieldName, left: &FlightState, right: &FlightState) -> Ordering {
-    match field {
-        FieldName::FlightId => left.flight_id.cmp(&right.flight_id),
-        FieldName::Altitude => left.altitude.cmp(&right.altitude),
-        FieldName::Lat => left.lat_scaled.cmp(&right.lat_scaled),
-        FieldName::Lon => left.lon_scaled.cmp(&right.lon_scaled),
-        FieldName::Gs => left.gs.cmp(&right.gs),
-        FieldName::UpdatedAt => left.updated_at.cmp(&right.updated_at),
-    }
-}
-
 fn format_decode_error(line: usize, err: TsvDecodeError) -> String {
     format!(
         "decode error at line {} column {}: {}",
@@ -634,70 +576,6 @@ fn format_decode_error(line: usize, err: TsvDecodeError) -> String {
 
 fn format_planner_error(err: PlannerError) -> String {
     err.tcl_error_message()
-}
-
-fn options_to_stapi_query(options: &SearchOptions) -> Result<StapiQuery, String> {
-    let mut filters = Vec::with_capacity(options.comparisons.len());
-
-    for comparison in &options.comparisons {
-        filters.push(comparison_to_stapi_filter(comparison)?);
-    }
-
-    Ok(StapiQuery {
-        filters,
-        sort: None,
-        limit: None,
-    })
-}
-
-fn comparison_to_stapi_filter(comparison: &Comparison) -> Result<StapiFilter, String> {
-    match comparison {
-        Comparison::Eq(field, value) => Ok(StapiFilter::Eq {
-            field: field.canonical_name().to_string(),
-            value: comparison_value_to_stapi(*field, value)?,
-        }),
-        Comparison::Gt(field, value) => Ok(StapiFilter::Gt {
-            field: field.canonical_name().to_string(),
-            value: comparison_value_to_stapi(*field, value)?,
-        }),
-        Comparison::Lt(field, value) => Ok(StapiFilter::Lt {
-            field: field.canonical_name().to_string(),
-            value: comparison_value_to_stapi(*field, value)?,
-        }),
-        Comparison::In(field, values) => {
-            let mut mapped = Vec::with_capacity(values.len());
-            for value in values {
-                mapped.push(comparison_value_to_stapi(*field, value)?);
-            }
-            Ok(StapiFilter::In {
-                field: field.canonical_name().to_string(),
-                values: mapped,
-            })
-        }
-        Comparison::Match(field, pattern) => Ok(StapiFilter::Match {
-            field: field.canonical_name().to_string(),
-            pattern: pattern.clone(),
-        }),
-    }
-}
-
-fn comparison_value_to_stapi(
-    field: FieldName,
-    value: &ComparisonValue,
-) -> Result<StapiValue, String> {
-    match (field, value) {
-        (FieldName::FlightId, ComparisonValue::String(v)) => Ok(StapiValue::Text(v.clone())),
-        (FieldName::Altitude, ComparisonValue::I32(v)) => Ok(StapiValue::Int(*v as i64)),
-        (FieldName::Gs, ComparisonValue::U16(v)) => Ok(StapiValue::Int(*v as i64)),
-        (FieldName::UpdatedAt, ComparisonValue::U64(v)) => {
-            let mapped = i64::try_from(*v)
-                .map_err(|_| "updated_at exceeds signed 64-bit range".to_string())?;
-            Ok(StapiValue::Int(mapped))
-        }
-        (FieldName::Lat, ComparisonValue::F64(v)) => Ok(StapiValue::Int(scale_coord(*v))),
-        (FieldName::Lon, ComparisonValue::F64(v)) => Ok(StapiValue::Int(scale_coord(*v))),
-        _ => Err("comparison field/value type mismatch".to_string()),
-    }
 }
 
 fn with_ffi_boundary(interp: *mut clib::Tcl_Interp, f: impl FnOnce() -> c_int) -> c_int {
@@ -837,9 +715,9 @@ unsafe fn search_cmd(
     interp: *mut clib::Tcl_Interp,
     args: &[*mut clib::Tcl_Obj],
 ) -> Result<c_int, String> {
-    let options = parse_search_options(interp, args)?;
+    let request = parse_search_request(interp, args)?;
     let db = ensure_database(None)?;
-    let count = db.search_count(options)? as i64;
+    let count = db.search_count(request)? as i64;
     Ok(set_wide_result(interp, count))
 }
 
@@ -863,14 +741,15 @@ unsafe fn ingest_tsv_cmd(
     Ok(set_ok_result(interp, &stats.metrics_line()))
 }
 
-unsafe fn parse_search_options(
+unsafe fn parse_search_request(
     interp: *mut clib::Tcl_Interp,
     args: &[*mut clib::Tcl_Obj],
-) -> Result<SearchOptions, String> {
-    let mut opts = SearchOptions {
-        sort_direction: SortDirection::Asc,
-        ..SearchOptions::default()
-    };
+) -> Result<SearchRequest, String> {
+    let mut stapi = String::new();
+    let mut limit = None;
+    let mut offset = 0_usize;
+    let mut sort_desc = false;
+    let mut has_sort = false;
 
     let mut i = 2_usize;
     while i < args.len() {
@@ -880,122 +759,61 @@ unsafe fn parse_search_options(
                 if i + 1 >= args.len() {
                     return Err("missing value for -compare".to_string());
                 }
-                let mut parsed = parse_compare_list(interp, args[i + 1])?;
-                opts.comparisons.append(&mut parsed);
+                append_stapi_option(&mut stapi, "-compare", obj_to_str(args[i + 1])?);
                 i += 2;
             }
             "-sort" => {
                 if i + 1 >= args.len() {
                     return Err("missing value for -sort".to_string());
                 }
-                let field_str = obj_to_str(args[i + 1])?;
-                let field = FieldName::parse(field_str)
-                    .ok_or_else(|| format!("unknown sort field: {field_str}"))?;
-                opts.sort_field = Some(field);
+                has_sort = true;
+                append_stapi_option(&mut stapi, "-sort", obj_to_str(args[i + 1])?);
                 i += 2;
             }
             "-limit" => {
                 if i + 1 >= args.len() {
                     return Err("missing value for -limit".to_string());
                 }
-                opts.limit = Some(parse_usize(interp, args[i + 1])?);
+                limit = Some(parse_usize(interp, args[i + 1])?);
                 i += 2;
             }
             "-offset" => {
                 if i + 1 >= args.len() {
                     return Err("missing value for -offset".to_string());
                 }
-                opts.offset = parse_usize(interp, args[i + 1])?;
+                offset = parse_usize(interp, args[i + 1])?;
                 i += 2;
             }
             "-desc" => {
-                opts.sort_direction = SortDirection::Desc;
+                sort_desc = true;
                 i += 1;
             }
             "-asc" => {
-                opts.sort_direction = SortDirection::Asc;
+                sort_desc = false;
                 i += 1;
             }
             _ => return Err(format!("unknown search option: {opt}")),
         }
     }
 
-    Ok(opts)
+    Ok(SearchRequest {
+        stapi,
+        limit,
+        offset,
+        sort_desc,
+        has_sort,
+    })
 }
 
-unsafe fn parse_compare_list(
-    interp: *mut clib::Tcl_Interp,
-    compare_obj: *mut clib::Tcl_Obj,
-) -> Result<Vec<Comparison>, String> {
-    let items = list_elements(interp, compare_obj)
-        .map_err(|_| "expected -compare to be a Tcl list".to_string())?;
-    let mut out = Vec::with_capacity(items.len());
-
-    for item in items {
-        let triplet = list_elements(interp, item)
-            .map_err(|_| "each compare clause must be a list: {op field value}".to_string())?;
-        if triplet.len() != 3 {
-            return Err("compare clause must have exactly 3 elements".to_string());
-        }
-
-        let op = obj_to_str(triplet[0])?;
-        let field_name = obj_to_str(triplet[1])?;
-        let field = FieldName::parse(field_name)
-            .ok_or_else(|| format!("unknown compare field: {field_name}"))?;
-
-        let comparison = match op {
-            "=" | "==" => Comparison::Eq(field, parse_value(interp, field, triplet[2])?),
-            ">" => Comparison::Gt(field, parse_value(interp, field, triplet[2])?),
-            "<" => Comparison::Lt(field, parse_value(interp, field, triplet[2])?),
-            "in" | "IN" => {
-                let values = list_elements(interp, triplet[2]).map_err(|_| {
-                    "operator 'in' expects a Tcl list of values as the third item".to_string()
-                })?;
-                let mut parsed_values = Vec::with_capacity(values.len());
-                for value in values {
-                    parsed_values.push(parse_value(interp, field, value)?);
-                }
-                Comparison::In(field, parsed_values)
-            }
-            "match" => {
-                if !matches!(field, FieldName::FlightId) {
-                    return Err("operator 'match' currently supports only flight_id fields".to_string());
-                }
-                Comparison::Match(field, obj_to_str(triplet[2])?.to_string())
-            }
-            _ => return Err(format!("unsupported compare operator: {op}")),
-        };
-
-        out.push(comparison);
+fn append_stapi_option(stapi: &mut String, option: &str, value: &str) {
+    if !stapi.is_empty() {
+        stapi.push(' ');
     }
-
-    Ok(out)
-}
-
-unsafe fn parse_value(
-    interp: *mut clib::Tcl_Interp,
-    field: FieldName,
-    value_obj: *mut clib::Tcl_Obj,
-) -> Result<ComparisonValue, String> {
-    match field {
-        FieldName::FlightId => Ok(ComparisonValue::String(obj_to_str(value_obj)?.to_owned())),
-        FieldName::Altitude => {
-            let v = parse_i64(interp, value_obj)?;
-            let v = i32::try_from(v).map_err(|_| "altitude must fit i32".to_string())?;
-            Ok(ComparisonValue::I32(v))
-        }
-        FieldName::Gs => {
-            let v = parse_i64(interp, value_obj)?;
-            let v = u16::try_from(v).map_err(|_| "groundspeed must fit u16".to_string())?;
-            Ok(ComparisonValue::U16(v))
-        }
-        FieldName::UpdatedAt => {
-            let v = parse_i64(interp, value_obj)?;
-            let v = u64::try_from(v).map_err(|_| "updated_at must be >= 0".to_string())?;
-            Ok(ComparisonValue::U64(v))
-        }
-        FieldName::Lat | FieldName::Lon => Ok(ComparisonValue::F64(parse_f64(interp, value_obj)?)),
-    }
+    stapi.push_str(option);
+    stapi.push(' ');
+    stapi.push('{');
+    stapi.push_str(value);
+    stapi.push('}');
 }
 
 unsafe fn arg_slice(
@@ -1008,19 +826,6 @@ unsafe fn arg_slice(
 
     let argc = objc as usize;
     Ok(slice::from_raw_parts(objv, argc).to_vec())
-}
-
-unsafe fn list_elements(
-    interp: *mut clib::Tcl_Interp,
-    list_obj: *mut clib::Tcl_Obj,
-) -> Result<Vec<*mut clib::Tcl_Obj>, ()> {
-    let mut objc: c_int = 0;
-    let mut objv: *mut *mut clib::Tcl_Obj = ptr::null_mut();
-    let rc = clib::Tcl_ListObjGetElements(interp, list_obj, &mut objc, &mut objv);
-    if rc != clib::TCL_OK as c_int || objc < 0 || objv.is_null() {
-        return Err(());
-    }
-    Ok(slice::from_raw_parts(objv, objc as usize).to_vec())
 }
 
 unsafe fn parse_i64(interp: *mut clib::Tcl_Interp, obj: *mut clib::Tcl_Obj) -> Result<i64, String> {
@@ -1038,15 +843,6 @@ unsafe fn parse_usize(
 ) -> Result<usize, String> {
     let value = parse_i64(interp, obj)?;
     usize::try_from(value).map_err(|_| "expected non-negative integer".to_string())
-}
-
-unsafe fn parse_f64(interp: *mut clib::Tcl_Interp, obj: *mut clib::Tcl_Obj) -> Result<f64, String> {
-    let mut out = 0.0_f64;
-    let rc = clib::Tcl_GetDoubleFromObj(interp, obj, &mut out);
-    if rc != clib::TCL_OK as c_int {
-        return Err("expected double Tcl_Obj".to_string());
-    }
-    Ok(out)
 }
 
 unsafe fn obj_to_str<'a>(obj: *mut clib::Tcl_Obj) -> Result<&'a str, String> {

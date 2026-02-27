@@ -23,6 +23,8 @@ struct RingIntegrity {
     count: AtomicU32,
     sum: AtomicU64,
     xor: AtomicU64,
+    payload_sum: AtomicU64,
+    payload_xor: AtomicU64,
 }
 
 #[test]
@@ -185,6 +187,8 @@ fn forked_mpsc_ring_producers_preserve_message_integrity() {
             count: AtomicU32::new(0),
             sum: AtomicU64::new(0),
             xor: AtomicU64::new(0),
+            payload_sum: AtomicU64::new(0),
+            payload_xor: AtomicU64::new(0),
         })
         .expect("failed to allocate shared integrity block");
 
@@ -201,6 +205,8 @@ fn forked_mpsc_ring_producers_preserve_message_integrity() {
         let mut count = 0_u32;
         let mut sum = 0_u64;
         let mut xor = 0_u64;
+        let mut payload_sum = 0_u64;
+        let mut payload_xor = 0_u64;
 
         loop {
             match ring.pop_bytes() {
@@ -209,9 +215,26 @@ fn forked_mpsc_ring_producers_preserve_message_integrity() {
                         Ok(msg) => msg,
                         Err(_) => unsafe { libc::_exit(61) },
                     };
+                    if commit.writes.len() != 1 {
+                        // SAFETY:
+                        // child exits without unwinding.
+                        unsafe { libc::_exit(64) };
+                    }
+                    let write = &commit.writes[0];
+                    if write.value_payload.len() != std::mem::size_of::<u64>() {
+                        // SAFETY:
+                        // child exits without unwinding.
+                        unsafe { libc::_exit(65) };
+                    }
+                    let mut payload_buf = [0_u8; 8];
+                    payload_buf.copy_from_slice(write.value_payload.as_slice());
+                    let payload_value = u64::from_le_bytes(payload_buf);
+
                     count = count.wrapping_add(1);
                     sum = sum.wrapping_add(commit.txid);
                     xor ^= commit.txid;
+                    payload_sum = payload_sum.wrapping_add(payload_value);
+                    payload_xor ^= payload_value;
                     if count == TOTAL_MESSAGES as u32 {
                         break;
                     }
@@ -232,6 +255,8 @@ fn forked_mpsc_ring_producers_preserve_message_integrity() {
         integrity.count.store(count, Ordering::Release);
         integrity.sum.store(sum, Ordering::Release);
         integrity.xor.store(xor, Ordering::Release);
+        integrity.payload_sum.store(payload_sum, Ordering::Release);
+        integrity.payload_xor.store(payload_xor, Ordering::Release);
 
         // SAFETY:
         // child exits without unwinding.
@@ -252,12 +277,14 @@ fn forked_mpsc_ring_producers_preserve_message_integrity() {
         if pid == 0 {
             for seq in 0..MESSAGES_PER_PRODUCER {
                 let txid = ((producer_idx as u64) << 32) | (seq as u64 + 1);
+                let payload_value = txid.rotate_left(11) ^ 0x9E37_79B1_85EB_CA87_u64;
                 let msg = WalRingCommit {
                     txid,
                     writes: vec![WalRingWrite {
                         row_id: producer_idx as u64,
                         base_offset: seq as u32,
                         new_offset: seq as u32 + 1,
+                        value_payload: payload_value.to_le_bytes().to_vec(),
                     }],
                 };
 
@@ -286,11 +313,16 @@ fn forked_mpsc_ring_producers_preserve_message_integrity() {
 
     let mut expected_sum = 0_u64;
     let mut expected_xor = 0_u64;
+    let mut expected_payload_sum = 0_u64;
+    let mut expected_payload_xor = 0_u64;
     for producer_idx in 0..PRODUCERS {
         for seq in 0..MESSAGES_PER_PRODUCER {
             let txid = ((producer_idx as u64) << 32) | (seq as u64 + 1);
+            let payload_value = txid.rotate_left(11) ^ 0x9E37_79B1_85EB_CA87_u64;
             expected_sum = expected_sum.wrapping_add(txid);
             expected_xor ^= txid;
+            expected_payload_sum = expected_payload_sum.wrapping_add(payload_value);
+            expected_payload_xor ^= payload_value;
         }
     }
 
@@ -308,6 +340,16 @@ fn forked_mpsc_ring_producers_preserve_message_integrity() {
         integrity.xor.load(Ordering::Acquire),
         expected_xor,
         "ring consumer xor mismatch indicates corruption/loss"
+    );
+    assert_eq!(
+        integrity.payload_sum.load(Ordering::Acquire),
+        expected_payload_sum,
+        "ring consumer payload checksum mismatch indicates corruption/loss"
+    );
+    assert_eq!(
+        integrity.payload_xor.load(Ordering::Acquire),
+        expected_payload_xor,
+        "ring consumer payload xor mismatch indicates corruption/loss"
     );
 }
 
@@ -423,9 +465,7 @@ fn forked_occ_recycle_free_list_stress_is_safe_and_bounded() {
             .read(&mut verify, row_id)
             .expect("verify read failed")
             .expect("verify row missing");
-        table
-            .abort(&mut verify)
-            .expect("verify abort failed");
+        table.abort(&mut verify).expect("verify abort failed");
         assert_eq!(
             value, row_id as u64,
             "row {} changed unexpectedly under rollback-only forked stress",

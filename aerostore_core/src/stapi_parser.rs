@@ -150,7 +150,10 @@ fn looks_like_single_clause(parts: &[String]) -> bool {
         return false;
     }
 
-    matches!(parts[0].as_str(), "=" | "==" | ">" | "<" | "in" | "IN" | "match")
+    matches!(
+        parts[0].as_str(),
+        "=" | "==" | ">" | "<" | "in" | "IN" | "match"
+    )
 }
 
 fn parse_compare_clause(clause: &str) -> Result<Filter, ParseError> {
@@ -352,8 +355,7 @@ mod tests {
     #[test]
     fn malformed_input_never_panics_across_boundary() {
         let result = std::panic::catch_unwind(|| {
-            parse_stapi_query("-compare {{{> alt 10000}}}")
-                .map_err(|err| err.tcl_error_message())
+            parse_stapi_query("-compare {{{> alt 10000}}}").map_err(|err| err.tcl_error_message())
         });
 
         assert!(result.is_ok(), "parser must not panic");

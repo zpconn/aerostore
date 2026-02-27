@@ -38,6 +38,13 @@ if {$complex_count != 3} {
     error "expected complex STAPI-style count to be 3, got $complex_count"
 }
 
+set raw_compare "{> altitude 10000} {< altitude 36000} {in flight {UAL123 AAL456 SWA321}}"
+set raw_count [FlightState search -compare $raw_compare -sort altitude -limit 10]
+puts "raw compare literal count: $raw_count"
+if {$raw_count != $complex_count} {
+    error "expected raw compare literal count $complex_count, got $raw_count"
+}
+
 set match_count [FlightState search -compare {{match flight UAL*}} -limit 10]
 puts "match flight UAL* count: $match_count"
 if {$match_count != 1} {
@@ -81,6 +88,25 @@ if {[catch {FlightState search -compare {{> altitude}} -limit 5} malformed_err]}
     }
 } else {
     error "expected malformed query to return TCL_ERROR, but it succeeded"
+}
+
+set malformed_raw "{> altitude 10000"
+if {[catch {FlightState search -compare $malformed_raw -limit 5} malformed_raw_err]} {
+    puts "malformed raw compare rejected as expected: $malformed_raw_err"
+    if {![string match "TCL_ERROR:*" $malformed_raw_err]} {
+        error "expected malformed raw error to start with TCL_ERROR:, got '$malformed_raw_err'"
+    }
+} else {
+    error "expected malformed raw compare to return TCL_ERROR, but it succeeded"
+}
+
+if {[catch {FlightState search -bogus value -limit 5} malformed_opt_err]} {
+    puts "unknown search option rejected as expected: $malformed_opt_err"
+    if {![string match "TCL_ERROR:*" $malformed_opt_err]} {
+        error "expected unknown option error to start with TCL_ERROR:, got '$malformed_opt_err'"
+    }
+} else {
+    error "expected unknown search option to return TCL_ERROR, but it succeeded"
 }
 
 # Re-init with the same directory to validate idempotent initialization semantics.

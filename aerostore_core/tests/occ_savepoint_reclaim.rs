@@ -19,14 +19,16 @@ fn rollback_to_savepoint_reuses_abandoned_allocations() {
     const LOOPS: usize = 8_000;
 
     for i in 0..LOOPS {
-        let mut tx = table
-            .begin_transaction()
-            .expect("begin_transaction failed");
+        let mut tx = table.begin_transaction().expect("begin_transaction failed");
+        table.savepoint(&mut tx, "sp").expect("savepoint failed");
         table
-            .savepoint(&mut tx, "sp")
-            .expect("savepoint failed");
-        table
-            .write(&mut tx, 0, TinyRow { value: i as u64 + 1 })
+            .write(
+                &mut tx,
+                0,
+                TinyRow {
+                    value: i as u64 + 1,
+                },
+            )
             .expect("write failed");
         table
             .rollback_to(&mut tx, "sp")
@@ -61,9 +63,7 @@ fn nested_savepoint_rollbacks_restore_pending_state() {
         .seed_row(0, TinyRow { value: 7 })
         .expect("failed to seed row");
 
-    let mut tx = table
-        .begin_transaction()
-        .expect("begin_transaction failed");
+    let mut tx = table.begin_transaction().expect("begin_transaction failed");
 
     table
         .savepoint(&mut tx, "outer")
