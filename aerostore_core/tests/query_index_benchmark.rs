@@ -4,8 +4,8 @@ use std::time::Instant;
 use crossbeam::epoch;
 
 use aerostore_core::{
-    Field, IndexCatalog, IndexValue, MvccTable, OccTable, QueryEngine, QueryPlanner, ShmArena,
-    SortDirection, StapiRow, StapiValue, TransactionManager, SecondaryIndex,
+    Field, IndexCatalog, IndexValue, MvccTable, OccTable, QueryEngine, QueryPlanner,
+    SecondaryIndex, ShmArena, SortDirection, StapiRow, StapiValue, TransactionManager,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -43,7 +43,10 @@ impl StapiFlightRow {
 
 impl StapiRow for StapiFlightRow {
     fn has_field(field: &str) -> bool {
-        matches!(field, "alt" | "altitude" | "flight" | "ident" | "typ" | "type")
+        matches!(
+            field,
+            "alt" | "altitude" | "flight" | "ident" | "typ" | "type"
+        )
     }
 
     fn field_value(&self, field: &str) -> Option<StapiValue> {
@@ -189,8 +192,8 @@ fn benchmark_stapi_parse_compile_execute_vs_typed_query_path() {
 
     // STAPI parser + planner path over OCC table/indexes.
     let shm = Arc::new(ShmArena::new(64 << 20).expect("failed to create shared arena"));
-    let occ_table =
-        OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS).expect("failed to create OCC table");
+    let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+        .expect("failed to create OCC table");
     let alt_index = Arc::new(SecondaryIndex::<usize>::new("alt"));
 
     for row_id in 0..ROWS {
@@ -215,7 +218,8 @@ fn benchmark_stapi_parse_compile_execute_vs_typed_query_path() {
 
     let catalog = IndexCatalog::new().with_index("alt", alt_index);
     let planner = QueryPlanner::<StapiFlightRow>::new(catalog);
-    let stapi = "-compare {{match flight UAL*} {> alt 44000} {in typ {B738 A320}}} -sort alt -limit 20";
+    let stapi =
+        "-compare {{match flight UAL*} {> alt 44000} {in typ {B738 A320}}} -sort alt -limit 20";
 
     let stapi_start = Instant::now();
     for _ in 0..PASSES {
@@ -235,7 +239,9 @@ fn benchmark_stapi_parse_compile_execute_vs_typed_query_path() {
         assert!(!rows.is_empty(), "expected STAPI query to return rows");
         assert!(rows.len() <= LIMIT);
         assert!(rows.iter().all(|row| row.alt > 44_000));
-        assert!(rows.iter().all(|row| decode_ascii(&row.flight).starts_with("UAL")));
+        assert!(rows
+            .iter()
+            .all(|row| decode_ascii(&row.flight).starts_with("UAL")));
         assert!(rows.windows(2).all(|w| w[0].alt <= w[1].alt));
     }
     let stapi_elapsed = stapi_start.elapsed();
@@ -310,7 +316,9 @@ fn benchmark_tcl_style_alias_match_desc_offset_limit_path() {
 
         assert_eq!(window.len(), LIMIT);
         assert!(window.iter().all(|row| row.alt > 10_000));
-        assert!(window.iter().all(|row| decode_ascii(&row.flight).starts_with("UAL")));
+        assert!(window
+            .iter()
+            .all(|row| decode_ascii(&row.flight).starts_with("UAL")));
         assert!(window
             .iter()
             .all(|row| matches!(decode_ascii(&row.typ).as_str(), "B738" | "A320")));
@@ -320,6 +328,85 @@ fn benchmark_tcl_style_alias_match_desc_offset_limit_path() {
 
     eprintln!(
         "stapi_alias_match_desc_offset_limit_elapsed={:?} passes={} rows={}",
+        elapsed, PASSES, ROWS
+    );
+}
+
+#[test]
+fn benchmark_tcl_bridge_style_stapi_assembly_compile_execute() {
+    const ROWS: usize = 60_000;
+    const PASSES: usize = 48;
+    const LIMIT: usize = 20;
+    const OFFSET: usize = 4;
+
+    let shm = Arc::new(ShmArena::new(96 << 20).expect("failed to create shared arena"));
+    let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+        .expect("failed to create OCC table");
+    let alt_index = Arc::new(SecondaryIndex::<usize>::new("altitude"));
+
+    for row_id in 0..ROWS {
+        let alt = ((row_id % 45_000) as i64) + 500;
+        let flight = if row_id % 2 == 0 {
+            format!("UAL{:03}", row_id % 1_000)
+        } else {
+            format!("DAL{:03}", row_id % 1_000)
+        };
+        let typ = match row_id % 3 {
+            0 => "B738",
+            1 => "A320",
+            _ => "B77W",
+        };
+        let row = StapiFlightRow::new(alt, flight.as_str(), typ);
+        occ_table
+            .seed_row(row_id, row)
+            .expect("failed to seed OCC row for Tcl bridge benchmark");
+        alt_index.insert(IndexValue::I64(alt), row_id);
+    }
+
+    let catalog = IndexCatalog::new()
+        .with_index("alt", Arc::clone(&alt_index))
+        .with_index("altitude", alt_index);
+    let planner = QueryPlanner::<StapiFlightRow>::new(catalog);
+
+    let compare_literal = "{match ident UAL*} {> altitude 10000} {in typ {B738 A320}}";
+    let sort_field = "altitude";
+    let tcl_bridge_start = Instant::now();
+
+    for _ in 0..PASSES {
+        let stapi = format!("-compare {{{}}} -sort {{{}}}", compare_literal, sort_field);
+        let plan = planner
+            .compile_from_stapi(stapi.as_str())
+            .expect("failed to compile Tcl bridge-style STAPI query");
+
+        let mut tx = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for Tcl bridge benchmark");
+        let mut rows = plan
+            .execute(&occ_table, &mut tx)
+            .expect("Tcl bridge plan execution failed");
+        occ_table
+            .abort(&mut tx)
+            .expect("abort failed for Tcl bridge benchmark");
+
+        rows.reverse(); // Tcl `-desc`.
+        let start = OFFSET.min(rows.len()); // Tcl `-offset`.
+        let end = (start + LIMIT).min(rows.len()); // Tcl `-limit`.
+        let window = &rows[start..end];
+
+        assert_eq!(window.len(), LIMIT);
+        assert!(window.iter().all(|row| row.alt > 10_000));
+        assert!(window
+            .iter()
+            .all(|row| decode_ascii(&row.flight).starts_with("UAL")));
+        assert!(window
+            .iter()
+            .all(|row| matches!(decode_ascii(&row.typ).as_str(), "B738" | "A320")));
+        assert!(window.windows(2).all(|w| w[0].alt >= w[1].alt));
+    }
+
+    let elapsed = tcl_bridge_start.elapsed();
+    eprintln!(
+        "tcl_bridge_style_stapi_assembly_compile_execute_elapsed={:?} passes={} rows={}",
         elapsed, PASSES, ROWS
     );
 }

@@ -1,29 +1,14 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-use crossbeam::epoch;
 use serde::{Deserialize, Serialize};
 
 use aerostore_core::{
-    deserialize_commit_record, spawn_wal_writer_daemon, DurableDatabase, Field, IndexDefinition,
-    IndexCompare, IndexValue, OccCommitter, OccRow, OccTable, RecoveryStage, RelPtr,
-    SecondaryIndex, SharedWalRing, ShmArena, SortDirection,
+    deserialize_commit_record, read_wal_file, recover_occ_table_from_wal, spawn_wal_writer_daemon,
+    IndexCompare, IndexValue, OccCommitter, OccTable, SecondaryIndex, SharedWalRing, ShmArena,
+    WalWriterError,
 };
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-struct FlightRow {
-    altitude: i32,
-    groundspeed: u16,
-}
-
-fn altitude(row: &FlightRow) -> i32 {
-    row.altitude
-}
-
-fn altitude_field() -> Field<FlightRow, i32> {
-    Field::new("altitude", altitude)
-}
 
 fn tmp_data_dir() -> PathBuf {
     let nonce = SystemTime::now()
@@ -36,7 +21,7 @@ fn tmp_data_dir() -> PathBuf {
 const RING_SLOTS: usize = 1024;
 const RING_SLOT_BYTES: usize = 128;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct TclLikeRow {
     exists: u8,
     flight: [u8; 12],
@@ -78,144 +63,127 @@ fn decode_flight(row: &TclLikeRow) -> String {
     String::from_utf8_lossy(&row.flight[..end]).to_string()
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn crash_recovery_restores_checkpoint_wal_and_indexes() {
+#[test]
+fn crash_recovery_restores_occ_rows_and_indexes_from_wal() {
     let data_dir = tmp_data_dir();
     std::fs::create_dir_all(&data_dir).expect("failed to create temp data dir");
+    let wal_path = data_dir.join("aerostore_occ_recovery.wal");
 
-    let index_defs = vec![IndexDefinition::new("altitude", altitude)];
+    let shm = std::sync::Arc::new(
+        ShmArena::new(64 << 20).expect("failed to create shared memory for recovery test"),
+    );
+    let table = OccTable::<TclLikeRow>::new(std::sync::Arc::clone(&shm), 16)
+        .expect("failed to create occ table");
+    for row_id in 0..16 {
+        table
+            .seed_row(row_id, TclLikeRow::empty())
+            .expect("failed to seed tcl-like row");
+    }
 
-    let (db, first_recovery) = DurableDatabase::<u64, FlightRow>::open_with_recovery(
-        &data_dir,
-        2048,
-        Duration::from_secs(300),
-        index_defs.clone(),
-    )
-    .await
-    .expect("failed to open durable database");
+    let ring = SharedWalRing::<RING_SLOTS, RING_SLOT_BYTES>::create(std::sync::Arc::clone(&shm))
+        .expect("failed to create shared wal ring");
+    let daemon = spawn_wal_writer_daemon(ring.clone(), &wal_path)
+        .expect("failed to spawn wal writer daemon");
+    let mut committer = OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_asynchronous(ring.clone());
 
-    assert_eq!(first_recovery.stage, RecoveryStage::Complete);
-    assert_eq!(first_recovery.applied_writes, 0);
+    let altitude_index = SecondaryIndex::<usize>::new("altitude");
+    let mut key_to_row = HashMap::<String, usize>::new();
+    let mut next_row_id = 0_usize;
+    let mut expected_final = HashMap::<String, TclLikeRow>::new();
 
-    let mut tx1 = db.begin();
-    db.insert(
-        &mut tx1,
-        1001,
-        FlightRow {
-            altitude: 12_000,
-            groundspeed: 440,
-        },
-    )
-    .expect("insert should succeed");
-    db.insert(
-        &mut tx1,
-        1002,
-        FlightRow {
-            altitude: 18_500,
-            groundspeed: 452,
-        },
-    )
-    .expect("insert should succeed");
-    db.commit(tx1).await.expect("commit 1 must succeed");
+    let first_wave = [
+        ("UAL123", 12_000_i32, 451_u16),
+        ("AAL456", 9_000, 390),
+        ("DAL789", 15_000, 430),
+        ("UAL123", 12_150, 452),
+    ];
+    run_tcl_like_upsert_wave(
+        &table,
+        &mut committer,
+        &altitude_index,
+        &mut key_to_row,
+        &mut next_row_id,
+        &mut expected_final,
+        &first_wave,
+    );
 
-    let mut tx2 = db.begin();
-    db.update(
-        &mut tx2,
-        &1001,
-        FlightRow {
-            altitude: 13_250,
-            groundspeed: 448,
-        },
-    )
-    .expect("update should succeed");
-    db.delete(&mut tx2, &1002).expect("delete should succeed");
-    db.insert(
-        &mut tx2,
-        1003,
-        FlightRow {
-            altitude: 25_100,
-            groundspeed: 470,
-        },
-    )
-    .expect("insert should succeed");
-    db.commit(tx2).await.expect("commit 2 must succeed");
+    let second_wave = [
+        ("AAL456", 13_050_i32, 400_u16),
+        ("DAL789", 16_000, 435),
+        ("UAL123", 18_000, 468),
+        ("SWA321", 11_000, 380),
+    ];
+    run_tcl_like_upsert_wave(
+        &table,
+        &mut committer,
+        &altitude_index,
+        &mut key_to_row,
+        &mut next_row_id,
+        &mut expected_final,
+        &second_wave,
+    );
 
-    let checkpoint_rows = db
-        .checkpoint_now()
-        .await
-        .expect("checkpoint should complete");
-    assert!(checkpoint_rows >= 2);
+    ring.close().expect("failed to close ring");
+    daemon.join().expect("wal daemon should exit cleanly");
+    drop(table);
+    drop(shm);
 
-    let mut tx3 = db.begin();
-    db.update(
-        &mut tx3,
-        &1003,
-        FlightRow {
-            altitude: 26_000,
-            groundspeed: 475,
-        },
-    )
-    .expect("update should succeed");
-    db.insert(
-        &mut tx3,
-        1004,
-        FlightRow {
-            altitude: 10_400,
-            groundspeed: 399,
-        },
-    )
-    .expect("insert should succeed");
-    db.commit(tx3).await.expect("commit 3 must succeed");
+    let recovered_shm = std::sync::Arc::new(
+        ShmArena::new(64 << 20).expect("failed to create recovery shared memory"),
+    );
+    let recovered_table = OccTable::<TclLikeRow>::new(std::sync::Arc::clone(&recovered_shm), 16)
+        .expect("failed to create recovery occ table");
+    for row_id in 0..16 {
+        recovered_table
+            .seed_row(row_id, TclLikeRow::empty())
+            .expect("failed to seed recovery row");
+    }
 
-    drop(db);
+    let recovery_state = recover_occ_table_from_wal(&recovered_table, &wal_path)
+        .expect("failed to recover OCC table from wal");
+    assert!(recovery_state.wal_records >= 1);
+    assert!(recovery_state.applied_writes >= expected_final.len());
+    assert!(recovery_state.max_txid > 0);
 
-    let (recovered, recovery) = DurableDatabase::<u64, FlightRow>::open_with_recovery(
-        &data_dir,
-        2048,
-        Duration::from_secs(300),
-        index_defs,
-    )
-    .await
-    .expect("failed to reopen durable database");
+    let recovered_index = SecondaryIndex::<usize>::new("altitude");
+    let mut recovered_by_flight = HashMap::<String, (usize, TclLikeRow)>::new();
+    for row_id in 0..16 {
+        let row = recovered_table
+            .latest_value(row_id)
+            .expect("latest_value failed during recovery verification")
+            .expect("seeded row unexpectedly missing during recovery verification");
+        if row.exists == 0 {
+            continue;
+        }
+        let flight = decode_flight(&row);
+        recovered_index.insert(IndexValue::I64(row.altitude as i64), row_id);
+        recovered_by_flight.insert(flight, (row_id, row));
+    }
 
-    assert_eq!(recovery.stage, RecoveryStage::Complete);
-    assert!(recovery.checkpoint_rows >= 2);
-    assert!(recovery.wal_records >= 1);
-    assert!(recovery.applied_writes >= 4);
+    assert_eq!(recovered_by_flight.len(), expected_final.len());
 
-    let read_tx = recovered.begin();
-    let row_1001 = recovered
-        .read_visible(&1001, &read_tx)
-        .expect("row 1001 missing after recovery");
-    let row_1002 = recovered.read_visible(&1002, &read_tx);
-    let row_1003 = recovered
-        .read_visible(&1003, &read_tx)
-        .expect("row 1003 missing after recovery");
-    let row_1004 = recovered
-        .read_visible(&1004, &read_tx)
-        .expect("row 1004 missing after recovery");
+    for (flight, expected_row) in &expected_final {
+        let (row_id, recovered_row) = recovered_by_flight
+            .get(flight)
+            .unwrap_or_else(|| panic!("missing recovered row for key {}", flight));
+        assert_eq!(
+            recovered_row, expected_row,
+            "recovered row mismatch for key {}",
+            flight
+        );
 
-    assert_eq!(row_1001.altitude, 13_250);
-    assert!(row_1002.is_none(), "deleted row 1002 should stay deleted");
-    assert_eq!(row_1003.altitude, 26_000);
-    assert_eq!(row_1004.altitude, 10_400);
+        let candidates = recovered_index.lookup(&IndexCompare::Eq(IndexValue::I64(
+            expected_row.altitude as i64,
+        )));
+        assert!(
+            candidates.contains(row_id),
+            "recovered index missing key={} altitude={} row_id={}",
+            flight,
+            expected_row.altitude,
+            row_id
+        );
+    }
 
-    let guard = epoch::pin();
-    let indexed_rows = recovered
-        .engine()
-        .query()
-        .gt(altitude_field(), 12_000_i32)
-        .sort_by(altitude_field(), SortDirection::Desc)
-        .limit(2)
-        .execute(read_tx.tx(), &guard);
-
-    assert_eq!(indexed_rows.len(), 2);
-    assert!(indexed_rows[0].altitude >= indexed_rows[1].altitude);
-    assert!(indexed_rows.iter().all(|row| row.altitude > 12_000));
-
-    recovered.abort(read_tx);
-
-    drop(recovered);
     let _ = std::fs::remove_dir_all(data_dir);
 }
 
@@ -409,26 +377,55 @@ fn async_wal_daemon_crash_then_restart_replays_tcl_like_upserts_and_indexes() {
         );
     }
 
-    let replayed = replay_latest_rows_from_wal(&commits, &shm);
+    let recovered_shm = std::sync::Arc::new(
+        ShmArena::new(64 << 20).expect("failed to create shared memory for replay validation"),
+    );
+    let recovered_table = OccTable::<TclLikeRow>::new(std::sync::Arc::clone(&recovered_shm), 16)
+        .expect("failed to create replay-validation occ table");
+    for row_id in 0..16 {
+        recovered_table
+            .seed_row(row_id, TclLikeRow::empty())
+            .expect("failed to seed replay-validation row");
+    }
+
+    let recovery_state = recover_occ_table_from_wal(&recovered_table, &wal_path)
+        .expect("failed to recover tcl-like upsert wal");
+    assert!(recovery_state.wal_records >= 1);
+    assert!(recovery_state.applied_writes >= expected_final.len());
+
+    let recovered_altitude_index = SecondaryIndex::<usize>::new("altitude");
+    let mut recovered_rows = HashMap::<String, TclLikeRow>::new();
+    for row_id in 0..16 {
+        let row = recovered_table
+            .latest_value(row_id)
+            .expect("latest_value failed during replay validation")
+            .expect("seeded row unexpectedly missing during replay validation");
+        if row.exists == 0 {
+            continue;
+        }
+        recovered_altitude_index.insert(IndexValue::I64(row.altitude as i64), row_id);
+        recovered_rows.insert(decode_flight(&row), row);
+    }
+
     for (flight, expected_row) in &expected_final {
-        let replayed_row = replayed
+        let replayed_row = recovered_rows
             .get(flight)
-            .unwrap_or_else(|| panic!("missing replayed row for key {}", flight));
+            .unwrap_or_else(|| panic!("missing recovered row for key {}", flight));
         assert_eq!(
             replayed_row, expected_row,
-            "replayed row mismatch for key {}",
+            "recovered row mismatch for key {}",
             flight
         );
 
         let row_id = *key_to_row
             .get(flight)
             .unwrap_or_else(|| panic!("missing row id for key {}", flight));
-        let candidates = altitude_index.lookup(&IndexCompare::Eq(IndexValue::I64(
+        let candidates = recovered_altitude_index.lookup(&IndexCompare::Eq(IndexValue::I64(
             expected_row.altitude as i64,
         )));
         assert!(
             candidates.contains(&row_id),
-            "altitude index missing key={} altitude={} row_id={}",
+            "recovered altitude index missing key={} altitude={} row_id={}",
             flight,
             expected_row.altitude,
             row_id
@@ -532,45 +529,239 @@ fn async_wal_daemon_restart_does_not_persist_rolled_back_savepoint_intents() {
         );
     }
 
-    let mut latest_by_row = HashMap::<usize, u32>::new();
-    for commit in &commits {
-        let write = &commit.writes[0];
-        latest_by_row.insert(write.row_id as usize, write.new_offset);
+    let recovered_shm = std::sync::Arc::new(
+        ShmArena::new(64 << 20).expect("failed to create shared memory for savepoint recovery"),
+    );
+    let recovered_table = OccTable::<TclLikeRow>::new(std::sync::Arc::clone(&recovered_shm), 16)
+        .expect("failed to create savepoint recovery occ table");
+    for row_id in 0..16 {
+        recovered_table
+            .seed_row(row_id, TclLikeRow::empty())
+            .expect("failed to seed savepoint recovery row");
     }
+
+    let recovery_state = recover_occ_table_from_wal(&recovered_table, &wal_path)
+        .expect("failed to recover savepoint wal");
+    assert!(recovery_state.wal_records >= 1);
+    assert!(recovery_state.applied_writes >= expected_final.len());
 
     for (flight, expected_row) in &expected_final {
         let row_id = *key_to_row
             .get(flight)
             .unwrap_or_else(|| panic!("missing row mapping for key {}", flight));
-        let latest_offset = *latest_by_row
-            .get(&row_id)
-            .unwrap_or_else(|| panic!("missing wal replay entry for row_id {}", row_id));
-        let row_ptr = RelPtr::<OccRow<TclLikeRow>>::from_offset(latest_offset);
-        let row = row_ptr
-            .as_ref(shm.mmap_base())
-            .unwrap_or_else(|| panic!("failed to resolve row pointer offset {}", latest_offset));
-        assert_eq!(
-            row.value, *expected_row,
-            "wal replay resolved non-final value for key {}",
-            flight
-        );
-
-        let mut verify_tx = table
+        let mut verify_tx = recovered_table
             .begin_transaction()
             .expect("verify begin_transaction failed");
-        let live = table
+        let live = recovered_table
             .read(&mut verify_tx, row_id)
             .expect("verify read failed")
-            .expect("live row missing after savepoint replay test");
-        table
+            .expect("recovered row missing after savepoint replay test");
+        recovered_table
             .abort(&mut verify_tx)
             .expect("verify abort failed");
         assert_eq!(
             live, *expected_row,
-            "live table state diverged from expected final value for key {}",
+            "recovered table state diverged from expected final value for key {}",
             flight
         );
     }
+
+    let _ = std::fs::remove_dir_all(data_dir);
+}
+
+#[test]
+fn recovery_rejects_truncated_or_corrupt_wal_frames_with_explicit_error() {
+    let data_dir = tmp_data_dir();
+    std::fs::create_dir_all(&data_dir).expect("failed to create temp data dir");
+
+    let truncated_path = data_dir.join("truncated.wal");
+    let mut truncated = Vec::new();
+    truncated.extend_from_slice(&(16_u32).to_le_bytes());
+    truncated.extend_from_slice(&[0xAA, 0xBB, 0xCC]); // declared 16, only 3 bytes present
+    std::fs::write(&truncated_path, truncated).expect("failed to write truncated wal");
+
+    match read_wal_file(&truncated_path) {
+        Err(WalWriterError::Io(err)) => {
+            assert_eq!(
+                err.kind(),
+                std::io::ErrorKind::InvalidData,
+                "truncated wal must report InvalidData"
+            );
+        }
+        Err(other) => panic!("unexpected truncated WAL error variant: {}", other),
+        Ok(_) => panic!("truncated WAL unexpectedly parsed as valid"),
+    }
+
+    let corrupt_path = data_dir.join("corrupt.wal");
+    let mut corrupt = Vec::new();
+    corrupt.extend_from_slice(&(8_u32).to_le_bytes());
+    corrupt.extend_from_slice(&[0_u8; 8]); // valid frame size, invalid rkyv payload
+    std::fs::write(&corrupt_path, corrupt).expect("failed to write corrupt wal");
+
+    match read_wal_file(&corrupt_path) {
+        Err(WalWriterError::Ring(_)) => {}
+        Err(other) => panic!("unexpected corrupt WAL error variant: {}", other),
+        Ok(_) => panic!("corrupt WAL unexpectedly parsed as valid"),
+    }
+
+    let _ = std::fs::remove_dir_all(data_dir);
+}
+
+#[test]
+fn replaying_same_wal_into_fresh_tables_is_idempotent() {
+    let data_dir = tmp_data_dir();
+    std::fs::create_dir_all(&data_dir).expect("failed to create temp data dir");
+    let wal_path = data_dir.join("idempotent_replay.wal");
+
+    let source_shm = std::sync::Arc::new(
+        ShmArena::new(64 << 20).expect("failed to create source shared memory"),
+    );
+    let source_table = OccTable::<TclLikeRow>::new(std::sync::Arc::clone(&source_shm), 16)
+        .expect("failed to create source table");
+    for row_id in 0..16 {
+        source_table
+            .seed_row(row_id, TclLikeRow::empty())
+            .expect("failed to seed source row");
+    }
+
+    let mut committer = OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_synchronous(&wal_path)
+        .expect("failed to create synchronous committer for idempotency test");
+    let altitude_index = SecondaryIndex::<usize>::new("altitude");
+    let mut key_to_row = HashMap::<String, usize>::new();
+    let mut next_row_id = 0_usize;
+    let mut expected_final = HashMap::<String, TclLikeRow>::new();
+
+    let ops = [
+        ("UAL123", 12_000_i32, 451_u16),
+        ("AAL456", 13_500, 402),
+        ("UAL123", 12_320, 452),
+        ("DAL789", 9_750, 330),
+        ("DAL789", 10_020, 338),
+    ];
+    run_tcl_like_upsert_wave(
+        &source_table,
+        &mut committer,
+        &altitude_index,
+        &mut key_to_row,
+        &mut next_row_id,
+        &mut expected_final,
+        &ops,
+    );
+    drop(source_table);
+    drop(source_shm);
+
+    let recovered_a = std::sync::Arc::new(
+        ShmArena::new(64 << 20).expect("failed to create replay A shared memory"),
+    );
+    let table_a = OccTable::<TclLikeRow>::new(std::sync::Arc::clone(&recovered_a), 16)
+        .expect("failed to create replay A table");
+    for row_id in 0..16 {
+        table_a
+            .seed_row(row_id, TclLikeRow::empty())
+            .expect("failed to seed replay A row");
+    }
+
+    let recovered_b = std::sync::Arc::new(
+        ShmArena::new(64 << 20).expect("failed to create replay B shared memory"),
+    );
+    let table_b = OccTable::<TclLikeRow>::new(std::sync::Arc::clone(&recovered_b), 16)
+        .expect("failed to create replay B table");
+    for row_id in 0..16 {
+        table_b
+            .seed_row(row_id, TclLikeRow::empty())
+            .expect("failed to seed replay B row");
+    }
+
+    let state_a =
+        recover_occ_table_from_wal(&table_a, &wal_path).expect("failed replay A recovery from wal");
+    let state_b =
+        recover_occ_table_from_wal(&table_b, &wal_path).expect("failed replay B recovery from wal");
+    assert_eq!(
+        state_a, state_b,
+        "recovery metadata diverged across replays"
+    );
+
+    let rows_a = collect_live_rows(&table_a, 16);
+    let rows_b = collect_live_rows(&table_b, 16);
+    assert_eq!(rows_a, rows_b, "replayed live rows diverged across replays");
+
+    let recovered_by_flight: HashMap<_, _> = rows_a
+        .iter()
+        .map(|(_, row)| (decode_flight(row), *row))
+        .collect();
+    assert_eq!(recovered_by_flight.len(), expected_final.len());
+    for (flight, expected) in &expected_final {
+        let recovered = recovered_by_flight
+            .get(flight)
+            .unwrap_or_else(|| panic!("missing recovered row for key {}", flight));
+        assert_eq!(
+            recovered, expected,
+            "idempotent replay mismatch for key {}",
+            flight
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(data_dir);
+}
+
+#[test]
+fn benchmark_occ_wal_replay_startup_throughput() {
+    const TXNS: usize = 12_000;
+    let data_dir = tmp_data_dir();
+    std::fs::create_dir_all(&data_dir).expect("failed to create temp data dir");
+    let wal_path = data_dir.join("replay_benchmark.wal");
+
+    let source_shm = std::sync::Arc::new(
+        ShmArena::new(32 << 20).expect("failed to create benchmark source shm"),
+    );
+    let source_table = OccTable::<u64>::new(std::sync::Arc::clone(&source_shm), 1)
+        .expect("failed to create benchmark source table");
+    source_table
+        .seed_row(0, 0_u64)
+        .expect("failed to seed benchmark source row");
+    let mut committer = OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_synchronous(&wal_path)
+        .expect("failed to create benchmark synchronous committer");
+
+    run_occ_increment_commits(&source_table, &mut committer, TXNS);
+    drop(source_table);
+    drop(source_shm);
+
+    let recover_shm = std::sync::Arc::new(
+        ShmArena::new(32 << 20).expect("failed to create benchmark recovery shm"),
+    );
+    let recover_table = OccTable::<u64>::new(std::sync::Arc::clone(&recover_shm), 1)
+        .expect("failed to create benchmark recovery table");
+    recover_table
+        .seed_row(0, 0_u64)
+        .expect("failed to seed benchmark recovery row");
+
+    let start = Instant::now();
+    let recovery = recover_occ_table_from_wal(&recover_table, &wal_path)
+        .expect("benchmark recovery should succeed");
+    let elapsed = start.elapsed();
+    let throughput = recovery.applied_writes as f64 / elapsed.as_secs_f64().max(1e-9);
+
+    let final_value = recover_table
+        .latest_value(0)
+        .expect("latest value query failed")
+        .expect("benchmark recovery row unexpectedly missing");
+    assert_eq!(
+        final_value, TXNS as u64,
+        "replayed benchmark row does not match committed txn count"
+    );
+    assert_eq!(
+        recovery.applied_writes, TXNS,
+        "recovery write count should match committed txn count"
+    );
+    assert!(
+        throughput >= 1_000.0,
+        "recovery throughput unexpectedly low: {:.2} writes/sec",
+        throughput
+    );
+    eprintln!(
+        "occ_replay_benchmark: txns={} applied_writes={} elapsed={:?} throughput_writes_per_sec={:.2}",
+        TXNS, recovery.applied_writes, elapsed, throughput
+    );
 
     let _ = std::fs::remove_dir_all(data_dir);
 }
@@ -735,24 +926,18 @@ fn read_ring_wal_records(path: &Path) -> Vec<aerostore_core::WalRingCommit> {
     out
 }
 
-fn replay_latest_rows_from_wal(
-    commits: &[aerostore_core::WalRingCommit],
-    shm: &ShmArena,
-) -> HashMap<String, TclLikeRow> {
-    let mut by_key = HashMap::<String, TclLikeRow>::new();
-
-    for commit in commits {
-        for write in &commit.writes {
-            let row_ptr = RelPtr::<OccRow<TclLikeRow>>::from_offset(write.new_offset);
-            let row = row_ptr
-                .as_ref(shm.mmap_base())
-                .unwrap_or_else(|| panic!("failed to resolve row pointer offset {}", write.new_offset));
-            if row.value.exists == 0 {
-                continue;
-            }
-            by_key.insert(decode_flight(&row.value), row.value);
+fn collect_live_rows(table: &OccTable<TclLikeRow>, capacity: usize) -> Vec<(usize, TclLikeRow)> {
+    let mut rows = Vec::new();
+    for row_id in 0..capacity {
+        let row = table
+            .latest_value(row_id)
+            .expect("latest_value failed while collecting live rows")
+            .expect("seeded row unexpectedly missing while collecting live rows");
+        if row.exists == 0 {
+            continue;
         }
+        rows.push((row_id, row));
     }
-
-    by_key
+    rows.sort_unstable_by_key(|entry| entry.0);
+    rows
 }

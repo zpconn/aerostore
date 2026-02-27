@@ -5,10 +5,12 @@ use std::os::fd::AsRawFd;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
+use serde::de::DeserializeOwned;
+
 use crate::occ::{Error as OccError, OccTable, OccTransaction};
 use crate::wal_ring::{
-    deserialize_commit_record, serialize_commit_record, SharedWalRing, SynchronousCommit,
-    WalRingCommit, WalRingError,
+    deserialize_commit_record, serialize_commit_record, wal_commit_from_occ_record, SharedWalRing,
+    SynchronousCommit, WalRingCommit, WalRingError,
 };
 
 #[derive(Debug)]
@@ -16,6 +18,7 @@ pub enum WalWriterError {
     Io(io::Error),
     Occ(OccError),
     Ring(WalRingError),
+    Codec(String),
     InvalidMode(&'static str),
 }
 
@@ -25,6 +28,7 @@ impl fmt::Display for WalWriterError {
             WalWriterError::Io(err) => write!(f, "io error: {}", err),
             WalWriterError::Occ(err) => write!(f, "occ error: {}", err),
             WalWriterError::Ring(err) => write!(f, "ring error: {}", err),
+            WalWriterError::Codec(msg) => write!(f, "codec error: {}", msg),
             WalWriterError::InvalidMode(msg) => write!(f, "invalid wal writer mode: {}", msg),
         }
     }
@@ -292,9 +296,12 @@ impl<const SLOTS: usize, const SLOT_BYTES: usize> OccCommitter<SLOTS, SLOT_BYTES
         &mut self,
         table: &OccTable<T>,
         tx: &mut OccTransaction<T>,
-    ) -> Result<usize, WalWriterError> {
+    ) -> Result<usize, WalWriterError>
+    where
+        T: serde::Serialize,
+    {
         let record = table.commit_with_record(tx)?;
-        let wal_commit = WalRingCommit::from(&record);
+        let wal_commit = wal_commit_from_occ_record(&record)?;
 
         match &self.sink {
             CommitSink::Synchronous(_) => {
@@ -320,6 +327,92 @@ impl<const SLOTS: usize, const SLOT_BYTES: usize> OccCommitter<SLOTS, SLOT_BYTES
             CommitSink::Asynchronous(_) => None,
         }
     }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct OccRecoveryState {
+    pub wal_records: usize,
+    pub applied_writes: usize,
+    pub max_txid: u64,
+}
+
+pub fn read_wal_file(path: impl AsRef<Path>) -> Result<Vec<WalRingCommit>, WalWriterError> {
+    let path = path.as_ref();
+    if !path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let bytes = std::fs::read(path)?;
+    let mut cursor = 0_usize;
+    let mut commits = Vec::new();
+
+    while cursor < bytes.len() {
+        if bytes.len() - cursor < 4 {
+            return Err(WalWriterError::Io(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "truncated wal length prefix at byte offset {} (remaining={})",
+                    cursor,
+                    bytes.len() - cursor
+                ),
+            )));
+        }
+        let mut len_buf = [0_u8; 4];
+        len_buf.copy_from_slice(&bytes[cursor..cursor + 4]);
+        cursor += 4;
+        let frame_len = u32::from_le_bytes(len_buf) as usize;
+        if cursor + frame_len > bytes.len() {
+            return Err(WalWriterError::Io(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "truncated wal frame at byte offset {} (declared_len={}, remaining={})",
+                    cursor,
+                    frame_len,
+                    bytes.len() - cursor
+                ),
+            )));
+        }
+
+        let frame = &bytes[cursor..cursor + frame_len];
+        cursor += frame_len;
+        commits.push(deserialize_commit_record(frame)?);
+    }
+
+    Ok(commits)
+}
+
+pub fn recover_occ_table_from_wal<T: Copy + Send + Sync + 'static>(
+    table: &OccTable<T>,
+    wal_path: impl AsRef<Path>,
+) -> Result<OccRecoveryState, WalWriterError>
+where
+    T: DeserializeOwned,
+{
+    let commits = read_wal_file(wal_path)?;
+    let mut applied_writes = 0_usize;
+    let mut max_txid = 0_u64;
+
+    for commit in &commits {
+        if commit.txid > max_txid {
+            max_txid = commit.txid;
+        }
+        for write in &commit.writes {
+            let value: T = bincode::deserialize(write.value_payload.as_slice())
+                .map_err(|err| WalWriterError::Codec(err.to_string()))?;
+            table.apply_recovered_write(write.row_id as usize, commit.txid, value)?;
+            applied_writes += 1;
+        }
+    }
+
+    if max_txid > 0 {
+        table.advance_global_txid_floor(max_txid.saturating_add(1));
+    }
+
+    Ok(OccRecoveryState {
+        wal_records: commits.len(),
+        applied_writes,
+        max_txid,
+    })
 }
 
 fn fdatasync(fd: libc::c_int) -> io::Result<()> {

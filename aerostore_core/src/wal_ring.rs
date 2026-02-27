@@ -5,6 +5,7 @@ use std::sync::Arc;
 use rkyv::{
     AlignedVec, Archive, Deserialize as RkyvDeserialize, Infallible, Serialize as RkyvSerialize,
 };
+use serde::Serialize;
 
 use crate::occ::OccCommitRecord;
 use crate::shm::{RelPtr, ShmAllocError, ShmArena};
@@ -35,6 +36,7 @@ pub struct WalRingWrite {
     pub row_id: u64,
     pub base_offset: u32,
     pub new_offset: u32,
+    pub value_payload: Vec<u8>,
 }
 
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, Clone, Debug, PartialEq, Eq)]
@@ -45,22 +47,25 @@ pub struct WalRingCommit {
     pub writes: Vec<WalRingWrite>,
 }
 
-impl From<&OccCommitRecord> for WalRingCommit {
-    fn from(record: &OccCommitRecord) -> Self {
-        let mut writes = Vec::with_capacity(record.writes.len());
-        for w in &record.writes {
-            writes.push(WalRingWrite {
-                row_id: w.row_id as u64,
-                base_offset: w.base_offset,
-                new_offset: w.new_offset,
-            });
-        }
-
-        Self {
-            txid: record.txid,
-            writes,
-        }
+pub fn wal_commit_from_occ_record<T: Copy + Serialize>(
+    record: &OccCommitRecord<T>,
+) -> Result<WalRingCommit, WalRingError> {
+    let mut writes = Vec::with_capacity(record.writes.len());
+    for w in &record.writes {
+        let value_payload =
+            bincode::serialize(&w.value).map_err(|err| WalRingError::Serialize(err.to_string()))?;
+        writes.push(WalRingWrite {
+            row_id: w.row_id as u64,
+            base_offset: w.base_offset,
+            new_offset: w.new_offset,
+            value_payload,
+        });
     }
+
+    Ok(WalRingCommit {
+        txid: record.txid,
+        writes,
+    })
 }
 
 #[derive(Debug)]

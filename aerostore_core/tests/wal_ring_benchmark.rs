@@ -7,10 +7,11 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use aerostore_core::{
-    deserialize_commit_record, spawn_wal_writer_daemon, OccCommitter, OccTable, SharedWalRing,
-    ShmArena, WalRingCommit, WalRingWrite, WalWriterDaemon, IndexValue, SecondaryIndex,
+    deserialize_commit_record, spawn_wal_writer_daemon, IndexValue, OccCommitter, OccTable,
+    SecondaryIndex, SharedWalRing, ShmArena, WalRingCommit, WalRingWrite, WalWriterDaemon,
 };
 use crossbeam_skiplist::SkipMap;
+use serde::{Deserialize, Serialize};
 
 const TXNS: usize = 10_000;
 const ROW_ID: usize = 0;
@@ -46,7 +47,7 @@ fn benchmark_async_synchronous_commit_modes() {
     );
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct TclBenchRow {
     exists: u8,
     flight: [u8; 12],
@@ -142,13 +143,27 @@ fn wal_ring_backpressure_blocks_producers_without_corruption() {
         let ring = ring.clone();
         let done = Arc::clone(&done);
         std::thread::spawn(move || {
-            let mut received = Vec::<u64>::with_capacity(TOTAL_MESSAGES);
+            let mut received = Vec::<(u64, u64)>::with_capacity(TOTAL_MESSAGES);
             loop {
                 match ring.pop_bytes() {
                     Ok(Some(payload)) => {
                         let msg =
                             deserialize_commit_record(payload.as_slice()).expect("decode failed");
-                        received.push(msg.txid);
+                        assert_eq!(
+                            msg.writes.len(),
+                            1,
+                            "backpressure payload should contain exactly one write"
+                        );
+                        let write = &msg.writes[0];
+                        assert_eq!(
+                            write.value_payload.len(),
+                            std::mem::size_of::<u64>(),
+                            "backpressure payload value length mismatch"
+                        );
+                        let mut payload_buf = [0_u8; 8];
+                        payload_buf.copy_from_slice(write.value_payload.as_slice());
+                        let payload_value = u64::from_le_bytes(payload_buf);
+                        received.push((msg.txid, payload_value));
                         std::thread::sleep(std::time::Duration::from_micros(400));
                     }
                     Ok(None) => {
@@ -167,12 +182,14 @@ fn wal_ring_backpressure_blocks_producers_without_corruption() {
 
     let start = Instant::now();
     for txid in 1..=TOTAL_MESSAGES as u64 {
+        let payload_value = txid.rotate_left(17) ^ 0xA5A5_5A5A_5A5A_A5A5_u64;
         let msg = WalRingCommit {
             txid,
             writes: vec![WalRingWrite {
                 row_id: 0,
                 base_offset: txid as u32 - 1,
                 new_offset: txid as u32,
+                value_payload: payload_value.to_le_bytes().to_vec(),
             }],
         };
         ring.push_commit_record(&msg)
@@ -181,19 +198,25 @@ fn wal_ring_backpressure_blocks_producers_without_corruption() {
     let producer_elapsed = start.elapsed();
 
     done.store(true, Ordering::Release);
-    let mut consumed_txids = consumer.join().expect("backpressure consumer panicked");
+    let mut consumed = consumer.join().expect("backpressure consumer panicked");
 
     assert_eq!(
-        consumed_txids.len(),
+        consumed.len(),
         TOTAL_MESSAGES,
         "ring consumer lost messages under producer backpressure"
     );
-    consumed_txids.sort_unstable();
-    for (idx, txid) in consumed_txids.iter().enumerate() {
+    consumed.sort_unstable_by_key(|entry| entry.0);
+    for (idx, (txid, payload_value)) in consumed.iter().enumerate() {
+        let expected_txid = (idx + 1) as u64;
         assert_eq!(
-            *txid,
-            (idx + 1) as u64,
+            *txid, expected_txid,
             "ring payload corruption or duplicate/missing txid detected"
+        );
+        let expected_payload = expected_txid.rotate_left(17) ^ 0xA5A5_5A5A_5A5A_A5A5_u64;
+        assert_eq!(
+            *payload_value, expected_payload,
+            "ring payload value corruption detected for txid {}",
+            expected_txid
         );
     }
 
@@ -355,8 +378,7 @@ fn run_synchronous_tcl_like_benchmark(wal_path: &Path) -> f64 {
 }
 
 fn run_asynchronous_tcl_like_benchmark(wal_path: &Path) -> f64 {
-    let shm =
-        Arc::new(ShmArena::new(96 << 20).expect("failed to create async tcl-like shm arena"));
+    let shm = Arc::new(ShmArena::new(96 << 20).expect("failed to create async tcl-like shm arena"));
     let table = OccTable::<TclBenchRow>::new(Arc::clone(&shm), TCL_BENCH_KEYS)
         .expect("failed to create async tcl-like occ table");
     let key_index = SkipMap::<String, usize>::new();
@@ -418,7 +440,8 @@ fn run_asynchronous_tcl_like_benchmark(wal_path: &Path) -> f64 {
 
 fn run_synchronous_savepoint_churn_benchmark(wal_path: &Path) -> f64 {
     let shm = Arc::new(ShmArena::new(64 << 20).expect("failed to create sync churn shm arena"));
-    let table = OccTable::<u64>::new(Arc::clone(&shm), 1).expect("failed to create churn occ table");
+    let table =
+        OccTable::<u64>::new(Arc::clone(&shm), 1).expect("failed to create churn occ table");
     table
         .seed_row(ROW_ID, 0_u64)
         .expect("failed to seed churn benchmark row");
@@ -474,7 +497,8 @@ fn run_synchronous_savepoint_churn_benchmark(wal_path: &Path) -> f64 {
 
 fn run_asynchronous_savepoint_churn_benchmark(wal_path: &Path) -> f64 {
     let shm = Arc::new(ShmArena::new(96 << 20).expect("failed to create async churn shm arena"));
-    let table = OccTable::<u64>::new(Arc::clone(&shm), 1).expect("failed to create churn occ table");
+    let table =
+        OccTable::<u64>::new(Arc::clone(&shm), 1).expect("failed to create churn occ table");
     table
         .seed_row(ROW_ID, 0_u64)
         .expect("failed to seed churn benchmark row");

@@ -4,7 +4,9 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread;
 
-use aerostore_core::{OccError, OccTable, SharedWalRing, ShmArena, WalRingCommit, PROCARRAY_SLOTS};
+use aerostore_core::{
+    wal_commit_from_occ_record, OccError, OccTable, SharedWalRing, ShmArena, PROCARRAY_SLOTS,
+};
 
 #[test]
 fn procarray_thread_stress_begin_end_and_snapshot_consistency() {
@@ -214,7 +216,8 @@ fn procarray_slots_release_under_occ_conflicts_and_ring_backpressure() {
 
                 match table.commit_with_record(&mut tx) {
                     Ok(record) => {
-                        let wal_record = WalRingCommit::from(&record);
+                        let wal_record = wal_commit_from_occ_record(&record)
+                            .expect("failed to encode OCC commit as WAL record");
                         ring.push_commit_record(&wal_record)
                             .expect("ring push failed under pressure");
                         successful_commits.fetch_add(1, Ordering::AcqRel);
@@ -265,9 +268,8 @@ fn procarray_slots_release_under_concurrent_savepoint_rollback_churn() {
     const MAX_HEAD_GROWTH_BYTES: u32 = 1024 * 1024;
 
     let shm = Arc::new(ShmArena::new(32 << 20).expect("failed to create shared arena"));
-    let table = Arc::new(
-        OccTable::<u64>::new(Arc::clone(&shm), ROWS).expect("failed to create occ table"),
-    );
+    let table =
+        Arc::new(OccTable::<u64>::new(Arc::clone(&shm), ROWS).expect("failed to create occ table"));
 
     for row_id in 0..ROWS {
         table
@@ -355,9 +357,7 @@ fn procarray_slots_release_under_concurrent_savepoint_rollback_churn() {
             .read(&mut verify, row_id)
             .expect("verify read failed")
             .expect("verify row missing");
-        table
-            .abort(&mut verify)
-            .expect("verify abort failed");
+        table.abort(&mut verify).expect("verify abort failed");
         assert_eq!(
             value, row_id as u64,
             "row {} should remain unchanged after rollback-only churn",

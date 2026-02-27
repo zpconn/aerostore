@@ -98,16 +98,17 @@ impl<T: Copy> OccTransaction<T> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct OccCommittedWrite {
+pub struct OccCommittedWrite<T: Copy> {
     pub row_id: usize,
     pub base_offset: u32,
     pub new_offset: u32,
+    pub value: T,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct OccCommitRecord {
+pub struct OccCommitRecord<T: Copy> {
     pub txid: TxId,
-    pub writes: Vec<OccCommittedWrite>,
+    pub writes: Vec<OccCommittedWrite<T>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -352,7 +353,10 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         Ok(self.commit_with_record(tx)?.writes.len())
     }
 
-    pub fn commit_with_record(&self, tx: &mut OccTransaction<T>) -> Result<OccCommitRecord, Error> {
+    pub fn commit_with_record(
+        &self,
+        tx: &mut OccTransaction<T>,
+    ) -> Result<OccCommitRecord<T>, Error> {
         self.ensure_open(tx)?;
         let _lock = self.acquire_commit_lock()?;
 
@@ -386,7 +390,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         &self,
         tx: &OccTransaction<T>,
         final_write_indices: &[usize],
-    ) -> Result<Vec<OccCommittedWrite>, Error> {
+    ) -> Result<Vec<OccCommittedWrite<T>>, Error> {
         let mut published = Vec::with_capacity(final_write_indices.len());
 
         for idx in final_write_indices {
@@ -422,6 +426,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
                 row_id: write.row_id,
                 base_offset,
                 new_offset,
+                value: new_row.value,
             });
         }
 
@@ -607,7 +612,10 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             return Ok(recycled_ptr);
         }
 
-        Ok(self.shm.chunked_arena().alloc(OccRow::new(value, xmin, next))?)
+        Ok(self
+            .shm
+            .chunked_arena()
+            .alloc(OccRow::new(value, xmin, next))?)
     }
 
     fn initialize_row(
@@ -733,6 +741,69 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             return Err(Error::TransactionClosed);
         }
         Ok(())
+    }
+
+    pub fn latest_value(&self, row_id: usize) -> Result<Option<T>, Error> {
+        if row_id >= self.capacity() {
+            return Err(Error::RowOutOfBounds {
+                row_id,
+                capacity: self.capacity(),
+            });
+        }
+
+        let slot = self.slot_ref(row_id)?;
+        let head_offset = slot.head.load(Ordering::Acquire);
+        if head_offset == EMPTY_PTR {
+            return Ok(None);
+        }
+
+        let row_ptr = RelPtr::from_offset(head_offset);
+        let row = self.resolve_row_ptr(&row_ptr)?;
+        Ok(Some(row.value))
+    }
+
+    pub fn apply_recovered_write(&self, row_id: usize, txid: TxId, value: T) -> Result<(), Error> {
+        if row_id >= self.capacity() {
+            return Err(Error::RowOutOfBounds {
+                row_id,
+                capacity: self.capacity(),
+            });
+        }
+        if txid == 0 {
+            return Err(Error::SerializationFailure);
+        }
+
+        let _lock = self.acquire_commit_lock()?;
+        let slot = self.slot_ref(row_id)?;
+        let base_offset = slot.head.load(Ordering::Acquire);
+        let new_ptr = self.allocate_row(value, txid, base_offset)?;
+        let new_offset = new_ptr.load(Ordering::Acquire);
+
+        if base_offset != EMPTY_PTR {
+            let base_ptr = RelPtr::<OccRow<T>>::from_offset(base_offset);
+            let base_row = self.resolve_row_ptr(&base_ptr)?;
+            let _ = base_row
+                .xmax
+                .compare_exchange(0, txid, Ordering::AcqRel, Ordering::Acquire);
+        }
+
+        let new_row = self.resolve_row_ptr(&new_ptr)?;
+        new_row.next.store(base_offset, Ordering::Release);
+        slot.head.store(new_offset, Ordering::Release);
+        self.advance_global_txid_floor(txid.saturating_add(1));
+        Ok(())
+    }
+
+    pub fn advance_global_txid_floor(&self, floor: TxId) {
+        let global = self.shm.global_txid();
+        let mut observed = global.load(Ordering::Acquire);
+        while observed < floor {
+            match global.compare_exchange_weak(observed, floor, Ordering::AcqRel, Ordering::Acquire)
+            {
+                Ok(_) => break,
+                Err(next) => observed = next,
+            }
+        }
     }
 }
 

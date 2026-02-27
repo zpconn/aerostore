@@ -6,6 +6,7 @@ use aerostore_core::{
     QueryPlanner, SecondaryIndex, SharedWalRing, ShmArena, StapiRow, StapiValue,
 };
 use crossbeam_skiplist::SkipMap;
+use serde::{Deserialize, Serialize};
 
 const RING_SLOTS: usize = 256;
 const RING_SLOT_BYTES: usize = 128;
@@ -40,7 +41,7 @@ enum Mode {
     Asynchronous,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct OnCallRow {
     doctor: [u8; 8],
     on_call: i64,

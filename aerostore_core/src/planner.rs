@@ -282,7 +282,9 @@ fn compile_filter<T: StapiRow>(filter: &Filter) -> RowPredicate<T> {
             let expected = value.clone();
             Arc::new(move |row: &T| {
                 row.field_value(field.as_str())
-                    .map(|actual| matches!(compare_values(&actual, &expected), Some(Ordering::Less)))
+                    .map(|actual| {
+                        matches!(compare_values(&actual, &expected), Some(Ordering::Less))
+                    })
                     .unwrap_or(false)
             })
         }
@@ -292,10 +294,7 @@ fn compile_filter<T: StapiRow>(filter: &Filter) -> RowPredicate<T> {
             Arc::new(move |row: &T| {
                 row.field_value(field.as_str())
                     .map(|actual| {
-                        matches!(
-                            compare_values(&actual, &expected),
-                            Some(Ordering::Greater)
-                        )
+                        matches!(compare_values(&actual, &expected), Some(Ordering::Greater))
                     })
                     .unwrap_or(false)
             })
@@ -307,7 +306,9 @@ fn compile_filter<T: StapiRow>(filter: &Filter) -> RowPredicate<T> {
                 let Some(actual) = row.field_value(field.as_str()) else {
                     return false;
                 };
-                options.iter().any(|expected| values_equal(&actual, expected))
+                options
+                    .iter()
+                    .any(|expected| values_equal(&actual, expected))
             })
         }
         Filter::Match { field, pattern } => {
@@ -494,9 +495,7 @@ mod tests {
         let plan = planner.compile(&query).expect("failed to compile plan");
         assert_eq!(plan.route(), PlanRoute::Indexed);
 
-        let mut tx = table
-            .begin_transaction()
-            .expect("begin_transaction failed");
+        let mut tx = table.begin_transaction().expect("begin_transaction failed");
         let rows = plan
             .execute(&table, &mut tx)
             .expect("plan execution should succeed");
@@ -521,9 +520,7 @@ mod tests {
         let plan = planner.compile(&query).expect("failed to compile plan");
         assert_eq!(plan.route(), PlanRoute::Indexed);
 
-        let mut tx = table
-            .begin_transaction()
-            .expect("begin_transaction failed");
+        let mut tx = table.begin_transaction().expect("begin_transaction failed");
         let rows = plan
             .execute(&table, &mut tx)
             .expect("plan execution should succeed");
@@ -577,7 +574,9 @@ mod tests {
         let planner = QueryPlanner::<FlightRow>::new(indexes);
         let parsed =
             parse_stapi_query("-compare {{> alt 10000}}").expect("failed to parse read query");
-        let plan = planner.compile(&parsed).expect("failed to compile read plan");
+        let plan = planner
+            .compile(&parsed)
+            .expect("failed to compile read plan");
         assert_eq!(plan.route(), PlanRoute::Indexed);
 
         let mut tx_a = table
