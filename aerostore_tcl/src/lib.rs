@@ -3,14 +3,16 @@ use std::os::raw::{c_char, c_int};
 use std::path::{Path, PathBuf};
 use std::slice;
 use std::str;
-use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering as AtomicOrdering};
 use std::sync::{Arc, Mutex, OnceLock};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use aerostore_core::{
-    recover_occ_table_from_wal, spawn_wal_writer_daemon, IndexCatalog, IndexValue, IngestStats,
-    OccError, OccTable, OccTransaction, PlannerError, QueryPlanner, SecondaryIndex, SharedWalRing,
-    ShmArena, StapiRow, StapiValue, TsvColumns, TsvDecodeError, WalWriterError,
+    recover_occ_table_from_checkpoint_and_wal, spawn_wal_writer_daemon,
+    write_occ_checkpoint_and_truncate_wal, IndexCatalog, IndexValue, IngestStats, OccError,
+    OccTable, OccTransaction, PlannerError, QueryPlanner, SecondaryIndex, SharedWalRing, ShmArena,
+    StapiRow, StapiValue, SynchronousCommit, TsvColumns, TsvDecodeError, WalWriterError,
+    SYNCHRONOUS_COMMIT_KEY,
 };
 use crossbeam_skiplist::SkipMap;
 use serde::{Deserialize, Serialize};
@@ -27,6 +29,9 @@ const WAL_RING_SLOTS: usize = 512;
 const WAL_RING_SLOT_BYTES: usize = 256;
 
 const WAL_FILE_NAME: &str = "aerostore.wal";
+const CHECKPOINT_FILE_NAME: &str = "occ_checkpoint.dat";
+const CHECKPOINT_INTERVAL_SECS_KEY: &str = "aerostore.checkpoint_interval_secs";
+const DEFAULT_CHECKPOINT_INTERVAL_SECS: u64 = 300;
 
 type FlightDb = SharedFlightDb;
 
@@ -245,16 +250,26 @@ impl FlightIndexes {
     }
 }
 
+struct WalRuntime {
+    configured_mode: SynchronousCommit,
+    committer: aerostore_core::OccCommitter<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>,
+    ring: SharedWalRing<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>,
+    _wal_daemon: aerostore_core::WalWriterDaemon,
+}
+
 struct SharedFlightDb {
+    _shm: Arc<ShmArena>,
     table: Arc<OccTable<FlightState>>,
     planner: QueryPlanner<FlightState>,
     key_index: SkipMap<String, usize>,
     next_row_id: AtomicUsize,
     row_capacity: usize,
     indexes: FlightIndexes,
-    committer: Mutex<aerostore_core::OccCommitter<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>>,
-    _ring: SharedWalRing<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>,
-    _wal_daemon: aerostore_core::WalWriterDaemon,
+    wal_runtime: Mutex<WalRuntime>,
+    wal_path: PathBuf,
+    checkpoint_path: PathBuf,
+    checkpoint_interval_secs: AtomicU64,
+    checkpointer_started: AtomicBool,
     _data_dir: PathBuf,
 }
 
@@ -287,8 +302,12 @@ impl SharedFlightDb {
         let planner = QueryPlanner::new(indexes.as_catalog());
 
         let wal_path = data_dir.join(WAL_FILE_NAME);
-        let _recovery = recover_occ_table_from_wal(&table, &wal_path)
-            .map_err(|err| format!("failed to recover OCC state from WAL: {}", err))?;
+        let checkpoint_path = data_dir.join(CHECKPOINT_FILE_NAME);
+        let _recovery =
+            recover_occ_table_from_checkpoint_and_wal(&table, &checkpoint_path, &wal_path)
+                .map_err(|err| {
+                    format!("failed to recover OCC state from checkpoint/WAL: {}", err)
+                })?;
 
         let key_index = SkipMap::new();
         let mut next_row_id = 0_usize;
@@ -310,22 +329,126 @@ impl SharedFlightDb {
         let wal_daemon = spawn_wal_writer_daemon(ring.clone(), &wal_path)
             .map_err(|err| format!("failed to spawn WAL writer daemon: {}", err))?;
         let committer =
-            aerostore_core::OccCommitter::<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>::new_asynchronous(
-                ring.clone(),
-            );
+            aerostore_core::OccCommitter::<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>::new_synchronous(
+                &wal_path,
+            )
+            .map_err(|err| format!("failed to initialize synchronous committer: {}", err))?;
+        let wal_runtime = WalRuntime {
+            configured_mode: SynchronousCommit::On,
+            committer,
+            ring,
+            _wal_daemon: wal_daemon,
+        };
 
         Ok(Self {
+            _shm: shm,
             table,
             planner,
             key_index,
             next_row_id: AtomicUsize::new(next_row_id),
             row_capacity: DEFAULT_ROW_CAPACITY,
             indexes,
-            committer: Mutex::new(committer),
-            _ring: ring,
-            _wal_daemon: wal_daemon,
+            wal_runtime: Mutex::new(wal_runtime),
+            wal_path,
+            checkpoint_path,
+            checkpoint_interval_secs: AtomicU64::new(DEFAULT_CHECKPOINT_INTERVAL_SECS),
+            checkpointer_started: AtomicBool::new(false),
             _data_dir: data_dir.to_path_buf(),
         })
+    }
+
+    fn start_checkpointer(self: &Arc<Self>) {
+        if self
+            .checkpointer_started
+            .compare_exchange(false, true, AtomicOrdering::AcqRel, AtomicOrdering::Acquire)
+            .is_err()
+        {
+            return;
+        }
+
+        let db = Arc::clone(self);
+        std::thread::spawn(move || loop {
+            let interval_secs = db.checkpoint_interval_secs.load(AtomicOrdering::Acquire);
+            if interval_secs == 0 {
+                std::thread::sleep(Duration::from_millis(250));
+                continue;
+            }
+
+            std::thread::sleep(Duration::from_secs(interval_secs));
+            let mode = match db.current_synchronous_commit_mode() {
+                Ok(mode) => mode,
+                Err(_) => continue,
+            };
+            if mode == SynchronousCommit::Off {
+                continue;
+            }
+            let _ = db.checkpoint_now();
+        });
+    }
+
+    fn set_synchronous_commit_mode(&self, mode: SynchronousCommit) -> Result<(), String> {
+        let mut runtime = self
+            .wal_runtime
+            .lock()
+            .map_err(|_| "wal runtime lock poisoned".to_string())?;
+
+        if runtime.configured_mode == mode {
+            return Ok(());
+        }
+
+        runtime.committer = match mode {
+            SynchronousCommit::On => aerostore_core::OccCommitter::<
+                WAL_RING_SLOTS,
+                WAL_RING_SLOT_BYTES,
+            >::new_synchronous(&self.wal_path)
+            .map_err(|err| format!("failed to enable synchronous commit mode: {}", err))?,
+            SynchronousCommit::Off => aerostore_core::OccCommitter::<
+                WAL_RING_SLOTS,
+                WAL_RING_SLOT_BYTES,
+            >::new_asynchronous(runtime.ring.clone()),
+        };
+        runtime.configured_mode = mode;
+        Ok(())
+    }
+
+    fn current_synchronous_commit_mode(&self) -> Result<SynchronousCommit, String> {
+        let runtime = self
+            .wal_runtime
+            .lock()
+            .map_err(|_| "wal runtime lock poisoned".to_string())?;
+        Ok(runtime.configured_mode)
+    }
+
+    fn set_checkpoint_interval_secs(&self, secs: u64) {
+        self.checkpoint_interval_secs
+            .store(secs, AtomicOrdering::Release);
+    }
+
+    fn checkpoint_interval_secs(&self) -> u64 {
+        self.checkpoint_interval_secs.load(AtomicOrdering::Acquire)
+    }
+
+    fn checkpoint_now(&self) -> Result<usize, String> {
+        let mut runtime = self
+            .wal_runtime
+            .lock()
+            .map_err(|_| "wal runtime lock poisoned".to_string())?;
+
+        if runtime.configured_mode == SynchronousCommit::Off {
+            return Err(
+                "checkpoint requires synchronous_commit=on (set aerostore.synchronous_commit first)"
+                    .to_string(),
+            );
+        }
+
+        runtime.committer =
+            aerostore_core::OccCommitter::<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>::new_synchronous(
+                &self.wal_path,
+            )
+            .map_err(|err| format!("failed to prepare synchronous checkpoint path: {}", err))?;
+
+        write_occ_checkpoint_and_truncate_wal(&self.table, &self.checkpoint_path, &self.wal_path)
+            .map_err(|err| format!("checkpoint failed: {}", err))
     }
 
     fn search_count(&self, request: SearchRequest) -> Result<usize, String> {
@@ -518,10 +641,10 @@ impl SharedFlightDb {
     ) -> Result<(), String> {
         let commit_result = {
             let mut guard = self
-                .committer
+                .wal_runtime
                 .lock()
-                .map_err(|_| "committer lock poisoned".to_string())?;
-            guard.commit(&self.table, tx)
+                .map_err(|_| "wal runtime lock poisoned".to_string())?;
+            guard.committer.commit(&self.table, tx)
         };
 
         match commit_result {
@@ -609,6 +732,9 @@ unsafe fn aerostore_init(interp_ptr: *mut clib::Tcl_Interp) -> c_int {
     }
 
     interp.def_proc("aerostore::init", aerostore_init_cmd);
+    interp.def_proc("aerostore::set_config", aerostore_set_config_cmd);
+    interp.def_proc("aerostore::get_config", aerostore_get_config_cmd);
+    interp.def_proc("aerostore::checkpoint_now", aerostore_checkpoint_now_cmd);
     interp.def_proc("FlightState", flight_state_cmd);
 
     let rc = interp.package_provide(PACKAGE_NAME, PACKAGE_VERSION);
@@ -666,6 +792,7 @@ unsafe fn aerostore_init_cmd_impl(
 
 fn ensure_database(data_dir: Option<&str>) -> Result<&'static Arc<FlightDb>, String> {
     if let Some(db) = GLOBAL_DB.get() {
+        db.start_checkpointer();
         return Ok(db);
     }
 
@@ -674,9 +801,133 @@ fn ensure_database(data_dir: Option<&str>) -> Result<&'static Arc<FlightDb>, Str
 
     let _ = GLOBAL_DB_DIR.set(dir.to_string());
     let _ = GLOBAL_DB.set(Arc::new(db));
-    GLOBAL_DB
+    let db = GLOBAL_DB
         .get()
-        .ok_or_else(|| "failed to initialize global database".to_string())
+        .ok_or_else(|| "failed to initialize global database".to_string())?;
+    db.start_checkpointer();
+    Ok(db)
+}
+
+extern "C" fn aerostore_set_config_cmd(
+    _client_data: clib::ClientData,
+    interp: *mut clib::Tcl_Interp,
+    objc: c_int,
+    objv: *const *mut clib::Tcl_Obj,
+) -> c_int {
+    with_ffi_boundary(interp, || unsafe {
+        match aerostore_set_config_cmd_impl(interp, objc, objv) {
+            Ok(code) => code,
+            Err(message) => set_error(interp, &message),
+        }
+    })
+}
+
+unsafe fn aerostore_set_config_cmd_impl(
+    interp: *mut clib::Tcl_Interp,
+    objc: c_int,
+    objv: *const *mut clib::Tcl_Obj,
+) -> Result<c_int, String> {
+    let args = arg_slice(objc, objv)?;
+    if args.len() != 3 {
+        return Err("usage: aerostore::set_config <key> <value>".to_string());
+    }
+
+    let key = obj_to_str(args[1])?;
+    let db = ensure_database(None)?;
+    match key {
+        SYNCHRONOUS_COMMIT_KEY => {
+            let mode = SynchronousCommit::from_setting(obj_to_str(args[2])?);
+            db.set_synchronous_commit_mode(mode)?;
+        }
+        CHECKPOINT_INTERVAL_SECS_KEY => {
+            let secs = parse_u64(interp, args[2])?;
+            db.set_checkpoint_interval_secs(secs);
+        }
+        _ => {
+            return Err(format!(
+                "unknown config key '{}'; supported: {}, {}",
+                key, SYNCHRONOUS_COMMIT_KEY, CHECKPOINT_INTERVAL_SECS_KEY
+            ));
+        }
+    }
+
+    Ok(set_ok_result(interp, "ok"))
+}
+
+extern "C" fn aerostore_get_config_cmd(
+    _client_data: clib::ClientData,
+    interp: *mut clib::Tcl_Interp,
+    objc: c_int,
+    objv: *const *mut clib::Tcl_Obj,
+) -> c_int {
+    with_ffi_boundary(interp, || unsafe {
+        match aerostore_get_config_cmd_impl(interp, objc, objv) {
+            Ok(code) => code,
+            Err(message) => set_error(interp, &message),
+        }
+    })
+}
+
+unsafe fn aerostore_get_config_cmd_impl(
+    interp: *mut clib::Tcl_Interp,
+    objc: c_int,
+    objv: *const *mut clib::Tcl_Obj,
+) -> Result<c_int, String> {
+    let args = arg_slice(objc, objv)?;
+    if args.len() != 2 {
+        return Err("usage: aerostore::get_config <key>".to_string());
+    }
+
+    let key = obj_to_str(args[1])?;
+    let db = ensure_database(None)?;
+    match key {
+        SYNCHRONOUS_COMMIT_KEY => {
+            let mode = db.current_synchronous_commit_mode()?;
+            let value = if mode == SynchronousCommit::Off {
+                "off"
+            } else {
+                "on"
+            };
+            Ok(set_ok_result(interp, value))
+        }
+        CHECKPOINT_INTERVAL_SECS_KEY => {
+            let secs = db.checkpoint_interval_secs();
+            Ok(set_wide_result(interp, secs as i64))
+        }
+        _ => Err(format!(
+            "unknown config key '{}'; supported: {}, {}",
+            key, SYNCHRONOUS_COMMIT_KEY, CHECKPOINT_INTERVAL_SECS_KEY
+        )),
+    }
+}
+
+extern "C" fn aerostore_checkpoint_now_cmd(
+    _client_data: clib::ClientData,
+    interp: *mut clib::Tcl_Interp,
+    objc: c_int,
+    objv: *const *mut clib::Tcl_Obj,
+) -> c_int {
+    with_ffi_boundary(interp, || unsafe {
+        match aerostore_checkpoint_now_cmd_impl(interp, objc, objv) {
+            Ok(code) => code,
+            Err(message) => set_error(interp, &message),
+        }
+    })
+}
+
+unsafe fn aerostore_checkpoint_now_cmd_impl(
+    interp: *mut clib::Tcl_Interp,
+    objc: c_int,
+    objv: *const *mut clib::Tcl_Obj,
+) -> Result<c_int, String> {
+    let args = arg_slice(objc, objv)?;
+    if args.len() != 1 {
+        return Err("usage: aerostore::checkpoint_now".to_string());
+    }
+
+    let db = ensure_database(None)?;
+    let rows = db.checkpoint_now()?;
+    Ok(set_ok_result(interp, &format!("checkpoint rows={rows}")))
 }
 
 extern "C" fn flight_state_cmd(
@@ -843,6 +1094,11 @@ unsafe fn parse_usize(
 ) -> Result<usize, String> {
     let value = parse_i64(interp, obj)?;
     usize::try_from(value).map_err(|_| "expected non-negative integer".to_string())
+}
+
+unsafe fn parse_u64(interp: *mut clib::Tcl_Interp, obj: *mut clib::Tcl_Obj) -> Result<u64, String> {
+    let value = parse_i64(interp, obj)?;
+    u64::try_from(value).map_err(|_| "expected non-negative integer".to_string())
 }
 
 unsafe fn obj_to_str<'a>(obj: *mut clib::Tcl_Obj) -> Result<&'a str, String> {

@@ -8,10 +8,12 @@ use std::time::{Duration, Instant};
 #[test]
 fn tcl_search_uses_stapi_path_for_list_and_raw_compare_inputs() {
     let libpath = find_tcl_cdylib().expect("failed to locate libaerostore_tcl shared library");
+    let data_dir = unique_temp_dir("aerostore_tcl_it");
+    let _ = std::fs::remove_dir_all(&data_dir);
     let script_template = r#"
 load __LIBPATH__ Aerostore
 package require aerostore
-set _ [aerostore::init ./tmp/aerostore_tcl_it]
+set _ [aerostore::init __DATA_DIR__]
 
 set batch [join [list \
     "UAL123\t37.618805\t-122.375416\t35000\t451\t1709000000" \
@@ -48,14 +50,52 @@ if {![string match "TCL_ERROR:*" $err2]} {
     error "unknown option error missing TCL_ERROR prefix: $err2"
 }
 
+set sync_mode [aerostore::get_config aerostore.synchronous_commit]
+if {$sync_mode ne "on"} {
+    error "expected default synchronous_commit mode on, got: $sync_mode"
+}
+
+aerostore::set_config aerostore.synchronous_commit off
+set sync_mode [aerostore::get_config aerostore.synchronous_commit]
+if {$sync_mode ne "off"} {
+    error "expected synchronous_commit mode off after toggle, got: $sync_mode"
+}
+
+if {[catch {aerostore::checkpoint_now} checkpoint_err] == 0} {
+    error "checkpoint unexpectedly succeeded while synchronous_commit=off"
+}
+if {![string match "TCL_ERROR:*" $checkpoint_err]} {
+    error "checkpoint error missing TCL_ERROR prefix: $checkpoint_err"
+}
+
+aerostore::set_config aerostore.synchronous_commit on
+set sync_mode [aerostore::get_config aerostore.synchronous_commit]
+if {$sync_mode ne "on"} {
+    error "expected synchronous_commit mode on after restore, got: $sync_mode"
+}
+
+aerostore::set_config aerostore.checkpoint_interval_secs 1
+set checkpoint_interval [aerostore::get_config aerostore.checkpoint_interval_secs]
+if {$checkpoint_interval != 1} {
+    error "expected checkpoint interval 1, got: $checkpoint_interval"
+}
+
+set checkpoint_ok [aerostore::checkpoint_now]
+if {![string match "checkpoint rows=*" $checkpoint_ok]} {
+    error "unexpected checkpoint success payload: $checkpoint_ok"
+}
+
 puts "bridge_ok"
 "#;
-    let script = script_template.replace("__LIBPATH__", tcl_quote_path(libpath.as_path()).as_str());
+    let script = script_template
+        .replace("__LIBPATH__", tcl_quote_path(libpath.as_path()).as_str())
+        .replace("__DATA_DIR__", tcl_quote_path(data_dir.as_path()).as_str());
 
     let script_path = write_temp_script(script.as_str()).expect("failed to write temp Tcl script");
     let status = run_tcl_script_with_timeout(script_path.as_path(), Duration::from_secs(20))
         .expect("failed to execute tcl bridge script");
     let _ = std::fs::remove_file(script_path);
+    let _ = std::fs::remove_dir_all(&data_dir);
 
     assert!(
         status.success(),
@@ -198,4 +238,12 @@ fn write_temp_script(script: &str) -> Result<PathBuf, String> {
     let path = std::env::temp_dir().join(format!("aerostore_tcl_bridge_{nonce}.tcl"));
     std::fs::write(path.as_path(), script).map_err(|e| format!("script write failed: {}", e))?;
     Ok(path)
+}
+
+fn unique_temp_dir(prefix: &str) -> PathBuf {
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock drift while deriving temp dir")
+        .as_nanos();
+    std::env::temp_dir().join(format!("{prefix}_{nonce}"))
 }

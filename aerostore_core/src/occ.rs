@@ -805,6 +805,30 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             }
         }
     }
+
+    #[inline]
+    pub fn current_global_txid(&self) -> TxId {
+        self.shm.global_txid().load(Ordering::Acquire)
+    }
+
+    pub fn snapshot_latest_rows(&self) -> Result<Vec<(usize, T)>, Error> {
+        let _lock = self.acquire_commit_lock()?;
+        let mut rows = Vec::with_capacity(self.capacity());
+
+        for row_id in 0..self.capacity() {
+            let slot = self.slot_ref(row_id)?;
+            let head_offset = slot.head.load(Ordering::Acquire);
+            if head_offset == EMPTY_PTR {
+                continue;
+            }
+
+            let row_ptr = RelPtr::<OccRow<T>>::from_offset(head_offset);
+            let row = self.resolve_row_ptr(&row_ptr)?;
+            rows.push((row_id, row.value));
+        }
+
+        Ok(rows)
+    }
 }
 
 struct CommitLockGuard<'a> {
