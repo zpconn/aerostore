@@ -38,7 +38,7 @@ As of February 27, 2026, this repository contains a working hybrid architecture:
 - `occ.rs`: shared-memory OCC/SSI with savepoints.
 - `wal.rs`: WAL, group commit, checkpointing, recovery.
 - `wal_ring.rs`: shared-memory MPSC ring + `rkyv` commit payload codec.
-- `wal_writer.rs`: forked WAL writer daemon + sync/async OCC commit sink.
+- `wal_writer.rs`: forked WAL writer daemon + sync/async OCC commit sink + parent-death lifecycle guard.
 - `ingest.rs`: TSV bulk upsert pipeline.
 - `watch.rs`: pub/sub change streaming + TTL sweeper.
 
@@ -127,6 +127,7 @@ Two durability stacks currently exist:
 - Shared-memory OCC durability primitives (`wal_ring.rs` + `wal_writer.rs`):
   - lock-free MPSC ring
   - daemonized WAL sink with periodic `fdatasync`
+  - WAL daemon arms Linux `PR_SET_PDEATHSIG(SIGTERM)` to avoid orphaned background writers if parent exits/crashes
   - `OccCommitter` supports sync and async commit modes
 
 Primary code:
@@ -191,6 +192,12 @@ Tcl extension only:
 cargo build -p aerostore_tcl
 ```
 
+Tcl bridge integration test:
+
+```bash
+cargo test -p aerostore_tcl --release --test search_stapi_bridge -- --test-threads=1
+```
+
 ## Test + Benchmark Runbook
 
 ### Full release suite
@@ -244,11 +251,12 @@ Includes:
 - typed query benchmark (existing)
 - STAPI parse+compile+execute benchmark (new)
 - Tcl-style alias/match + `-desc`/`-offset`/`-limit` benchmark path (new)
+- Tcl-bridge-style STAPI string assembly + compile + execute benchmark path (new)
 
 ### Targeted reliability suites
 
 ```bash
-cargo test -p aerostore_core --release --test occ_write_skew --test occ_savepoint_reclaim --test procarray_concurrency --test wal_crash_recovery --test shm_shared_memory -- --test-threads=1
+cargo test -p aerostore_core --release --test occ_write_skew --test occ_savepoint_reclaim --test procarray_concurrency --test wal_crash_recovery --test wal_writer_lifecycle --test shm_shared_memory -- --test-threads=1
 ```
 
 ### Savepoint Reclamation Validation
@@ -281,6 +289,8 @@ cargo test -p aerostore_core --release --test occ_savepoint_reclaim -- --test-th
   - WAL daemon crash/restart replayability
   - Tcl-like keyed upsert crash/restart replay + secondary-index consistency checks
   - savepoint-rollback WAL test proving rolled-back write intents never become durable frames
+- `tests/wal_writer_lifecycle.rs`
+  - parent/child fork lifecycle regression guard proving WAL daemon exits when parent process exits
 - `tests/wal_ring_benchmark.rs`
   - sync-vs-async throughput gate
   - Tcl-like keyed upsert throughput gate (read/write + index maintenance workload)
@@ -338,7 +348,8 @@ V1 recovery order:
 
 - `DurableDatabase` remains the V1 MVCC durability path used by core recovery tests.
 - Tcl-facing query/ingest execution is now wired to shared-memory OCC + WAL ring commits (the previous README caveat has been resolved).
-- Tcl search option parsing still uses Tcl list-object decoding (`Tcl_ListObjGetElements`) before mapping into planner filters; direct raw STAPI string parsing is implemented in `aerostore_core::stapi_parser` and validated in unit tests.
+- Tcl search now routes through the raw STAPI parser/compiler path (`QueryPlanner::compile_from_stapi`) instead of decoding nested compare lists via `Tcl_ListObjGetElements`.
+- Tcl scalar options (`-limit`, `-offset`, `-asc`/`-desc`) are parsed with Tcl numeric/object APIs and applied around planner execution without bypassing STAPI filter parsing.
 - `rollback_to(savepoint)` now eagerly recycles abandoned write allocations into a lock-free per-table free list, and subsequent OCC writes reuse those slots immediately.
 
 ## License
