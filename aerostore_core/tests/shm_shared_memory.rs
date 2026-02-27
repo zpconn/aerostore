@@ -4,8 +4,8 @@ use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
 use aerostore_core::{
-    deserialize_commit_record, RelPtr, SharedWalRing, ShmAllocError, ShmArena, WalRingCommit,
-    WalRingWrite,
+    deserialize_commit_record, OccTable, RelPtr, SharedWalRing, ShmAllocError, ShmArena,
+    WalRingCommit, WalRingWrite,
 };
 
 #[repr(C, align(64))]
@@ -309,6 +309,129 @@ fn forked_mpsc_ring_producers_preserve_message_integrity() {
         expected_xor,
         "ring consumer xor mismatch indicates corruption/loss"
     );
+}
+
+#[test]
+fn forked_occ_recycle_free_list_stress_is_safe_and_bounded() {
+    const CHILDREN: usize = 6;
+    const ITERATIONS: usize = 8_000;
+    const ROWS: usize = 4;
+    const MAX_HEAD_GROWTH_BYTES: u32 = 512 * 1024;
+
+    let shm = Arc::new(ShmArena::new(32 << 20).expect("failed to create shared arena"));
+    let table = OccTable::<u64>::new(Arc::clone(&shm), ROWS).expect("failed to create occ table");
+
+    for row_id in 0..ROWS {
+        table
+            .seed_row(row_id, row_id as u64)
+            .expect("failed to seed row");
+    }
+
+    let base_head = shm.chunked_arena().head_offset();
+    let mut pids = Vec::with_capacity(CHILDREN);
+
+    for child_idx in 0..CHILDREN {
+        // SAFETY:
+        // `fork` duplicates process. Child exits via `_exit`.
+        let pid = unsafe { libc::fork() };
+        assert!(pid >= 0, "fork failed: {}", std::io::Error::last_os_error());
+
+        if pid == 0 {
+            let mut code = 0_i32;
+            for iter in 0..ITERATIONS {
+                let row_id = (child_idx + iter) % ROWS;
+
+                let mut tx = match table.begin_transaction() {
+                    Ok(tx) => tx,
+                    Err(_) => {
+                        code = 81;
+                        break;
+                    }
+                };
+
+                let current = match table.read(&mut tx, row_id) {
+                    Ok(Some(value)) => value,
+                    _ => {
+                        code = 82;
+                        break;
+                    }
+                };
+
+                if table.savepoint(&mut tx, "sp").is_err() {
+                    code = 83;
+                    break;
+                }
+                if table.write(&mut tx, row_id, current + 1).is_err() {
+                    code = 84;
+                    break;
+                }
+                if table.rollback_to(&mut tx, "sp").is_err() {
+                    code = 85;
+                    break;
+                }
+
+                let restored = match table.read(&mut tx, row_id) {
+                    Ok(Some(value)) => value,
+                    _ => {
+                        code = 86;
+                        break;
+                    }
+                };
+                if restored != current {
+                    code = 87;
+                    break;
+                }
+
+                if table.abort(&mut tx).is_err() {
+                    code = 88;
+                    break;
+                }
+            }
+
+            // SAFETY:
+            // child exits without unwinding.
+            unsafe { libc::_exit(code) };
+        }
+
+        pids.push(pid);
+    }
+
+    for pid in pids {
+        wait_for_child(pid);
+    }
+
+    let snapshot = shm.create_snapshot();
+    assert_eq!(
+        snapshot.len(),
+        0,
+        "all ProcArray slots must be released after forked recycle stress"
+    );
+
+    let end_head = shm.chunked_arena().head_offset();
+    let consumed = end_head.saturating_sub(base_head);
+    assert!(
+        consumed <= MAX_HEAD_GROWTH_BYTES,
+        "shared arena head grew unexpectedly under forked recycle stress (growth={} bytes)",
+        consumed
+    );
+
+    for row_id in 0..ROWS {
+        let mut verify = table
+            .begin_transaction()
+            .expect("verify begin_transaction failed");
+        let value = table
+            .read(&mut verify, row_id)
+            .expect("verify read failed")
+            .expect("verify row missing");
+        table
+            .abort(&mut verify)
+            .expect("verify abort failed");
+        assert_eq!(
+            value, row_id as u64,
+            "row {} changed unexpectedly under rollback-only forked stress",
+            row_id
+        );
+    }
 }
 
 fn wait_for_child(pid: libc::pid_t) {

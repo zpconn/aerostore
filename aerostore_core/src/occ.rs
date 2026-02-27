@@ -13,6 +13,7 @@ const EMPTY_PTR: u32 = 0;
 #[repr(C, align(64))]
 struct OccSharedHeader {
     commit_lock: AtomicU32,
+    recycled_head: AtomicU32,
 }
 
 impl OccSharedHeader {
@@ -20,6 +21,7 @@ impl OccSharedHeader {
     fn new() -> Self {
         Self {
             commit_lock: AtomicU32::new(0),
+            recycled_head: AtomicU32::new(EMPTY_PTR),
         }
     }
 }
@@ -43,6 +45,7 @@ pub struct OccRow<T: Copy> {
     pub xmin: TxId,
     pub xmax: AtomicU64,
     next: AtomicU32,
+    recycle_next: AtomicU32,
     pub value: T,
 }
 
@@ -53,6 +56,7 @@ impl<T: Copy> OccRow<T> {
             xmin,
             xmax: AtomicU64::new(0),
             next: AtomicU32::new(next),
+            recycle_next: AtomicU32::new(EMPTY_PTR),
             value,
         }
     }
@@ -192,10 +196,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
     pub fn seed_row(&self, row_id: usize, value: T) -> Result<(), Error> {
         let slot = self.slot_ref(row_id)?;
         let seed_txid = self.shm.global_txid().fetch_add(1, Ordering::AcqRel);
-        let row_ptr = self
-            .shm
-            .chunked_arena()
-            .alloc(OccRow::new(value, seed_txid, 0))?;
+        let row_ptr = self.allocate_row(value, seed_txid, EMPTY_PTR)?;
         let row_offset = row_ptr.load(Ordering::Acquire);
 
         if slot
@@ -253,6 +254,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         };
 
         let write_len = tx.savepoints[savepoint_idx].write_len;
+        self.recycle_write_suffix(tx, write_len)?;
         tx.write_set.truncate(write_len);
         tx.savepoints.truncate(savepoint_idx + 1);
         Ok(())
@@ -331,10 +333,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         };
 
         let base_offset = base_ptr.load(Ordering::Acquire);
-        let new_ptr = self
-            .shm
-            .chunked_arena()
-            .alloc(OccRow::new(value, tx.txid, base_offset))?;
+        let new_ptr = self.allocate_row(value, tx.txid, base_offset)?;
 
         tx.write_set.push(PendingWrite {
             row_id,
@@ -345,7 +344,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
     }
 
     pub fn abort(&self, tx: &mut OccTransaction<T>) -> Result<(), Error> {
-        self.clear_local_sets(tx);
+        self.clear_local_sets(tx)?;
         self.finish_transaction(tx)
     }
 
@@ -375,7 +374,10 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             writes,
         };
 
-        self.clear_local_sets(tx);
+        self.recycle_non_final_writes(tx, &final_write_indices)?;
+        tx.read_set.clear();
+        tx.write_set.clear();
+        tx.savepoints.clear();
         self.finish_transaction(tx)?;
         Ok(commit_record)
     }
@@ -482,6 +484,40 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         by_row.into_values().collect()
     }
 
+    fn recycle_non_final_writes(
+        &self,
+        tx: &OccTransaction<T>,
+        final_write_indices: &[usize],
+    ) -> Result<(), Error> {
+        let mut keep = vec![false; tx.write_set.len()];
+        for idx in final_write_indices {
+            if *idx < keep.len() {
+                keep[*idx] = true;
+            }
+        }
+
+        for (idx, write) in tx.write_set.iter().enumerate() {
+            if keep[idx] {
+                continue;
+            }
+            self.recycle_row_ptr(&write.new_ptr)?;
+        }
+
+        Ok(())
+    }
+
+    fn recycle_write_suffix(&self, tx: &OccTransaction<T>, start: usize) -> Result<(), Error> {
+        if start >= tx.write_set.len() {
+            return Ok(());
+        }
+
+        for write in tx.write_set[start..].iter() {
+            self.recycle_row_ptr(&write.new_ptr)?;
+        }
+
+        Ok(())
+    }
+
     fn is_visible(&self, row: &OccRow<T>, tx: &OccTransaction<T>) -> bool {
         if row.xmin == tx.txid {
             return true;
@@ -565,8 +601,112 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             .ok_or(Error::InvalidPointer { offset })
     }
 
+    fn allocate_row(&self, value: T, xmin: TxId, next: u32) -> Result<RelPtr<OccRow<T>>, Error> {
+        if let Some(recycled_ptr) = self.try_pop_recycled_row()? {
+            self.initialize_row(&recycled_ptr, value, xmin, next)?;
+            return Ok(recycled_ptr);
+        }
+
+        Ok(self.shm.chunked_arena().alloc(OccRow::new(value, xmin, next))?)
+    }
+
+    fn initialize_row(
+        &self,
+        row_ptr: &RelPtr<OccRow<T>>,
+        value: T,
+        xmin: TxId,
+        next: u32,
+    ) -> Result<(), Error> {
+        let offset = row_ptr.load(Ordering::Acquire);
+        let row_mut = self.resolve_row_ptr_raw(offset)?;
+        // SAFETY:
+        // Recycled rows are only reused after being removed from the free list and are not
+        // reachable from table heads or any live transaction write-set at this point.
+        unsafe {
+            std::ptr::write(row_mut, OccRow::new(value, xmin, next));
+        }
+        Ok(())
+    }
+
+    fn resolve_row_ptr_raw(&self, offset: u32) -> Result<*mut OccRow<T>, Error> {
+        if offset == EMPTY_PTR {
+            return Err(Error::InvalidPointer { offset });
+        }
+
+        let mmap = self.shm.mmap_base();
+        let size = std::mem::size_of::<OccRow<T>>();
+        let align = std::mem::align_of::<OccRow<T>>();
+
+        let start = offset as usize;
+        let end = start
+            .checked_add(size)
+            .ok_or(Error::InvalidPointer { offset })?;
+        if end > mmap.len() {
+            return Err(Error::InvalidPointer { offset });
+        }
+
+        let addr = (mmap.as_ptr() as usize)
+            .checked_add(start)
+            .ok_or(Error::InvalidPointer { offset })?;
+        if addr % align != 0 {
+            return Err(Error::InvalidPointer { offset });
+        }
+
+        Ok(addr as *mut OccRow<T>)
+    }
+
+    fn try_pop_recycled_row(&self) -> Result<Option<RelPtr<OccRow<T>>>, Error> {
+        let header = self.shared_header_ref()?;
+
+        loop {
+            let head = header.recycled_head.load(Ordering::Acquire);
+            if head == EMPTY_PTR {
+                return Ok(None);
+            }
+
+            let head_ptr = RelPtr::<OccRow<T>>::from_offset(head);
+            let row = self.resolve_row_ptr(&head_ptr)?;
+            let next = row.recycle_next.load(Ordering::Acquire);
+
+            if header
+                .recycled_head
+                .compare_exchange(head, next, Ordering::AcqRel, Ordering::Acquire)
+                .is_ok()
+            {
+                return Ok(Some(head_ptr));
+            }
+
+            std::hint::spin_loop();
+        }
+    }
+
+    fn recycle_row_ptr(&self, row_ptr: &RelPtr<OccRow<T>>) -> Result<(), Error> {
+        let offset = row_ptr.load(Ordering::Acquire);
+        if offset == EMPTY_PTR {
+            return Ok(());
+        }
+
+        let header = self.shared_header_ref()?;
+        let row = self.resolve_row_ptr(row_ptr)?;
+
+        loop {
+            let old_head = header.recycled_head.load(Ordering::Acquire);
+            row.recycle_next.store(old_head, Ordering::Release);
+
+            if header
+                .recycled_head
+                .compare_exchange(old_head, offset, Ordering::AcqRel, Ordering::Acquire)
+                .is_ok()
+            {
+                return Ok(());
+            }
+
+            std::hint::spin_loop();
+        }
+    }
+
     fn abort_for_serialization_failure(&self, tx: &mut OccTransaction<T>) {
-        self.clear_local_sets(tx);
+        let _ = self.clear_local_sets(tx);
         let _ = self.finish_transaction(tx);
     }
 
@@ -579,10 +719,12 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
     }
 
     #[inline]
-    fn clear_local_sets(&self, tx: &mut OccTransaction<T>) {
+    fn clear_local_sets(&self, tx: &mut OccTransaction<T>) -> Result<(), Error> {
+        self.recycle_write_suffix(tx, 0)?;
         tx.read_set.clear();
         tx.write_set.clear();
         tx.savepoints.clear();
+        Ok(())
     }
 
     #[inline]

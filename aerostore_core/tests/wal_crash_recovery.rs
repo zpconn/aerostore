@@ -438,6 +438,143 @@ fn async_wal_daemon_crash_then_restart_replays_tcl_like_upserts_and_indexes() {
     let _ = std::fs::remove_dir_all(data_dir);
 }
 
+#[test]
+fn async_wal_daemon_restart_does_not_persist_rolled_back_savepoint_intents() {
+    let data_dir = tmp_data_dir();
+    std::fs::create_dir_all(&data_dir).expect("failed to create temp data dir");
+    let wal_path = data_dir.join("aerostore_tcl_like_savepoint.wal");
+
+    let shm = std::sync::Arc::new(
+        ShmArena::new(64 << 20)
+            .expect("failed to create shared memory for savepoint wal replay test"),
+    );
+    let table = OccTable::<TclLikeRow>::new(std::sync::Arc::clone(&shm), 16)
+        .expect("failed to create occ table");
+    for row_id in 0..16 {
+        table
+            .seed_row(row_id, TclLikeRow::empty())
+            .expect("failed to seed tcl-like row");
+    }
+
+    let ring = SharedWalRing::<RING_SLOTS, RING_SLOT_BYTES>::create(std::sync::Arc::clone(&shm))
+        .expect("failed to create shared wal ring");
+    let daemon = spawn_wal_writer_daemon(ring.clone(), &wal_path)
+        .expect("failed to spawn first wal writer daemon");
+    let mut committer = OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_asynchronous(ring.clone());
+
+    let mut key_to_row = HashMap::<String, usize>::new();
+    let mut next_row_id = 0_usize;
+    let mut expected_final = HashMap::<String, TclLikeRow>::new();
+
+    let first_wave = [
+        ("UAL123", 11_800_i32, 446_u16),
+        ("AAL456", 12_400, 401),
+        ("DAL789", 14_000, 432),
+    ];
+    run_tcl_like_upsert_wave_with_savepoint_churn(
+        &table,
+        &mut committer,
+        &mut key_to_row,
+        &mut next_row_id,
+        &mut expected_final,
+        &first_wave,
+    );
+
+    daemon
+        .terminate(libc::SIGKILL)
+        .expect("failed to kill first wal writer daemon");
+    let killed_status = daemon
+        .join_any_status()
+        .expect("failed waiting for killed daemon");
+    assert!(
+        libc::WIFSIGNALED(killed_status),
+        "expected first daemon to be signaled, status={}",
+        killed_status
+    );
+
+    let daemon2 = spawn_wal_writer_daemon(ring.clone(), &wal_path)
+        .expect("failed to spawn second wal writer daemon");
+    let second_wave = [
+        ("UAL123", 12_200_i32, 450_u16),
+        ("AAL456", 13_100, 410),
+        ("SWA321", 10_900, 382),
+    ];
+    run_tcl_like_upsert_wave_with_savepoint_churn(
+        &table,
+        &mut committer,
+        &mut key_to_row,
+        &mut next_row_id,
+        &mut expected_final,
+        &second_wave,
+    );
+
+    ring.close()
+        .expect("failed to close ring after second wave");
+    daemon2
+        .join()
+        .expect("second daemon should exit cleanly after ring close");
+
+    let commits = read_ring_wal_records(&wal_path);
+    assert!(
+        !commits.is_empty(),
+        "expected at least some commits to persist to WAL file"
+    );
+    assert!(
+        commits.len() <= first_wave.len() + second_wave.len(),
+        "persisted more commits than produced"
+    );
+
+    for commit in &commits {
+        assert_eq!(
+            commit.writes.len(),
+            1,
+            "rolled-back savepoint intents must not appear in durable WAL records"
+        );
+    }
+
+    let mut latest_by_row = HashMap::<usize, u32>::new();
+    for commit in &commits {
+        let write = &commit.writes[0];
+        latest_by_row.insert(write.row_id as usize, write.new_offset);
+    }
+
+    for (flight, expected_row) in &expected_final {
+        let row_id = *key_to_row
+            .get(flight)
+            .unwrap_or_else(|| panic!("missing row mapping for key {}", flight));
+        let latest_offset = *latest_by_row
+            .get(&row_id)
+            .unwrap_or_else(|| panic!("missing wal replay entry for row_id {}", row_id));
+        let row_ptr = RelPtr::<OccRow<TclLikeRow>>::from_offset(latest_offset);
+        let row = row_ptr
+            .as_ref(shm.mmap_base())
+            .unwrap_or_else(|| panic!("failed to resolve row pointer offset {}", latest_offset));
+        assert_eq!(
+            row.value, *expected_row,
+            "wal replay resolved non-final value for key {}",
+            flight
+        );
+
+        let mut verify_tx = table
+            .begin_transaction()
+            .expect("verify begin_transaction failed");
+        let live = table
+            .read(&mut verify_tx, row_id)
+            .expect("verify read failed")
+            .expect("live row missing after savepoint replay test");
+        table
+            .abort(&mut verify_tx)
+            .expect("verify abort failed");
+        assert_eq!(
+            live, *expected_row,
+            "live table state diverged from expected final value for key {}",
+            flight
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(data_dir);
+}
+
 fn run_occ_increment_commits(
     table: &OccTable<u64>,
     committer: &mut OccCommitter<RING_SLOTS, RING_SLOT_BYTES>,
@@ -500,6 +637,73 @@ fn run_tcl_like_upsert_wave(
         }
         altitude_index.insert(IndexValue::I64(next.altitude as i64), row_id);
         expected_final.insert((*flight).to_string(), next);
+    }
+}
+
+fn run_tcl_like_upsert_wave_with_savepoint_churn(
+    table: &OccTable<TclLikeRow>,
+    committer: &mut OccCommitter<RING_SLOTS, RING_SLOT_BYTES>,
+    key_to_row: &mut HashMap<String, usize>,
+    next_row_id: &mut usize,
+    expected_final: &mut HashMap<String, TclLikeRow>,
+    ops: &[(&str, i32, u16)],
+) {
+    for (flight, altitude, gs) in ops {
+        let row_id = if let Some(row_id) = key_to_row.get(*flight).copied() {
+            row_id
+        } else {
+            let assigned = *next_row_id;
+            *next_row_id += 1;
+            key_to_row.insert((*flight).to_string(), assigned);
+            assigned
+        };
+
+        let mut tx = table
+            .begin_transaction()
+            .expect("begin_transaction failed for savepoint replay test");
+        let current = table
+            .read(&mut tx, row_id)
+            .expect("read failed for savepoint replay test")
+            .expect("seed row missing during savepoint replay test");
+
+        table
+            .savepoint(&mut tx, "sp")
+            .expect("savepoint failed for savepoint replay test");
+
+        let churn_a = TclLikeRow::from_parts(flight, *altitude + 4_000, gs.wrapping_add(10));
+        table
+            .write(&mut tx, row_id, churn_a)
+            .expect("write(churn_a) failed for savepoint replay test");
+        table
+            .rollback_to(&mut tx, "sp")
+            .expect("rollback_to(sp) failed for savepoint replay test");
+
+        let churn_b = TclLikeRow::from_parts(flight, *altitude + 8_000, gs.wrapping_add(20));
+        table
+            .write(&mut tx, row_id, churn_b)
+            .expect("write(churn_b) failed for savepoint replay test");
+        table
+            .rollback_to(&mut tx, "sp")
+            .expect("rollback_to(sp #2) failed for savepoint replay test");
+
+        let restored = table
+            .read(&mut tx, row_id)
+            .expect("restored read failed for savepoint replay test")
+            .expect("row missing after rollback in savepoint replay test");
+        assert_eq!(
+            restored, current,
+            "row must match pre-savepoint value after rollback"
+        );
+
+        let final_row = TclLikeRow::from_parts(flight, *altitude, *gs);
+        table
+            .write(&mut tx, row_id, final_row)
+            .expect("final write failed for savepoint replay test");
+        committer
+            .commit(table, &mut tx)
+            .expect("commit failed for savepoint replay test");
+
+        expected_final.insert((*flight).to_string(), final_row);
     }
 }
 

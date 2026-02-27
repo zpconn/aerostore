@@ -28,6 +28,12 @@ fn ssi_rejects_write_skew_for_tcl_like_keyed_upserts() {
     run_write_skew_with_tcl_like_keyed_upserts(Mode::Asynchronous);
 }
 
+#[test]
+fn ssi_rejects_write_skew_with_savepoint_heavy_write_paths() {
+    run_write_skew_with_savepoint_churn(Mode::Synchronous);
+    run_write_skew_with_savepoint_churn(Mode::Asynchronous);
+}
+
 #[derive(Clone, Copy)]
 enum Mode {
     Synchronous,
@@ -633,6 +639,204 @@ fn run_write_skew_with_tcl_like_keyed_upserts(mode: Mode) {
         daemon
             .join()
             .expect("keyed async wal writer daemon did not exit cleanly");
+    }
+
+    let _ = std::fs::remove_file(wal_path);
+}
+
+fn run_write_skew_with_savepoint_churn(mode: Mode) {
+    let shm = Arc::new(ShmArena::new(16 << 20).expect("failed to create shared arena"));
+    let table =
+        Arc::new(OccTable::<bool>::new(Arc::clone(&shm), 2).expect("failed to create OCC table"));
+
+    table
+        .seed_row(0, true)
+        .expect("failed to seed row 0 as on-call");
+    table
+        .seed_row(1, true)
+        .expect("failed to seed row 1 as on-call");
+
+    let ring = SharedWalRing::<RING_SLOTS, RING_SLOT_BYTES>::create(Arc::clone(&shm))
+        .expect("failed to create wal ring for savepoint skew test");
+    let wal_path = std::env::temp_dir().join(format!(
+        "aerostore_occ_write_skew_savepoint_{:?}_{}.wal",
+        match mode {
+            Mode::Synchronous => "sync",
+            Mode::Asynchronous => "async",
+        },
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&wal_path);
+
+    let daemon = match mode {
+        Mode::Asynchronous => Some(
+            spawn_wal_writer_daemon(ring.clone(), &wal_path)
+                .expect("failed to spawn wal writer daemon for savepoint skew test"),
+        ),
+        Mode::Synchronous => None,
+    };
+
+    let committer = match mode {
+        Mode::Synchronous => {
+            OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_synchronous(&wal_path)
+                .expect("failed to create synchronous committer")
+        }
+        Mode::Asynchronous => {
+            OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_asynchronous(ring.clone())
+        }
+    };
+    let committer = Arc::new(std::sync::Mutex::new(committer));
+    let barrier = Arc::new(Barrier::new(2));
+
+    let tx_a = {
+        let table = Arc::clone(&table);
+        let barrier = Arc::clone(&barrier);
+        let committer = Arc::clone(&committer);
+        thread::spawn(move || {
+            let mut tx = table
+                .begin_transaction()
+                .expect("savepoint tx A begin_transaction failed");
+            let row_0 = table
+                .read(&mut tx, 0)
+                .expect("savepoint tx A read row 0 failed");
+            let row_1 = table
+                .read(&mut tx, 1)
+                .expect("savepoint tx A read row 1 failed");
+            assert_eq!(row_0, Some(true));
+            assert_eq!(row_1, Some(true));
+
+            barrier.wait();
+
+            table
+                .savepoint(&mut tx, "root")
+                .expect("savepoint tx A root savepoint failed");
+            table
+                .write(&mut tx, 0, false)
+                .expect("savepoint tx A write(1) failed");
+            table
+                .savepoint(&mut tx, "inner")
+                .expect("savepoint tx A inner savepoint failed");
+            table
+                .write(&mut tx, 0, true)
+                .expect("savepoint tx A write(2) failed");
+            table
+                .rollback_to(&mut tx, "inner")
+                .expect("savepoint tx A rollback_to(inner) failed");
+            table
+                .rollback_to(&mut tx, "root")
+                .expect("savepoint tx A rollback_to(root) failed");
+            table
+                .write(&mut tx, 0, false)
+                .expect("savepoint tx A final write failed");
+
+            committer
+                .lock()
+                .expect("savepoint tx A failed to lock committer")
+                .commit(&table, &mut tx)
+                .map_err(|e| match e {
+                    aerostore_core::WalWriterError::Occ(err) => err,
+                    other => panic!("unexpected wal writer error in savepoint tx A: {}", other),
+                })
+        })
+    };
+
+    let tx_b = {
+        let table = Arc::clone(&table);
+        let barrier = Arc::clone(&barrier);
+        let committer = Arc::clone(&committer);
+        thread::spawn(move || {
+            let mut tx = table
+                .begin_transaction()
+                .expect("savepoint tx B begin_transaction failed");
+            let row_0 = table
+                .read(&mut tx, 0)
+                .expect("savepoint tx B read row 0 failed");
+            let row_1 = table
+                .read(&mut tx, 1)
+                .expect("savepoint tx B read row 1 failed");
+            assert_eq!(row_0, Some(true));
+            assert_eq!(row_1, Some(true));
+
+            barrier.wait();
+
+            table
+                .savepoint(&mut tx, "root")
+                .expect("savepoint tx B root savepoint failed");
+            table
+                .write(&mut tx, 1, false)
+                .expect("savepoint tx B write(1) failed");
+            table
+                .savepoint(&mut tx, "inner")
+                .expect("savepoint tx B inner savepoint failed");
+            table
+                .write(&mut tx, 1, true)
+                .expect("savepoint tx B write(2) failed");
+            table
+                .rollback_to(&mut tx, "inner")
+                .expect("savepoint tx B rollback_to(inner) failed");
+            table
+                .rollback_to(&mut tx, "root")
+                .expect("savepoint tx B rollback_to(root) failed");
+            table
+                .write(&mut tx, 1, false)
+                .expect("savepoint tx B final write failed");
+
+            committer
+                .lock()
+                .expect("savepoint tx B failed to lock committer")
+                .commit(&table, &mut tx)
+                .map_err(|e| match e {
+                    aerostore_core::WalWriterError::Occ(err) => err,
+                    other => panic!("unexpected wal writer error in savepoint tx B: {}", other),
+                })
+        })
+    };
+
+    let result_a = tx_a.join().expect("savepoint tx A thread panicked");
+    let result_b = tx_b.join().expect("savepoint tx B thread panicked");
+
+    let outcomes = [result_a, result_b];
+    let committed = outcomes.iter().filter(|r| r.is_ok()).count();
+    let serialization_failures = outcomes
+        .iter()
+        .filter(|r| matches!(r, Err(OccError::SerializationFailure)))
+        .count();
+
+    assert_eq!(
+        committed, 1,
+        "exactly one savepoint-heavy writer should commit"
+    );
+    assert_eq!(
+        serialization_failures, 1,
+        "exactly one savepoint-heavy writer should fail with SerializationFailure"
+    );
+
+    let mut verify_tx = table
+        .begin_transaction()
+        .expect("verify begin_transaction failed");
+    let final_row_0 = table
+        .read(&mut verify_tx, 0)
+        .expect("verify read row 0 failed")
+        .expect("row 0 missing after savepoint skew test");
+    let final_row_1 = table
+        .read(&mut verify_tx, 1)
+        .expect("verify read row 1 failed")
+        .expect("row 1 missing after savepoint skew test");
+    table
+        .abort(&mut verify_tx)
+        .expect("verify transaction abort failed");
+
+    assert!(
+        final_row_0 || final_row_1,
+        "savepoint-heavy serializable validation failed to preserve invariant"
+    );
+
+    if let Some(daemon) = daemon {
+        ring.close()
+            .expect("failed to close savepoint skew test wal ring");
+        daemon
+            .join()
+            .expect("savepoint async wal writer daemon did not exit cleanly");
     }
 
     let _ = std::fs::remove_file(wal_path);
