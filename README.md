@@ -1,5 +1,7 @@
 # Aerostore
 
+<img width="500" height="500" alt="ChatGPT Image Feb 26, 2026, 06_15_42 PM" src="https://github.com/user-attachments/assets/3573ab8f-45b9-481c-bdcf-cb1186d73df0" />
+
 A lock-free, memory-resident Rust database prototype built for high-concurrency market/flight workloads.
 
 Aerostore combines:
