@@ -233,6 +233,7 @@ Includes:
 
 - typed query benchmark (existing)
 - STAPI parse+compile+execute benchmark (new)
+- Tcl-style alias/match + `-desc`/`-offset`/`-limit` benchmark path (new)
 
 ### Targeted reliability suites
 
@@ -253,15 +254,19 @@ cargo test -p aerostore_core --release --test occ_write_skew --test procarray_co
 - `tests/occ_write_skew.rs`
   - baseline write-skew serializable failure proof
   - planner-driven read variant proving SSI read-set integration
+  - Tcl-like keyed-upsert write-skew variant (key map + planner reads)
 - `tests/wal_crash_recovery.rs`
   - checkpoint + WAL replay recovery
   - WAL daemon crash/restart replayability
+  - Tcl-like keyed upsert crash/restart replay + secondary-index consistency checks
 - `tests/wal_ring_benchmark.rs`
   - sync-vs-async throughput gate
+  - Tcl-like keyed upsert throughput gate (read/write + index maintenance workload)
   - ring backpressure integrity checks
 - `tests/query_index_benchmark.rs`
   - indexed query scan benchmark
   - STAPI parse/compile/execute benchmark extension
+  - Tcl-style alias/match + paging/sort benchmark extension
 - `tests/shm_shared_memory.rs`
   - forked CAS contention correctness
   - forked ring producer integrity checks
@@ -278,6 +283,9 @@ The demo now validates:
 
 - basic ingest and search
 - complex STAPI-style search input
+- Tcl alias handling (`ident`, `alt`) with `match` glob filtering
+- `-desc` + `-offset` + `-limit` paging semantics on search counts
+- second ingest pass proving keyed upsert behavior (update existing + insert new)
 - malformed search rejection with explicit `TCL_ERROR:` message
 
 Example query syntax:

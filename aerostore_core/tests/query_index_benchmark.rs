@@ -43,14 +43,14 @@ impl StapiFlightRow {
 
 impl StapiRow for StapiFlightRow {
     fn has_field(field: &str) -> bool {
-        matches!(field, "alt" | "flight" | "typ")
+        matches!(field, "alt" | "altitude" | "flight" | "ident" | "typ" | "type")
     }
 
     fn field_value(&self, field: &str) -> Option<StapiValue> {
         match field {
-            "alt" => Some(StapiValue::Int(self.alt)),
-            "flight" => Some(StapiValue::Text(decode_ascii(&self.flight))),
-            "typ" => Some(StapiValue::Text(decode_ascii(&self.typ))),
+            "alt" | "altitude" => Some(StapiValue::Int(self.alt)),
+            "flight" | "ident" => Some(StapiValue::Text(decode_ascii(&self.flight))),
+            "typ" | "type" => Some(StapiValue::Text(decode_ascii(&self.typ))),
             _ => None,
         }
     }
@@ -243,5 +243,83 @@ fn benchmark_stapi_parse_compile_execute_vs_typed_query_path() {
     eprintln!(
         "typed_query_elapsed={:?} stapi_parse_compile_execute_elapsed={:?} passes={} rows={}",
         typed_elapsed, stapi_elapsed, PASSES, ROWS
+    );
+}
+
+#[test]
+fn benchmark_tcl_style_alias_match_desc_offset_limit_path() {
+    const ROWS: usize = 75_000;
+    const PASSES: usize = 32;
+    const LIMIT: usize = 15;
+    const OFFSET: usize = 5;
+    const FETCH_LIMIT: usize = LIMIT + OFFSET;
+
+    let shm = Arc::new(ShmArena::new(96 << 20).expect("failed to create shared arena"));
+    let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+        .expect("failed to create OCC table");
+    let alt_index = Arc::new(SecondaryIndex::<usize>::new("altitude"));
+
+    for row_id in 0..ROWS {
+        let alt = ((row_id % 45_000) as i64) + 500;
+        let flight = if row_id % 2 == 0 {
+            format!("UAL{:03}", row_id % 1_000)
+        } else {
+            format!("DAL{:03}", row_id % 1_000)
+        };
+        let typ = match row_id % 3 {
+            0 => "B738",
+            1 => "A320",
+            _ => "B77W",
+        };
+        let row = StapiFlightRow::new(alt, flight.as_str(), typ);
+        occ_table
+            .seed_row(row_id, row)
+            .expect("failed to seed OCC row for alias benchmark");
+        alt_index.insert(IndexValue::I64(alt), row_id);
+    }
+
+    let catalog = IndexCatalog::new()
+        .with_index("alt", Arc::clone(&alt_index))
+        .with_index("altitude", alt_index);
+    let planner = QueryPlanner::<StapiFlightRow>::new(catalog);
+    let stapi =
+        "-compare {{match ident UAL*} {> altitude 10000} {in typ {B738 A320}}} -sort altitude";
+
+    let start = Instant::now();
+    for _ in 0..PASSES {
+        let plan = planner
+            .compile_from_stapi(stapi)
+            .expect("failed to compile alias STAPI query");
+        let mut tx = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for alias benchmark");
+        let mut rows = plan
+            .execute(&occ_table, &mut tx)
+            .expect("alias STAPI plan execution failed");
+        occ_table
+            .abort(&mut tx)
+            .expect("abort failed for alias benchmark");
+
+        rows.reverse(); // Tcl `-desc`.
+        if rows.len() > FETCH_LIMIT {
+            rows.truncate(FETCH_LIMIT);
+        }
+        let start_idx = OFFSET.min(rows.len()); // Tcl `-offset`.
+        let end_idx = (start_idx + LIMIT).min(rows.len()); // Tcl `-limit`.
+        let window = &rows[start_idx..end_idx];
+
+        assert_eq!(window.len(), LIMIT);
+        assert!(window.iter().all(|row| row.alt > 10_000));
+        assert!(window.iter().all(|row| decode_ascii(&row.flight).starts_with("UAL")));
+        assert!(window
+            .iter()
+            .all(|row| matches!(decode_ascii(&row.typ).as_str(), "B738" | "A320")));
+        assert!(window.windows(2).all(|w| w[0].alt >= w[1].alt));
+    }
+    let elapsed = start.elapsed();
+
+    eprintln!(
+        "stapi_alias_match_desc_offset_limit_elapsed={:?} passes={} rows={}",
+        elapsed, PASSES, ROWS
     );
 }

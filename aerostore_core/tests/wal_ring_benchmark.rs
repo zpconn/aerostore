@@ -8,13 +8,15 @@ use std::time::Instant;
 
 use aerostore_core::{
     deserialize_commit_record, spawn_wal_writer_daemon, OccCommitter, OccTable, SharedWalRing,
-    ShmArena, WalRingCommit, WalRingWrite, WalWriterDaemon,
+    ShmArena, WalRingCommit, WalRingWrite, WalWriterDaemon, IndexValue, SecondaryIndex,
 };
+use crossbeam_skiplist::SkipMap;
 
 const TXNS: usize = 10_000;
 const ROW_ID: usize = 0;
 const RING_SLOTS: usize = 1024;
 const RING_SLOT_BYTES: usize = 128;
+const TCL_BENCH_KEYS: usize = 64;
 
 #[test]
 fn benchmark_async_synchronous_commit_modes() {
@@ -38,6 +40,55 @@ fn benchmark_async_synchronous_commit_modes() {
     assert!(
         ratio >= 10.0,
         "expected async synchronous_commit=off throughput to be >=10x sync mode; observed {:.2}x",
+        ratio
+    );
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct TclBenchRow {
+    exists: u8,
+    flight: [u8; 12],
+    altitude: i32,
+    gs: u16,
+}
+
+impl TclBenchRow {
+    fn new(flight: &str, altitude: i32, gs: u16) -> Self {
+        let mut encoded = [0_u8; 12];
+        let bytes = flight.as_bytes();
+        let len = bytes.len().min(encoded.len());
+        encoded[..len].copy_from_slice(&bytes[..len]);
+        Self {
+            exists: 1,
+            flight: encoded,
+            altitude,
+            gs,
+        }
+    }
+}
+
+#[test]
+fn benchmark_async_synchronous_commit_modes_tcl_like_keyed_upserts() {
+    let root = std::env::temp_dir().join("aerostore_wal_ring_benchmark_tcl_like");
+    fs::create_dir_all(&root).expect("failed to create tcl-like wal_ring benchmark directory");
+
+    let sync_wal = root.join("sync_mode_tcl_like.wal");
+    let async_wal = root.join("async_mode_tcl_like.wal");
+    remove_if_exists(&sync_wal);
+    remove_if_exists(&async_wal);
+
+    let sync_tps = run_synchronous_tcl_like_benchmark(&sync_wal);
+    let async_tps = run_asynchronous_tcl_like_benchmark(&async_wal);
+    let ratio = async_tps / sync_tps.max(1.0);
+
+    eprintln!(
+        "wal_ring_tcl_like_benchmark: txns={} keys={} sync_tps={:.2} async_tps={:.2} ratio={:.2}x",
+        TXNS, TCL_BENCH_KEYS, sync_tps, async_tps, ratio
+    );
+
+    assert!(
+        ratio >= 10.0,
+        "expected async tcl-like upsert throughput to be >=10x sync mode; observed {:.2}x",
         ratio
     );
 }
@@ -212,6 +263,123 @@ fn run_asynchronous_benchmark(wal_path: &Path) -> f64 {
         .abort(&mut verify)
         .expect("async benchmark verify abort failed");
     assert_eq!(final_value, TXNS as u64);
+
+    TXNS as f64 / producer_elapsed.as_secs_f64()
+}
+
+fn run_synchronous_tcl_like_benchmark(wal_path: &Path) -> f64 {
+    let shm = Arc::new(ShmArena::new(64 << 20).expect("failed to create sync tcl-like shm arena"));
+    let table = OccTable::<TclBenchRow>::new(Arc::clone(&shm), TCL_BENCH_KEYS)
+        .expect("failed to create sync tcl-like occ table");
+    let key_index = SkipMap::<String, usize>::new();
+    let altitude_index = SecondaryIndex::<usize>::new("altitude");
+
+    for row_id in 0..TCL_BENCH_KEYS {
+        let flight = format!("FLT{:03}", row_id);
+        let row = TclBenchRow::new(flight.as_str(), 10_000 + row_id as i32, 350);
+        table
+            .seed_row(row_id, row)
+            .expect("failed to seed sync tcl-like row");
+        key_index.insert(flight, row_id);
+        altitude_index.insert(IndexValue::I64(row.altitude as i64), row_id);
+    }
+
+    let mut committer = OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_synchronous(wal_path)
+        .expect("failed to create synchronous tcl-like committer");
+
+    let start = Instant::now();
+    for i in 0..TXNS {
+        let key_slot = i % TCL_BENCH_KEYS;
+        let key = format!("FLT{:03}", key_slot);
+        let row_id = key_index
+            .get(key.as_str())
+            .map(|entry| *entry.value())
+            .expect("missing keyed row in sync tcl-like benchmark");
+
+        let mut tx = table
+            .begin_transaction()
+            .expect("sync tcl-like begin_transaction failed");
+        let mut current = table
+            .read(&mut tx, row_id)
+            .expect("sync tcl-like read failed")
+            .expect("sync tcl-like row missing");
+
+        let old_altitude = current.altitude;
+        current.altitude += 1;
+        current.gs = current.gs.wrapping_add(1);
+        table
+            .write(&mut tx, row_id, current)
+            .expect("sync tcl-like write failed");
+        committer
+            .commit(&table, &mut tx)
+            .expect("sync tcl-like commit failed");
+
+        altitude_index.remove(&IndexValue::I64(old_altitude as i64), &row_id);
+        altitude_index.insert(IndexValue::I64(current.altitude as i64), row_id);
+    }
+    let elapsed = start.elapsed();
+
+    TXNS as f64 / elapsed.as_secs_f64()
+}
+
+fn run_asynchronous_tcl_like_benchmark(wal_path: &Path) -> f64 {
+    let shm =
+        Arc::new(ShmArena::new(96 << 20).expect("failed to create async tcl-like shm arena"));
+    let table = OccTable::<TclBenchRow>::new(Arc::clone(&shm), TCL_BENCH_KEYS)
+        .expect("failed to create async tcl-like occ table");
+    let key_index = SkipMap::<String, usize>::new();
+    let altitude_index = SecondaryIndex::<usize>::new("altitude");
+
+    for row_id in 0..TCL_BENCH_KEYS {
+        let flight = format!("FLT{:03}", row_id);
+        let row = TclBenchRow::new(flight.as_str(), 10_000 + row_id as i32, 350);
+        table
+            .seed_row(row_id, row)
+            .expect("failed to seed async tcl-like row");
+        key_index.insert(flight, row_id);
+        altitude_index.insert(IndexValue::I64(row.altitude as i64), row_id);
+    }
+
+    let ring = SharedWalRing::<RING_SLOTS, RING_SLOT_BYTES>::create(Arc::clone(&shm))
+        .expect("failed to create shared wal ring");
+    let daemon: WalWriterDaemon =
+        spawn_wal_writer_daemon(ring.clone(), wal_path).expect("failed to spawn wal writer daemon");
+    let mut committer = OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_asynchronous(ring.clone());
+
+    let start = Instant::now();
+    for i in 0..TXNS {
+        let key_slot = i % TCL_BENCH_KEYS;
+        let key = format!("FLT{:03}", key_slot);
+        let row_id = key_index
+            .get(key.as_str())
+            .map(|entry| *entry.value())
+            .expect("missing keyed row in async tcl-like benchmark");
+
+        let mut tx = table
+            .begin_transaction()
+            .expect("async tcl-like begin_transaction failed");
+        let mut current = table
+            .read(&mut tx, row_id)
+            .expect("async tcl-like read failed")
+            .expect("async tcl-like row missing");
+
+        let old_altitude = current.altitude;
+        current.altitude += 1;
+        current.gs = current.gs.wrapping_add(1);
+        table
+            .write(&mut tx, row_id, current)
+            .expect("async tcl-like write failed");
+        committer
+            .commit(&table, &mut tx)
+            .expect("async tcl-like commit failed");
+
+        altitude_index.remove(&IndexValue::I64(old_altitude as i64), &row_id);
+        altitude_index.insert(IndexValue::I64(current.altitude as i64), row_id);
+    }
+    let producer_elapsed = start.elapsed();
+
+    ring.close().expect("failed to close wal ring");
+    daemon.join().expect("wal writer daemon join failed");
 
     TXNS as f64 / producer_elapsed.as_secs_f64()
 }
