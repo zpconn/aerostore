@@ -17,6 +17,8 @@ const ROW_ID: usize = 0;
 const RING_SLOTS: usize = 1024;
 const RING_SLOT_BYTES: usize = 128;
 const TCL_BENCH_KEYS: usize = 64;
+const SAVEPOINT_CHURN_TXNS: usize = 5_000;
+const SAVEPOINT_CHURN_WRITES: usize = 6;
 
 #[test]
 fn benchmark_async_synchronous_commit_modes() {
@@ -89,6 +91,36 @@ fn benchmark_async_synchronous_commit_modes_tcl_like_keyed_upserts() {
     assert!(
         ratio >= 10.0,
         "expected async tcl-like upsert throughput to be >=10x sync mode; observed {:.2}x",
+        ratio
+    );
+}
+
+#[test]
+fn benchmark_async_synchronous_commit_modes_savepoint_churn() {
+    let root = std::env::temp_dir().join("aerostore_wal_ring_benchmark_savepoint_churn");
+    fs::create_dir_all(&root).expect("failed to create savepoint wal_ring benchmark directory");
+
+    let sync_wal = root.join("sync_mode_savepoint_churn.wal");
+    let async_wal = root.join("async_mode_savepoint_churn.wal");
+    remove_if_exists(&sync_wal);
+    remove_if_exists(&async_wal);
+
+    let sync_tps = run_synchronous_savepoint_churn_benchmark(&sync_wal);
+    let async_tps = run_asynchronous_savepoint_churn_benchmark(&async_wal);
+    let ratio = async_tps / sync_tps.max(1.0);
+
+    eprintln!(
+        "wal_ring_savepoint_churn_benchmark: txns={} rolled_back_writes_per_tx={} sync_tps={:.2} async_tps={:.2} ratio={:.2}x",
+        SAVEPOINT_CHURN_TXNS,
+        SAVEPOINT_CHURN_WRITES,
+        sync_tps,
+        async_tps,
+        ratio
+    );
+
+    assert!(
+        ratio >= 10.0,
+        "expected async savepoint churn throughput to be >=10x sync mode; observed {:.2}x",
         ratio
     );
 }
@@ -382,6 +414,124 @@ fn run_asynchronous_tcl_like_benchmark(wal_path: &Path) -> f64 {
     daemon.join().expect("wal writer daemon join failed");
 
     TXNS as f64 / producer_elapsed.as_secs_f64()
+}
+
+fn run_synchronous_savepoint_churn_benchmark(wal_path: &Path) -> f64 {
+    let shm = Arc::new(ShmArena::new(64 << 20).expect("failed to create sync churn shm arena"));
+    let table = OccTable::<u64>::new(Arc::clone(&shm), 1).expect("failed to create churn occ table");
+    table
+        .seed_row(ROW_ID, 0_u64)
+        .expect("failed to seed churn benchmark row");
+
+    let mut committer = OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_synchronous(wal_path)
+        .expect("failed to create synchronous churn committer");
+
+    let start = Instant::now();
+    for _ in 0..SAVEPOINT_CHURN_TXNS {
+        let mut tx = table
+            .begin_transaction()
+            .expect("sync churn begin_transaction failed");
+        let value = table
+            .read(&mut tx, ROW_ID)
+            .expect("sync churn read failed")
+            .expect("sync churn row missing");
+
+        table
+            .savepoint(&mut tx, "sp")
+            .expect("sync churn savepoint failed");
+        for step in 0..SAVEPOINT_CHURN_WRITES {
+            table
+                .write(&mut tx, ROW_ID, value + step as u64 + 10)
+                .expect("sync churn write failed");
+            table
+                .rollback_to(&mut tx, "sp")
+                .expect("sync churn rollback_to failed");
+        }
+
+        table
+            .write(&mut tx, ROW_ID, value + 1)
+            .expect("sync churn final write failed");
+        committer
+            .commit(&table, &mut tx)
+            .expect("sync churn commit failed");
+    }
+    let elapsed = start.elapsed();
+
+    let mut verify = table
+        .begin_transaction()
+        .expect("sync churn verify begin_transaction failed");
+    let final_value = table
+        .read(&mut verify, ROW_ID)
+        .expect("sync churn verify read failed")
+        .expect("sync churn verify row missing");
+    table
+        .abort(&mut verify)
+        .expect("sync churn verify abort failed");
+    assert_eq!(final_value, SAVEPOINT_CHURN_TXNS as u64);
+
+    SAVEPOINT_CHURN_TXNS as f64 / elapsed.as_secs_f64()
+}
+
+fn run_asynchronous_savepoint_churn_benchmark(wal_path: &Path) -> f64 {
+    let shm = Arc::new(ShmArena::new(96 << 20).expect("failed to create async churn shm arena"));
+    let table = OccTable::<u64>::new(Arc::clone(&shm), 1).expect("failed to create churn occ table");
+    table
+        .seed_row(ROW_ID, 0_u64)
+        .expect("failed to seed churn benchmark row");
+
+    let ring = SharedWalRing::<RING_SLOTS, RING_SLOT_BYTES>::create(Arc::clone(&shm))
+        .expect("failed to create shared wal ring");
+    let daemon: WalWriterDaemon =
+        spawn_wal_writer_daemon(ring.clone(), wal_path).expect("failed to spawn wal writer daemon");
+    let mut committer = OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_asynchronous(ring.clone());
+
+    let start = Instant::now();
+    for _ in 0..SAVEPOINT_CHURN_TXNS {
+        let mut tx = table
+            .begin_transaction()
+            .expect("async churn begin_transaction failed");
+        let value = table
+            .read(&mut tx, ROW_ID)
+            .expect("async churn read failed")
+            .expect("async churn row missing");
+
+        table
+            .savepoint(&mut tx, "sp")
+            .expect("async churn savepoint failed");
+        for step in 0..SAVEPOINT_CHURN_WRITES {
+            table
+                .write(&mut tx, ROW_ID, value + step as u64 + 10)
+                .expect("async churn write failed");
+            table
+                .rollback_to(&mut tx, "sp")
+                .expect("async churn rollback_to failed");
+        }
+
+        table
+            .write(&mut tx, ROW_ID, value + 1)
+            .expect("async churn final write failed");
+        committer
+            .commit(&table, &mut tx)
+            .expect("async churn commit failed");
+    }
+    let producer_elapsed = start.elapsed();
+
+    ring.close().expect("failed to close wal ring");
+    daemon.join().expect("wal writer daemon join failed");
+
+    let mut verify = table
+        .begin_transaction()
+        .expect("async churn verify begin_transaction failed");
+    let final_value = table
+        .read(&mut verify, ROW_ID)
+        .expect("async churn verify read failed")
+        .expect("async churn verify row missing");
+    table
+        .abort(&mut verify)
+        .expect("async churn verify abort failed");
+    assert_eq!(final_value, SAVEPOINT_CHURN_TXNS as u64);
+
+    SAVEPOINT_CHURN_TXNS as f64 / producer_elapsed.as_secs_f64()
 }
 
 fn remove_if_exists(path: &Path) {

@@ -256,3 +256,112 @@ fn procarray_slots_release_under_occ_conflicts_and_ring_backpressure() {
         "all ProcArray slots must be released even when OCC commits fail under pressure"
     );
 }
+
+#[test]
+fn procarray_slots_release_under_concurrent_savepoint_rollback_churn() {
+    const WORKERS: usize = 24;
+    const ITERATIONS: usize = 4_000;
+    const ROWS: usize = 4;
+    const MAX_HEAD_GROWTH_BYTES: u32 = 1024 * 1024;
+
+    let shm = Arc::new(ShmArena::new(32 << 20).expect("failed to create shared arena"));
+    let table = Arc::new(
+        OccTable::<u64>::new(Arc::clone(&shm), ROWS).expect("failed to create occ table"),
+    );
+
+    for row_id in 0..ROWS {
+        table
+            .seed_row(row_id, row_id as u64)
+            .expect("failed to seed churn row");
+    }
+
+    let base_head = shm.chunked_arena().head_offset();
+    let start_barrier = Arc::new(std::sync::Barrier::new(WORKERS));
+    let tx_count = Arc::new(AtomicU64::new(0));
+
+    let mut workers = Vec::with_capacity(WORKERS);
+    for worker_idx in 0..WORKERS {
+        let table = Arc::clone(&table);
+        let start_barrier = Arc::clone(&start_barrier);
+        let tx_count = Arc::clone(&tx_count);
+        workers.push(thread::spawn(move || {
+            start_barrier.wait();
+
+            for i in 0..ITERATIONS {
+                let row_id = (worker_idx + i) % ROWS;
+                let mut tx = table
+                    .begin_transaction()
+                    .expect("begin_transaction failed during churn");
+                let current = table
+                    .read(&mut tx, row_id)
+                    .expect("read failed during churn")
+                    .expect("seed row missing during churn");
+
+                table
+                    .savepoint(&mut tx, "sp")
+                    .expect("savepoint failed during churn");
+                table
+                    .write(&mut tx, row_id, current + 1)
+                    .expect("write failed during churn");
+                table
+                    .rollback_to(&mut tx, "sp")
+                    .expect("rollback_to failed during churn");
+
+                let after = table
+                    .read(&mut tx, row_id)
+                    .expect("post-rollback read failed during churn")
+                    .expect("seed row missing after rollback during churn");
+                assert_eq!(
+                    after, current,
+                    "rollback_to must restore row visibility to pre-savepoint value"
+                );
+
+                table.abort(&mut tx).expect("abort failed during churn");
+                tx_count.fetch_add(1, Ordering::AcqRel);
+            }
+        }));
+    }
+
+    for worker in workers {
+        worker.join().expect("savepoint churn worker panicked");
+    }
+
+    let snapshot = shm.create_snapshot();
+    assert_eq!(
+        snapshot.len(),
+        0,
+        "all ProcArray slots must be released after savepoint rollback churn"
+    );
+
+    let end_head = shm.chunked_arena().head_offset();
+    let consumed = end_head.saturating_sub(base_head);
+    assert!(
+        consumed <= MAX_HEAD_GROWTH_BYTES,
+        "shared arena head grew unexpectedly under rollback churn (growth={} bytes)",
+        consumed
+    );
+
+    assert_eq!(
+        tx_count.load(Ordering::Acquire),
+        (WORKERS * ITERATIONS) as u64,
+        "expected every churn transaction begin to be counted"
+    );
+
+    for row_id in 0..ROWS {
+        let mut verify = table
+            .begin_transaction()
+            .expect("verify begin_transaction failed");
+        let value = table
+            .read(&mut verify, row_id)
+            .expect("verify read failed")
+            .expect("verify row missing");
+        table
+            .abort(&mut verify)
+            .expect("verify abort failed");
+        assert_eq!(
+            value, row_id as u64,
+            "row {} should remain unchanged after rollback-only churn",
+            row_id
+        );
+    }
+}
