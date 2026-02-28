@@ -1,15 +1,13 @@
-use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
 use crate::execution::{PrimaryKeyMapError, ShmPrimaryKeyMap};
+use crate::filters::{compile_filter, field_name, RowPredicate};
 use crate::index::{IndexCompare, IndexValue, SecondaryIndex};
 use crate::occ::Error as OccError;
 use crate::stapi_parser::{parse_stapi_query, Filter, ParseError, Query, Value};
-
-pub(crate) type RowPredicate<T> = Arc<dyn Fn(&T) -> bool + Send + Sync>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RouteKind {
@@ -70,6 +68,11 @@ impl From<PrimaryKeyMapError> for PlannerError {
 pub trait StapiRow: Copy + Send + Sync + 'static {
     fn has_field(field: &str) -> bool;
     fn field_value(&self, field: &str) -> Option<Value>;
+
+    #[inline]
+    fn is_field_null(&self, _field: &str) -> bool {
+        false
+    }
 }
 
 #[derive(Clone)]
@@ -293,6 +296,7 @@ impl<T: StapiRow> RuleBasedOptimizer<T> {
         let mut best: Option<Candidate> = None;
         for (idx, filter) in query.filters.iter().enumerate() {
             match filter {
+                Filter::Null { .. } | Filter::NotNull { .. } => {}
                 Filter::Eq { field, value } => {
                     // Rule 1: exact match on the primary key routes to the O(1) shared PK map.
                     if field.as_str() == self.catalog.primary_key_field()
@@ -346,6 +350,7 @@ impl<T: StapiRow> RuleBasedOptimizer<T> {
                         }
                     }
                 }
+                Filter::Ne { .. } => {}
                 Filter::Gt { field, value } => {
                     if self.catalog.contains_index(field.as_str()) {
                         let indexed_value = value_to_index(value).ok_or_else(|| {
@@ -400,6 +405,33 @@ impl<T: StapiRow> RuleBasedOptimizer<T> {
                         }
                     }
                 }
+                Filter::Lte { field, value } => {
+                    if self.catalog.contains_index(field.as_str()) {
+                        let indexed_value = value_to_index(value).ok_or_else(|| {
+                            PlannerError::InvalidIndexedValue(format!(
+                                "field '{}' cannot use this value in an indexed range route",
+                                field
+                            ))
+                        })?;
+                        let candidate = Candidate {
+                            precedence: 3,
+                            rank: self.catalog.rank_for(field.as_str()),
+                            filter_idx: idx,
+                            route_kind: RouteKind::IndexRangeScan,
+                            access_path: AccessPath::Indexed {
+                                field: field.clone(),
+                                compare: IndexCompare::Lte(indexed_value),
+                            },
+                        };
+                        if best
+                            .as_ref()
+                            .map(|b| is_better(&candidate, b))
+                            .unwrap_or(true)
+                        {
+                            best = Some(candidate);
+                        }
+                    }
+                }
                 Filter::Gte { field, value } => {
                     if self.catalog.contains_index(field.as_str()) {
                         let indexed_value = value_to_index(value).ok_or_else(|| {
@@ -427,7 +459,7 @@ impl<T: StapiRow> RuleBasedOptimizer<T> {
                         }
                     }
                 }
-                Filter::In { .. } | Filter::Match { .. } => {}
+                Filter::In { .. } | Filter::Match { .. } | Filter::NotMatch { .. } => {}
             }
         }
 
@@ -440,113 +472,6 @@ impl<T: StapiRow> RuleBasedOptimizer<T> {
         } else {
             Ok((RouteKind::FullScan, AccessPath::FullScan, None))
         }
-    }
-}
-
-fn field_name(filter: &Filter) -> &str {
-    match filter {
-        Filter::Eq { field, .. } => field.as_str(),
-        Filter::Lt { field, .. } => field.as_str(),
-        Filter::Gt { field, .. } => field.as_str(),
-        Filter::Gte { field, .. } => field.as_str(),
-        Filter::In { field, .. } => field.as_str(),
-        Filter::Match { field, .. } => field.as_str(),
-    }
-}
-
-fn compile_filter<T: StapiRow>(filter: &Filter) -> RowPredicate<T> {
-    match filter {
-        Filter::Eq { field, value } => {
-            let field = field.clone();
-            let expected = value.clone();
-            Arc::new(move |row: &T| {
-                row.field_value(field.as_str())
-                    .map(|actual| values_equal(&actual, &expected))
-                    .unwrap_or(false)
-            })
-        }
-        Filter::Lt { field, value } => {
-            let field = field.clone();
-            let expected = value.clone();
-            Arc::new(move |row: &T| {
-                row.field_value(field.as_str())
-                    .map(|actual| {
-                        matches!(compare_values(&actual, &expected), Some(Ordering::Less))
-                    })
-                    .unwrap_or(false)
-            })
-        }
-        Filter::Gt { field, value } => {
-            let field = field.clone();
-            let expected = value.clone();
-            Arc::new(move |row: &T| {
-                row.field_value(field.as_str())
-                    .map(|actual| {
-                        matches!(compare_values(&actual, &expected), Some(Ordering::Greater))
-                    })
-                    .unwrap_or(false)
-            })
-        }
-        Filter::Gte { field, value } => {
-            let field = field.clone();
-            let expected = value.clone();
-            Arc::new(move |row: &T| {
-                row.field_value(field.as_str())
-                    .map(|actual| {
-                        matches!(
-                            compare_values(&actual, &expected),
-                            Some(Ordering::Greater | Ordering::Equal)
-                        )
-                    })
-                    .unwrap_or(false)
-            })
-        }
-        Filter::In { field, values } => {
-            let field = field.clone();
-            let options = values.clone();
-            Arc::new(move |row: &T| {
-                let Some(actual) = row.field_value(field.as_str()) else {
-                    return false;
-                };
-                options
-                    .iter()
-                    .any(|expected| values_equal(&actual, expected))
-            })
-        }
-        Filter::Match { field, pattern } => {
-            let field = field.clone();
-            let pattern = pattern.clone();
-            Arc::new(move |row: &T| {
-                let Some(Value::Text(actual)) = row.field_value(field.as_str()) else {
-                    return false;
-                };
-                glob_matches(pattern.as_str(), actual.as_str())
-            })
-        }
-    }
-}
-
-pub(crate) fn compare_optional(left: Option<Value>, right: Option<Value>) -> Ordering {
-    match (left, right) {
-        (Some(lhs), Some(rhs)) => compare_values(&lhs, &rhs).unwrap_or(Ordering::Equal),
-        (None, Some(_)) => Ordering::Greater,
-        (Some(_), None) => Ordering::Less,
-        (None, None) => Ordering::Equal,
-    }
-}
-
-fn values_equal(left: &Value, right: &Value) -> bool {
-    matches!(compare_values(left, right), Some(Ordering::Equal))
-}
-
-fn compare_values(left: &Value, right: &Value) -> Option<Ordering> {
-    match (left, right) {
-        (Value::Int(lhs), Value::Int(rhs)) => Some(lhs.cmp(rhs)),
-        (Value::Float(lhs), Value::Float(rhs)) => lhs.partial_cmp(rhs),
-        (Value::Int(lhs), Value::Float(rhs)) => (*lhs as f64).partial_cmp(rhs),
-        (Value::Float(lhs), Value::Int(rhs)) => lhs.partial_cmp(&(*rhs as f64)),
-        (Value::Text(lhs), Value::Text(rhs)) => Some(lhs.cmp(rhs)),
-        _ => None,
     }
 }
 
@@ -578,44 +503,4 @@ fn value_to_primary_key(value: &Value) -> Option<String> {
             }
         }
     }
-}
-
-fn glob_matches(pattern: &str, value: &str) -> bool {
-    let pattern = pattern.as_bytes();
-    let value = value.as_bytes();
-
-    let mut p_idx = 0_usize;
-    let mut v_idx = 0_usize;
-    let mut star_idx: Option<usize> = None;
-    let mut fallback_v_idx = 0_usize;
-
-    while v_idx < value.len() {
-        if p_idx < pattern.len() && (pattern[p_idx] == b'?' || pattern[p_idx] == value[v_idx]) {
-            p_idx += 1;
-            v_idx += 1;
-            continue;
-        }
-
-        if p_idx < pattern.len() && pattern[p_idx] == b'*' {
-            star_idx = Some(p_idx);
-            p_idx += 1;
-            fallback_v_idx = v_idx;
-            continue;
-        }
-
-        if let Some(star) = star_idx {
-            p_idx = star + 1;
-            fallback_v_idx += 1;
-            v_idx = fallback_v_idx;
-            continue;
-        }
-
-        return false;
-    }
-
-    while p_idx < pattern.len() && pattern[p_idx] == b'*' {
-        p_idx += 1;
-    }
-
-    p_idx == pattern.len()
 }

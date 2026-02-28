@@ -31,10 +31,13 @@ pub fn speedtable(_attr: TokenStream, item: TokenStream) -> TokenStream {
     for field in &named_fields.named {
         if let Some(ident) = &field.ident {
             let name = ident.to_string();
-            if matches!(name.as_str(), "_nullmask" | "_xmin" | "_xmax") {
+            if matches!(
+                name.as_str(),
+                "_null_bitmask" | "_nullmask" | "_xmin" | "_xmax"
+            ) {
                 return syn::Error::new(
                     ident.span(),
-                    "field name is reserved by #[speedtable]: _nullmask, _xmin, _xmax",
+                    "field name is reserved by #[speedtable]: _null_bitmask, _xmin, _xmax",
                 )
                 .to_compile_error()
                 .into();
@@ -64,9 +67,20 @@ pub fn speedtable(_attr: TokenStream, item: TokenStream) -> TokenStream {
         })
         .collect();
 
+    let null_index_match_arms: Vec<_> = user_fields
+        .iter()
+        .map(|(ident, _)| {
+            let field_name = ident.to_string();
+            let const_ident = format_ident!("__NULLBIT_{}", to_screaming_snake(&field_name));
+            quote! {
+                #field_name => Some(Self::#const_ident),
+            }
+        })
+        .collect();
+
     named_fields.named.push(syn::parse_quote! {
         #[doc(hidden)]
-        pub(crate) _nullmask: u64
+        pub(crate) _null_bitmask: u64
     });
     named_fields.named.push(syn::parse_quote! {
         #[doc(hidden)]
@@ -87,7 +101,7 @@ pub fn speedtable(_attr: TokenStream, item: TokenStream) -> TokenStream {
             pub fn new(#(#arg_idents: #arg_types),*) -> Self {
                 Self {
                     #(#arg_idents,)*
-                    _nullmask: 0,
+                    _null_bitmask: 0,
                     _xmin: 0,
                     _xmax: ::std::sync::atomic::AtomicU64::new(0),
                 }
@@ -99,20 +113,35 @@ pub fn speedtable(_attr: TokenStream, item: TokenStream) -> TokenStream {
             pub fn __set_null_by_index(&mut self, idx: u8, is_null: bool) {
                 let bit = 1_u64 << idx;
                 if is_null {
-                    self._nullmask |= bit;
+                    self._null_bitmask |= bit;
                 } else {
-                    self._nullmask &= !bit;
+                    self._null_bitmask &= !bit;
                 }
             }
 
             #[inline]
             pub fn __is_null_by_index(&self, idx: u8) -> bool {
-                (self._nullmask & (1_u64 << idx)) != 0
+                (self._null_bitmask & (1_u64 << idx)) != 0
             }
 
             #[inline]
-            pub fn __nullmask(&self) -> u64 {
-                self._nullmask
+            pub fn __null_bitmask(&self) -> u64 {
+                self._null_bitmask
+            }
+
+            #[inline]
+            pub fn __null_index_for_field(field: &str) -> Option<u8> {
+                match field {
+                    #(#null_index_match_arms)*
+                    _ => None,
+                }
+            }
+
+            #[inline]
+            pub fn __is_null_field(&self, field: &str) -> bool {
+                Self::__null_index_for_field(field)
+                    .map(|idx| self.__is_null_by_index(idx))
+                    .unwrap_or(false)
             }
 
             #[inline]

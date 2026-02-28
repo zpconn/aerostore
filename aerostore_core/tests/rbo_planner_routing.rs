@@ -260,6 +260,105 @@ fn rbo_uses_index_range_scan_for_greater_or_equal() {
 }
 
 #[test]
+fn rbo_uses_index_range_scan_for_less_or_equal() {
+    let (table, optimizer) = seed_optimizer();
+    let plan = optimizer
+        .compile_from_stapi("-compare {{<= altitude 10000}}")
+        .expect("failed to compile lte query");
+
+    assert_eq!(plan.route_kind(), RouteKind::IndexRangeScan);
+    assert_eq!(plan.driver_field(), Some("altitude"));
+    match plan.access_path() {
+        AccessPath::Indexed { compare, .. } => assert!(matches!(compare, IndexCompare::Lte(_))),
+        _ => panic!("expected indexed access path"),
+    }
+
+    let mut tx = table.begin_transaction().expect("begin_transaction failed");
+    let rows = plan
+        .execute(&table, &mut tx)
+        .expect("lte-index plan execution should succeed");
+    table.abort(&mut tx).expect("abort failed");
+    assert!(rows.iter().all(|row| row.altitude <= 10_000));
+}
+
+#[test]
+fn rbo_defers_negative_filters_to_residual_execution() {
+    let (_table, optimizer) = seed_optimizer();
+    let plan = optimizer
+        .compile_from_stapi("-compare {{<= altitude 14000} {!= typ C17} {notmatch typ C17*}}")
+        .expect("failed to compile negative-filter query");
+
+    assert_eq!(plan.route_kind(), RouteKind::IndexRangeScan);
+    assert_eq!(plan.driver_field(), Some("altitude"));
+    let residual = plan.residual_filter_fields();
+    assert!(
+        residual.iter().filter(|field| **field == "typ").count() >= 2,
+        "negative filters should remain residual predicates"
+    );
+}
+
+#[test]
+fn rbo_treats_null_notnull_as_residual_even_when_field_is_indexed() {
+    let (_table, optimizer) = seed_optimizer();
+    let plan = optimizer
+        .compile_from_stapi("-compare {{null altitude} {notnull altitude} {<= altitude 14000}}")
+        .expect("failed to compile null/notnull residual query");
+
+    assert_eq!(plan.route_kind(), RouteKind::IndexRangeScan);
+    assert_eq!(plan.driver_field(), Some("altitude"));
+    let residual = plan.residual_filter_fields();
+    assert!(
+        residual
+            .iter()
+            .filter(|field| **field == "altitude")
+            .count()
+            >= 2,
+        "null/notnull on indexed field must remain residual predicates"
+    );
+}
+
+#[test]
+fn rbo_falls_back_to_full_scan_for_negative_only_predicates() {
+    let (_table, optimizer) = seed_optimizer();
+    let plan = optimizer
+        .compile_from_stapi("-compare {{!= typ C17} {notmatch typ C17*}}")
+        .expect("failed to compile negative-only query");
+
+    assert_eq!(plan.route_kind(), RouteKind::FullScan);
+    assert_eq!(plan.driver_field(), None);
+    assert!(matches!(plan.access_path(), AccessPath::FullScan));
+    let residual = plan.residual_filter_fields();
+    assert!(
+        residual.iter().filter(|field| **field == "typ").count() >= 2,
+        "negative-only predicates should be planned as residual full-scan filters"
+    );
+}
+
+#[test]
+fn rbo_executes_negative_residual_predicates_correctly_with_index_driver() {
+    let (table, optimizer) = seed_optimizer();
+    let plan = optimizer
+        .compile_from_stapi("-compare {{<= altitude 14000} {!= typ B739} {notmatch typ A3*}}")
+        .expect("failed to compile mixed range/negative query");
+
+    assert_eq!(plan.route_kind(), RouteKind::IndexRangeScan);
+    assert_eq!(plan.driver_field(), Some("altitude"));
+
+    let mut tx = table.begin_transaction().expect("begin_transaction failed");
+    let rows = plan
+        .execute(&table, &mut tx)
+        .expect("mixed range/negative execution should succeed");
+    table.abort(&mut tx).expect("abort failed");
+
+    assert_eq!(rows.len(), 3);
+    assert!(rows.iter().all(|row| row.altitude <= 14_000));
+    assert!(rows.iter().all(|row| decode_ascii(&row.typ) != "B739"));
+    assert!(rows
+        .iter()
+        .all(|row| !decode_ascii(&row.typ).starts_with("A3")));
+}
+
+#[test]
 fn rbo_tie_breaker_prefers_dest_eq_over_altitude_eq() {
     let (table, optimizer) = seed_optimizer();
     let plan = optimizer

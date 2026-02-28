@@ -1,0 +1,5 @@
+error: field name is reserved by #[speedtable]: _null_bitmask, _xmin, _xmax
+ --> tests/ui/compile_fail_reserved_xmin.rs:6:5
+  |
+6 |     _xmin: u64,
+  |     ^^^^^
