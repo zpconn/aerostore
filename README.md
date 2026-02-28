@@ -11,7 +11,7 @@ As of February 27, 2026, this repository contains:
 - V2 shared-memory OCC/SSI engine with ProcArray, savepoints, shared-memory lock-free secondary indexing, WAL ring, and WAL writer daemon.
 - V3 logical WAL + snapshot recovery path with strict corruption detection and crash-recovery validation.
 
-Aerostore now at its core includes a novel lock-free cross-process shared-memory secondary index implementation for a fork-heavy in-memory database.
+Aerostore now at its core includes a novel lock-free cross-process shared-memory secondary index implementation supporting fast queries across forks.
 
 ## How Shared-Memory Secondary Indexing Works
 
