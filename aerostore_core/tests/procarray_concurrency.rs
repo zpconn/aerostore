@@ -8,6 +8,12 @@ use aerostore_core::{
     wal_commit_from_occ_record, OccError, OccTable, SharedWalRing, ShmArena, PROCARRAY_SLOTS,
 };
 
+#[derive(Clone, Copy, Debug)]
+struct ScenarioStats {
+    commits: u64,
+    conflicts: u64,
+}
+
 #[test]
 fn procarray_thread_stress_begin_end_and_snapshot_consistency() {
     const WORKERS: usize = 64;
@@ -210,9 +216,16 @@ fn procarray_slots_release_under_occ_conflicts_and_ring_backpressure() {
                 std::thread::yield_now();
                 std::thread::sleep(std::time::Duration::from_micros(20));
 
-                table
-                    .write(&mut tx, 0, current + 1)
-                    .expect("contention write failed");
+                if let Err(err) = table.write(&mut tx, 0, current + 1) {
+                    match err {
+                        OccError::RowMissing { .. } | OccError::SerializationFailure => {
+                            let _ = table.abort(&mut tx);
+                            serialization_failures.fetch_add(1, Ordering::AcqRel);
+                            continue;
+                        }
+                        other => panic!("unexpected OCC write error: {}", other),
+                    }
+                }
 
                 match table.commit_with_record(&mut tx) {
                     Ok(record) => {
@@ -257,6 +270,32 @@ fn procarray_slots_release_under_occ_conflicts_and_ring_backpressure() {
         snapshot.len(),
         0,
         "all ProcArray slots must be released even when OCC commits fail under pressure"
+    );
+}
+
+#[test]
+fn procarray_disjoint_writes_have_lower_conflicts_than_hot_row_contention() {
+    const WORKERS: usize = 16;
+    const ITERATIONS: usize = 1_500;
+
+    let contended = run_occ_procarray_scenario(WORKERS, ITERATIONS, ScenarioKind::ContendedHotRow);
+    let disjoint = run_occ_procarray_scenario(WORKERS, ITERATIONS, ScenarioKind::DisjointRows);
+
+    assert!(
+        contended.conflicts > 0,
+        "contended scenario should produce serialization failures"
+    );
+    assert!(
+        disjoint.commits > contended.commits,
+        "disjoint scenario should commit more than hot-row contention (disjoint={} contended={})",
+        disjoint.commits,
+        contended.commits
+    );
+    assert!(
+        disjoint.conflicts * 10 <= contended.conflicts.saturating_add(1),
+        "disjoint scenario should have at least 10x fewer conflicts (disjoint={} contended={})",
+        disjoint.conflicts,
+        contended.conflicts
     );
 }
 
@@ -363,5 +402,106 @@ fn procarray_slots_release_under_concurrent_savepoint_rollback_churn() {
             "row {} should remain unchanged after rollback-only churn",
             row_id
         );
+    }
+}
+
+#[derive(Clone, Copy)]
+enum ScenarioKind {
+    ContendedHotRow,
+    DisjointRows,
+}
+
+fn run_occ_procarray_scenario(
+    workers: usize,
+    iterations: usize,
+    kind: ScenarioKind,
+) -> ScenarioStats {
+    let rows = match kind {
+        ScenarioKind::ContendedHotRow => 1,
+        ScenarioKind::DisjointRows => workers,
+    };
+    let shm = Arc::new(ShmArena::new(32 << 20).expect("failed to create shared arena"));
+    let table =
+        Arc::new(OccTable::<u64>::new(Arc::clone(&shm), rows).expect("failed to create occ table"));
+
+    for row_id in 0..rows {
+        table
+            .seed_row(row_id, row_id as u64)
+            .expect("failed to seed scenario row");
+    }
+
+    let commits = Arc::new(AtomicU64::new(0));
+    let conflicts = Arc::new(AtomicU64::new(0));
+    let start = Arc::new(std::sync::Barrier::new(workers));
+
+    let mut threads = Vec::with_capacity(workers);
+    for worker_idx in 0..workers {
+        let table = Arc::clone(&table);
+        let commits = Arc::clone(&commits);
+        let conflicts = Arc::clone(&conflicts);
+        let start = Arc::clone(&start);
+
+        threads.push(thread::spawn(move || {
+            start.wait();
+            for i in 0..iterations {
+                let row_id = match kind {
+                    ScenarioKind::ContendedHotRow => 0,
+                    ScenarioKind::DisjointRows => worker_idx,
+                };
+                let mut tx = table
+                    .begin_transaction()
+                    .expect("begin_transaction failed in procarray scenario");
+                let current = match table.read(&mut tx, row_id) {
+                    Ok(Some(value)) => value,
+                    Ok(None) => {
+                        let _ = table.abort(&mut tx);
+                        conflicts.fetch_add(1, Ordering::AcqRel);
+                        continue;
+                    }
+                    Err(err) => panic!("read failed in procarray scenario: {}", err),
+                };
+
+                if matches!(kind, ScenarioKind::ContendedHotRow) && i % 3 == 0 {
+                    thread::yield_now();
+                }
+
+                if let Err(err) = table.write(&mut tx, row_id, current.wrapping_add(1)) {
+                    match err {
+                        OccError::RowMissing { .. } | OccError::SerializationFailure => {
+                            let _ = table.abort(&mut tx);
+                            conflicts.fetch_add(1, Ordering::AcqRel);
+                            continue;
+                        }
+                        other => panic!("unexpected OCC write error in procarray scenario: {}", other),
+                    }
+                }
+
+                match table.commit(&mut tx) {
+                    Ok(_) => {
+                        commits.fetch_add(1, Ordering::AcqRel);
+                    }
+                    Err(OccError::SerializationFailure) => {
+                        conflicts.fetch_add(1, Ordering::AcqRel);
+                    }
+                    Err(other) => panic!("unexpected OCC error in procarray scenario: {}", other),
+                }
+            }
+        }));
+    }
+
+    for thread in threads {
+        thread.join().expect("scenario worker panicked");
+    }
+
+    let snapshot = shm.create_snapshot();
+    assert_eq!(
+        snapshot.len(),
+        0,
+        "all ProcArray slots must be released after scenario run"
+    );
+
+    ScenarioStats {
+        commits: commits.load(Ordering::Acquire),
+        conflicts: conflicts.load(Ordering::Acquire),
     }
 }

@@ -4,12 +4,13 @@ use std::fs;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Instant;
 
 use aerostore_core::{
-    deserialize_commit_record, spawn_wal_writer_daemon, IndexValue, LogicalDatabase,
-    LogicalDatabaseConfig, OccCommitter, OccTable, SecondaryIndex, SharedWalRing, ShmArena,
-    WalRingCommit, WalRingWrite, WalWriterDaemon,
+    deserialize_commit_record, spawn_wal_writer_daemon, wal_commit_from_occ_record, IndexValue,
+    LogicalDatabase, LogicalDatabaseConfig, OccCommitter, OccTable, SecondaryIndex, SharedWalRing,
+    ShmArena, SyncWalWriter, WalRingCommit, WalRingWrite, WalWriterDaemon,
 };
 use crossbeam_skiplist::SkipMap;
 use serde::{Deserialize, Serialize};
@@ -23,6 +24,8 @@ const SAVEPOINT_CHURN_TXNS: usize = 5_000;
 const SAVEPOINT_CHURN_WRITES: usize = 6;
 const LOGICAL_RING_SLOTS: usize = 1024;
 const LOGICAL_RING_SLOT_BYTES: usize = 256;
+const PARALLEL_DISJOINT_WORKERS: usize = 8;
+const PARALLEL_DISJOINT_TXNS_PER_WORKER: usize = 2_000;
 
 #[test]
 fn benchmark_async_synchronous_commit_modes() {
@@ -146,6 +149,36 @@ fn benchmark_logical_async_vs_sync_commit_modes() {
     assert!(
         ratio >= 10.0,
         "expected logical async synchronous_commit=off throughput to be >=10x sync mode; observed {:.2}x",
+        ratio
+    );
+}
+
+#[test]
+fn benchmark_async_synchronous_commit_modes_parallel_disjoint_keys() {
+    let root = std::env::temp_dir().join("aerostore_wal_ring_parallel_disjoint_benchmark");
+    fs::create_dir_all(&root).expect("failed to create parallel disjoint benchmark directory");
+
+    let sync_wal = root.join("sync_parallel_disjoint.wal");
+    let async_wal = root.join("async_parallel_disjoint.wal");
+    remove_if_exists(&sync_wal);
+    remove_if_exists(&async_wal);
+
+    let sync_tps = run_parallel_disjoint_synchronous_benchmark(&sync_wal);
+    let async_tps = run_parallel_disjoint_asynchronous_benchmark(&async_wal);
+    let ratio = async_tps / sync_tps.max(1.0);
+
+    eprintln!(
+        "wal_ring_parallel_disjoint_benchmark: workers={} txns_per_worker={} sync_tps={:.2} async_tps={:.2} ratio={:.2}x",
+        PARALLEL_DISJOINT_WORKERS,
+        PARALLEL_DISJOINT_TXNS_PER_WORKER,
+        sync_tps,
+        async_tps,
+        ratio
+    );
+
+    assert!(
+        ratio >= 3.0,
+        "expected async parallel disjoint throughput to be >=3x sync mode; observed {:.2}x",
         ratio
     );
 }
@@ -580,6 +613,184 @@ fn run_asynchronous_savepoint_churn_benchmark(wal_path: &Path) -> f64 {
     assert_eq!(final_value, SAVEPOINT_CHURN_TXNS as u64);
 
     SAVEPOINT_CHURN_TXNS as f64 / producer_elapsed.as_secs_f64()
+}
+
+fn run_parallel_disjoint_synchronous_benchmark(wal_path: &Path) -> f64 {
+    let shm = Arc::new(ShmArena::new(96 << 20).expect("failed to create sync disjoint shm arena"));
+    let rows = PARALLEL_DISJOINT_WORKERS;
+    let table = Arc::new(
+        OccTable::<u64>::new(Arc::clone(&shm), rows).expect("failed to create sync disjoint table"),
+    );
+    for row_id in 0..rows {
+        table
+            .seed_row(row_id, 0_u64)
+            .expect("failed to seed sync disjoint row");
+    }
+
+    let writer = SyncWalWriter::open(wal_path).expect("failed to create sync disjoint wal writer");
+    let writer = Arc::new(Mutex::new(writer));
+    let start_barrier = Arc::new(std::sync::Barrier::new(PARALLEL_DISJOINT_WORKERS));
+    let mut workers = Vec::with_capacity(PARALLEL_DISJOINT_WORKERS);
+
+    let start = Instant::now();
+    for worker_idx in 0..PARALLEL_DISJOINT_WORKERS {
+        let table = Arc::clone(&table);
+        let writer = Arc::clone(&writer);
+        let start_barrier = Arc::clone(&start_barrier);
+        workers.push(std::thread::spawn(move || {
+            start_barrier.wait();
+            let row_id = worker_idx;
+            let mut committed = 0_usize;
+            while committed < PARALLEL_DISJOINT_TXNS_PER_WORKER {
+                let mut tx = table
+                    .begin_transaction()
+                    .expect("sync disjoint begin_transaction failed");
+                let value = table
+                    .read(&mut tx, row_id)
+                    .expect("sync disjoint read failed")
+                    .expect("sync disjoint row missing");
+                table
+                    .write(&mut tx, row_id, value + 1)
+                    .expect("sync disjoint write failed");
+
+                match table.commit_with_record(&mut tx) {
+                    Ok(record) => {
+                        let wal_commit = wal_commit_from_occ_record(&record)
+                            .expect("failed to encode sync disjoint wal commit");
+                        writer
+                            .lock()
+                            .expect("sync disjoint writer mutex poisoned")
+                            .append_commit(&wal_commit)
+                            .expect("sync disjoint wal append failed");
+                        committed += 1;
+                    }
+                    Err(aerostore_core::OccError::SerializationFailure) => {
+                        std::thread::yield_now();
+                    }
+                    Err(other) => panic!("unexpected sync disjoint OCC error: {}", other),
+                }
+            }
+        }));
+    }
+
+    for worker in workers {
+        worker.join().expect("sync disjoint worker panicked");
+    }
+    let elapsed = start.elapsed();
+
+    for row_id in 0..rows {
+        let mut verify = table
+            .begin_transaction()
+            .expect("sync disjoint verify begin_transaction failed");
+        let value = table
+            .read(&mut verify, row_id)
+            .expect("sync disjoint verify read failed")
+            .expect("sync disjoint verify row missing");
+        table
+            .abort(&mut verify)
+            .expect("sync disjoint verify abort failed");
+        assert_eq!(
+            value, PARALLEL_DISJOINT_TXNS_PER_WORKER as u64,
+            "sync disjoint final value mismatch for row {}",
+            row_id
+        );
+    }
+
+    (PARALLEL_DISJOINT_WORKERS * PARALLEL_DISJOINT_TXNS_PER_WORKER) as f64
+        / elapsed.as_secs_f64().max(f64::EPSILON)
+}
+
+fn run_parallel_disjoint_asynchronous_benchmark(wal_path: &Path) -> f64 {
+    let shm =
+        Arc::new(ShmArena::new(128 << 20).expect("failed to create async disjoint shm arena"));
+    let rows = PARALLEL_DISJOINT_WORKERS;
+    let table = Arc::new(
+        OccTable::<u64>::new(Arc::clone(&shm), rows)
+            .expect("failed to create async disjoint table"),
+    );
+    for row_id in 0..rows {
+        table
+            .seed_row(row_id, 0_u64)
+            .expect("failed to seed async disjoint row");
+    }
+
+    let ring = SharedWalRing::<RING_SLOTS, RING_SLOT_BYTES>::create(Arc::clone(&shm))
+        .expect("failed to create async disjoint wal ring");
+    let daemon = spawn_wal_writer_daemon(ring.clone(), wal_path)
+        .expect("failed to spawn async disjoint wal daemon");
+
+    let start_barrier = Arc::new(std::sync::Barrier::new(PARALLEL_DISJOINT_WORKERS));
+    let mut workers = Vec::with_capacity(PARALLEL_DISJOINT_WORKERS);
+
+    let start = Instant::now();
+    for worker_idx in 0..PARALLEL_DISJOINT_WORKERS {
+        let table = Arc::clone(&table);
+        let ring = ring.clone();
+        let start_barrier = Arc::clone(&start_barrier);
+        workers.push(std::thread::spawn(move || {
+            start_barrier.wait();
+            let row_id = worker_idx;
+            let mut committed = 0_usize;
+            while committed < PARALLEL_DISJOINT_TXNS_PER_WORKER {
+                let mut tx = table
+                    .begin_transaction()
+                    .expect("async disjoint begin_transaction failed");
+                let value = table
+                    .read(&mut tx, row_id)
+                    .expect("async disjoint read failed")
+                    .expect("async disjoint row missing");
+                table
+                    .write(&mut tx, row_id, value + 1)
+                    .expect("async disjoint write failed");
+
+                match table.commit_with_record(&mut tx) {
+                    Ok(record) => {
+                        let wal_commit = wal_commit_from_occ_record(&record)
+                            .expect("failed to encode async disjoint wal commit");
+                        ring.push_commit_record(&wal_commit)
+                            .expect("async disjoint ring push failed");
+                        committed += 1;
+                    }
+                    Err(aerostore_core::OccError::SerializationFailure) => {
+                        std::thread::yield_now();
+                    }
+                    Err(other) => panic!("unexpected async disjoint OCC error: {}", other),
+                }
+            }
+        }));
+    }
+
+    for worker in workers {
+        worker.join().expect("async disjoint worker panicked");
+    }
+    let producer_elapsed = start.elapsed();
+
+    ring.close()
+        .expect("failed to close async disjoint wal ring");
+    daemon
+        .join()
+        .expect("async disjoint wal daemon did not exit cleanly");
+
+    for row_id in 0..rows {
+        let mut verify = table
+            .begin_transaction()
+            .expect("async disjoint verify begin_transaction failed");
+        let value = table
+            .read(&mut verify, row_id)
+            .expect("async disjoint verify read failed")
+            .expect("async disjoint verify row missing");
+        table
+            .abort(&mut verify)
+            .expect("async disjoint verify abort failed");
+        assert_eq!(
+            value, PARALLEL_DISJOINT_TXNS_PER_WORKER as u64,
+            "async disjoint final value mismatch for row {}",
+            row_id
+        );
+    }
+
+    (PARALLEL_DISJOINT_WORKERS * PARALLEL_DISJOINT_TXNS_PER_WORKER) as f64
+        / producer_elapsed.as_secs_f64().max(f64::EPSILON)
 }
 
 fn remove_if_exists(path: &Path) {

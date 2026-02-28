@@ -2,7 +2,7 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::mem::{align_of, size_of};
 use std::ptr::{self, NonNull};
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 
 use crate::procarray::{
     ProcArray, ProcArrayError, ProcArrayRegistration, ProcSnapshot, PROCARRAY_SLOTS,
@@ -10,6 +10,33 @@ use crate::procarray::{
 
 const SHM_HEADER_MAGIC: u32 = 0xA3E0_5202;
 const SHM_HEADER_ALIGN: u32 = 64;
+pub(crate) const OCC_PARTITION_LOCKS: usize = 1024;
+
+#[repr(C, align(64))]
+pub(crate) struct OccPartitionLock {
+    state: AtomicBool,
+}
+
+impl OccPartitionLock {
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            state: AtomicBool::new(false),
+        }
+    }
+
+    #[inline]
+    pub fn try_lock(&self) -> bool {
+        self.state
+            .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+            .is_ok()
+    }
+
+    #[inline]
+    pub fn unlock(&self) {
+        self.state.store(false, Ordering::Release);
+    }
+}
 
 #[derive(Debug)]
 pub enum ShmError {
@@ -192,6 +219,7 @@ struct ShmHeader {
     data_start: u32,
     next_txid: AtomicU64,
     proc_array: ProcArray,
+    occ_partition_locks: [OccPartitionLock; OCC_PARTITION_LOCKS],
     head: AtomicU32,
 }
 
@@ -251,6 +279,7 @@ impl ShmArena {
                 data_start,
                 next_txid: AtomicU64::new(1),
                 proc_array: ProcArray::new(),
+                occ_partition_locks: std::array::from_fn(|_| OccPartitionLock::new()),
                 head: AtomicU32::new(data_start),
             });
         }
@@ -313,6 +342,14 @@ impl ShmArena {
             .header_ref()
             .expect("shared memory header was unexpectedly invalid")
             .next_txid
+    }
+
+    #[inline]
+    pub(crate) fn occ_partition_locks(&self) -> &[OccPartitionLock; OCC_PARTITION_LOCKS] {
+        &self
+            .header_ref()
+            .expect("shared memory header was unexpectedly invalid")
+            .occ_partition_locks
     }
 
     #[inline]

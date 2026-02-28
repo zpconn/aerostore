@@ -955,6 +955,128 @@ fn recovery_large_cardinality_index_parity_matches_table_scan() {
 }
 
 #[test]
+fn recovery_high_cardinality_multi_round_updates_restore_latest_values() {
+    const ROWS: usize = 8_192;
+    const ROUNDS: usize = 4;
+
+    let data_dir = tmp_data_dir();
+    std::fs::create_dir_all(&data_dir).expect("failed to create temp data dir");
+    let wal_path = data_dir.join("high_cardinality_multi_round.wal");
+
+    let source_shm = Arc::new(
+        ShmArena::new(256 << 20).expect("failed to create source shared memory for stress test"),
+    );
+    let source_table = OccTable::<i32>::new(Arc::clone(&source_shm), ROWS)
+        .expect("failed to create source table for stress test");
+    for row_id in 0..ROWS {
+        source_table
+            .seed_row(row_id, 0_i32)
+            .expect("failed to seed source stress row");
+    }
+
+    let ring = SharedWalRing::<RING_SLOTS, RING_SLOT_BYTES>::create(Arc::clone(&source_shm))
+        .expect("failed to create stress ring");
+    let daemon =
+        spawn_wal_writer_daemon(ring.clone(), &wal_path).expect("failed to spawn stress daemon");
+    let mut committer = OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_asynchronous(ring.clone());
+
+    let mut expected_latest = vec![0_i32; ROWS];
+    for round in 0..ROUNDS {
+        for row_id in 0..ROWS {
+            let value = (((row_id as i32 * 97) + (round as i32 * 1_231)) % 45_000) + 500;
+            let mut tx = source_table
+                .begin_transaction()
+                .expect("begin_transaction failed for stress source write");
+            source_table
+                .write(&mut tx, row_id, value)
+                .expect("write failed for stress source row");
+            committer
+                .commit(&source_table, &mut tx)
+                .expect("commit failed for stress source row");
+            expected_latest[row_id] = value;
+        }
+    }
+
+    ring.close().expect("failed to close stress ring");
+    daemon.join().expect("stress daemon did not exit cleanly");
+    drop(source_table);
+    drop(source_shm);
+
+    let recovered_shm = Arc::new(
+        ShmArena::new(256 << 20).expect("failed to create recovered shared memory for stress test"),
+    );
+    let recovered_table = OccTable::<i32>::new(Arc::clone(&recovered_shm), ROWS)
+        .expect("failed to create recovered table for stress test");
+    for row_id in 0..ROWS {
+        recovered_table
+            .seed_row(row_id, 0_i32)
+            .expect("failed to seed recovered stress row");
+    }
+
+    let recovery = recover_occ_table_from_wal(&recovered_table, &wal_path)
+        .expect("failed to recover stress WAL");
+    assert_eq!(
+        recovery.applied_writes,
+        ROWS * ROUNDS,
+        "stress recovery should apply every generated write"
+    );
+
+    let altitude_index =
+        SecondaryIndex::<usize>::new_in_shared("altitude", Arc::clone(&recovered_shm));
+    let mut recovered_values = Vec::with_capacity(ROWS);
+    for row_id in 0..ROWS {
+        let value = recovered_table
+            .latest_value(row_id)
+            .expect("latest_value failed for recovered stress row")
+            .expect("recovered stress row unexpectedly missing");
+        assert_eq!(
+            value, expected_latest[row_id],
+            "recovered latest value mismatch for row {}",
+            row_id
+        );
+        altitude_index.insert(IndexValue::I64(value as i64), row_id);
+        recovered_values.push(value);
+    }
+
+    for sample_row in [0_usize, ROWS / 3, ROWS / 2, ROWS - 1] {
+        let target = expected_latest[sample_row] as i64;
+        let indexed: BTreeSet<usize> = altitude_index
+            .lookup(&IndexCompare::Eq(IndexValue::I64(target)))
+            .into_iter()
+            .collect();
+        let scanned: BTreeSet<usize> = recovered_values
+            .iter()
+            .enumerate()
+            .filter_map(|(row_id, value)| ((*value as i64) == target).then_some(row_id))
+            .collect();
+        assert_eq!(
+            indexed, scanned,
+            "stress EQ predicate parity mismatch for value={}",
+            target
+        );
+    }
+
+    for threshold in [5_000_i64, 12_000, 24_000, 36_000] {
+        let indexed: BTreeSet<usize> = altitude_index
+            .lookup(&IndexCompare::Gt(IndexValue::I64(threshold)))
+            .into_iter()
+            .collect();
+        let scanned: BTreeSet<usize> = recovered_values
+            .iter()
+            .enumerate()
+            .filter_map(|(row_id, value)| ((*value as i64) > threshold).then_some(row_id))
+            .collect();
+        assert_eq!(
+            indexed, scanned,
+            "stress GT predicate parity mismatch for threshold={}",
+            threshold
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(data_dir);
+}
+
+#[test]
 fn benchmark_occ_wal_replay_startup_throughput() {
     const TXNS: usize = 12_000;
     let data_dir = tmp_data_dir();
