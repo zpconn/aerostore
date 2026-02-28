@@ -73,7 +73,7 @@ fn decode_ascii(bytes: &[u8]) -> String {
 }
 
 #[test]
-fn benchmark_skiplist_indexed_range_scan_with_sort_and_limit() {
+fn benchmark_shared_index_indexed_range_scan_with_sort_and_limit() {
     const ROWS: usize = 100_000;
     const READERS: usize = 8;
     const SCANS_PER_READER: usize = 64;
@@ -194,7 +194,10 @@ fn benchmark_stapi_parse_compile_execute_vs_typed_query_path() {
     let shm = Arc::new(ShmArena::new(64 << 20).expect("failed to create shared arena"));
     let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
         .expect("failed to create OCC table");
-    let alt_index = Arc::new(SecondaryIndex::<usize>::new("alt"));
+    let alt_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "alt",
+        Arc::clone(&shm),
+    ));
 
     for row_id in 0..ROWS {
         let alt = ((row_id % 45_000) as i64) + 500;
@@ -263,7 +266,10 @@ fn benchmark_tcl_style_alias_match_desc_offset_limit_path() {
     let shm = Arc::new(ShmArena::new(96 << 20).expect("failed to create shared arena"));
     let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
         .expect("failed to create OCC table");
-    let alt_index = Arc::new(SecondaryIndex::<usize>::new("altitude"));
+    let alt_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "altitude",
+        Arc::clone(&shm),
+    ));
 
     for row_id in 0..ROWS {
         let alt = ((row_id % 45_000) as i64) + 500;
@@ -342,7 +348,10 @@ fn benchmark_tcl_bridge_style_stapi_assembly_compile_execute() {
     let shm = Arc::new(ShmArena::new(96 << 20).expect("failed to create shared arena"));
     let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
         .expect("failed to create OCC table");
-    let alt_index = Arc::new(SecondaryIndex::<usize>::new("altitude"));
+    let alt_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "altitude",
+        Arc::clone(&shm),
+    ));
 
     for row_id in 0..ROWS {
         let alt = ((row_id % 45_000) as i64) + 500;

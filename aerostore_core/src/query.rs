@@ -4,6 +4,8 @@ use std::hash::{BuildHasher, Hash};
 use std::sync::Arc;
 
 use crossbeam::epoch::{self, Guard};
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 use crate::index::{IndexCompare, IndexValue, IntoIndexValue, SecondaryIndex};
 use crate::mvcc::{MvccError, MvccTable};
@@ -44,7 +46,7 @@ struct SortSpec<T> {
 
 pub struct QueryEngine<K, V, S = std::collections::hash_map::RandomState>
 where
-    K: Eq + Hash + Clone + Ord + Send + Sync + 'static,
+    K: Eq + Hash + Clone + Ord + Send + Sync + Serialize + DeserializeOwned + 'static,
 {
     table: Arc<MvccTable<K, V, S>>,
     indexes: HashMap<&'static str, Arc<SecondaryIndex<K>>>,
@@ -53,7 +55,7 @@ where
 
 impl<K, V, S> QueryEngine<K, V, S>
 where
-    K: Eq + Hash + Clone + Ord + Send + Sync + 'static,
+    K: Eq + Hash + Clone + Ord + Send + Sync + Serialize + DeserializeOwned + 'static,
     V: Send + Sync + 'static,
     S: BuildHasher + Send + Sync + 'static,
 {
@@ -193,7 +195,7 @@ where
 
 pub struct QueryBuilder<'a, K, V, S = std::collections::hash_map::RandomState>
 where
-    K: Eq + Hash + Clone + Ord + Send + Sync + 'static,
+    K: Eq + Hash + Clone + Ord + Send + Sync + Serialize + DeserializeOwned + 'static,
 {
     engine: &'a QueryEngine<K, V, S>,
     filters: Vec<Filter<V>>,
@@ -204,7 +206,7 @@ where
 
 impl<'a, K, V, S> QueryBuilder<'a, K, V, S>
 where
-    K: Eq + Hash + Clone + Ord + Send + Sync + 'static,
+    K: Eq + Hash + Clone + Ord + Send + Sync + Serialize + DeserializeOwned + 'static,
     V: Send + Sync + 'static,
     S: BuildHasher + Send + Sync + 'static,
 {

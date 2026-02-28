@@ -8,6 +8,7 @@ pub mod procarray;
 pub mod query;
 pub mod recovery;
 pub mod shm;
+pub mod shm_index;
 pub mod stapi_parser;
 pub mod txn;
 pub mod wal;
@@ -36,6 +37,7 @@ pub use recovery::{
 pub use shm::{
     ChunkedArena as ShmChunkedArena, MmapBase, RelPtr, ShmAllocError, ShmArena, ShmError,
 };
+pub use shm_index::{ShmIndexError, ShmIndexGcDaemon};
 pub use stapi_parser::{
     parse_stapi_query, Filter as StapiFilter, ParseError as StapiParseError, Query as StapiQuery,
     Value as StapiValue,

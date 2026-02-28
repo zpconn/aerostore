@@ -175,14 +175,14 @@ struct FlightIndexes {
 }
 
 impl FlightIndexes {
-    fn new() -> Self {
+    fn new(shm: Arc<ShmArena>) -> Self {
         Self {
-            flight_id: Arc::new(SecondaryIndex::new("flight_id")),
-            altitude: Arc::new(SecondaryIndex::new("altitude")),
-            gs: Arc::new(SecondaryIndex::new("gs")),
-            lat: Arc::new(SecondaryIndex::new("lat")),
-            lon: Arc::new(SecondaryIndex::new("lon")),
-            updated_at: Arc::new(SecondaryIndex::new("updated_at")),
+            flight_id: Arc::new(SecondaryIndex::new_in_shared("flight_id", Arc::clone(&shm))),
+            altitude: Arc::new(SecondaryIndex::new_in_shared("altitude", Arc::clone(&shm))),
+            gs: Arc::new(SecondaryIndex::new_in_shared("gs", Arc::clone(&shm))),
+            lat: Arc::new(SecondaryIndex::new_in_shared("lat", Arc::clone(&shm))),
+            lon: Arc::new(SecondaryIndex::new_in_shared("lon", Arc::clone(&shm))),
+            updated_at: Arc::new(SecondaryIndex::new_in_shared("updated_at", shm)),
         }
     }
 
@@ -298,7 +298,7 @@ impl SharedFlightDb {
                 .map_err(|err| format!("failed to seed OCC row {}: {}", row_id, err))?;
         }
 
-        let indexes = FlightIndexes::new();
+        let indexes = FlightIndexes::new(Arc::clone(&shm));
         let planner = QueryPlanner::new(indexes.as_catalog());
 
         let wal_path = data_dir.join(WAL_FILE_NAME);

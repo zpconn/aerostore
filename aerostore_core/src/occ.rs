@@ -822,6 +822,11 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         self.shm.global_txid().load(Ordering::Acquire)
     }
 
+    #[inline]
+    pub fn shared_arena(&self) -> &Arc<ShmArena> {
+        &self.shm
+    }
+
     pub fn snapshot_latest_rows(&self) -> Result<Vec<(usize, T)>, Error> {
         let _lock = self.acquire_commit_lock()?;
         let mut rows = Vec::with_capacity(self.capacity());

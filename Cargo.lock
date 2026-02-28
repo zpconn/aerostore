@@ -17,6 +17,7 @@ dependencies = [
  "memchr",
  "nom",
  "rkyv",
+ "rustix 0.38.44",
  "ryu",
  "serde",
  "tempfile",
