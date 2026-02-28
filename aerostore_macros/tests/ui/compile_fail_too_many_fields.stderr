@@ -1,0 +1,5 @@
+error: #[speedtable] supports at most 64 user fields (u64 null bitmask)
+ --> tests/ui/compile_fail_too_many_fields.rs:4:1
+  |
+4 | #[repr(C)]
+  | ^

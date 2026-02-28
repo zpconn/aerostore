@@ -19,7 +19,7 @@ struct FlightState {
 fn speedtable_macro_adds_hidden_system_columns() {
     let mut row = FlightState::new(37.618_805_6, -122.375_416_7, 30_000, 450);
 
-    assert_eq!(row.__nullmask(), 0);
+    assert_eq!(row.__null_bitmask(), 0);
     assert_eq!(row._xmin, 0);
     assert_eq!(row._xmax.load(Ordering::Relaxed), 0);
 
@@ -28,6 +28,42 @@ fn speedtable_macro_adds_hidden_system_columns() {
 
     row.__set_null_by_index(FlightState::__NULLBIT_ALT, false);
     assert!(!row.__is_null_by_index(FlightState::__NULLBIT_ALT));
+
+    assert_eq!(
+        FlightState::__null_index_for_field("lat"),
+        Some(FlightState::__NULLBIT_LAT)
+    );
+    assert_eq!(
+        FlightState::__null_index_for_field("lon"),
+        Some(FlightState::__NULLBIT_LON)
+    );
+    assert_eq!(
+        FlightState::__null_index_for_field("alt"),
+        Some(FlightState::__NULLBIT_ALT)
+    );
+    assert_eq!(
+        FlightState::__null_index_for_field("gs"),
+        Some(FlightState::__NULLBIT_GS)
+    );
+    assert_eq!(FlightState::__null_index_for_field("missing"), None);
+    assert!(!row.__is_null_field("missing"));
+}
+
+#[test]
+fn speedtable_null_bitmask_masks_garbage_column_bytes_without_option_wrappers() {
+    let mut row = FlightState::new(37.618_805_6, -122.375_416_7, 30_000, 450);
+    row.alt = i32::MIN;
+    row.__set_null_by_index(FlightState::__NULLBIT_ALT, true);
+
+    assert!(row.__is_null_field("alt"));
+    assert_eq!(
+        row.alt,
+        i32::MIN,
+        "physical payload remains garbage while logical null bit is authoritative"
+    );
+
+    row.__set_null_by_index(FlightState::__NULLBIT_ALT, false);
+    assert!(!row.__is_null_field("alt"));
 }
 
 #[test]

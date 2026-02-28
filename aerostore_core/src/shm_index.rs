@@ -339,6 +339,19 @@ where
                     },
                 );
             }
+            IndexCompare::Lte(v) => {
+                let Ok(bound) = EncodedKey::from_index_value(v) else {
+                    return Vec::new();
+                };
+                let _ = self.skiplist.scan_payloads(
+                    |key| matches!(key.cmp(&bound), Ordering::Less | Ordering::Equal),
+                    |_, _, payload| {
+                        if let Some(row_id) = Self::decode_row_id(payload) {
+                            out.insert(row_id);
+                        }
+                    },
+                );
+            }
             IndexCompare::In(values) => {
                 for value in values {
                     let rows = self.lookup(&IndexCompare::Eq(value.clone()));

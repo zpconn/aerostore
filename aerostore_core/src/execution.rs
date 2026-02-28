@@ -2,8 +2,9 @@ use std::fmt;
 use std::sync::atomic::{AtomicU32, Ordering as AtomicOrdering};
 use std::sync::Arc;
 
+use crate::filters::compare_optional;
 use crate::occ::{OccTable, OccTransaction};
-use crate::rbo_planner::{compare_optional, AccessPath, CompiledPlan, PlannerError, StapiRow};
+use crate::rbo_planner::{AccessPath, CompiledPlan, PlannerError, StapiRow};
 use crate::shm::{RelPtr, ShmAllocError, ShmArena};
 
 const EMPTY_OFFSET: u32 = 0;

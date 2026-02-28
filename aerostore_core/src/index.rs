@@ -81,6 +81,7 @@ pub enum IndexCompare {
     Gt(IndexValue),
     Gte(IndexValue),
     Lt(IndexValue),
+    Lte(IndexValue),
     In(Vec<IndexValue>),
 }
 

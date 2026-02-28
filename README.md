@@ -7,7 +7,7 @@ It combines:
 
 - lock-free shared-memory data structures (`RelPtr`, shared arena, CAS-based updates),
 - PostgreSQL-inspired snapshot/OCC/SSI behavior,
-- shared-memory secondary indexing,
+- shared-memory secondary indexing (V4 lock-free skiplist backend),
 - WAL + checkpoint/snapshot durability paths,
 - in-process Tcl integration (`cdylib`) for low-overhead execution.
 
@@ -34,12 +34,17 @@ The repo currently includes multiple durability/concurrency paths (legacy + newe
 
 ### STAPI-style filters
 
-- `=` exact match
+- `null field` SQL-null bit check
+- `notnull field` SQL-not-null bit check
+- `=` / `==` exact match
+- `!=` / `<>` not-equal (residual filter)
 - `>` greater than
-- `<` less than
 - `>=` greater than or equal
+- `<` less than
+- `<=` less than or equal
 - `in field {a b c}` membership
 - `match field glob*` glob matching
+- `notmatch field glob*` glob non-match (residual filter)
 
 ### Search controls
 
@@ -47,18 +52,31 @@ The repo currently includes multiple durability/concurrency paths (legacy + newe
 - `-limit <n>`
 - Tcl bridge options: `-offset <n>`, `-asc`, `-desc`
 
+### Nullability Without `Option<T>`
+
+- `#[speedtable]` rows carry a hidden `_null_bitmask: u64` plus system columns (`_xmin`, `_xmax`).
+- If bit `i` is set, column `i` is logically SQL `NULL` even if physical column bytes contain data.
+- Query predicates use the bitmask as the source of truth for null semantics.
+
 ## Rule-Based Optimizer (RBO)
 
-Aerostore uses a zero-allocation heuristic planner in `rbo_planner.rs` + `execution.rs`.
+Aerostore uses a deterministic heuristic planner in `rbo_planner.rs` + `execution.rs`.
 
 Routing precedence:
 
 1. Primary-key equality route (`RouteKind::PrimaryKeyLookup`) through shared `ShmPrimaryKeyMap`.
 2. Indexed equality route (`RouteKind::IndexExactMatch`).
-3. Indexed range route (`RouteKind::IndexRangeScan`) for `>`, `<`, `>=`.
+3. Indexed range route (`RouteKind::IndexRangeScan`) for `>`, `<`, `>=`, `<=`.
 4. Full scan (`RouteKind::FullScan`) fallback.
 
 Tie-breaks are deterministic via cardinality ranking (default: `flight_id` -> `geohash` -> `dest` -> `altitude`).
+
+Residual-only predicates:
+
+- `null`, `notnull`
+- `!=`, `notmatch`
+
+These predicates are never used as index drivers and are applied after candidate row ID narrowing.
 
 Execution pipeline:
 
@@ -99,13 +117,16 @@ Execution pipeline:
 
 ### 4) Shared-Memory Indexing
 
-- Shared secondary index implementation in `shm_index.rs` (`SecondaryIndex`).
-- CAS-based insertion/removal, range scans, and deferred reclamation horizon checks.
+- Shared secondary index implementation in `shm_index.rs` (`SecondaryIndex`) on top of `shm_skiplist.rs` (`ShmSkipList`).
+- Lock-free CAS-based insertion/removal and multi-level skiplist traversal in shared memory.
+- Duplicate-key postings are supported (non-unique secondary index semantics).
+- Range scans and deferred reclamation horizon checks are enforced in shared memory.
 - Shared primary key map in `execution.rs` (`ShmPrimaryKeyMap`) for PK route.
 
 ### 5) Query Layer
 
-- `stapi_parser.rs`: Tcl list syntax parsing to typed AST.
+- `stapi_parser.rs`: Tcl list syntax parsing to typed AST with full operator support (`null`, `notnull`, `<=`, `>=`, `!=`, `notmatch`, etc.).
+- `filters.rs`: predicate compilation and SQL-like null short-circuit semantics.
 - `rbo_planner.rs`: route selection and residual predicate compilation.
 - `execution.rs`: candidate-to-result execution path.
 - `query.rs`: typed Rust query API (`QueryBuilder`, `QueryEngine`) also retained.
@@ -205,12 +226,16 @@ cargo build -p aerostore_tcl
 cargo test --workspace --no-run
 cargo test -p aerostore_core --tests --no-run
 cargo test -p aerostore_tcl --tests --no-run
+cargo test -p aerostore_macros --test ui
 ```
 
 ### Targeted reliability suites
 
 ```bash
 cargo test -p aerostore_core --test rbo_planner_routing -- --nocapture
+cargo test -p aerostore_core stapi_parser -- --nocapture
+cargo test -p aerostore_core filters:: -- --nocapture
+cargo test -p aerostore_core --test speedtable_arena_perf -- --nocapture
 cargo test -p aerostore_core --test occ_write_skew -- --nocapture
 cargo test -p aerostore_core --test shm_shared_memory -- --nocapture
 cargo test -p aerostore_core --test logical_recovery -- --nocapture --test-threads=1
@@ -239,6 +264,7 @@ Criterion:
 
 ```bash
 cargo bench -p aerostore_core --bench procarray_snapshot
+cargo bench -p aerostore_core --bench shm_skiplist_adversarial
 ```
 
 Nightly runbook:
@@ -278,9 +304,17 @@ Nightly runbook:
 ### Planning and query behavior
 
 - `aerostore_core/tests/rbo_planner_routing.rs`
-  - route precedence, tie-breaks, residual filtering, malformed syntax handling.
+  - route precedence, tie-breaks, residual filtering, malformed syntax handling, negative/null residual guarantees.
 - `aerostore_core/tests/query_index_benchmark.rs`
-  - typed query vs STAPI path, Tcl-style path, PK route vs full scan, tie-break benchmark.
+  - typed query vs STAPI path, Tcl-style path, PK route vs full scan, tie-break benchmark, negative/null residual benchmark paths.
+- `aerostore_core/src/stapi_parser.rs` (unit tests)
+  - full STAPI operator matrix and arity validation (`null`, `notnull`, `<=`, `>=`, `!=`, `notmatch`, aliases).
+- `aerostore_core/src/filters.rs` (unit tests)
+  - null-bitmask-dominant predicate semantics and negative/range correctness.
+- `aerostore_core/tests/speedtable_arena_perf.rs`
+  - `#[speedtable]` system-column injection and null-bitmask behavior over physical payload bytes.
+- `aerostore_macros/tests/ui.rs`
+  - compile-fail macro contract tests (reserved names and >64-field rejection).
 
 ### WAL, checkpoint, crash recovery
 
@@ -300,7 +334,7 @@ Nightly runbook:
 - `aerostore_core/tests/ingest_watch_ttl.rs`
   - ingest + watch + TTL behavior.
 - `aerostore_tcl/tests/search_stapi_bridge.rs`
-  - list/raw STAPI parity, `>=`, PK equality routing, error boundary checks.
+  - list/raw STAPI parity across `<=`, `>=`, `!=`, `notmatch`, `null`, `notnull`, PK routing, and arity/error boundary checks.
 - `aerostore_tcl/tests/config_checkpoint_integration.rs`
   - Tcl config toggles, checkpoint behavior, recovery (including PK lookup checks).
 
@@ -308,7 +342,9 @@ Nightly runbook:
 
 - Primary execution path is shared-memory OCC/SSI + partitioned lock striping.
 - Query path is RBO (`rbo_planner.rs` + `execution.rs`) with shared PK map support.
-- Shared-memory secondary indexes are cross-process visible under `fork()`.
+- Shared-memory secondary indexes are cross-process visible under `fork()` and backed by lock-free shared-memory skiplist lanes.
+- STAPI grammar supports the full operational set used in this repository, including null/negative predicates.
+- Speedtable nullability is represented by `_null_bitmask` (no `Option<T>` row layout inflation).
 - Async WAL ring path and logical WAL/snapshot recovery path are both implemented and tested.
 - Legacy modules (`mvcc.rs`, `wal.rs`, `occ_legacy.rs`) remain for compatibility/reference and test coverage.
 

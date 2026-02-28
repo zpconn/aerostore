@@ -34,12 +34,24 @@ impl Value {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Filter {
+    Null { field: String },
+    NotNull { field: String },
     Eq { field: String, value: Value },
+    Ne { field: String, value: Value },
     Lt { field: String, value: Value },
+    Lte { field: String, value: Value },
     Gt { field: String, value: Value },
     Gte { field: String, value: Value },
     In { field: String, values: Vec<Value> },
     Match { field: String, pattern: String },
+    NotMatch { field: String, pattern: String },
+}
+
+impl Filter {
+    #[inline]
+    pub fn is_negative(&self) -> bool {
+        matches!(self, Filter::Ne { .. } | Filter::NotMatch { .. })
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -147,13 +159,15 @@ fn parse_compare_clauses(raw_compare: &str) -> Result<Vec<Filter>, ParseError> {
 }
 
 fn looks_like_single_clause(parts: &[String]) -> bool {
+    if parts.len() == 2 {
+        return matches!(parts[0].to_ascii_lowercase().as_str(), "null" | "notnull");
+    }
     if parts.len() < 3 {
         return false;
     }
-
     matches!(
-        parts[0].as_str(),
-        "=" | "==" | ">" | ">=" | "<" | "in" | "IN" | "match"
+        parts[0].to_ascii_lowercase().as_str(),
+        "=" | "==" | "!=" | "<>" | ">" | ">=" | "<" | "<=" | "in" | "match" | "notmatch"
     )
 }
 
@@ -163,11 +177,30 @@ fn parse_compare_clause(clause: &str) -> Result<Filter, ParseError> {
         return Err(ParseError::new("compare clause must not be empty"));
     }
 
-    let op = parts[0].as_str();
-    match op {
+    let op = parts[0].to_ascii_lowercase();
+    match op.as_str() {
+        "null" => {
+            ensure_clause_arity(&parts, 2, "null")?;
+            Ok(Filter::Null {
+                field: parts[1].clone(),
+            })
+        }
+        "notnull" => {
+            ensure_clause_arity(&parts, 2, "notnull")?;
+            Ok(Filter::NotNull {
+                field: parts[1].clone(),
+            })
+        }
         "=" | "==" => {
             ensure_clause_arity(&parts, 3, "=")?;
             Ok(Filter::Eq {
+                field: parts[1].clone(),
+                value: Value::from_atom(parts[2].as_str()),
+            })
+        }
+        "!=" | "<>" => {
+            ensure_clause_arity(&parts, 3, "!=")?;
+            Ok(Filter::Ne {
                 field: parts[1].clone(),
                 value: Value::from_atom(parts[2].as_str()),
             })
@@ -193,6 +226,13 @@ fn parse_compare_clause(clause: &str) -> Result<Filter, ParseError> {
                 value: Value::from_atom(parts[2].as_str()),
             })
         }
+        "<=" => {
+            ensure_clause_arity(&parts, 3, "<=")?;
+            Ok(Filter::Lte {
+                field: parts[1].clone(),
+                value: Value::from_atom(parts[2].as_str()),
+            })
+        }
         "match" => {
             ensure_clause_arity(&parts, 3, "match")?;
             Ok(Filter::Match {
@@ -200,7 +240,14 @@ fn parse_compare_clause(clause: &str) -> Result<Filter, ParseError> {
                 pattern: parts[2].clone(),
             })
         }
-        "in" | "IN" => {
+        "notmatch" => {
+            ensure_clause_arity(&parts, 3, "notmatch")?;
+            Ok(Filter::NotMatch {
+                field: parts[1].clone(),
+                pattern: parts[2].clone(),
+            })
+        }
+        "in" => {
             ensure_clause_arity(&parts, 3, "in")?;
             let raw_values = parse_word_list(parts[2].as_str())?;
             if raw_values.is_empty() {
@@ -220,7 +267,7 @@ fn parse_compare_clause(clause: &str) -> Result<Filter, ParseError> {
         }
         _ => Err(ParseError::new(format!(
             "unsupported compare operator '{}'",
-            op
+            parts[0].as_str()
         ))),
     }
 }
@@ -332,17 +379,137 @@ mod tests {
     #[test]
     fn parses_each_supported_operator() {
         let parsed = parse_stapi_query(
-            "-compare {{= typ B738} {< alt 40000} {> alt 10000} {>= alt 10000} {in typ {B738 A320}} {match flight UAL*}}",
+            "-compare {{null destination} {notnull geohash} {= typ B738} {!= typ C17} {< alt 40000} {<= alt 40000} {> alt 10000} {>= alt 10000} {in typ {B738 A320}} {match flight UAL*} {notmatch typ C17*}}",
         )
         .expect("operator matrix should parse");
 
-        assert_eq!(parsed.filters.len(), 6);
-        assert!(matches!(parsed.filters[0], Filter::Eq { .. }));
-        assert!(matches!(parsed.filters[1], Filter::Lt { .. }));
-        assert!(matches!(parsed.filters[2], Filter::Gt { .. }));
-        assert!(matches!(parsed.filters[3], Filter::Gte { .. }));
-        assert!(matches!(parsed.filters[4], Filter::In { .. }));
-        assert!(matches!(parsed.filters[5], Filter::Match { .. }));
+        assert_eq!(parsed.filters.len(), 11);
+        assert!(matches!(parsed.filters[0], Filter::Null { .. }));
+        assert!(matches!(parsed.filters[1], Filter::NotNull { .. }));
+        assert!(matches!(parsed.filters[2], Filter::Eq { .. }));
+        assert!(matches!(parsed.filters[3], Filter::Ne { .. }));
+        assert!(matches!(parsed.filters[4], Filter::Lt { .. }));
+        assert!(matches!(parsed.filters[5], Filter::Lte { .. }));
+        assert!(matches!(parsed.filters[6], Filter::Gt { .. }));
+        assert!(matches!(parsed.filters[7], Filter::Gte { .. }));
+        assert!(matches!(parsed.filters[8], Filter::In { .. }));
+        assert!(matches!(parsed.filters[9], Filter::Match { .. }));
+        assert!(matches!(parsed.filters[10], Filter::NotMatch { .. }));
+    }
+
+    #[test]
+    fn parses_operator_aliases_and_case_variants() {
+        let parsed = parse_stapi_query(
+            "-compare {{NuLl destination} {NoTnUlL geohash} {== typ B738} {<> typ C17} {NoTmAtCh type C17*}}",
+        )
+        .expect("operator aliases and mixed-case variants should parse");
+
+        assert_eq!(parsed.filters.len(), 5);
+        assert!(matches!(
+            parsed.filters[0],
+            Filter::Null { ref field } if field == "destination"
+        ));
+        assert!(matches!(
+            parsed.filters[1],
+            Filter::NotNull { ref field } if field == "geohash"
+        ));
+        assert!(matches!(
+            parsed.filters[2],
+            Filter::Eq { ref field, value: Value::Text(ref value) } if field == "typ" && value == "B738"
+        ));
+        assert!(matches!(
+            parsed.filters[3],
+            Filter::Ne { ref field, value: Value::Text(ref value) } if field == "typ" && value == "C17"
+        ));
+        assert!(parsed.filters[3].is_negative());
+        assert!(matches!(
+            parsed.filters[4],
+            Filter::NotMatch { ref field, ref pattern } if field == "type" && pattern == "C17*"
+        ));
+        assert!(parsed.filters[4].is_negative());
+    }
+
+    #[test]
+    fn parses_single_clause_unary_compare_form() {
+        let parsed_null = parse_stapi_query("-compare {null destination}")
+            .expect("single-clause unary null query should parse");
+        assert_eq!(parsed_null.filters.len(), 1);
+        assert!(matches!(
+            parsed_null.filters[0],
+            Filter::Null { ref field } if field == "destination"
+        ));
+
+        let parsed_notnull = parse_stapi_query("-compare {notnull geohash}")
+            .expect("single-clause unary notnull query should parse");
+        assert_eq!(parsed_notnull.filters.len(), 1);
+        assert!(matches!(
+            parsed_notnull.filters[0],
+            Filter::NotNull { ref field } if field == "geohash"
+        ));
+    }
+
+    #[test]
+    fn parses_nested_negative_and_null_compare_clauses() {
+        let parsed = parse_stapi_query(
+            "-compare {{null destination} {<= altitude 10000} {notmatch type C17*} {!= ident UAL123} {notnull geohash}}",
+        )
+        .expect("nested negative/null clauses should parse");
+
+        assert_eq!(parsed.filters.len(), 5);
+        assert!(matches!(
+            parsed.filters[0],
+            Filter::Null { ref field } if field == "destination"
+        ));
+        assert!(matches!(
+            parsed.filters[1],
+            Filter::Lte { ref field, value: Value::Int(10_000) } if field == "altitude"
+        ));
+        assert!(matches!(
+            parsed.filters[2],
+            Filter::NotMatch { ref field, ref pattern } if field == "type" && pattern == "C17*"
+        ));
+        assert!(parsed.filters[2].is_negative());
+        assert!(matches!(
+            parsed.filters[3],
+            Filter::Ne { ref field, value: Value::Text(ref value) } if field == "ident" && value == "UAL123"
+        ));
+        assert!(parsed.filters[3].is_negative());
+        assert!(matches!(
+            parsed.filters[4],
+            Filter::NotNull { ref field } if field == "geohash"
+        ));
+    }
+
+    #[test]
+    fn rejects_invalid_null_operator_arity() {
+        let err = parse_stapi_query("-compare {{null destination now}}")
+            .expect_err("null operator with invalid arity must be rejected");
+        assert!(err.tcl_error_message().starts_with("TCL_ERROR:"));
+        assert!(err.message().contains("expects exactly 2"));
+    }
+
+    #[test]
+    fn rejects_invalid_arity_for_notnull_notmatch_and_neq() {
+        let err_notnull = parse_stapi_query("-compare {{notnull geohash now}}")
+            .expect_err("notnull operator with invalid arity must be rejected");
+        assert!(err_notnull.tcl_error_message().starts_with("TCL_ERROR:"));
+        assert!(err_notnull
+            .message()
+            .contains("operator 'notnull' expects exactly 2"));
+
+        let err_notmatch = parse_stapi_query("-compare {{notmatch type}}")
+            .expect_err("notmatch operator with missing pattern must be rejected");
+        assert!(err_notmatch.tcl_error_message().starts_with("TCL_ERROR:"));
+        assert!(err_notmatch
+            .message()
+            .contains("operator 'notmatch' expects exactly 3"));
+
+        let err_neq = parse_stapi_query("-compare {{!= ident}}")
+            .expect_err("!= operator with missing rhs must be rejected");
+        assert!(err_neq.tcl_error_message().starts_with("TCL_ERROR:"));
+        assert!(err_neq
+            .message()
+            .contains("operator '!=' expects exactly 3"));
     }
 
     #[test]

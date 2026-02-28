@@ -46,6 +46,61 @@ if {$gte_list_count != 2} {
     error "unexpected >= match count: $gte_list_count"
 }
 
+set compare_lte_list {{<= altitude 12000}}
+set compare_lte_raw "{<= altitude 12000}"
+set lte_list_count [FlightState search -compare $compare_lte_list -sort altitude -limit 50]
+set lte_raw_count [FlightState search -compare $compare_lte_raw -sort altitude -limit 50]
+if {$lte_list_count != $lte_raw_count} {
+    error "<= list/raw compare mismatch: list=$lte_list_count raw=$lte_raw_count"
+}
+if {$lte_list_count != 2} {
+    error "unexpected <= match count: $lte_list_count"
+}
+
+set compare_ne_list {{!= ident UAL123}}
+set compare_ne_raw "{!= ident UAL123}"
+set ne_list_count [FlightState search -compare $compare_ne_list -limit 50]
+set ne_raw_count [FlightState search -compare $compare_ne_raw -limit 50]
+if {$ne_list_count != $ne_raw_count} {
+    error "!= list/raw compare mismatch: list=$ne_list_count raw=$ne_raw_count"
+}
+if {$ne_list_count != 3} {
+    error "unexpected != match count: $ne_list_count"
+}
+
+set compare_notmatch_list {{notmatch ident UAL*}}
+set compare_notmatch_raw "{notmatch ident UAL*}"
+set notmatch_list_count [FlightState search -compare $compare_notmatch_list -limit 50]
+set notmatch_raw_count [FlightState search -compare $compare_notmatch_raw -limit 50]
+if {$notmatch_list_count != $notmatch_raw_count} {
+    error "notmatch list/raw compare mismatch: list=$notmatch_list_count raw=$notmatch_raw_count"
+}
+if {$notmatch_list_count != 2} {
+    error "unexpected notmatch count: $notmatch_list_count"
+}
+
+set compare_null_list {{null ident}}
+set compare_null_raw "{null ident}"
+set null_list_count [FlightState search -compare $compare_null_list -limit 50]
+set null_raw_count [FlightState search -compare $compare_null_raw -limit 50]
+if {$null_list_count != $null_raw_count} {
+    error "null list/raw compare mismatch: list=$null_list_count raw=$null_raw_count"
+}
+if {$null_list_count != 0} {
+    error "unexpected null match count: $null_list_count"
+}
+
+set compare_notnull_list {{notnull ident}}
+set compare_notnull_raw "{notnull ident}"
+set notnull_list_count [FlightState search -compare $compare_notnull_list -limit 50]
+set notnull_raw_count [FlightState search -compare $compare_notnull_raw -limit 50]
+if {$notnull_list_count != $notnull_raw_count} {
+    error "notnull list/raw compare mismatch: list=$notnull_list_count raw=$notnull_raw_count"
+}
+if {$notnull_list_count != 4} {
+    error "unexpected notnull match count: $notnull_list_count"
+}
+
 set pk_list {{= flight_id UAL123}}
 set pk_raw "{= flight_id UAL123}"
 set pk_list_count [FlightState search -compare $pk_list -limit 10]
@@ -74,6 +129,30 @@ if {[catch {FlightState search -compare $malformed_raw -limit 5} err1] == 0} {
 }
 if {![string match "TCL_ERROR:*" $err1]} {
     error "malformed raw STAPI error missing TCL_ERROR prefix: $err1"
+}
+
+set malformed_null_arity "{null ident extra}"
+if {[catch {FlightState search -compare $malformed_null_arity -limit 5} err_null] == 0} {
+    error "malformed null arity unexpectedly succeeded"
+}
+if {![string match "TCL_ERROR:*" $err_null]} {
+    error "malformed null arity missing TCL_ERROR prefix: $err_null"
+}
+
+set malformed_notnull_arity "{notnull ident extra}"
+if {[catch {FlightState search -compare $malformed_notnull_arity -limit 5} err_notnull] == 0} {
+    error "malformed notnull arity unexpectedly succeeded"
+}
+if {![string match "TCL_ERROR:*" $err_notnull]} {
+    error "malformed notnull arity missing TCL_ERROR prefix: $err_notnull"
+}
+
+set malformed_notmatch_arity "{notmatch ident}"
+if {[catch {FlightState search -compare $malformed_notmatch_arity -limit 5} err_notmatch] == 0} {
+    error "malformed notmatch arity unexpectedly succeeded"
+}
+if {![string match "TCL_ERROR:*" $err_notmatch]} {
+    error "malformed notmatch arity missing TCL_ERROR prefix: $err_notmatch"
 }
 
 if {[catch {FlightState search -bogus value -limit 5} err2] == 0} {

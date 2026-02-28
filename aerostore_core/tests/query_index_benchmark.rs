@@ -27,6 +27,7 @@ fn altitude_field() -> Field<FlightPosition, i32> {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct StapiFlightRow {
+    null_bitmask: u64,
     alt: i64,
     flight: [u8; 8],
     dest: [u8; 4],
@@ -34,16 +35,44 @@ struct StapiFlightRow {
 }
 
 impl StapiFlightRow {
+    const NULLBIT_ALT: u8 = 0;
+    const NULLBIT_FLIGHT: u8 = 1;
+    const NULLBIT_DEST: u8 = 2;
+    const NULLBIT_TYP: u8 = 3;
+
     fn new(alt: i64, flight: &str, typ: &str) -> Self {
         Self::new_with_dest(alt, flight, typ, "KORD")
     }
 
     fn new_with_dest(alt: i64, flight: &str, typ: &str, dest: &str) -> Self {
         Self {
+            null_bitmask: 0,
             alt,
             flight: fixed_ascii::<8>(flight),
             dest: fixed_ascii::<4>(dest),
             typ: fixed_ascii::<4>(typ),
+        }
+    }
+
+    fn null_index_for_field(field: &str) -> Option<u8> {
+        match field {
+            "alt" | "altitude" => Some(Self::NULLBIT_ALT),
+            "flight" | "flight_id" | "ident" => Some(Self::NULLBIT_FLIGHT),
+            "dest" => Some(Self::NULLBIT_DEST),
+            "typ" | "type" => Some(Self::NULLBIT_TYP),
+            _ => None,
+        }
+    }
+
+    fn set_field_null(&mut self, field: &str, is_null: bool) {
+        let Some(idx) = Self::null_index_for_field(field) else {
+            return;
+        };
+        let bit = 1_u64 << idx;
+        if is_null {
+            self.null_bitmask |= bit;
+        } else {
+            self.null_bitmask &= !bit;
         }
     }
 }
@@ -64,6 +93,12 @@ impl StapiRow for StapiFlightRow {
             "typ" | "type" => Some(StapiValue::Text(decode_ascii(&self.typ))),
             _ => None,
         }
+    }
+
+    fn is_field_null(&self, field: &str) -> bool {
+        Self::null_index_for_field(field)
+            .map(|idx| (self.null_bitmask & (1_u64 << idx)) != 0)
+            .unwrap_or(false)
     }
 }
 
@@ -603,6 +638,167 @@ fn benchmark_stapi_rbo_tiebreak_dest_over_altitude() {
 
     eprintln!(
         "rbo_tiebreak_dest_over_altitude_elapsed={:?} passes={} rows={} limit={}",
+        elapsed, PASSES, ROWS, LIMIT
+    );
+}
+
+#[test]
+fn benchmark_stapi_residual_negative_filters_with_index_driver() {
+    const ROWS: usize = 50_000;
+    const PASSES: usize = 48;
+    const LIMIT: usize = 25;
+
+    let shm = Arc::new(ShmArena::new(128 << 20).expect("failed to create shared arena"));
+    let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+        .expect("failed to create OCC table");
+    let altitude_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "altitude",
+        Arc::clone(&shm),
+    ));
+
+    for row_id in 0..ROWS {
+        let alt = ((row_id % 45_000) as i64) + 500;
+        let flight = if row_id % 2 == 0 {
+            format!("UAL{:03}", row_id % 1_000)
+        } else {
+            format!("DAL{:03}", row_id % 1_000)
+        };
+        let typ = match row_id % 4 {
+            0 => "B738",
+            1 => "B739",
+            2 => "A320",
+            _ => "E190",
+        };
+        let row = StapiFlightRow::new(alt, flight.as_str(), typ);
+        occ_table
+            .seed_row(row_id, row)
+            .expect("failed to seed OCC row for residual negative benchmark");
+        altitude_index.insert(IndexValue::I64(alt), row_id);
+    }
+
+    let catalog = SchemaCatalog::new("flight_id")
+        .with_index("altitude", Arc::clone(&altitude_index))
+        .with_index("alt", altitude_index);
+    let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
+    let stapi =
+        "-compare {{<= altitude 14000} {!= typ B739} {notmatch typ A3*}} -sort altitude -limit 25";
+
+    let start = Instant::now();
+    for _ in 0..PASSES {
+        let plan = planner
+            .compile_from_stapi(stapi)
+            .expect("failed to compile residual negative benchmark query");
+        let mut tx = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for residual negative benchmark");
+        let rows = plan
+            .execute(&occ_table, &mut tx)
+            .expect("residual negative benchmark execution failed");
+        occ_table
+            .abort(&mut tx)
+            .expect("abort failed for residual negative benchmark");
+
+        assert!(!rows.is_empty());
+        assert!(rows.len() <= LIMIT);
+        assert!(rows.iter().all(|row| row.alt <= 14_000));
+        assert!(rows.iter().all(|row| decode_ascii(&row.typ) != "B739"));
+        assert!(rows
+            .iter()
+            .all(|row| !decode_ascii(&row.typ).starts_with("A3")));
+        assert!(rows.windows(2).all(|w| w[0].alt <= w[1].alt));
+    }
+    let elapsed = start.elapsed();
+
+    eprintln!(
+        "stapi_residual_negative_filters_with_index_driver_elapsed={:?} passes={} rows={} limit={}",
+        elapsed, PASSES, ROWS, LIMIT
+    );
+}
+
+#[test]
+fn benchmark_stapi_null_notnull_residual_filters() {
+    const ROWS: usize = 40_000;
+    const PASSES: usize = 40;
+    const LIMIT: usize = 100;
+
+    let shm = Arc::new(ShmArena::new(128 << 20).expect("failed to create shared arena"));
+    let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+        .expect("failed to create OCC table");
+    let altitude_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "altitude",
+        Arc::clone(&shm),
+    ));
+
+    for row_id in 0..ROWS {
+        let alt = ((row_id % 45_000) as i64) + 500;
+        let flight = if row_id % 2 == 0 {
+            format!("UAL{:03}", row_id % 1_000)
+        } else {
+            format!("DAL{:03}", row_id % 1_000)
+        };
+        let typ = if row_id % 3 == 0 { "B738" } else { "A320" };
+        let mut row = StapiFlightRow::new(alt, flight.as_str(), typ);
+        if row_id % 5 == 0 {
+            row.typ = fixed_ascii::<4>("JUNK");
+            row.set_field_null("typ", true);
+        }
+        occ_table
+            .seed_row(row_id, row)
+            .expect("failed to seed OCC row for null/notnull benchmark");
+        altitude_index.insert(IndexValue::I64(alt), row_id);
+    }
+
+    let catalog = SchemaCatalog::new("flight_id")
+        .with_index("altitude", Arc::clone(&altitude_index))
+        .with_index("alt", altitude_index);
+    let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
+    let null_stapi = "-compare {{<= altitude 12000} {null typ}} -sort altitude -limit 100";
+    let notnull_stapi = "-compare {{<= altitude 12000} {notnull typ}} -sort altitude -limit 100";
+
+    let start = Instant::now();
+    for _ in 0..PASSES {
+        let null_plan = planner
+            .compile_from_stapi(null_stapi)
+            .expect("failed to compile null benchmark query");
+        let mut tx_null = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for null benchmark");
+        let null_rows = null_plan
+            .execute(&occ_table, &mut tx_null)
+            .expect("null benchmark execution failed");
+        occ_table
+            .abort(&mut tx_null)
+            .expect("abort failed for null benchmark");
+
+        assert!(!null_rows.is_empty());
+        assert!(null_rows.len() <= LIMIT);
+        assert!(null_rows.iter().all(|row| row.alt <= 12_000));
+        assert!(null_rows.iter().all(|row| row.is_field_null("typ")));
+        assert!(null_rows.windows(2).all(|w| w[0].alt <= w[1].alt));
+
+        let notnull_plan = planner
+            .compile_from_stapi(notnull_stapi)
+            .expect("failed to compile notnull benchmark query");
+        let mut tx_notnull = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for notnull benchmark");
+        let notnull_rows = notnull_plan
+            .execute(&occ_table, &mut tx_notnull)
+            .expect("notnull benchmark execution failed");
+        occ_table
+            .abort(&mut tx_notnull)
+            .expect("abort failed for notnull benchmark");
+
+        assert!(!notnull_rows.is_empty());
+        assert!(notnull_rows.len() <= LIMIT);
+        assert!(notnull_rows.iter().all(|row| row.alt <= 12_000));
+        assert!(notnull_rows.iter().all(|row| !row.is_field_null("typ")));
+        assert!(notnull_rows.windows(2).all(|w| w[0].alt <= w[1].alt));
+    }
+    let elapsed = start.elapsed();
+
+    eprintln!(
+        "stapi_null_notnull_residual_filters_elapsed={:?} passes={} rows={} limit={}",
         elapsed, PASSES, ROWS, LIMIT
     );
 }

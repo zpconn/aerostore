@@ -1,5 +1,6 @@
 pub mod arena;
 pub mod execution;
+pub mod filters;
 pub mod index;
 pub mod ingest;
 pub mod mvcc;
