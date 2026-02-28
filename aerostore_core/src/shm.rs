@@ -158,6 +158,11 @@ impl<T> RelPtr<T> {
     }
 
     #[inline]
+    pub fn swap(&self, offset: u32, order: Ordering) -> u32 {
+        self.offset.swap(offset, order)
+    }
+
+    #[inline]
     pub fn as_ref<'a>(&self, mmap_base: MmapBase<'a>) -> Option<&'a T> {
         let ptr = self.resolve_ptr(mmap_base, Ordering::Acquire)?;
         // SAFETY:
@@ -401,13 +406,16 @@ impl<'a> ChunkedArena<'a> {
         self.header.capacity.saturating_sub(self.head_offset()) as usize
     }
 
-    pub fn alloc<T>(&self, value: T) -> Result<RelPtr<T>, ShmAllocError> {
-        if size_of::<T>() == 0 {
+    pub fn alloc_raw(&self, size: usize, align: usize) -> Result<u32, ShmAllocError> {
+        if size == 0 {
             return Err(ShmAllocError::ZeroSizedType);
         }
+        if align == 0 || !align.is_power_of_two() {
+            return Err(ShmAllocError::SizeOverflow);
+        }
 
-        let size = u32::try_from(size_of::<T>()).map_err(|_| ShmAllocError::SizeOverflow)?;
-        let align = u32::try_from(align_of::<T>()).map_err(|_| ShmAllocError::SizeOverflow)?;
+        let size = u32::try_from(size).map_err(|_| ShmAllocError::SizeOverflow)?;
+        let align = u32::try_from(align).map_err(|_| ShmAllocError::SizeOverflow)?;
 
         loop {
             let head = self.header.head.load(Ordering::Acquire);
@@ -428,22 +436,31 @@ impl<'a> ChunkedArena<'a> {
                 .compare_exchange(head, end, Ordering::AcqRel, Ordering::Acquire)
                 .is_ok()
             {
-                let addr = (self.mmap_base.as_ptr() as usize)
-                    .checked_add(start as usize)
-                    .ok_or(ShmAllocError::SizeOverflow)?;
-                let ptr = addr as *mut T;
-
-                // SAFETY:
-                // `ptr` points into a unique range reserved by the successful CAS above.
-                unsafe {
-                    ptr.write(value);
-                }
-
-                return Ok(RelPtr::from_offset(start));
+                return Ok(start);
             }
 
             std::hint::spin_loop();
         }
+    }
+
+    pub fn alloc<T>(&self, value: T) -> Result<RelPtr<T>, ShmAllocError> {
+        if size_of::<T>() == 0 {
+            return Err(ShmAllocError::ZeroSizedType);
+        }
+
+        let start = self.alloc_raw(size_of::<T>(), align_of::<T>())?;
+        let addr = (self.mmap_base.as_ptr() as usize)
+            .checked_add(start as usize)
+            .ok_or(ShmAllocError::SizeOverflow)?;
+        let ptr = addr as *mut T;
+
+        // SAFETY:
+        // `ptr` points into a unique range reserved by `alloc_raw`.
+        unsafe {
+            ptr.write(value);
+        }
+
+        Ok(RelPtr::from_offset(start))
     }
 }
 

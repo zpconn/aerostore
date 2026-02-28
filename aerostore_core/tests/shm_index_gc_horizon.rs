@@ -20,6 +20,12 @@ fn retired_nodes_are_not_reclaimed_before_oldest_active_snapshot_finishes() {
         index.remove(&IndexValue::I64(row_id as i64), &row_id);
     }
 
+    let visible_after_delete = index.traverse();
+    assert!(
+        visible_after_delete.is_empty(),
+        "all deleted keys should be unlinked from visible traversal before reclaim"
+    );
+
     let retired_before = index.retired_nodes();
     assert!(
         retired_before > 0,
@@ -57,6 +63,10 @@ fn retired_nodes_are_not_reclaimed_before_oldest_active_snapshot_finishes() {
     assert!(
         total_reclaimed > 0,
         "expected GC to reclaim retired nodes after blocker completion"
+    );
+    assert!(
+        index.traverse().is_empty(),
+        "deleted keys must remain unlinked from traversal after GC runs"
     );
     assert_eq!(
         index.retired_nodes(),

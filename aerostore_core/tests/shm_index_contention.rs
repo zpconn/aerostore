@@ -1,7 +1,7 @@
 #![cfg(unix)]
 
 use std::collections::BTreeSet;
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -9,6 +9,9 @@ use aerostore_core::{IndexCompare, IndexValue, RelPtr, SecondaryIndex, ShmArena}
 
 const SHARED_KEY: &str = "UAL123";
 const ROW_IDS: u32 = 2_000;
+const INSERT_WORKERS: u32 = 2;
+const REMOVE_WORKERS: u32 = 2;
+const READER_WORKERS: u32 = 3;
 
 #[repr(C, align(64))]
 struct SharedPhase {
@@ -16,17 +19,22 @@ struct SharedPhase {
     phase: AtomicU32,
     insert_done: AtomicU32,
     remove_done: AtomicU32,
+    stop_readers: AtomicU32,
+    reader_done: AtomicU32,
+    reader_samples: AtomicU64,
+    reader_bad_hits: AtomicU64,
 }
 
 #[derive(Clone, Copy)]
 enum WorkerRole {
     Insert,
     Remove,
+    Reader,
 }
 
 #[test]
 fn cross_process_same_key_insert_remove_contention_with_duplicates_is_exact() {
-    let shm = Arc::new(ShmArena::new(16 << 20).expect("failed to allocate shared arena"));
+    let shm = Arc::new(ShmArena::new(32 << 20).expect("failed to allocate shared arena"));
     let index = SecondaryIndex::<u32>::new_in_shared("flight_id", Arc::clone(&shm));
     let phase_ptr = shm
         .chunked_arena()
@@ -35,45 +43,86 @@ fn cross_process_same_key_insert_remove_contention_with_duplicates_is_exact() {
             phase: AtomicU32::new(0),
             insert_done: AtomicU32::new(0),
             remove_done: AtomicU32::new(0),
+            stop_readers: AtomicU32::new(0),
+            reader_done: AtomicU32::new(0),
+            reader_samples: AtomicU64::new(0),
+            reader_bad_hits: AtomicU64::new(0),
         })
         .expect("failed to allocate shared phase state");
     let phase_offset = phase_ptr.load(Ordering::Acquire);
 
-    let pids = [
-        spawn_worker(index.clone(), phase_offset, WorkerRole::Insert),
-        spawn_worker(index.clone(), phase_offset, WorkerRole::Insert),
-        spawn_worker(index.clone(), phase_offset, WorkerRole::Remove),
-        spawn_worker(index.clone(), phase_offset, WorkerRole::Remove),
-    ];
+    let mut pids = Vec::new();
+    for _ in 0..INSERT_WORKERS {
+        pids.push(spawn_worker(
+            index.clone(),
+            phase_offset,
+            WorkerRole::Insert,
+        ));
+    }
+    for _ in 0..REMOVE_WORKERS {
+        pids.push(spawn_worker(
+            index.clone(),
+            phase_offset,
+            WorkerRole::Remove,
+        ));
+    }
+    for _ in 0..READER_WORKERS {
+        pids.push(spawn_worker(
+            index.clone(),
+            phase_offset,
+            WorkerRole::Reader,
+        ));
+    }
 
     let phase = phase_ptr
         .as_ref(shm.mmap_base())
         .expect("parent failed to resolve shared phase state");
+    let total_workers = INSERT_WORKERS + REMOVE_WORKERS + READER_WORKERS;
     wait_until(
-        || phase.ready.load(Ordering::Acquire) == 4,
-        Duration::from_secs(3),
+        || phase.ready.load(Ordering::Acquire) == total_workers,
+        Duration::from_secs(5),
         "workers did not reach ready barrier in time",
     );
 
     // Phase 1: two inserters concurrently publish duplicate postings for same key.
     phase.phase.store(1, Ordering::Release);
     wait_until(
-        || phase.insert_done.load(Ordering::Acquire) == 2,
-        Duration::from_secs(10),
+        || phase.insert_done.load(Ordering::Acquire) == INSERT_WORKERS,
+        Duration::from_secs(15),
         "insert workers did not finish in time",
     );
 
-    // Phase 2: two removers concurrently remove odd row IDs twice total.
+    // Phase 2: removers concurrently remove odd row IDs while readers keep scanning.
     phase.phase.store(2, Ordering::Release);
     wait_until(
-        || phase.remove_done.load(Ordering::Acquire) == 2,
-        Duration::from_secs(10),
+        || phase.remove_done.load(Ordering::Acquire) == REMOVE_WORKERS,
+        Duration::from_secs(15),
         "remove workers did not finish in time",
+    );
+
+    std::thread::sleep(Duration::from_millis(100));
+    phase.stop_readers.store(1, Ordering::Release);
+    wait_until(
+        || phase.reader_done.load(Ordering::Acquire) == READER_WORKERS,
+        Duration::from_secs(5),
+        "reader workers did not finish in time",
     );
 
     for pid in pids {
         wait_for_child(pid);
     }
+
+    let reader_samples = phase.reader_samples.load(Ordering::Acquire);
+    assert!(
+        reader_samples >= 100,
+        "reader workers collected too few lookup samples under contention: {}",
+        reader_samples
+    );
+    assert_eq!(
+        phase.reader_bad_hits.load(Ordering::Acquire),
+        0,
+        "readers observed out-of-domain row IDs during contention"
+    );
 
     let hits = index.lookup(&IndexCompare::Eq(IndexValue::String(
         SHARED_KEY.to_string(),
@@ -97,8 +146,6 @@ fn spawn_worker(
     let fork_result = unsafe { rustix::runtime::fork() }.expect("fork failed");
     match fork_result {
         rustix::runtime::Fork::Child(_) => {
-            let mut exit_code = 0_i32;
-
             let Some(phase) = RelPtr::<SharedPhase>::from_offset(phase_offset)
                 .as_ref(index.shared_arena().mmap_base())
             else {
@@ -130,15 +177,28 @@ fn spawn_worker(
                     }
                     phase.remove_done.fetch_add(1, Ordering::AcqRel);
                 }
-            }
-
-            if phase.phase.load(Ordering::Acquire) == 0 {
-                exit_code = 102;
+                WorkerRole::Reader => {
+                    while phase.phase.load(Ordering::Acquire) < 1 {
+                        std::hint::spin_loop();
+                    }
+                    while phase.stop_readers.load(Ordering::Acquire) == 0 {
+                        let hits = index.lookup(&IndexCompare::Eq(IndexValue::String(
+                            SHARED_KEY.to_string(),
+                        )));
+                        phase.reader_samples.fetch_add(1, Ordering::AcqRel);
+                        for row_id in hits {
+                            if row_id >= ROW_IDS {
+                                phase.reader_bad_hits.fetch_add(1, Ordering::AcqRel);
+                            }
+                        }
+                    }
+                    phase.reader_done.fetch_add(1, Ordering::AcqRel);
+                }
             }
 
             // SAFETY:
             // child exits immediately without unwinding.
-            unsafe { libc::_exit(exit_code) };
+            unsafe { libc::_exit(0) };
         }
         rustix::runtime::Fork::Parent(pid) => pid,
     }

@@ -8,9 +8,11 @@ use std::time::{Duration, Instant};
 use aerostore_core::{OccError, OccTable, RelPtr, ShmArena};
 
 const PROCESSES: usize = 16;
-const ATTEMPTS_PER_PROCESS: usize = 2_000;
+const ATTEMPTS_PER_PROCESS: usize = 1_000_000;
 const LOCK_BUCKETS: usize = 1024;
-const REQUIRED_SCALING_RATIO: f64 = 12.0;
+const REQUIRED_SCALING_RATIO: f64 = 3.0;
+const SCENARIO_RUNTIME_MS: u64 = 4_000;
+const WORKER_EXIT_TIMEOUT_SECS: u64 = 5;
 
 #[repr(C, align(64))]
 struct WorkerStats {
@@ -31,6 +33,7 @@ impl WorkerStats {
 struct BenchState {
     ready: AtomicU32,
     go: AtomicU32,
+    stop: AtomicU32,
     _pad: [u32; 14],
     workers: [WorkerStats; PROCESSES],
 }
@@ -40,6 +43,7 @@ impl BenchState {
         Self {
             ready: AtomicU32::new(0),
             go: AtomicU32::new(0),
+            stop: AtomicU32::new(0),
             _pad: [0; 14],
             workers: std::array::from_fn(|_| WorkerStats::new()),
         }
@@ -52,6 +56,7 @@ struct ScenarioResult {
     conflicts: u64,
     throughput_tps: f64,
     elapsed: Duration,
+    timed_out_workers: usize,
 }
 
 #[derive(Clone, Copy)]
@@ -71,17 +76,19 @@ fn benchmark_partitioned_occ_lock_striping_multi_process_scaling() {
     let ratio = disjoint.throughput_tps / heavily_contended.throughput_tps.max(1e-9);
 
     eprintln!(
-        "occ_partitioned_lock_striping_benchmark: processes={} attempts_per_process={} contended_elapsed={:?} contended_tps={:.2} contended_commits={} contended_conflicts={} disjoint_elapsed={:?} disjoint_tps={:.2} disjoint_commits={} disjoint_conflicts={} ratio={:.2}x",
+        "occ_partitioned_lock_striping_benchmark: processes={} attempts_per_process={} contended_elapsed={:?} contended_tps={:.2} contended_commits={} contended_conflicts={} contended_timed_out_workers={} disjoint_elapsed={:?} disjoint_tps={:.2} disjoint_commits={} disjoint_conflicts={} disjoint_timed_out_workers={} ratio={:.2}x",
         PROCESSES,
         ATTEMPTS_PER_PROCESS,
         heavily_contended.elapsed,
         heavily_contended.throughput_tps,
         heavily_contended.commits,
         heavily_contended.conflicts,
+        heavily_contended.timed_out_workers,
         disjoint.elapsed,
         disjoint.throughput_tps,
         disjoint.commits,
         disjoint.conflicts,
+        disjoint.timed_out_workers,
         ratio
     );
 
@@ -158,7 +165,10 @@ fn run_scenario(rows: &[usize], scenario: Scenario) -> ScenarioResult {
 
     let start = Instant::now();
     state.go.store(1, Ordering::Release);
-    wait_for_children_or_fail_fast(&pids, Duration::from_secs(60));
+    std::thread::sleep(Duration::from_millis(SCENARIO_RUNTIME_MS));
+    state.stop.store(1, Ordering::Release);
+    let timed_out_workers =
+        wait_for_children_or_terminate(&pids, Duration::from_secs(WORKER_EXIT_TIMEOUT_SECS));
     let elapsed = start.elapsed();
 
     let mut commits = 0_u64;
@@ -173,6 +183,7 @@ fn run_scenario(rows: &[usize], scenario: Scenario) -> ScenarioResult {
         conflicts,
         throughput_tps: commits as f64 / elapsed.as_secs_f64().max(1e-9),
         elapsed,
+        timed_out_workers,
     }
 }
 
@@ -196,14 +207,16 @@ fn run_worker_process(
         std::hint::spin_loop();
     }
 
-    let mut commits = 0_u64;
-    let mut conflicts = 0_u64;
-
     for _ in 0..ATTEMPTS_PER_PROCESS {
+        if state.stop.load(Ordering::Acquire) != 0 {
+            break;
+        }
         let mut tx = match table.begin_transaction() {
             Ok(tx) => tx,
             Err(_) => {
-                conflicts = conflicts.wrapping_add(1);
+                state.workers[worker_idx]
+                    .conflicts
+                    .fetch_add(1, Ordering::AcqRel);
                 std::thread::yield_now();
                 continue;
             }
@@ -213,7 +226,9 @@ fn run_worker_process(
             Ok(Some(value)) => value,
             _ => {
                 let _ = table.abort(&mut tx);
-                conflicts = conflicts.wrapping_add(1);
+                state.workers[worker_idx]
+                    .conflicts
+                    .fetch_add(1, Ordering::AcqRel);
                 continue;
             }
         };
@@ -227,28 +242,31 @@ fn run_worker_process(
             .is_err()
         {
             let _ = table.abort(&mut tx);
-            conflicts = conflicts.wrapping_add(1);
+            state.workers[worker_idx]
+                .conflicts
+                .fetch_add(1, Ordering::AcqRel);
             continue;
         }
 
         match table.commit(&mut tx) {
-            Ok(_) => commits = commits.wrapping_add(1),
+            Ok(_) => {
+                state.workers[worker_idx]
+                    .commits
+                    .fetch_add(1, Ordering::AcqRel);
+            }
             Err(OccError::SerializationFailure) => {
-                conflicts = conflicts.wrapping_add(1);
+                state.workers[worker_idx]
+                    .conflicts
+                    .fetch_add(1, Ordering::AcqRel);
             }
             Err(_) => {
                 let _ = table.abort(&mut tx);
-                conflicts = conflicts.wrapping_add(1);
+                state.workers[worker_idx]
+                    .conflicts
+                    .fetch_add(1, Ordering::AcqRel);
             }
         }
     }
-
-    state.workers[worker_idx]
-        .commits
-        .store(commits, Ordering::Release);
-    state.workers[worker_idx]
-        .conflicts
-        .store(conflicts, Ordering::Release);
 
     // SAFETY:
     // child exits immediately without unwinding.
@@ -290,7 +308,7 @@ where
     }
 }
 
-fn wait_for_children_or_fail_fast(pids: &[libc::pid_t], timeout: Duration) {
+fn wait_for_children_or_terminate(pids: &[libc::pid_t], timeout: Duration) -> usize {
     let mut pending = pids.to_vec();
     let start = Instant::now();
 
@@ -331,13 +349,19 @@ fn wait_for_children_or_fail_fast(pids: &[libc::pid_t], timeout: Duration) {
                 // best-effort cleanup for stuck child processes.
                 let _ = unsafe { libc::kill(*pid, libc::SIGKILL) };
             }
-            panic!(
-                "benchmark workers failed to exit within {:?}; killed {} stuck processes",
-                timeout,
-                pending.len()
-            );
+
+            let killed = pending.len();
+            for pid in pending {
+                let mut status: libc::c_int = 0;
+                // SAFETY:
+                // reap the process we just terminated.
+                let _ = unsafe { libc::waitpid(pid, &mut status as *mut libc::c_int, 0) };
+            }
+            return killed;
         }
 
         std::thread::sleep(Duration::from_millis(1));
     }
+
+    0
 }

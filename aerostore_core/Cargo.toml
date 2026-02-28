@@ -27,3 +27,7 @@ tempfile = "3.15"
 [[bench]]
 name = "procarray_snapshot"
 harness = false
+
+[[bench]]
+name = "shm_skiplist_adversarial"
+harness = false
