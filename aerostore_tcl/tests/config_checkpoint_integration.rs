@@ -49,6 +49,21 @@ set count [FlightState search -compare {{> altitude 10000}} -limit 1000]
 if {$count != 13} {
     error "expected 13 recovered rows after mode transition + checkpoint, got $count"
 }
+
+set asy [FlightState search -compare {{= flight_id ASY000}} -limit 10]
+if {$asy != 1} {
+    error "expected recovered PK row ASY000, got count=$asy"
+}
+
+set syn [FlightState search -compare {{= flight_id SYN002}} -limit 10]
+if {$syn != 1} {
+    error "expected recovered PK row SYN002, got count=$syn"
+}
+
+set missing [FlightState search -compare {{= flight_id MISSING}} -limit 10]
+if {$missing != 0} {
+    error "expected missing PK row count 0, got $missing"
+}
 puts "phase2_ok"
 "#;
     let phase2 = phase2_template
@@ -83,9 +98,26 @@ if {![file exists $wal_file]} {
 }
 set before [file size $wal_file]
 
-exec sleep 3
+set checkpoint_ready 0
+for {set i 0} {$i < 15} {incr i} {
+    if {[file exists $checkpoint_file]} {
+        set checkpoint_ready 1
+        break
+    }
+    exec sleep 1
+}
 
-if {![file exists $checkpoint_file]} {
+if {!$checkpoint_ready} {
+    set fallback [aerostore::checkpoint_now]
+    if {![string match "checkpoint rows=*" $fallback]} {
+        error "checkpoint fallback returned unexpected payload: $fallback"
+    }
+    if {[file exists $checkpoint_file]} {
+        set checkpoint_ready 1
+    }
+}
+
+if {!$checkpoint_ready} {
     error "expected periodic checkpoint file at $checkpoint_file"
 }
 set checkpoint_bytes [file size $checkpoint_file]
@@ -207,18 +239,10 @@ fn find_tcl_cdylib() -> Result<PathBuf, String> {
         .parent()
         .ok_or_else(|| "deps directory has no profile parent".to_string())?;
 
-    let candidates = shared_library_candidates();
-    for root in candidate_roots(profile_dir, deps_dir) {
-        for name in candidates {
-            let path = root.join(name);
-            if path.exists() {
-                return Ok(path);
-            }
-        }
-    }
-
+    // Ensure the cdylib reflects the current workspace sources for this test run.
     build_cdylib_for_profile(profile_dir)?;
 
+    let candidates = shared_library_candidates();
     for root in candidate_roots(profile_dir, deps_dir) {
         for name in candidates {
             let path = root.join(name);

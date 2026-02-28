@@ -35,6 +35,39 @@ if {$list_count != 2} {
     error "unexpected match count: $list_count"
 }
 
+set compare_gte_list {{>= altitude 12000} {match ident UAL*}}
+set compare_gte_raw "{>= altitude 12000} {match ident UAL*}"
+set gte_list_count [FlightState search -compare $compare_gte_list -sort altitude -limit 50]
+set gte_raw_count [FlightState search -compare $compare_gte_raw -sort altitude -limit 50]
+if {$gte_list_count != $gte_raw_count} {
+    error ">= list/raw compare mismatch: list=$gte_list_count raw=$gte_raw_count"
+}
+if {$gte_list_count != 2} {
+    error "unexpected >= match count: $gte_list_count"
+}
+
+set pk_list {{= flight_id UAL123}}
+set pk_raw "{= flight_id UAL123}"
+set pk_list_count [FlightState search -compare $pk_list -limit 10]
+set pk_raw_count [FlightState search -compare $pk_raw -limit 10]
+if {$pk_list_count != $pk_raw_count} {
+    error "pk list/raw compare mismatch: list=$pk_list_count raw=$pk_raw_count"
+}
+if {$pk_list_count != 1} {
+    error "unexpected pk match count: $pk_list_count"
+}
+
+set mixed_list {{= flight_id UAL123} {> altitude 10000} {match ident UAL*}}
+set mixed_raw "{= flight_id UAL123} {> altitude 10000} {match ident UAL*}"
+set mixed_list_count [FlightState search -compare $mixed_list -sort altitude -limit 10]
+set mixed_raw_count [FlightState search -compare $mixed_raw -sort altitude -limit 10]
+if {$mixed_list_count != $mixed_raw_count} {
+    error "mixed list/raw compare mismatch: list=$mixed_list_count raw=$mixed_raw_count"
+}
+if {$mixed_list_count != 1} {
+    error "unexpected mixed predicate match count: $mixed_list_count"
+}
+
 set malformed_raw "{> altitude 10000"
 if {[catch {FlightState search -compare $malformed_raw -limit 5} err1] == 0} {
     error "malformed raw STAPI compare unexpectedly succeeded"
@@ -147,18 +180,10 @@ fn find_tcl_cdylib() -> Result<PathBuf, String> {
         .parent()
         .ok_or_else(|| "deps directory has no profile parent".to_string())?;
 
-    let candidates = shared_library_candidates();
-    for root in candidate_roots(profile_dir, deps_dir) {
-        for name in candidates {
-            let path = root.join(name);
-            if path.exists() {
-                return Ok(path);
-            }
-        }
-    }
-
+    // Ensure the cdylib reflects the current workspace sources for this test run.
     build_cdylib_for_profile(profile_dir)?;
 
+    let candidates = shared_library_candidates();
     for root in candidate_roots(profile_dir, deps_dir) {
         for name in candidates {
             let path = root.join(name);

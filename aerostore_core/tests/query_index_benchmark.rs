@@ -4,8 +4,9 @@ use std::time::Instant;
 use crossbeam::epoch;
 
 use aerostore_core::{
-    Field, IndexCatalog, IndexValue, MvccTable, OccTable, QueryEngine, QueryPlanner,
-    SecondaryIndex, ShmArena, SortDirection, StapiRow, StapiValue, TransactionManager,
+    Field, IndexValue, MvccTable, OccTable, QueryEngine, RouteKind, RuleBasedOptimizer,
+    SchemaCatalog, SecondaryIndex, ShmArena, ShmPrimaryKeyMap, SortDirection, StapiRow, StapiValue,
+    TransactionManager,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -28,14 +29,20 @@ fn altitude_field() -> Field<FlightPosition, i32> {
 struct StapiFlightRow {
     alt: i64,
     flight: [u8; 8],
+    dest: [u8; 4],
     typ: [u8; 4],
 }
 
 impl StapiFlightRow {
     fn new(alt: i64, flight: &str, typ: &str) -> Self {
+        Self::new_with_dest(alt, flight, typ, "KORD")
+    }
+
+    fn new_with_dest(alt: i64, flight: &str, typ: &str, dest: &str) -> Self {
         Self {
             alt,
             flight: fixed_ascii::<8>(flight),
+            dest: fixed_ascii::<4>(dest),
             typ: fixed_ascii::<4>(typ),
         }
     }
@@ -45,14 +52,15 @@ impl StapiRow for StapiFlightRow {
     fn has_field(field: &str) -> bool {
         matches!(
             field,
-            "alt" | "altitude" | "flight" | "ident" | "typ" | "type"
+            "alt" | "altitude" | "flight" | "flight_id" | "ident" | "dest" | "typ" | "type"
         )
     }
 
     fn field_value(&self, field: &str) -> Option<StapiValue> {
         match field {
             "alt" | "altitude" => Some(StapiValue::Int(self.alt)),
-            "flight" | "ident" => Some(StapiValue::Text(decode_ascii(&self.flight))),
+            "flight" | "flight_id" | "ident" => Some(StapiValue::Text(decode_ascii(&self.flight))),
+            "dest" => Some(StapiValue::Text(decode_ascii(&self.dest))),
             "typ" | "type" => Some(StapiValue::Text(decode_ascii(&self.typ))),
             _ => None,
         }
@@ -219,8 +227,8 @@ fn benchmark_stapi_parse_compile_execute_vs_typed_query_path() {
         alt_index.insert(IndexValue::I64(alt), row_id);
     }
 
-    let catalog = IndexCatalog::new().with_index("alt", alt_index);
-    let planner = QueryPlanner::<StapiFlightRow>::new(catalog);
+    let catalog = SchemaCatalog::new("flight_id").with_index("alt", alt_index);
+    let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
     let stapi =
         "-compare {{match flight UAL*} {> alt 44000} {in typ {B738 A320}}} -sort alt -limit 20";
 
@@ -290,10 +298,10 @@ fn benchmark_tcl_style_alias_match_desc_offset_limit_path() {
         alt_index.insert(IndexValue::I64(alt), row_id);
     }
 
-    let catalog = IndexCatalog::new()
+    let catalog = SchemaCatalog::new("flight_id")
         .with_index("alt", Arc::clone(&alt_index))
         .with_index("altitude", alt_index);
-    let planner = QueryPlanner::<StapiFlightRow>::new(catalog);
+    let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
     let stapi =
         "-compare {{match ident UAL*} {> altitude 10000} {in typ {B738 A320}}} -sort altitude";
 
@@ -372,10 +380,10 @@ fn benchmark_tcl_bridge_style_stapi_assembly_compile_execute() {
         alt_index.insert(IndexValue::I64(alt), row_id);
     }
 
-    let catalog = IndexCatalog::new()
+    let catalog = SchemaCatalog::new("flight_id")
         .with_index("alt", Arc::clone(&alt_index))
         .with_index("altitude", alt_index);
-    let planner = QueryPlanner::<StapiFlightRow>::new(catalog);
+    let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
 
     let compare_literal = "{match ident UAL*} {> altitude 10000} {in typ {B738 A320}}";
     let sort_field = "altitude";
@@ -417,5 +425,184 @@ fn benchmark_tcl_bridge_style_stapi_assembly_compile_execute() {
     eprintln!(
         "tcl_bridge_style_stapi_assembly_compile_execute_elapsed={:?} passes={} rows={}",
         elapsed, PASSES, ROWS
+    );
+}
+
+#[test]
+fn benchmark_stapi_rbo_pk_point_lookup_vs_full_scan() {
+    const ROWS: usize = 40_000;
+    const PASSES: usize = 96;
+
+    let shm = Arc::new(ShmArena::new(96 << 20).expect("failed to create shared arena"));
+    let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+        .expect("failed to create OCC table");
+    let pk_map = Arc::new(
+        ShmPrimaryKeyMap::new_in_shared(Arc::clone(&shm), 4096, ROWS)
+            .expect("failed to create shared primary key map"),
+    );
+
+    for row_id in 0..ROWS {
+        let alt = ((row_id % 45_000) as i64) + 500;
+        let flight = format!("UAL{:05}", row_id);
+        let typ = match row_id % 3 {
+            0 => "B738",
+            1 => "A320",
+            _ => "B77W",
+        };
+        let row = StapiFlightRow::new_with_dest(alt, flight.as_str(), typ, "KORD");
+        occ_table
+            .seed_row(row_id, row)
+            .expect("failed to seed OCC row for PK benchmark");
+        pk_map
+            .insert_existing(flight.as_str(), row_id)
+            .expect("failed to seed PK map");
+    }
+
+    let catalog = SchemaCatalog::new("flight_id").with_primary_key_map(Arc::clone(&pk_map));
+    let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
+    let key = "UAL01234";
+    let pk_stapi = format!("-compare {{{{= flight_id {key}}}}} -limit 1");
+    let scan_stapi = format!("-compare {{{{match flight {key}}}}} -limit 1");
+
+    let pk_plan = planner
+        .compile_from_stapi(pk_stapi.as_str())
+        .expect("failed to compile PK route query");
+    assert_eq!(pk_plan.route_kind(), RouteKind::PrimaryKeyLookup);
+    assert_eq!(pk_plan.driver_field(), Some("flight_id"));
+
+    let scan_plan = planner
+        .compile_from_stapi(scan_stapi.as_str())
+        .expect("failed to compile full scan query");
+    assert_eq!(scan_plan.route_kind(), RouteKind::FullScan);
+
+    let pk_start = Instant::now();
+    for _ in 0..PASSES {
+        let mut tx = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for PK benchmark");
+        let rows = pk_plan
+            .execute(&occ_table, &mut tx)
+            .expect("PK execution failed");
+        occ_table
+            .abort(&mut tx)
+            .expect("abort failed for PK benchmark");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(decode_ascii(&rows[0].flight), key);
+    }
+    let pk_elapsed = pk_start.elapsed();
+
+    let scan_start = Instant::now();
+    for _ in 0..PASSES {
+        let mut tx = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for scan benchmark");
+        let rows = scan_plan
+            .execute(&occ_table, &mut tx)
+            .expect("scan execution failed");
+        occ_table
+            .abort(&mut tx)
+            .expect("abort failed for scan benchmark");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(decode_ascii(&rows[0].flight), key);
+    }
+    let scan_elapsed = scan_start.elapsed();
+
+    eprintln!(
+        "rbo_pk_vs_scan_elapsed pk={:?} scan={:?} passes={} rows={}",
+        pk_elapsed, scan_elapsed, PASSES, ROWS
+    );
+    assert!(
+        pk_elapsed < scan_elapsed,
+        "expected PK route to outperform full scan (pk={:?}, scan={:?})",
+        pk_elapsed,
+        scan_elapsed
+    );
+}
+
+#[test]
+fn benchmark_stapi_rbo_tiebreak_dest_over_altitude() {
+    const ROWS: usize = 60_000;
+    const PASSES: usize = 64;
+    const LIMIT: usize = 50;
+
+    let shm = Arc::new(ShmArena::new(128 << 20).expect("failed to create shared arena"));
+    let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+        .expect("failed to create OCC table");
+    let dest_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "dest",
+        Arc::clone(&shm),
+    ));
+    let altitude_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "altitude",
+        Arc::clone(&shm),
+    ));
+
+    for row_id in 0..ROWS {
+        let alt = ((row_id % 45_000) as i64) + 500;
+        let flight = if row_id % 2 == 0 {
+            format!("UAL{:03}", row_id % 1_000)
+        } else {
+            format!("DAL{:03}", row_id % 1_000)
+        };
+        let typ = match row_id % 3 {
+            0 => "B738",
+            1 => "B739",
+            _ => "A320",
+        };
+        let dest = match row_id % 4 {
+            0 => "KORD",
+            1 => "KATL",
+            2 => "KLAX",
+            _ => "KDEN",
+        };
+
+        let row = StapiFlightRow::new_with_dest(alt, flight.as_str(), typ, dest);
+        occ_table
+            .seed_row(row_id, row)
+            .expect("failed to seed OCC row for tie-break benchmark");
+        dest_index.insert(IndexValue::String(dest.to_string()), row_id);
+        altitude_index.insert(IndexValue::I64(alt), row_id);
+    }
+
+    let mut catalog = SchemaCatalog::new("flight_id")
+        .with_index("dest", dest_index)
+        .with_index("altitude", altitude_index);
+    catalog.set_cardinality_rank("dest", 2);
+    catalog.set_cardinality_rank("altitude", 3);
+
+    let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
+    let stapi = "-compare {{> altitude 10000} {= dest KORD} {match typ B73*}} -limit 50";
+    let plan = planner
+        .compile_from_stapi(stapi)
+        .expect("failed to compile tie-break query");
+
+    assert_eq!(plan.route_kind(), RouteKind::IndexExactMatch);
+    assert_eq!(plan.driver_field(), Some("dest"));
+
+    let start = Instant::now();
+    for _ in 0..PASSES {
+        let mut tx = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for tie-break benchmark");
+        let rows = plan
+            .execute(&occ_table, &mut tx)
+            .expect("tie-break execution failed");
+        occ_table
+            .abort(&mut tx)
+            .expect("abort failed for tie-break benchmark");
+
+        assert!(!rows.is_empty());
+        assert!(rows.len() <= LIMIT);
+        assert!(rows.iter().all(|row| row.alt > 10_000));
+        assert!(rows.iter().all(|row| decode_ascii(&row.dest) == "KORD"));
+        assert!(rows
+            .iter()
+            .all(|row| decode_ascii(&row.typ).starts_with("B73")));
+    }
+    let elapsed = start.elapsed();
+
+    eprintln!(
+        "rbo_tiebreak_dest_over_altitude_elapsed={:?} passes={} rows={} limit={}",
+        elapsed, PASSES, ROWS, LIMIT
     );
 }

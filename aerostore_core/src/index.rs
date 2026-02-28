@@ -75,10 +75,11 @@ impl IntoIndexValue for &str {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum IndexCompare {
     Eq(IndexValue),
     Gt(IndexValue),
+    Gte(IndexValue),
     Lt(IndexValue),
     In(Vec<IndexValue>),
 }

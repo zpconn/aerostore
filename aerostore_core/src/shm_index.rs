@@ -439,6 +439,15 @@ where
                 };
                 self.scan_range(|key| key.cmp(&bound) == Ordering::Greater, &mut out);
             }
+            IndexCompare::Gte(v) => {
+                let Ok(bound) = EncodedKey::from_index_value(v) else {
+                    return Vec::new();
+                };
+                self.scan_range(
+                    |key| matches!(key.cmp(&bound), Ordering::Greater | Ordering::Equal),
+                    &mut out,
+                );
+            }
             IndexCompare::Lt(v) => {
                 let Ok(bound) = EncodedKey::from_index_value(v) else {
                     return Vec::new();

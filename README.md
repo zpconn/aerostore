@@ -3,176 +3,161 @@
 <img width="600" height="600" alt="Aerostore Logo" src="https://github.com/user-attachments/assets/7d64557f-9733-40b7-8f40-d251a48a5205" />
 
 Aerostore is a Rust-first, shared-memory database prototype for high-ingest flight/state workloads.
-It combines lock-free shared-memory data structures, PostgreSQL-inspired MVCC/OCC semantics, and Tcl in-process integration.
+It combines:
+
+- lock-free shared-memory data structures (`RelPtr`, shared arena, CAS-based updates),
+- PostgreSQL-inspired snapshot/OCC/SSI behavior,
+- shared-memory secondary indexing,
+- WAL + checkpoint/snapshot durability paths,
+- in-process Tcl integration (`cdylib`) for low-overhead Hyperfeed-style execution.
+
+## How Aerostore Works (Plain Language)
+
+1. Data lives in a shared memory segment so forked worker processes see the same state.
+2. Transactions read a snapshot and build local read/write sets.
+3. Writes create new row versions and publish them atomically at commit time.
+4. Reads do not block writes; SSI validation catches conflicting commit interleavings.
+5. Commits are persisted through WAL paths (sync or async ring/daemon, depending on mode).
+6. Checkpoints/snapshots compact current state to disk.
+7. On startup, Aerostore rebuilds live state into a fresh shared memory mapping from persisted artifacts.
 
 ## What This Repository Contains
 
-- V1 in-process MVCC + WAL/checkpoint durability path.
-- V2 shared-memory OCC/SSI engine with ProcArray snapshots, savepoints, and lock striping.
-- V2 shared-memory, cross-process secondary indexes that survive `fork()` visibility requirements.
-- V2 shared-memory WAL ring + WAL writer daemon (`synchronous_commit` on/off behavior).
-- V3 logical WAL + snapshot durability and deterministic crash recovery.
-- Tcl extension bridge (`cdylib`) that maps STAPI-style search options to Rust planner execution.
+- `aerostore_core`: engine, concurrency control, shared memory primitives, query planner/executor, durability, tests/benchmarks.
+- `aerostore_tcl`: Tcl extension bridge exposing search/ingest/config/checkpoint commands.
+- `aerostore_macros`: schema macro crate.
+- `docs/nightly_perf.md`: nightly/long-running benchmark runbook.
 
-## System Overview (Plain Language)
+The repo currently includes multiple durability/concurrency paths (legacy + newer shared-memory paths) for compatibility and validation.
 
-Aerostore now at its core includes a lock-free cross-process shared-memory secondary index implementation supporting fast queries across forks.
+## Query Support
 
-1. Most mutable state is in shared memory so sibling worker processes can see the same database state.
-2. Writers publish new row versions and mark old versions obsolete instead of mutating in place.
-3. Readers run against snapshots and do not block writers.
-4. Commit uses serializable OCC/SSI validation; conflicts return `SerializationFailure` for retry loops.
-5. Durability uses WAL + checkpoints/snapshots.
-6. Startup recovery rebuilds active state by replaying persisted data into fresh shared memory.
-7. Tcl commands execute in-process against the same shared engine to avoid network/IPC overhead.
-
-## Query Support and Why It Is Fast
-
-Supported filtering operators:
+### STAPI-style filters
 
 - `=` exact match
-- `>` and `<` range predicates
+- `>` greater than
+- `<` less than
+- `>=` greater than or equal
 - `in field {a b c}` membership
-- `match field pattern` glob-style matching
+- `match field glob*` glob matching
 
-Execution controls:
+### Search controls
 
 - `-sort <field>`
 - `-limit <n>`
-- `-offset <n>`
-- ascending/descending order
+- Tcl bridge options: `-offset <n>`, `-asc`, `-desc`
 
-Why it is fast:
+## Rule-Based Optimizer (RBO)
 
-- Indexed predicates route to shared-memory secondary-index scans first.
-- Unindexed predicates fall back to sequential scans.
-- Candidate rows are filtered through MVCC/OCC visibility before return.
-- Residual filters are applied after candidate narrowing.
-- `-limit` allows early stop behavior.
-- Tcl path stays in-process and uses compiled Rust query plans.
+Aerostore uses a zero-allocation heuristic planner in `rbo_planner.rs` + `execution.rs`.
 
-## Shared-Memory Indexing Model
+Routing precedence:
 
-Aerostore includes a shared-memory secondary indexing design for fork-heavy runtimes:
+1. Primary-key equality route (`RouteKind::PrimaryKeyLookup`) through shared `ShmPrimaryKeyMap`.
+2. Indexed equality route (`RouteKind::IndexExactMatch`).
+3. Indexed range route (`RouteKind::IndexRangeScan`) for `>`, `<`, `>=`.
+4. Full scan (`RouteKind::FullScan`) fallback.
 
-1. Index structures live in POSIX shared memory, not per-process heap memory.
-2. Links are relative offsets (`RelPtr` / `AtomicU32`) rather than process-local absolute pointers.
-3. Writers use CAS to insert/unlink nodes and posting entries.
-4. Deletes are logical first; physical reclamation is deferred.
-5. Reclamation waits on ProcArray snapshot horizon safety.
-6. Updates by one process are visible to sibling processes mapped to the same segment.
+Tie-breaks are deterministic via cardinality ranking (default: `flight_id` -> `geohash` -> `dest` -> `altitude`).
 
-## Workspace Layout
+Execution pipeline:
 
-- `aerostore_core/`: core engine, durability, parser/planner, tests, benchmarks.
-- `aerostore_macros/`: `#[speedtable]` schema macro crate.
-- `aerostore_tcl/`: Tcl `cdylib` bridge and Tcl integration tests.
-- `docs/`: operational documentation (including nightly performance runbook).
+1. produce candidate row IDs from the chosen route,
+2. read rows under transaction snapshot visibility,
+3. apply residual predicates,
+4. apply sort,
+5. apply limit.
 
-## Core Module Inventory
+## Why Queries Are Fast
 
-`aerostore_core/src` currently exports:
-
-- `arena.rs`: V1 arena and version-chain primitives.
-- `txn.rs`: V1 transaction manager and snapshot model.
-- `mvcc.rs`: V1 MVCC visibility helpers.
-- `shm.rs`: shared-memory mapping + lock-free bump allocator + `RelPtr<T>`.
-- `procarray.rs`: bounded 256-slot active-transaction array.
-- `occ_partitioned.rs`: default OCC/SSI implementation with partitioned lock striping.
-- `occ.rs`: default OCC re-export facade.
-- `occ_legacy.rs`: legacy global-commit-lock OCC implementation kept for compatibility.
-- `index.rs`: index compare/value abstraction and `SecondaryIndex` export.
-- `shm_index.rs`: shared-memory lock-free secondary index and deferred GC horizon integration.
-- `query.rs`: typed query builder/executor.
-- `stapi_parser.rs`: STAPI parser (nom combinators).
-- `planner.rs`: AST-to-plan compiler and index routing.
-- `wal.rs`: V1 WAL/checkpoint/recovery path.
-- `wal_ring.rs`: shared-memory MPSC WAL ring structures and encoding.
-- `wal_writer.rs`: WAL writer daemon and OCC replay/checkpoint utilities.
-- `wal_logical.rs`: logical WAL records and logical WAL daemon helpers.
-- `recovery.rs`: logical snapshot + logical WAL replay database boot path.
-- `ingest.rs`: high-speed TSV ingestion primitives.
-- `watch.rs`: watch subscriptions and TTL sweeper.
+- Shared-memory indexes avoid IPC/network overhead between worker processes.
+- Candidate narrowing happens early (PK/index route before residual filtering).
+- Residual predicates run only on narrowed candidates.
+- Snapshot-safe reads do not block writers.
+- Shared-memory PK lookup path provides O(1) route for exact key queries.
 
 ## Architecture Summary
 
 ### 1) Shared Memory Foundation (`shm.rs`)
 
-- POSIX shared mappings for cross-process state sharing.
-- Relative pointers (`RelPtr<T>`) for mapping-base-independent addressing.
-- Lock-free shared arena allocation via CAS bump pointer.
+- POSIX shared memory mapping (`MAP_SHARED`).
+- Relative pointers (`RelPtr<T>`) instead of process-local absolute pointers.
+- Lock-free shared bump allocator (`ChunkedArena`) with CAS head movement.
 
-### 2) Transaction Tracking (`procarray.rs`)
+### 2) Active Transaction Tracking (`procarray.rs`)
 
-- Fixed-size `PROCARRAY_SLOTS = 256` active TxID table.
-- CAS claim/release and bounded snapshot scans.
-- Snapshot work is bounded to slot count, not historical TxID magnitude.
+- Bounded, cache-line-aligned ProcArray (`PROCARRAY_SLOTS = 256`).
+- CAS slot claim/release for begin/end transaction.
+- Bounded snapshot creation cost.
 
-### 3) Default OCC/SSI (`occ_partitioned.rs`)
+### 3) OCC/SSI Core (`occ_partitioned.rs` via `occ.rs`)
 
-- Process-local read/write sets and nested savepoints.
-- Partitioned commit lock striping over 1024 shared lock buckets.
-- Required buckets are derived from read/write row IDs, deduped, sorted, and acquired in ascending order.
-- SSI validation checks read-set stability before publish.
-- Conflicts return `SerializationFailure`.
+- Serializable OCC with read-set and write-set tracking.
+- Partitioned lock striping (`1024` lock buckets) to reduce commit bottlenecks.
+- Savepoints and rollback-to-savepoint write-intent truncation.
+- Conflict outcome: `SerializationFailure`.
 
-### 4) Planner and Index Routing (`stapi_parser.rs`, `planner.rs`, `query.rs`, `shm_index.rs`)
+### 4) Shared-Memory Indexing
 
-- STAPI syntax compiles to typed execution plans.
-- Indexable predicates (`=`, `>`, `<`) route to index-first scans.
-- Residual predicates apply after candidate narrowing.
-- Read tracking integrates with SSI validation.
+- Shared secondary index implementation in `shm_index.rs` (`SecondaryIndex`).
+- CAS-based insertion/removal, range scans, and deferred reclamation horizon checks.
+- Shared primary key map in `execution.rs` (`ShmPrimaryKeyMap`) for PK route.
 
-### 5) Ingestion and Streaming (`ingest.rs`, `watch.rs`)
+### 5) Query Layer
 
-- TSV ingest path oriented for low allocation pressure.
-- Watch subscriptions stream row-change events.
-- TTL sweeper removes stale rows.
+- `stapi_parser.rs`: Tcl list syntax parsing to typed AST.
+- `rbo_planner.rs`: route selection and residual predicate compilation.
+- `execution.rs`: candidate-to-result execution path.
+- `query.rs`: typed Rust query API (`QueryBuilder`, `QueryEngine`) also retained.
 
-### 6) Durability Stacks
+### 6) Ingestion and Streaming
 
-V1 durability (`wal.rs`):
+- `ingest.rs`: high-speed TSV ingestion helpers.
+- `watch.rs`: subscriptions + TTL sweeper support.
 
-- `wal.log` append path
-- `checkpoint.dat` snapshots
-- replay by checkpoint + WAL
+### 7) Durability and Recovery
 
-OCC ring durability (`wal_ring.rs` + `wal_writer.rs`):
+- `wal_ring.rs` + `wal_writer.rs`: shared ring commit path and WAL writer daemon.
+- `wal_logical.rs` + `recovery.rs`: logical WAL framing and snapshot/WAL replay recovery.
+- `wal.rs`: legacy durability path retained.
 
-- shared MPSC ring producer path
-- dedicated WAL writer daemon + fsync cadence
-- `aerostore.wal` + `occ_checkpoint.dat` replay
+## Durability Paths and Artifacts
 
-Logical durability (`wal_logical.rs` + `recovery.rs`):
-
-- logical `WalRecord` (`Upsert`, `Delete`, `Commit`)
-- strict framed decode (`u32 len + payload`)
-- corruption/truncation fail-fast parsing
-- `snapshot.dat` + `aerostore_logical.wal` recovery into fresh shared memory
-
-### 7) Tcl Bridge (`aerostore_tcl/src/lib.rs`)
-
-- Exposes `Aerostore_Init` / `Aerostore_SafeInit`.
-- Global in-process engine via `OnceLock`.
-- Supports search, ingest, config toggles, and checkpoint entry points.
-- Tcl search options map into Rust planner execution.
-
-## On-Disk Artifacts
-
-V1 path:
-
-- `wal.log`
-- `checkpoint.dat`
-
-OCC ring path:
+On-disk files used by different paths:
 
 - `aerostore.wal`
 - `occ_checkpoint.dat`
-
-Logical path:
-
 - `aerostore_logical.wal`
 - `snapshot.dat`
+- (legacy path) `wal.log`, `checkpoint.dat`
+
+Config knobs exposed through Tcl:
+
+- `aerostore.synchronous_commit` (`on` / `off`)
+- `aerostore.checkpoint_interval_secs`
+
+## Tcl Bridge (`aerostore_tcl`)
+
+The Tcl extension exports:
+
+- `aerostore::init ?data_dir?`
+- `aerostore::set_config <key> <value>`
+- `aerostore::get_config <key>`
+- `aerostore::checkpoint_now`
+- `FlightState search ...`
+- `FlightState ingest_tsv <tsv_data> ?batch_size?`
+
+Example:
+
+```tcl
+load ./target/debug/libaerostore_tcl.so Aerostore
+package require aerostore
+set _ [aerostore::init ./aerostore_tcl_data]
+
+FlightState ingest_tsv "UAL123\t37.618805\t-122.375416\t35000\t451\t1709000000" 1
+set n [FlightState search -compare {{= flight_id UAL123} {>= altitude 10000}} -sort altitude -limit 50]
+puts $n
+```
 
 ## Build Prerequisites
 
@@ -180,10 +165,10 @@ Rust:
 
 - stable Rust toolchain (`cargo`, `rustc`)
 
-Tcl extension (optional):
+For Tcl bridge builds/tests:
 
 - Tcl 8.6 runtime and development headers
-- `clang` and `libclang`
+- clang/libclang
 
 Debian/Ubuntu example:
 
@@ -194,13 +179,19 @@ sudo apt-get install -y tcl tcl-dev clang libclang-dev
 
 ## Build
 
-Build full workspace:
+Workspace:
 
 ```bash
 cargo build --workspace
 ```
 
-Build Tcl bridge only:
+Core only:
+
+```bash
+cargo build -p aerostore_core
+```
+
+Tcl bridge only:
 
 ```bash
 cargo build -p aerostore_tcl
@@ -208,186 +199,126 @@ cargo build -p aerostore_tcl
 
 ## Test and Benchmark Runbook
 
-Release compile check:
+### Fast sanity checks
 
 ```bash
-cargo test --workspace --release --no-run
+cargo test --workspace --no-run
+cargo test -p aerostore_core --tests --no-run
+cargo test -p aerostore_tcl --tests --no-run
 ```
 
-Core release suite:
+### Targeted reliability suites
 
 ```bash
-cargo test -p aerostore_core --release -- --test-threads=1
+cargo test -p aerostore_core --test rbo_planner_routing -- --nocapture
+cargo test -p aerostore_core --test occ_write_skew -- --nocapture
+cargo test -p aerostore_core --test shm_shared_memory -- --nocapture
+cargo test -p aerostore_core --test logical_recovery -- --nocapture --test-threads=1
+cargo test -p aerostore_core --test wal_crash_recovery -- --nocapture --test-threads=1
+cargo test -p aerostore_tcl --test search_stapi_bridge -- --nocapture
+cargo test -p aerostore_tcl --test config_checkpoint_integration -- --nocapture
 ```
 
-Tcl release suite:
+### Benchmark / long-running suites
 
 ```bash
-cargo test -p aerostore_tcl --release -- --test-threads=1
-tclsh aerostore_tcl/test.tcl
+cargo test -p aerostore_core --release --test wal_ring_benchmark -- --test-threads=1 --nocapture
+cargo test -p aerostore_core --release --test query_index_benchmark -- --test-threads=1 --nocapture
+cargo test -p aerostore_core --release --test shm_index_benchmark -- --test-threads=1 --nocapture
+cargo test -p aerostore_core --release --test occ_checkpoint_benchmark -- --test-threads=1 --nocapture
 ```
 
-### Targeted Reliability Suites
-
-Logical crash recovery and WAL robustness:
+Ignored heavy contention/model suites:
 
 ```bash
-cargo test -p aerostore_core --release --test logical_recovery -- --nocapture --test-threads=1
-```
-
-Savepoint reclamation and replay correctness:
-
-```bash
-cargo test -p aerostore_core --release --test occ_savepoint_reclaim -- --test-threads=1
-```
-
-OCC crash/replay and daemon lifecycle path:
-
-```bash
-cargo test -p aerostore_core --release --test wal_crash_recovery -- --nocapture --test-threads=1
-cargo test -p aerostore_core --release --test wal_writer_lifecycle -- --test-threads=1
-```
-
-Long-running MVCC GC stress (ignored by default):
-
-```bash
+cargo test -p aerostore_core --release --test occ_partitioned_lock_striping_benchmark -- --ignored --test-threads=1 --nocapture
 cargo test -p aerostore_core --release --test test_concurrency -- --ignored --test-threads=1
 ```
 
-### Benchmarks and Performance Gates
-
-ProcArray criterion benchmark:
+Criterion:
 
 ```bash
 cargo bench -p aerostore_core --bench procarray_snapshot
 ```
 
-WAL ring throughput/backpressure benchmarks:
+Nightly runbook:
 
-```bash
-cargo test -p aerostore_core --release --test wal_ring_benchmark -- --test-threads=1 --nocapture
-```
-
-Current WAL ring benchmark gates include:
-
-- sync vs async throughput (`>= 10x`)
-- keyed upsert throughput (`>= 10x`)
-- savepoint churn throughput (`>= 10x`)
-- logical async vs sync throughput (`>= 10x`)
-- parallel disjoint-key producer throughput (`>= 3x`)
-- backpressure integrity assertions
-
-Partitioned OCC lock-striping contention benchmark (ignored by default, run explicitly):
-
-```bash
-cargo test -p aerostore_core --release --test occ_partitioned_lock_striping_benchmark -- --ignored --test-threads=1 --nocapture
-```
-
-This benchmark validates 16-process disjoint vs hot-key scaling with a `>= 12x` gate.
-
-Checkpoint and replay benchmark suite:
-
-```bash
-cargo test -p aerostore_core --release --test occ_checkpoint_benchmark -- --nocapture --test-threads=1
-```
-
-Query/planner benchmark suite:
-
-```bash
-cargo test -p aerostore_core --release --test query_index_benchmark -- --nocapture --test-threads=1
-```
-
-Shared-memory index benchmark suite:
-
-```bash
-cargo test -p aerostore_core --release --test shm_index_benchmark -- --nocapture --test-threads=1
-```
-
-Additional nightly command set is documented in `docs/nightly_perf.md`.
+- `docs/nightly_perf.md`
 
 ## Reliability Coverage Matrix
 
-- `tests/test_concurrency.rs`
-  - Loom CAS model checks.
-  - 100,000-update GC stress with drop-tracker leak accounting.
-- `tests/mvcc_tokio_concurrency.rs`
-  - 50-reader / 50-writer visibility safety.
-- `tests/procarray_concurrency.rs`
-  - thread/fork slot stress.
-  - OCC conflict + ring backpressure slot release.
-  - savepoint rollback churn.
-  - disjoint-write vs hot-row conflict profile comparison.
-- `tests/occ_write_skew.rs`
-  - classic write-skew serializable-failure proof.
-  - planner-read SSI coverage.
-  - keyed upsert SSI coverage.
-  - savepoint-heavy SSI coverage.
-  - distinct lock-bucket write-skew serializable proof.
-- `tests/occ_savepoint_reclaim.rs`
-  - reclaimed write-intent reuse.
-  - nested savepoint correctness.
-  - rolled-back intent exclusion from logical replay durability.
-- `tests/wal_crash_recovery.rs`
-  - OCC replay into fresh shared-memory tables.
-  - checkpoint + WAL tail recovery.
-  - daemon crash/restart replayability.
-  - malformed/truncated WAL handling.
-  - replay idempotency.
-  - large-cardinality index parity checks.
-  - high-cardinality multi-round latest-value recovery verification.
-- `tests/logical_recovery.rs`
-  - hard-exit crash recovery from `snapshot.dat` + `aerostore_logical.wal`.
-  - mixed upsert/update/delete replay correctness.
-  - strict malformed logical WAL rejection.
-  - commit-ack durability stress.
-  - logical WAL daemon kill/restart recovery.
-  - forked writer-process crash and parent recovery.
-- `tests/wal_writer_lifecycle.rs`
-  - parent-death daemon lifecycle guard.
-- `tests/wal_ring_benchmark.rs`
-  - sync/async durability throughput and backpressure gates.
-  - parallel disjoint-key producer throughput gate.
-- `tests/occ_partitioned_lock_striping_benchmark.rs`
-  - 16-process hot-key vs disjoint-key lock striping gate (`>= 12x`).
-- `tests/occ_checkpoint_benchmark.rs`
-  - checkpoint and logical replay cardinality benchmarks.
-- `tests/shm_shared_memory.rs`
-  - forked CAS correctness.
-  - forked ring producer integrity.
-  - shared free-list stress.
-- `tests/shm_fork.rs`
-  - parent/child `RelPtr` CAS mutation sanity.
-- `tests/shm_index_fork.rs`
-  - cross-process shared index insertion visibility under `fork()`.
-- `tests/shm_index_contention.rs`
-  - cross-process same-key duplicate insert/remove contention exactness.
-- `tests/shm_index_gc_horizon.rs`
-  - retired-node reclamation horizon enforcement.
-- `tests/shm_index_bounds.rs`
-  - oversized key / row-id payload rejection.
-- `tests/shm_index_benchmark.rs`
-  - shared-index Eq/range/forked-contention performance gates.
-- `tests/shm_benchmark.rs`
-  - shared-memory/fork range scan performance checks.
-- `tests/query_index_benchmark.rs`
-  - typed query vs STAPI planner performance paths.
-- `tests/ingest_watch_ttl.rs`
-  - TSV ingest + watch + TTL sweeper behavior.
-- `tests/speedtable_arena_perf.rs`
-  - arena-oriented performance checks.
+### Concurrency, MVCC, OCC, savepoints
+
+- `aerostore_core/tests/test_concurrency.rs`
+  - loom CAS model checks and long-running GC stress/leak accounting.
+- `aerostore_core/tests/mvcc_tokio_concurrency.rs`
+  - 50 readers + 50 writers snapshot isolation behavior.
+- `aerostore_core/tests/procarray_concurrency.rs`
+  - thread/fork ProcArray stress and slot release safety.
+- `aerostore_core/tests/occ_write_skew.rs`
+  - write-skew rejection across baseline/planner/keyed/savepoint/PK-route scenarios.
+- `aerostore_core/tests/occ_savepoint_reclaim.rs`
+  - savepoint rollback truncation/reuse and replay correctness.
+
+### Shared memory and index correctness
+
+- `aerostore_core/tests/shm_fork.rs`
+  - parent/child `RelPtr` mutation sanity.
+- `aerostore_core/tests/shm_shared_memory.rs`
+  - CAS contention, ring integrity, PK map fork visibility, OCC recycle stress.
+- `aerostore_core/tests/shm_index_fork.rs`
+  - cross-process index visibility.
+- `aerostore_core/tests/shm_index_contention.rs`
+  - same-key contention exactness.
+- `aerostore_core/tests/shm_index_gc_horizon.rs`
+  - deferred reclamation horizon enforcement.
+- `aerostore_core/tests/shm_index_bounds.rs`
+  - oversized key/payload rejection.
+
+### Planning and query behavior
+
+- `aerostore_core/tests/rbo_planner_routing.rs`
+  - route precedence, tie-breaks, residual filtering, malformed syntax handling.
+- `aerostore_core/tests/query_index_benchmark.rs`
+  - typed query vs STAPI path, Tcl-style path, PK route vs full scan, tie-break benchmark.
+
+### WAL, checkpoint, crash recovery
+
+- `aerostore_core/tests/wal_crash_recovery.rs`
+  - replay, checkpoint tail recovery, corruption handling, idempotency, high-cardinality checks.
+- `aerostore_core/tests/logical_recovery.rs`
+  - logical snapshot/WAL crash recovery and strict malformed-log rejection.
+- `aerostore_core/tests/wal_writer_lifecycle.rs`
+  - writer daemon lifecycle guarantees.
+- `aerostore_core/tests/wal_ring_benchmark.rs`
+  - sync vs async throughput and backpressure gates.
+- `aerostore_core/tests/occ_checkpoint_benchmark.rs`
+  - checkpoint/replay cardinality performance.
+
+### Ingest, watch, TTL, Tcl integration
+
+- `aerostore_core/tests/ingest_watch_ttl.rs`
+  - ingest + watch + TTL behavior.
 - `aerostore_tcl/tests/search_stapi_bridge.rs`
-  - Tcl option bridge and STAPI planner integration.
+  - list/raw STAPI parity, `>=`, PK equality routing, error boundary checks.
 - `aerostore_tcl/tests/config_checkpoint_integration.rs`
-  - Tcl config toggles, checkpointing, and recovery transitions.
+  - Tcl config toggles, checkpoint behavior, recovery (including PK lookup checks).
 
 ## Current Status
 
-- Default OCC path uses partitioned lock striping in shared memory.
-- Legacy global-lock OCC path remains available for compatibility testing (`occ_legacy.rs`).
-- Shared-memory secondary index path is cross-process visible under `fork()`.
-- Logical WAL + snapshot durability path is integrated with strict decode/validation.
-- Tcl bridge uses the shared engine and planner path in-process.
+- Primary execution path is shared-memory OCC/SSI + partitioned lock striping.
+- Query path is RBO (`rbo_planner.rs` + `execution.rs`) with shared PK map support.
+- Shared-memory secondary indexes are cross-process visible under `fork()`.
+- Async WAL ring path and logical WAL/snapshot recovery path are both implemented and tested.
+- Legacy modules (`mvcc.rs`, `wal.rs`, `occ_legacy.rs`) remain for compatibility/reference and test coverage.
+
+## Workspace Layout
+
+- `aerostore_core/` core engine, durability, parser/planner/execution, tests, benchmarks.
+- `aerostore_tcl/` Tcl extension bridge and integration tests.
+- `aerostore_macros/` schema macro crate.
+- `docs/` operational docs (nightly benchmark runbook).
 
 ## License
 
-No license file is present yet. Treat this repository as proprietary/internal unless a license is explicitly added.
+No license file is currently present. Treat this repository as proprietary/internal unless a license is explicitly added.

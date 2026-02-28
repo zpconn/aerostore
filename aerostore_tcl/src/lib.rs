@@ -3,18 +3,17 @@ use std::os::raw::{c_char, c_int};
 use std::path::{Path, PathBuf};
 use std::slice;
 use std::str;
-use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering as AtomicOrdering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering as AtomicOrdering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use aerostore_core::{
     recover_occ_table_from_checkpoint_and_wal, spawn_wal_writer_daemon,
-    write_occ_checkpoint_and_truncate_wal, IndexCatalog, IndexValue, IngestStats, OccError,
-    OccTable, OccTransaction, PlannerError, QueryPlanner, SecondaryIndex, SharedWalRing, ShmArena,
-    StapiRow, StapiValue, SynchronousCommit, TsvColumns, TsvDecodeError, WalWriterError,
-    SYNCHRONOUS_COMMIT_KEY,
+    write_occ_checkpoint_and_truncate_wal, IndexValue, IngestStats, OccError, OccTable,
+    OccTransaction, PlannerError, RuleBasedOptimizer, SchemaCatalog, SecondaryIndex, SharedWalRing,
+    ShmArena, ShmPrimaryKeyMap, StapiRow, StapiValue, SynchronousCommit, TsvColumns,
+    TsvDecodeError, WalWriterError, SYNCHRONOUS_COMMIT_KEY,
 };
-use crossbeam_skiplist::SkipMap;
 use serde::{Deserialize, Serialize};
 use tcl::Interp;
 
@@ -186,8 +185,8 @@ impl FlightIndexes {
         }
     }
 
-    fn as_catalog(&self) -> IndexCatalog {
-        let mut catalog = IndexCatalog::new();
+    fn as_catalog(&self, pk_map: Arc<ShmPrimaryKeyMap>) -> SchemaCatalog {
+        let mut catalog = SchemaCatalog::new("flight_id").with_primary_key_map(pk_map);
 
         catalog.insert_index("flight_id", Arc::clone(&self.flight_id));
         catalog.insert_index("flight", Arc::clone(&self.flight_id));
@@ -208,6 +207,10 @@ impl FlightIndexes {
         catalog.insert_index("updated_at", Arc::clone(&self.updated_at));
         catalog.insert_index("updated", Arc::clone(&self.updated_at));
         catalog.insert_index("ts", Arc::clone(&self.updated_at));
+        catalog.set_cardinality_rank("flight_id", 0);
+        catalog.set_cardinality_rank("dest", 2);
+        catalog.set_cardinality_rank("altitude", 3);
+        catalog.set_cardinality_rank("alt", 3);
 
         catalog
     }
@@ -260,9 +263,8 @@ struct WalRuntime {
 struct SharedFlightDb {
     _shm: Arc<ShmArena>,
     table: Arc<OccTable<FlightState>>,
-    planner: QueryPlanner<FlightState>,
-    key_index: SkipMap<String, usize>,
-    next_row_id: AtomicUsize,
+    optimizer: RuleBasedOptimizer<FlightState>,
+    key_index: Arc<ShmPrimaryKeyMap>,
     row_capacity: usize,
     indexes: FlightIndexes,
     wal_runtime: Mutex<WalRuntime>,
@@ -299,7 +301,11 @@ impl SharedFlightDb {
         }
 
         let indexes = FlightIndexes::new(Arc::clone(&shm));
-        let planner = QueryPlanner::new(indexes.as_catalog());
+        let key_index = Arc::new(
+            ShmPrimaryKeyMap::new_in_shared(Arc::clone(&shm), 4096, DEFAULT_ROW_CAPACITY)
+                .map_err(|err| format!("failed to create shared primary key map: {}", err))?,
+        );
+        let optimizer = RuleBasedOptimizer::new(indexes.as_catalog(Arc::clone(&key_index)));
 
         let wal_path = data_dir.join(WAL_FILE_NAME);
         let checkpoint_path = data_dir.join(CHECKPOINT_FILE_NAME);
@@ -309,8 +315,6 @@ impl SharedFlightDb {
                     format!("failed to recover OCC state from checkpoint/WAL: {}", err)
                 })?;
 
-        let key_index = SkipMap::new();
-        let mut next_row_id = 0_usize;
         for row_id in 0..DEFAULT_ROW_CAPACITY {
             let row = table
                 .latest_value(row_id)
@@ -320,8 +324,9 @@ impl SharedFlightDb {
                 continue;
             }
             indexes.insert_row(row_id, &row);
-            key_index.insert(row.flight_id_string(), row_id);
-            next_row_id = next_row_id.max(row_id + 1);
+            key_index
+                .insert_existing(row.flight_id_string().as_str(), row_id)
+                .map_err(|err| format!("failed to rebuild primary key map: {}", err))?;
         }
 
         let ring = SharedWalRing::<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>::create(Arc::clone(&shm))
@@ -343,9 +348,8 @@ impl SharedFlightDb {
         Ok(Self {
             _shm: shm,
             table,
-            planner,
+            optimizer,
             key_index,
-            next_row_id: AtomicUsize::new(next_row_id),
             row_capacity: DEFAULT_ROW_CAPACITY,
             indexes,
             wal_runtime: Mutex::new(wal_runtime),
@@ -453,7 +457,7 @@ impl SharedFlightDb {
 
     fn search_count(&self, request: SearchRequest) -> Result<usize, String> {
         let plan = self
-            .planner
+            .optimizer
             .compile_from_stapi(request.stapi.as_str())
             .map_err(|err| format_planner_error(err))?;
 
@@ -607,22 +611,10 @@ impl SharedFlightDb {
     }
 
     fn resolve_or_allocate_row_id(&self, flight_key: &str) -> Result<usize, String> {
-        if let Some(entry) = self.key_index.get(flight_key) {
-            return Ok(*entry.value());
-        }
-
-        let candidate = self.next_row_id.fetch_add(1, AtomicOrdering::AcqRel);
-        if candidate >= self.row_capacity {
-            return Err(format!(
-                "row capacity exhausted (capacity={}, key='{}')",
-                self.row_capacity, flight_key
-            ));
-        }
-
-        let entry = self
+        let row_id = self
             .key_index
-            .get_or_insert(flight_key.to_string(), candidate);
-        let row_id = *entry.value();
+            .get_or_insert(flight_key)
+            .map_err(|err| format!("failed to resolve row id for '{}': {}", flight_key, err))?;
 
         if row_id >= self.row_capacity {
             return Err(format!(

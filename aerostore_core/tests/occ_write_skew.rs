@@ -2,8 +2,8 @@ use std::sync::{Arc, Barrier};
 use std::thread;
 
 use aerostore_core::{
-    spawn_wal_writer_daemon, IndexCatalog, IndexValue, OccCommitter, OccError, OccTable,
-    QueryPlanner, SecondaryIndex, SharedWalRing, ShmArena, StapiRow, StapiValue,
+    spawn_wal_writer_daemon, IndexValue, OccCommitter, OccError, OccTable, RuleBasedOptimizer,
+    SchemaCatalog, SecondaryIndex, SharedWalRing, ShmArena, ShmPrimaryKeyMap, StapiRow, StapiValue,
 };
 use crossbeam_skiplist::SkipMap;
 use serde::{Deserialize, Serialize};
@@ -35,6 +35,12 @@ fn ssi_rejects_write_skew_across_distinct_partition_lock_buckets() {
 fn ssi_rejects_write_skew_when_reads_flow_through_stapi_planner() {
     run_write_skew_with_planner_reads(Mode::Synchronous);
     run_write_skew_with_planner_reads(Mode::Asynchronous);
+}
+
+#[test]
+fn ssi_rejects_write_skew_when_reads_flow_through_pk_rbo_route() {
+    run_write_skew_with_pk_route_reads(Mode::Synchronous);
+    run_write_skew_with_pk_route_reads(Mode::Asynchronous);
 }
 
 #[test]
@@ -302,8 +308,8 @@ fn run_write_skew_with_planner_reads(mode: Mode) {
     ));
     on_call_index.insert(IndexValue::I64(1), 0);
     on_call_index.insert(IndexValue::I64(1), 1);
-    let catalog = IndexCatalog::new().with_index("on_call", on_call_index);
-    let planner = Arc::new(QueryPlanner::<OnCallRow>::new(catalog));
+    let catalog = SchemaCatalog::new("doctor").with_index("on_call", on_call_index);
+    let planner = Arc::new(RuleBasedOptimizer::<OnCallRow>::new(catalog));
 
     let read_plan = Arc::new(
         planner
@@ -498,8 +504,8 @@ fn run_write_skew_with_tcl_like_keyed_upserts(mode: Mode) {
     ));
     on_call_index.insert(IndexValue::I64(1), 0);
     on_call_index.insert(IndexValue::I64(1), 1);
-    let catalog = IndexCatalog::new().with_index("on_call", Arc::clone(&on_call_index));
-    let planner = Arc::new(QueryPlanner::<OnCallRow>::new(catalog));
+    let catalog = SchemaCatalog::new("doctor").with_index("on_call", Arc::clone(&on_call_index));
+    let planner = Arc::new(RuleBasedOptimizer::<OnCallRow>::new(catalog));
 
     let read_plan = Arc::new(
         planner
@@ -681,6 +687,211 @@ fn run_write_skew_with_tcl_like_keyed_upserts(mode: Mode) {
         daemon
             .join()
             .expect("keyed async wal writer daemon did not exit cleanly");
+    }
+
+    let _ = std::fs::remove_file(wal_path);
+}
+
+fn run_write_skew_with_pk_route_reads(mode: Mode) {
+    let shm = Arc::new(ShmArena::new(16 << 20).expect("failed to create shared arena"));
+    let table = Arc::new(
+        OccTable::<OnCallRow>::new(Arc::clone(&shm), 2).expect("failed to create OCC table"),
+    );
+
+    table
+        .seed_row(0, OnCallRow::new("DOC_A", 1))
+        .expect("failed to seed row 0");
+    table
+        .seed_row(1, OnCallRow::new("DOC_B", 1))
+        .expect("failed to seed row 1");
+
+    let pk_map = Arc::new(
+        ShmPrimaryKeyMap::new_in_shared(Arc::clone(&shm), 64, 2)
+            .expect("failed to create shared primary key map"),
+    );
+    pk_map
+        .insert_existing("DOC_A", 0)
+        .expect("failed to insert DOC_A primary key");
+    pk_map
+        .insert_existing("DOC_B", 1)
+        .expect("failed to insert DOC_B primary key");
+
+    let catalog = SchemaCatalog::new("doctor").with_primary_key_map(Arc::clone(&pk_map));
+    let planner = Arc::new(RuleBasedOptimizer::<OnCallRow>::new(catalog));
+
+    let read_doc_a = Arc::new(
+        planner
+            .compile_from_stapi("-compare {{= doctor DOC_A}} -limit 1")
+            .expect("failed to compile DOC_A PK read plan"),
+    );
+    let read_doc_b = Arc::new(
+        planner
+            .compile_from_stapi("-compare {{= doctor DOC_B}} -limit 1")
+            .expect("failed to compile DOC_B PK read plan"),
+    );
+
+    let ring = SharedWalRing::<RING_SLOTS, RING_SLOT_BYTES>::create(Arc::clone(&shm))
+        .expect("failed to create wal ring for PK planner skew test");
+    let wal_path = std::env::temp_dir().join(format!(
+        "aerostore_occ_write_skew_pk_rbo_{:?}_{}.wal",
+        match mode {
+            Mode::Synchronous => "sync",
+            Mode::Asynchronous => "async",
+        },
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&wal_path);
+
+    let daemon = match mode {
+        Mode::Asynchronous => Some(
+            spawn_wal_writer_daemon(ring.clone(), &wal_path)
+                .expect("failed to spawn wal writer daemon for PK planner skew test"),
+        ),
+        Mode::Synchronous => None,
+    };
+
+    let committer = match mode {
+        Mode::Synchronous => {
+            OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_synchronous(&wal_path)
+                .expect("failed to create synchronous committer")
+        }
+        Mode::Asynchronous => {
+            OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_asynchronous(ring.clone())
+        }
+    };
+    let committer = Arc::new(std::sync::Mutex::new(committer));
+    let barrier = Arc::new(Barrier::new(2));
+
+    let tx_a = {
+        let table = Arc::clone(&table);
+        let read_doc_a = Arc::clone(&read_doc_a);
+        let read_doc_b = Arc::clone(&read_doc_b);
+        let barrier = Arc::clone(&barrier);
+        let committer = Arc::clone(&committer);
+        thread::spawn(move || {
+            let mut tx = table
+                .begin_transaction()
+                .expect("PK tx A begin_transaction failed");
+
+            let rows_a = read_doc_a
+                .execute(&table, &mut tx)
+                .expect("PK tx A read DOC_A plan failed");
+            let rows_b = read_doc_b
+                .execute(&table, &mut tx)
+                .expect("PK tx A read DOC_B plan failed");
+            assert_eq!(rows_a.len(), 1);
+            assert_eq!(rows_b.len(), 1);
+            assert_eq!(rows_a[0].on_call, 1);
+            assert_eq!(rows_b[0].on_call, 1);
+
+            barrier.wait();
+
+            let mut row = table
+                .read(&mut tx, 0)
+                .expect("PK tx A read row 0 failed")
+                .expect("PK tx A row 0 missing");
+            row.on_call = 0;
+            table
+                .write(&mut tx, 0, row)
+                .expect("PK tx A write row 0 failed");
+
+            committer
+                .lock()
+                .expect("PK tx A failed to lock committer")
+                .commit(&table, &mut tx)
+                .map_err(|e| match e {
+                    aerostore_core::WalWriterError::Occ(err) => err,
+                    other => panic!("unexpected wal writer error in PK tx A: {}", other),
+                })
+        })
+    };
+
+    let tx_b = {
+        let table = Arc::clone(&table);
+        let read_doc_a = Arc::clone(&read_doc_a);
+        let read_doc_b = Arc::clone(&read_doc_b);
+        let barrier = Arc::clone(&barrier);
+        let committer = Arc::clone(&committer);
+        thread::spawn(move || {
+            let mut tx = table
+                .begin_transaction()
+                .expect("PK tx B begin_transaction failed");
+
+            let rows_a = read_doc_a
+                .execute(&table, &mut tx)
+                .expect("PK tx B read DOC_A plan failed");
+            let rows_b = read_doc_b
+                .execute(&table, &mut tx)
+                .expect("PK tx B read DOC_B plan failed");
+            assert_eq!(rows_a.len(), 1);
+            assert_eq!(rows_b.len(), 1);
+            assert_eq!(rows_a[0].on_call, 1);
+            assert_eq!(rows_b[0].on_call, 1);
+
+            barrier.wait();
+
+            let mut row = table
+                .read(&mut tx, 1)
+                .expect("PK tx B read row 1 failed")
+                .expect("PK tx B row 1 missing");
+            row.on_call = 0;
+            table
+                .write(&mut tx, 1, row)
+                .expect("PK tx B write row 1 failed");
+
+            committer
+                .lock()
+                .expect("PK tx B failed to lock committer")
+                .commit(&table, &mut tx)
+                .map_err(|e| match e {
+                    aerostore_core::WalWriterError::Occ(err) => err,
+                    other => panic!("unexpected wal writer error in PK tx B: {}", other),
+                })
+        })
+    };
+
+    let result_a = tx_a.join().expect("PK tx A thread panicked");
+    let result_b = tx_b.join().expect("PK tx B thread panicked");
+
+    let outcomes = [result_a, result_b];
+    let committed = outcomes.iter().filter(|r| r.is_ok()).count();
+    let serialization_failures = outcomes
+        .iter()
+        .filter(|r| matches!(r, Err(OccError::SerializationFailure)))
+        .count();
+
+    assert_eq!(committed, 1, "exactly one PK-route writer should commit");
+    assert_eq!(
+        serialization_failures, 1,
+        "exactly one PK-route writer should fail with SerializationFailure"
+    );
+
+    let mut verify_tx = table
+        .begin_transaction()
+        .expect("verify begin_transaction failed");
+    let row_a = table
+        .read(&mut verify_tx, 0)
+        .expect("verify read row 0 failed")
+        .expect("row 0 missing after PK skew test");
+    let row_b = table
+        .read(&mut verify_tx, 1)
+        .expect("verify read row 1 failed")
+        .expect("row 1 missing after PK skew test");
+    table
+        .abort(&mut verify_tx)
+        .expect("verify transaction abort failed");
+
+    assert!(
+        row_a.on_call == 1 || row_b.on_call == 1,
+        "PK-route serializable validation failed to preserve invariant"
+    );
+
+    if let Some(daemon) = daemon {
+        ring.close()
+            .expect("failed to close PK planner skew test wal ring");
+        daemon
+            .join()
+            .expect("PK planner async wal writer daemon did not exit cleanly");
     }
 
     let _ = std::fs::remove_file(wal_path);
