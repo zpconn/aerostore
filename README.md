@@ -9,7 +9,7 @@ It combines:
 - PostgreSQL-inspired snapshot/OCC/SSI behavior,
 - shared-memory secondary indexing,
 - WAL + checkpoint/snapshot durability paths,
-- in-process Tcl integration (`cdylib`) for low-overhead Hyperfeed-style execution.
+- in-process Tcl integration (`cdylib`) for low-overhead execution.
 
 ## How Aerostore Works (Plain Language)
 
