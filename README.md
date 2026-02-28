@@ -11,6 +11,18 @@ As of February 27, 2026, this repository contains:
 - V2 shared-memory OCC/SSI engine with ProcArray, savepoints, shared-memory lock-free secondary indexing, WAL ring, and WAL writer daemon.
 - V3 logical WAL + snapshot recovery path with strict corruption detection and crash-recovery validation.
 
+The project now includes a production-oriented solution to a hard systems problem: lock-free, cross-process shared-memory secondary indexes for a fork-heavy in-memory database.
+
+## How Shared-Memory Secondary Indexing Works
+
+1. The index lives in POSIX shared memory (`MAP_SHARED`), not the Rust process heap.
+2. Every index link is a relative offset (`RelPtr`/`AtomicU32`), so parent and forked children can map at different virtual addresses without breaking pointers.
+3. Inserts never take a global lock. Writers allocate node/posting structs in the shared arena and use CAS to splice them into the index.
+4. Deletes are logical first: posting entries are marked deleted, and empty key nodes are unlinked with CAS.
+5. Unlinked nodes are deferred for reclamation. They are not immediately freed.
+6. Reclamation uses ProcArray snapshot horizons: a retired node is reclaimed only after all older active transactions are gone.
+7. Because all metadata and links are in shared memory, updates from one process are immediately visible to all sibling worker processes after `fork()`.
+
 ## How It Works (Plain Language)
 
 1. Aerostore keeps most state in shared memory so multiple worker processes can see the same database.
