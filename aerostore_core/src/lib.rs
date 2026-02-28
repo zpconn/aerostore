@@ -12,6 +12,7 @@ pub mod rbo_planner;
 pub mod recovery;
 pub mod shm;
 pub mod shm_index;
+pub mod shm_skiplist;
 pub mod stapi_parser;
 pub mod txn;
 pub mod wal;

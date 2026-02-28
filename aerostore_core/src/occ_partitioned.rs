@@ -3,6 +3,7 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::procarray::{ProcArrayError, ProcArrayRegistration};
 use crate::shm::{RelPtr, ShmAllocError, ShmArena, OCC_PARTITION_LOCKS};
@@ -637,6 +638,11 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
                 spins = spins.wrapping_add(1);
                 if spins & 0x3f == 0 {
                     std::thread::yield_now();
+                }
+                // Under heavy cross-process contention, periodic micro-sleeps
+                // reduce lock-holder starvation from pure busy spinning.
+                if spins & 0x3ff == 0 {
+                    std::thread::sleep(Duration::from_micros(25));
                 }
                 std::hint::spin_loop();
             }

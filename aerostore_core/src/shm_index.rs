@@ -1,8 +1,7 @@
 use std::cmp::Ordering;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::marker::PhantomData;
-use std::sync::atomic::{AtomicI32, AtomicU32, AtomicU64, Ordering as AtomicOrdering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -10,11 +9,13 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::index::{IndexCompare, IndexValue};
-use crate::shm::{RelPtr, ShmArena};
+use crate::shm::ShmArena;
+use crate::shm_skiplist::{
+    ShmSkipKey, ShmSkipList, ShmSkipListError, ShmSkipListGcDaemon, MAX_PAYLOAD_BYTES,
+};
 
 const KEY_INLINE_BYTES: usize = 128;
-const ROWID_INLINE_BYTES: usize = 192;
-const NULL_OFFSET: u32 = 0;
+const ROWID_INLINE_BYTES: usize = MAX_PAYLOAD_BYTES;
 const DEFAULT_INDEX_ARENA_BYTES: usize = 64 << 20;
 
 const KEY_TAG_I64: u8 = 1;
@@ -29,6 +30,7 @@ pub enum ShmIndexError {
     InvalidPosting(u32),
     KeyTooLong { len: usize, max: usize },
     RowIdTooLarge { len: usize, max: usize },
+    Alloc(crate::shm::ShmAllocError),
     Fork(std::io::Error),
     Wait(std::io::Error),
     Signal(std::io::Error),
@@ -52,6 +54,7 @@ impl fmt::Display for ShmIndexError {
             ShmIndexError::RowIdTooLarge { len, max } => {
                 write!(f, "row-id payload length {} exceeds max {}", len, max)
             }
+            ShmIndexError::Alloc(err) => write!(f, "shared index allocation failed: {}", err),
             ShmIndexError::Fork(err) => write!(f, "fork failed: {}", err),
             ShmIndexError::Wait(err) => write!(f, "wait failed: {}", err),
             ShmIndexError::Signal(err) => write!(f, "signal failed: {}", err),
@@ -61,24 +64,22 @@ impl fmt::Display for ShmIndexError {
 
 impl std::error::Error for ShmIndexError {}
 
-#[repr(C, align(64))]
-struct ShmSkipHeader {
-    head: AtomicU32,
-    retired_head: AtomicU32,
-    retired_nodes: AtomicU64,
-    reclaimed_nodes: AtomicU64,
-    gc_daemon_pid: AtomicI32,
-}
-
-impl ShmSkipHeader {
-    #[inline]
-    fn new(head: u32) -> Self {
-        Self {
-            head: AtomicU32::new(head),
-            retired_head: AtomicU32::new(NULL_OFFSET),
-            retired_nodes: AtomicU64::new(0),
-            reclaimed_nodes: AtomicU64::new(0),
-            gc_daemon_pid: AtomicI32::new(0),
+impl From<ShmSkipListError> for ShmIndexError {
+    fn from(value: ShmSkipListError) -> Self {
+        match value {
+            ShmSkipListError::InvalidHeader(offset) => ShmIndexError::InvalidHeader(offset),
+            ShmSkipListError::InvalidNode(offset) => ShmIndexError::InvalidNode(offset),
+            ShmSkipListError::InvalidPosting(offset) => ShmIndexError::InvalidPosting(offset),
+            ShmSkipListError::InvalidLane { node_offset, .. } => {
+                ShmIndexError::InvalidNode(node_offset)
+            }
+            ShmSkipListError::PayloadTooLarge { len, max } => {
+                ShmIndexError::RowIdTooLarge { len, max }
+            }
+            ShmSkipListError::Alloc(err) => ShmIndexError::Alloc(err),
+            ShmSkipListError::Fork(err) => ShmIndexError::Fork(err),
+            ShmSkipListError::Wait(err) => ShmIndexError::Wait(err),
+            ShmSkipListError::Signal(err) => ShmIndexError::Signal(err),
         }
     }
 }
@@ -200,61 +201,15 @@ impl EncodedKey {
     }
 }
 
-#[repr(C)]
-struct ShmSkipNode {
-    key: EncodedKey,
-    marked: AtomicU32,
-    next: AtomicU32,
-    postings_head: AtomicU32,
-    retire_txid: AtomicU64,
-    retire_next: AtomicU32,
-}
-
-impl ShmSkipNode {
+impl ShmSkipKey for EncodedKey {
     #[inline]
     fn sentinel() -> Self {
-        Self {
-            key: EncodedKey::sentinel(),
-            marked: AtomicU32::new(0),
-            next: AtomicU32::new(NULL_OFFSET),
-            postings_head: AtomicU32::new(NULL_OFFSET),
-            retire_txid: AtomicU64::new(0),
-            retire_next: AtomicU32::new(NULL_OFFSET),
-        }
+        EncodedKey::sentinel()
     }
 
     #[inline]
-    fn new(key: EncodedKey, next: u32, postings_head: u32) -> Self {
-        Self {
-            key,
-            marked: AtomicU32::new(0),
-            next: AtomicU32::new(next),
-            postings_head: AtomicU32::new(postings_head),
-            retire_txid: AtomicU64::new(0),
-            retire_next: AtomicU32::new(NULL_OFFSET),
-        }
-    }
-}
-
-#[repr(C)]
-struct PostingEntry {
-    len: u16,
-    _pad: [u8; 2],
-    deleted: AtomicU32,
-    next: AtomicU32,
-    payload: [u8; ROWID_INLINE_BYTES],
-}
-
-impl PostingEntry {
-    #[inline]
-    fn new(payload_len: u16, payload: &[u8; ROWID_INLINE_BYTES], next: u32) -> Self {
-        Self {
-            len: payload_len,
-            _pad: [0_u8; 2],
-            deleted: AtomicU32::new(0),
-            next: AtomicU32::new(next),
-            payload: *payload,
-        }
+    fn cmp_key(&self, other: &Self) -> Ordering {
+        self.cmp(other)
     }
 }
 
@@ -264,8 +219,7 @@ where
     RowId: Ord + Clone + Send + Sync + Serialize + DeserializeOwned + 'static,
 {
     field: &'static str,
-    shm: Arc<ShmArena>,
-    header_offset: u32,
+    skiplist: ShmSkipList<EncodedKey>,
     _marker: PhantomData<RowId>,
 }
 
@@ -282,20 +236,11 @@ where
     }
 
     pub fn new_in_shared(field: &'static str, shm: Arc<ShmArena>) -> Self {
-        let arena = shm.chunked_arena();
-        let head_offset = arena
-            .alloc(ShmSkipNode::sentinel())
-            .expect("failed to allocate shared index head")
-            .load(AtomicOrdering::Acquire);
-        let header_offset = arena
-            .alloc(ShmSkipHeader::new(head_offset))
-            .expect("failed to allocate shared index header")
-            .load(AtomicOrdering::Acquire);
-
+        let skiplist = ShmSkipList::<EncodedKey>::new_in_shared(shm)
+            .expect("failed to allocate shared-memory skiplist index");
         Self {
             field,
-            shm,
-            header_offset,
+            skiplist,
             _marker: PhantomData,
         }
     }
@@ -307,7 +252,7 @@ where
 
     #[inline]
     pub fn shared_arena(&self) -> &Arc<ShmArena> {
-        &self.shm
+        self.skiplist.shared_arena()
     }
 
     pub fn insert(&self, indexed_value: IndexValue, row_id: RowId) {
@@ -321,54 +266,9 @@ where
     ) -> Result<(), ShmIndexError> {
         let key = EncodedKey::from_index_value(&indexed_value)?;
         let (payload_len, payload) = Self::encode_row_id(&row_id)?;
-
-        loop {
-            let (pred_offset, curr_offset, equal) = self.find_position(&key)?;
-
-            if equal {
-                let Some(node) = self.node_ref(curr_offset) else {
-                    return Err(ShmIndexError::InvalidNode(curr_offset));
-                };
-                if node.marked.load(AtomicOrdering::Acquire) != 0 {
-                    continue;
-                }
-                self.prepend_posting(node, payload_len, &payload);
-                return Ok(());
-            }
-
-            let posting_offset = match self.shm.chunked_arena().alloc(PostingEntry::new(
-                payload_len,
-                &payload,
-                NULL_OFFSET,
-            )) {
-                Ok(ptr) => ptr.load(AtomicOrdering::Acquire),
-                Err(_) => return Ok(()),
-            };
-            let node_offset = match self.shm.chunked_arena().alloc(ShmSkipNode::new(
-                key,
-                curr_offset,
-                posting_offset,
-            )) {
-                Ok(ptr) => ptr.load(AtomicOrdering::Acquire),
-                Err(_) => return Ok(()),
-            };
-
-            let Some(pred) = self.node_ref(pred_offset) else {
-                return Err(ShmIndexError::InvalidNode(pred_offset));
-            };
-            if pred
-                .next
-                .compare_exchange(
-                    curr_offset,
-                    node_offset,
-                    AtomicOrdering::AcqRel,
-                    AtomicOrdering::Acquire,
-                )
-                .is_ok()
-            {
-                return Ok(());
-            }
-        }
+        self.skiplist
+            .insert_payload(key, payload_len, &payload[..payload_len as usize])
+            .map_err(Into::into)
     }
 
     pub fn remove(&self, indexed_value: &IndexValue, row_id: &RowId) {
@@ -382,39 +282,9 @@ where
     ) -> Result<(), ShmIndexError> {
         let key = EncodedKey::from_index_value(indexed_value)?;
         let (payload_len, payload) = Self::encode_row_id(row_id)?;
-
-        let (_, node_offset, equal) = self.find_position(&key)?;
-        if !equal {
-            return Ok(());
-        }
-
-        let Some(node) = self.node_ref(node_offset) else {
-            return Err(ShmIndexError::InvalidNode(node_offset));
-        };
-        let mut posting_offset = node.postings_head.load(AtomicOrdering::Acquire);
-        while posting_offset != NULL_OFFSET {
-            let Some(post) = self.posting_ref(posting_offset) else {
-                return Err(ShmIndexError::InvalidPosting(posting_offset));
-            };
-            if post.deleted.load(AtomicOrdering::Acquire) == 0
-                && post.len == payload_len
-                && post.payload[..payload_len as usize] == payload[..payload_len as usize]
-            {
-                let _ = post.deleted.compare_exchange(
-                    0,
-                    1,
-                    AtomicOrdering::AcqRel,
-                    AtomicOrdering::Acquire,
-                );
-                break;
-            }
-            posting_offset = post.next.load(AtomicOrdering::Acquire);
-        }
-
-        if !self.has_live_postings(node) {
-            self.retire_node(&key, node_offset);
-        }
-        Ok(())
+        self.skiplist
+            .remove_payload(&key, payload_len, &payload[..payload_len as usize])
+            .map_err(Into::into)
     }
 
     pub fn lookup(&self, predicate: &IndexCompare) -> Vec<RowId> {
@@ -424,35 +294,50 @@ where
                 let Ok(key) = EncodedKey::from_index_value(v) else {
                     return Vec::new();
                 };
-                let Ok((_, node_offset, equal)) = self.find_position(&key) else {
-                    return Vec::new();
-                };
-                if equal {
-                    if let Some(node) = self.node_ref(node_offset) {
-                        self.collect_postings(node, &mut out);
+                let _ = self.skiplist.lookup_payloads(&key, |_, payload| {
+                    if let Some(row_id) = Self::decode_row_id(payload) {
+                        out.insert(row_id);
                     }
-                }
+                });
             }
             IndexCompare::Gt(v) => {
                 let Ok(bound) = EncodedKey::from_index_value(v) else {
                     return Vec::new();
                 };
-                self.scan_range(|key| key.cmp(&bound) == Ordering::Greater, &mut out);
+                let _ = self.skiplist.scan_payloads(
+                    |key| key.cmp(&bound) == Ordering::Greater,
+                    |_, _, payload| {
+                        if let Some(row_id) = Self::decode_row_id(payload) {
+                            out.insert(row_id);
+                        }
+                    },
+                );
             }
             IndexCompare::Gte(v) => {
                 let Ok(bound) = EncodedKey::from_index_value(v) else {
                     return Vec::new();
                 };
-                self.scan_range(
+                let _ = self.skiplist.scan_payloads(
                     |key| matches!(key.cmp(&bound), Ordering::Greater | Ordering::Equal),
-                    &mut out,
+                    |_, _, payload| {
+                        if let Some(row_id) = Self::decode_row_id(payload) {
+                            out.insert(row_id);
+                        }
+                    },
                 );
             }
             IndexCompare::Lt(v) => {
                 let Ok(bound) = EncodedKey::from_index_value(v) else {
                     return Vec::new();
                 };
-                self.scan_range(|key| key.cmp(&bound) == Ordering::Less, &mut out);
+                let _ = self.skiplist.scan_payloads(
+                    |key| key.cmp(&bound) == Ordering::Less,
+                    |_, _, payload| {
+                        if let Some(row_id) = Self::decode_row_id(payload) {
+                            out.insert(row_id);
+                        }
+                    },
+                );
             }
             IndexCompare::In(values) => {
                 for value in values {
@@ -465,340 +350,53 @@ where
         out.into_iter().collect()
     }
 
+    pub fn lookup_posting_count(&self, indexed_value: &IndexValue) -> usize {
+        let Ok(key) = EncodedKey::from_index_value(indexed_value) else {
+            return 0;
+        };
+
+        let mut count = 0_usize;
+        let _ = self.skiplist.lookup_payloads(&key, |_, _| {
+            count = count.saturating_add(1);
+        });
+        count
+    }
+
     pub fn traverse(&self) -> Vec<(IndexValue, Vec<RowId>)> {
-        let mut out = Vec::new();
-        let Some(header) = self.header_ref() else {
-            return out;
-        };
-        let Some(head) = self.node_ref(header.head.load(AtomicOrdering::Acquire)) else {
-            return out;
-        };
-
-        let mut curr_offset = head.next.load(AtomicOrdering::Acquire);
-        while curr_offset != NULL_OFFSET {
-            let Some(node) = self.node_ref(curr_offset) else {
-                break;
-            };
-            if node.marked.load(AtomicOrdering::Acquire) == 0 {
-                if let Some(value) = node.key.as_index_value() {
-                    let mut rows = BTreeSet::new();
-                    self.collect_postings(node, &mut rows);
-                    out.push((value, rows.into_iter().collect()));
+        let mut out: BTreeMap<IndexValue, BTreeSet<RowId>> = BTreeMap::new();
+        let _ = self.skiplist.scan_payloads(
+            |_| true,
+            |key, _, payload| {
+                if let (Some(value), Some(row_id)) =
+                    (key.as_index_value(), Self::decode_row_id(payload))
+                {
+                    out.entry(value).or_default().insert(row_id);
                 }
-            }
-            curr_offset = node.next.load(AtomicOrdering::Acquire);
-        }
+            },
+        );
 
-        out
+        out.into_iter()
+            .map(|(k, rows)| (k, rows.into_iter().collect()))
+            .collect()
     }
 
     pub fn collect_garbage_once(&self, max_nodes: usize) -> usize {
-        let Some(header) = self.header_ref() else {
-            return 0;
-        };
-        let snapshot = self.shm.create_snapshot();
-        let horizon = snapshot.xmin;
-
-        let detached_head = header
-            .retired_head
-            .swap(NULL_OFFSET, AtomicOrdering::AcqRel);
-        if detached_head == NULL_OFFSET {
-            return 0;
-        }
-
-        let mut keep = Vec::new();
-        let mut reclaimed = 0_usize;
-        let mut curr = detached_head;
-
-        while curr != NULL_OFFSET {
-            let Some(node) = self.node_ref(curr) else {
-                break;
-            };
-            let next = node.retire_next.load(AtomicOrdering::Acquire);
-            let retire_txid = node.retire_txid.load(AtomicOrdering::Acquire);
-
-            if reclaimed < max_nodes && retire_txid != 0 && retire_txid < horizon {
-                reclaimed += 1;
-                header.reclaimed_nodes.fetch_add(1, AtomicOrdering::AcqRel);
-                header.retired_nodes.fetch_sub(1, AtomicOrdering::AcqRel);
-            } else {
-                keep.push(curr);
-            }
-
-            curr = next;
-        }
-
-        for node_offset in keep {
-            let Some(node) = self.node_ref(node_offset) else {
-                continue;
-            };
-            loop {
-                let old = header.retired_head.load(AtomicOrdering::Acquire);
-                node.retire_next.store(old, AtomicOrdering::Release);
-                if header
-                    .retired_head
-                    .compare_exchange(
-                        old,
-                        node_offset,
-                        AtomicOrdering::AcqRel,
-                        AtomicOrdering::Acquire,
-                    )
-                    .is_ok()
-                {
-                    break;
-                }
-            }
-        }
-
-        reclaimed
+        self.skiplist.collect_garbage_once(max_nodes)
     }
 
     pub fn spawn_gc_daemon(&self, interval: Duration) -> Result<ShmIndexGcDaemon, ShmIndexError> {
-        let parent_pid = unsafe { libc::getpid() };
-        let index = self.clone();
-
-        // SAFETY:
-        // A dedicated process is used for cross-process GC coordination.
-        let fork_result = unsafe { rustix::runtime::fork() }.map_err(|err| {
-            ShmIndexError::Fork(std::io::Error::from_raw_os_error(err.raw_os_error()))
-        })?;
-
-        match fork_result {
-            rustix::runtime::Fork::Child(_) => {
-                let _ = arm_parent_death_signal(parent_pid);
-                loop {
-                    let _ = index.collect_garbage_once(1024);
-                    std::thread::sleep(interval);
-                }
-            }
-            rustix::runtime::Fork::Parent(pid) => {
-                let pid_raw = pid.as_raw_nonzero().get();
-                if let Some(header) = self.header_ref() {
-                    header.gc_daemon_pid.store(pid_raw, AtomicOrdering::Release);
-                }
-                Ok(ShmIndexGcDaemon { pid: pid_raw })
-            }
-        }
+        let daemon = self.skiplist.spawn_gc_daemon(interval)?;
+        Ok(ShmIndexGcDaemon { inner: daemon })
     }
 
     #[inline]
     pub fn retired_nodes(&self) -> u64 {
-        self.header_ref()
-            .map(|header| header.retired_nodes.load(AtomicOrdering::Acquire))
-            .unwrap_or(0)
+        self.skiplist.retired_nodes()
     }
 
     #[inline]
     pub fn reclaimed_nodes(&self) -> u64 {
-        self.header_ref()
-            .map(|header| header.reclaimed_nodes.load(AtomicOrdering::Acquire))
-            .unwrap_or(0)
-    }
-
-    fn find_position(&self, key: &EncodedKey) -> Result<(u32, u32, bool), ShmIndexError> {
-        'retry: loop {
-            let header = self
-                .header_ref()
-                .ok_or(ShmIndexError::InvalidHeader(self.header_offset))?;
-            let head_offset = header.head.load(AtomicOrdering::Acquire);
-            let head = self
-                .node_ref(head_offset)
-                .ok_or(ShmIndexError::InvalidNode(head_offset))?;
-
-            let mut pred_offset = head_offset;
-            let mut pred = head;
-            let mut curr_offset = pred.next.load(AtomicOrdering::Acquire);
-
-            while curr_offset != NULL_OFFSET {
-                let curr = self
-                    .node_ref(curr_offset)
-                    .ok_or(ShmIndexError::InvalidNode(curr_offset))?;
-                let next_offset = curr.next.load(AtomicOrdering::Acquire);
-
-                if curr.marked.load(AtomicOrdering::Acquire) != 0 {
-                    if pred
-                        .next
-                        .compare_exchange(
-                            curr_offset,
-                            next_offset,
-                            AtomicOrdering::AcqRel,
-                            AtomicOrdering::Acquire,
-                        )
-                        .is_ok()
-                    {
-                        curr_offset = next_offset;
-                        continue;
-                    }
-                    continue 'retry;
-                }
-
-                match curr.key.cmp(key) {
-                    Ordering::Less => {
-                        pred_offset = curr_offset;
-                        pred = curr;
-                        curr_offset = next_offset;
-                    }
-                    Ordering::Equal => return Ok((pred_offset, curr_offset, true)),
-                    Ordering::Greater => return Ok((pred_offset, curr_offset, false)),
-                }
-            }
-
-            return Ok((pred_offset, NULL_OFFSET, false));
-        }
-    }
-
-    fn scan_range<F>(&self, predicate: F, out: &mut BTreeSet<RowId>)
-    where
-        F: Fn(&EncodedKey) -> bool,
-    {
-        let Some(header) = self.header_ref() else {
-            return;
-        };
-        let Some(head) = self.node_ref(header.head.load(AtomicOrdering::Acquire)) else {
-            return;
-        };
-
-        let mut curr_offset = head.next.load(AtomicOrdering::Acquire);
-        while curr_offset != NULL_OFFSET {
-            let Some(node) = self.node_ref(curr_offset) else {
-                break;
-            };
-            if node.marked.load(AtomicOrdering::Acquire) == 0 && predicate(&node.key) {
-                self.collect_postings(node, out);
-            }
-            curr_offset = node.next.load(AtomicOrdering::Acquire);
-        }
-    }
-
-    fn prepend_posting(
-        &self,
-        node: &ShmSkipNode,
-        payload_len: u16,
-        payload: &[u8; ROWID_INLINE_BYTES],
-    ) {
-        let posting_offset = match self.shm.chunked_arena().alloc(PostingEntry::new(
-            payload_len,
-            payload,
-            NULL_OFFSET,
-        )) {
-            Ok(ptr) => ptr.load(AtomicOrdering::Acquire),
-            Err(_) => return,
-        };
-
-        let Some(posting) = self.posting_ref(posting_offset) else {
-            return;
-        };
-        loop {
-            let old_head = node.postings_head.load(AtomicOrdering::Acquire);
-            posting.next.store(old_head, AtomicOrdering::Release);
-            if node
-                .postings_head
-                .compare_exchange(
-                    old_head,
-                    posting_offset,
-                    AtomicOrdering::AcqRel,
-                    AtomicOrdering::Acquire,
-                )
-                .is_ok()
-            {
-                break;
-            }
-        }
-    }
-
-    fn collect_postings(&self, node: &ShmSkipNode, out: &mut BTreeSet<RowId>) {
-        let mut curr_offset = node.postings_head.load(AtomicOrdering::Acquire);
-        while curr_offset != NULL_OFFSET {
-            let Some(post) = self.posting_ref(curr_offset) else {
-                break;
-            };
-            if post.deleted.load(AtomicOrdering::Acquire) == 0 {
-                if let Some(row_id) = Self::decode_row_id(post) {
-                    out.insert(row_id);
-                }
-            }
-            curr_offset = post.next.load(AtomicOrdering::Acquire);
-        }
-    }
-
-    fn has_live_postings(&self, node: &ShmSkipNode) -> bool {
-        let mut curr_offset = node.postings_head.load(AtomicOrdering::Acquire);
-        while curr_offset != NULL_OFFSET {
-            let Some(post) = self.posting_ref(curr_offset) else {
-                return false;
-            };
-            if post.deleted.load(AtomicOrdering::Acquire) == 0 {
-                return true;
-            }
-            curr_offset = post.next.load(AtomicOrdering::Acquire);
-        }
-        false
-    }
-
-    fn retire_node(&self, key: &EncodedKey, node_offset: u32) {
-        let Some(node) = self.node_ref(node_offset) else {
-            return;
-        };
-        if node
-            .marked
-            .compare_exchange(0, 1, AtomicOrdering::AcqRel, AtomicOrdering::Acquire)
-            .is_err()
-        {
-            return;
-        }
-
-        if let Ok((pred_offset, found_offset, found)) = self.find_position(key) {
-            if found && found_offset == node_offset {
-                if let Some(pred) = self.node_ref(pred_offset) {
-                    let next_offset = node.next.load(AtomicOrdering::Acquire);
-                    let _ = pred.next.compare_exchange(
-                        node_offset,
-                        next_offset,
-                        AtomicOrdering::AcqRel,
-                        AtomicOrdering::Acquire,
-                    );
-                }
-            }
-        }
-
-        let retire_txid = self.shm.global_txid().fetch_add(1, AtomicOrdering::AcqRel);
-        node.retire_txid.store(retire_txid, AtomicOrdering::Release);
-
-        let Some(header) = self.header_ref() else {
-            return;
-        };
-        header.retired_nodes.fetch_add(1, AtomicOrdering::AcqRel);
-        loop {
-            let old = header.retired_head.load(AtomicOrdering::Acquire);
-            node.retire_next.store(old, AtomicOrdering::Release);
-            if header
-                .retired_head
-                .compare_exchange(
-                    old,
-                    node_offset,
-                    AtomicOrdering::AcqRel,
-                    AtomicOrdering::Acquire,
-                )
-                .is_ok()
-            {
-                break;
-            }
-        }
-    }
-
-    #[inline]
-    fn header_ref(&self) -> Option<&ShmSkipHeader> {
-        RelPtr::<ShmSkipHeader>::from_offset(self.header_offset).as_ref(self.shm.mmap_base())
-    }
-
-    #[inline]
-    fn node_ref(&self, offset: u32) -> Option<&ShmSkipNode> {
-        RelPtr::<ShmSkipNode>::from_offset(offset).as_ref(self.shm.mmap_base())
-    }
-
-    #[inline]
-    fn posting_ref(&self, offset: u32) -> Option<&PostingEntry> {
-        RelPtr::<PostingEntry>::from_offset(offset).as_ref(self.shm.mmap_base())
+        self.skiplist.reclaimed_nodes()
     }
 
     fn encode_row_id(row_id: &RowId) -> Result<(u16, [u8; ROWID_INLINE_BYTES]), ShmIndexError> {
@@ -817,94 +415,26 @@ where
         Ok((encoded.len() as u16, out))
     }
 
-    fn decode_row_id(entry: &PostingEntry) -> Option<RowId> {
-        let len = entry.len as usize;
-        bincode::deserialize::<RowId>(&entry.payload[..len]).ok()
+    fn decode_row_id(bytes: &[u8]) -> Option<RowId> {
+        bincode::deserialize::<RowId>(bytes).ok()
     }
 }
 
 pub struct ShmIndexGcDaemon {
-    pid: i32,
+    inner: ShmSkipListGcDaemon,
 }
 
 impl ShmIndexGcDaemon {
     #[inline]
     pub fn pid(&self) -> i32 {
-        self.pid
+        self.inner.pid()
     }
 
     pub fn terminate(&self, signal: i32) -> Result<(), ShmIndexError> {
-        // SAFETY:
-        // `pid` came from a successful fork call and belongs to this process group.
-        let rc = unsafe { libc::kill(self.pid, signal) };
-        if rc == 0 {
-            Ok(())
-        } else {
-            Err(ShmIndexError::Signal(std::io::Error::last_os_error()))
-        }
+        self.inner.terminate(signal).map_err(Into::into)
     }
 
     pub fn join(&self) -> Result<(), ShmIndexError> {
-        let pid = rustix::process::Pid::from_raw(self.pid).ok_or_else(|| {
-            ShmIndexError::Wait(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "invalid pid for gc daemon",
-            ))
-        })?;
-        let status = rustix::process::waitpid(Some(pid), rustix::process::WaitOptions::empty())
-            .map_err(|err| {
-                ShmIndexError::Wait(std::io::Error::from_raw_os_error(err.raw_os_error()))
-            })?;
-        let Some(status) = status else {
-            return Err(ShmIndexError::Wait(std::io::Error::new(
-                std::io::ErrorKind::UnexpectedEof,
-                "waitpid returned no status",
-            )));
-        };
-
-        if status.exited() {
-            if status.exit_status() == Some(0) {
-                Ok(())
-            } else {
-                Err(ShmIndexError::Wait(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("gc daemon exited with status {:?}", status.exit_status()),
-                )))
-            }
-        } else if status.signaled() {
-            Ok(())
-        } else {
-            Err(ShmIndexError::Wait(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("gc daemon exited unexpectedly: {:?}", status),
-            )))
-        }
+        self.inner.join().map_err(Into::into)
     }
-}
-
-#[cfg(target_os = "linux")]
-fn arm_parent_death_signal(expected_parent: libc::pid_t) -> Result<(), ShmIndexError> {
-    // SAFETY:
-    // called immediately in the fork child before creating new threads.
-    let rc = unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM) };
-    if rc != 0 {
-        return Err(ShmIndexError::Fork(std::io::Error::last_os_error()));
-    }
-
-    // SAFETY:
-    // getppid is async-signal-safe and used for race-checking parent liveness.
-    let observed_parent = unsafe { libc::getppid() };
-    if observed_parent != expected_parent {
-        return Err(ShmIndexError::Fork(std::io::Error::new(
-            std::io::ErrorKind::Interrupted,
-            "parent exited before gc daemon armed PDEATHSIG",
-        )));
-    }
-
-    Ok(())
-}
-
-#[cfg(not(target_os = "linux"))]
-fn arm_parent_death_signal(_expected_parent: libc::pid_t) -> Result<(), ShmIndexError> {
-    Ok(())
 }
