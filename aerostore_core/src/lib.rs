@@ -3,6 +3,8 @@ pub mod index;
 pub mod ingest;
 pub mod mvcc;
 pub mod occ;
+pub mod occ_legacy;
+pub mod occ_partitioned;
 pub mod planner;
 pub mod procarray;
 pub mod query;

@@ -10,11 +10,25 @@ use serde::{Deserialize, Serialize};
 
 const RING_SLOTS: usize = 256;
 const RING_SLOT_BYTES: usize = 128;
+const OCC_PARTITION_LOCK_BUCKETS: usize = 1024;
 
 #[test]
 fn ssi_rejects_write_skew_and_returns_serialization_failure() {
     run_write_skew_scenario(Mode::Synchronous);
     run_write_skew_scenario(Mode::Asynchronous);
+}
+
+#[test]
+fn ssi_rejects_write_skew_across_distinct_partition_lock_buckets() {
+    let (row_a, row_b) = find_distinct_bucket_rows();
+    assert_ne!(
+        lock_bucket_for_row_id(row_a),
+        lock_bucket_for_row_id(row_b),
+        "test setup must use rows in different OCC partition buckets"
+    );
+
+    run_write_skew_for_rows(Mode::Synchronous, row_a, row_b, "bucketed_sync");
+    run_write_skew_for_rows(Mode::Asynchronous, row_a, row_b, "bucketed_async");
 }
 
 #[test]
@@ -84,25 +98,30 @@ fn decode_ascii(bytes: &[u8]) -> String {
 }
 
 fn run_write_skew_scenario(mode: Mode) {
-    let shm = Arc::new(ShmArena::new(16 << 20).expect("failed to create shared arena"));
-    let table =
-        Arc::new(OccTable::<bool>::new(Arc::clone(&shm), 2).expect("failed to create OCC table"));
+    run_write_skew_for_rows(mode, 0, 1, "baseline");
+}
+
+fn run_write_skew_for_rows(mode: Mode, row_a: usize, row_b: usize, label: &str) {
+    let capacity = row_a.max(row_b) + 1;
+    let shm = Arc::new(ShmArena::new(32 << 20).expect("failed to create shared arena"));
+    let table = Arc::new(
+        OccTable::<bool>::new(Arc::clone(&shm), capacity).expect("failed to create OCC table"),
+    );
 
     table
-        .seed_row(0, true)
-        .expect("failed to seed row 0 as on-call");
+        .seed_row(row_a, true)
+        .expect("failed to seed first skew row as on-call");
     table
-        .seed_row(1, true)
-        .expect("failed to seed row 1 as on-call");
+        .seed_row(row_b, true)
+        .expect("failed to seed second skew row as on-call");
 
     let ring = SharedWalRing::<RING_SLOTS, RING_SLOT_BYTES>::create(Arc::clone(&shm))
         .expect("failed to create wal ring for skew test");
     let wal_path = std::env::temp_dir().join(format!(
-        "aerostore_occ_write_skew_{:?}_{}.wal",
-        match mode {
-            Mode::Synchronous => "sync",
-            Mode::Asynchronous => "async",
-        },
+        "aerostore_occ_write_skew_{}_{}_{}_{}.wal",
+        label,
+        row_a,
+        row_b,
         std::process::id()
     ));
     let _ = std::fs::remove_file(&wal_path);
@@ -110,7 +129,7 @@ fn run_write_skew_scenario(mode: Mode) {
     let daemon = match mode {
         Mode::Asynchronous => Some(
             spawn_wal_writer_daemon(ring.clone(), &wal_path)
-                .expect("failed to spawn wal writer daemon for async skew test"),
+                .expect("failed to spawn wal writer daemon for skew test"),
         ),
         Mode::Synchronous => None,
     };
@@ -135,16 +154,20 @@ fn run_write_skew_scenario(mode: Mode) {
             let mut tx = table
                 .begin_transaction()
                 .expect("tx A begin_transaction failed");
-            let row_0 = table.read(&mut tx, 0).expect("tx A read row 0 failed");
-            let row_1 = table.read(&mut tx, 1).expect("tx A read row 1 failed");
-            assert_eq!(row_0, Some(true));
-            assert_eq!(row_1, Some(true));
+            let row_a_value = table
+                .read(&mut tx, row_a)
+                .expect("tx A read first row failed");
+            let row_b_value = table
+                .read(&mut tx, row_b)
+                .expect("tx A read second row failed");
+            assert_eq!(row_a_value, Some(true));
+            assert_eq!(row_b_value, Some(true));
 
             barrier.wait();
 
             table
-                .write(&mut tx, 0, false)
-                .expect("tx A write row 0 failed");
+                .write(&mut tx, row_a, false)
+                .expect("tx A write first row failed");
             committer
                 .lock()
                 .expect("tx A failed to lock committer")
@@ -164,16 +187,20 @@ fn run_write_skew_scenario(mode: Mode) {
             let mut tx = table
                 .begin_transaction()
                 .expect("tx B begin_transaction failed");
-            let row_0 = table.read(&mut tx, 0).expect("tx B read row 0 failed");
-            let row_1 = table.read(&mut tx, 1).expect("tx B read row 1 failed");
-            assert_eq!(row_0, Some(true));
-            assert_eq!(row_1, Some(true));
+            let row_a_value = table
+                .read(&mut tx, row_a)
+                .expect("tx B read first row failed");
+            let row_b_value = table
+                .read(&mut tx, row_b)
+                .expect("tx B read second row failed");
+            assert_eq!(row_a_value, Some(true));
+            assert_eq!(row_b_value, Some(true));
 
             barrier.wait();
 
             table
-                .write(&mut tx, 1, false)
-                .expect("tx B write row 1 failed");
+                .write(&mut tx, row_b, false)
+                .expect("tx B write second row failed");
             committer
                 .lock()
                 .expect("tx B failed to lock committer")
@@ -196,46 +223,35 @@ fn run_write_skew_scenario(mode: Mode) {
         .count();
 
     assert_eq!(
-        committed,
-        1,
-        "exactly one writer should commit in write-skew scenario ({:?})",
-        match mode {
-            Mode::Synchronous => "sync",
-            Mode::Asynchronous => "async",
-        }
+        committed, 1,
+        "exactly one writer should commit in write-skew scenario ({})",
+        label
     );
     assert_eq!(
-        serialization_failures,
-        1,
-        "exactly one writer should fail with SerializationFailure ({:?})",
-        match mode {
-            Mode::Synchronous => "sync",
-            Mode::Asynchronous => "async",
-        }
+        serialization_failures, 1,
+        "exactly one writer should fail with SerializationFailure ({})",
+        label
     );
 
     let mut verify_tx = table
         .begin_transaction()
         .expect("verify begin_transaction failed");
-    let final_row_0 = table
-        .read(&mut verify_tx, 0)
-        .expect("verify read row 0 failed")
-        .expect("row 0 missing after skew test");
-    let final_row_1 = table
-        .read(&mut verify_tx, 1)
-        .expect("verify read row 1 failed")
-        .expect("row 1 missing after skew test");
+    let final_row_a = table
+        .read(&mut verify_tx, row_a)
+        .expect("verify read first row failed")
+        .expect("first row missing after skew test");
+    let final_row_b = table
+        .read(&mut verify_tx, row_b)
+        .expect("verify read second row failed")
+        .expect("second row missing after skew test");
     table
         .abort(&mut verify_tx)
         .expect("verify transaction abort failed");
 
     assert!(
-        final_row_0 || final_row_1,
-        "serializable validation failed to preserve invariant in mode {:?}",
-        match mode {
-            Mode::Synchronous => "sync",
-            Mode::Asynchronous => "async",
-        }
+        final_row_a || final_row_b,
+        "serializable validation failed to preserve invariant for {}",
+        label
     );
 
     if let Some(daemon) = daemon {
@@ -246,6 +262,25 @@ fn run_write_skew_scenario(mode: Mode) {
     }
 
     let _ = std::fs::remove_file(wal_path);
+}
+
+fn find_distinct_bucket_rows() -> (usize, usize) {
+    for left in 0..4_096 {
+        for right in (left + 1)..4_096 {
+            if lock_bucket_for_row_id(left) != lock_bucket_for_row_id(right) {
+                return (left, right);
+            }
+        }
+    }
+    panic!("failed to find distinct OCC lock buckets for write-skew test rows");
+}
+
+fn lock_bucket_for_row_id(row_id: usize) -> usize {
+    let mut mixed = row_id as u64;
+    mixed ^= mixed >> 33;
+    mixed = mixed.wrapping_mul(0xff51_afd7_ed55_8ccd);
+    mixed ^= mixed >> 33;
+    (mixed as usize) % OCC_PARTITION_LOCK_BUCKETS
 }
 
 fn run_write_skew_with_planner_reads(mode: Mode) {
