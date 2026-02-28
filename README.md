@@ -14,7 +14,6 @@ It combines lock-free shared-memory data structures, PostgreSQL-inspired MVCC/OC
 - V3 logical WAL + snapshot durability and deterministic crash recovery.
 - Tcl extension bridge (`cdylib`) that maps STAPI-style search options to Rust planner execution.
 
-<<<<<<< HEAD
 ## System Overview (Plain Language)
 
 Aerostore now at its core includes a lock-free cross-process shared-memory secondary index implementation supporting fast queries across forks.
