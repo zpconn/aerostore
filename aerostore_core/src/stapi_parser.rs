@@ -37,6 +37,7 @@ pub enum Filter {
     Eq { field: String, value: Value },
     Lt { field: String, value: Value },
     Gt { field: String, value: Value },
+    Gte { field: String, value: Value },
     In { field: String, values: Vec<Value> },
     Match { field: String, pattern: String },
 }
@@ -152,7 +153,7 @@ fn looks_like_single_clause(parts: &[String]) -> bool {
 
     matches!(
         parts[0].as_str(),
-        "=" | "==" | ">" | "<" | "in" | "IN" | "match"
+        "=" | "==" | ">" | ">=" | "<" | "in" | "IN" | "match"
     )
 }
 
@@ -174,6 +175,13 @@ fn parse_compare_clause(clause: &str) -> Result<Filter, ParseError> {
         ">" => {
             ensure_clause_arity(&parts, 3, ">")?;
             Ok(Filter::Gt {
+                field: parts[1].clone(),
+                value: Value::from_atom(parts[2].as_str()),
+            })
+        }
+        ">=" => {
+            ensure_clause_arity(&parts, 3, ">=")?;
+            Ok(Filter::Gte {
                 field: parts[1].clone(),
                 value: Value::from_atom(parts[2].as_str()),
             })
@@ -324,16 +332,17 @@ mod tests {
     #[test]
     fn parses_each_supported_operator() {
         let parsed = parse_stapi_query(
-            "-compare {{= typ B738} {< alt 40000} {> alt 10000} {in typ {B738 A320}} {match flight UAL*}}",
+            "-compare {{= typ B738} {< alt 40000} {> alt 10000} {>= alt 10000} {in typ {B738 A320}} {match flight UAL*}}",
         )
         .expect("operator matrix should parse");
 
-        assert_eq!(parsed.filters.len(), 5);
+        assert_eq!(parsed.filters.len(), 6);
         assert!(matches!(parsed.filters[0], Filter::Eq { .. }));
         assert!(matches!(parsed.filters[1], Filter::Lt { .. }));
         assert!(matches!(parsed.filters[2], Filter::Gt { .. }));
-        assert!(matches!(parsed.filters[3], Filter::In { .. }));
-        assert!(matches!(parsed.filters[4], Filter::Match { .. }));
+        assert!(matches!(parsed.filters[3], Filter::Gte { .. }));
+        assert!(matches!(parsed.filters[4], Filter::In { .. }));
+        assert!(matches!(parsed.filters[5], Filter::Match { .. }));
     }
 
     #[test]

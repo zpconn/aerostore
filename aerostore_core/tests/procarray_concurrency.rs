@@ -472,7 +472,10 @@ fn run_occ_procarray_scenario(
                             conflicts.fetch_add(1, Ordering::AcqRel);
                             continue;
                         }
-                        other => panic!("unexpected OCC write error in procarray scenario: {}", other),
+                        other => panic!(
+                            "unexpected OCC write error in procarray scenario: {}",
+                            other
+                        ),
                     }
                 }
 

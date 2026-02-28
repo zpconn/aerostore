@@ -1,13 +1,14 @@
 pub mod arena;
+pub mod execution;
 pub mod index;
 pub mod ingest;
 pub mod mvcc;
 pub mod occ;
 pub mod occ_legacy;
 pub mod occ_partitioned;
-pub mod planner;
 pub mod procarray;
 pub mod query;
+pub mod rbo_planner;
 pub mod recovery;
 pub mod shm;
 pub mod shm_index;
@@ -20,17 +21,20 @@ pub mod wal_writer;
 pub mod watch;
 
 pub use arena::{ChunkedArena, Table, VersionNode};
+pub use execution::{ExecutionEngine, PrimaryKeyMapError, ShmPrimaryKeyMap};
 pub use index::{IndexCompare, IndexValue, IntoIndexValue, SecondaryIndex};
 pub use ingest::{
     bulk_upsert_tsv, IngestError, IngestStats, TsvColumns, TsvDecodeError, TsvDecoder,
 };
 pub use mvcc::{is_visible, MvccError, MvccTable, RowVersion};
 pub use occ::{Error as OccError, OccRow, OccTable, OccTransaction};
-pub use planner::{ExecutionPlan, IndexCatalog, PlanRoute, PlannerError, QueryPlanner, StapiRow};
 pub use procarray::{
     ProcArray, ProcArrayError, ProcArrayRegistration, ProcSlot, ProcSnapshot, PROCARRAY_SLOTS,
 };
 pub use query::{Field, QueryBuilder, QueryEngine, SortDirection};
+pub use rbo_planner::{
+    AccessPath, CompiledPlan, PlannerError, RouteKind, RuleBasedOptimizer, SchemaCatalog, StapiRow,
+};
 pub use recovery::{
     spawn_logical_checkpointer, LogicalCheckpointerHandle, LogicalDatabase, LogicalDatabaseConfig,
     LogicalRow, RecoveryError, SnapshotMeta, LOGICAL_MAX_PAYLOAD_BYTES, LOGICAL_MAX_PK_BYTES,

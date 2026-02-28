@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use aerostore_core::{
     deserialize_commit_record, OccTable, RelPtr, SharedWalRing, ShmAllocError, ShmArena,
-    WalRingCommit, WalRingWrite,
+    ShmPrimaryKeyMap, WalRingCommit, WalRingWrite,
 };
 
 #[repr(C, align(64))]
@@ -167,6 +167,101 @@ fn forked_children_cas_contention_reaches_exact_total() {
         counter.value.load(Ordering::Acquire),
         expected,
         "final CAS total diverged under multi-process contention"
+    );
+}
+
+#[test]
+fn forked_primary_key_map_updates_are_cross_process_visible() {
+    const CHILDREN: usize = 4;
+
+    let shm = Arc::new(ShmArena::new(8 << 20).expect("failed to create shared arena"));
+    let pk_map = ShmPrimaryKeyMap::new_in_shared(Arc::clone(&shm), 256, 1024)
+        .expect("failed to create shared primary key map");
+    pk_map
+        .insert_existing("PARENT", 7)
+        .expect("failed to seed parent key");
+
+    let result_ptr = shm
+        .chunked_arena()
+        .alloc(std::array::from_fn::<AtomicU32, CHILDREN, _>(|_| {
+            AtomicU32::new(u32::MAX)
+        }))
+        .expect("failed to allocate shared result slots");
+
+    let mut pids = Vec::with_capacity(CHILDREN);
+    for child_idx in 0..CHILDREN {
+        // SAFETY:
+        // `fork` duplicates process. Child exits via `_exit`.
+        let pid = unsafe { libc::fork() };
+        assert!(pid >= 0, "fork failed: {}", std::io::Error::last_os_error());
+
+        if pid == 0 {
+            let Some(result_slots) = result_ptr.as_ref(shm.mmap_base()) else {
+                // SAFETY:
+                // child exits without unwinding.
+                unsafe { libc::_exit(91) };
+            };
+
+            let outcome = match child_idx {
+                0 => pk_map.insert_existing("UAL123", 101),
+                1 => pk_map.insert_existing("DAL456", 202),
+                2 => pk_map.get_or_insert("RACE001"),
+                3 => pk_map.get_or_insert("RACE001"),
+                _ => unreachable!(),
+            };
+
+            let row_id = match outcome {
+                Ok(row_id) => row_id as u32,
+                Err(_) => {
+                    // SAFETY:
+                    // child exits without unwinding.
+                    unsafe { libc::_exit(92) };
+                }
+            };
+            result_slots[child_idx].store(row_id, Ordering::Release);
+
+            // SAFETY:
+            // child exits without unwinding.
+            unsafe { libc::_exit(0) };
+        }
+
+        pids.push(pid);
+    }
+
+    for pid in pids {
+        wait_for_child(pid);
+    }
+
+    let slots = result_ptr
+        .as_ref(shm.mmap_base())
+        .expect("parent failed to resolve shared result slots");
+
+    assert_eq!(
+        pk_map.get("PARENT").expect("parent key lookup failed"),
+        Some(7)
+    );
+    assert_eq!(
+        pk_map.get("UAL123").expect("UAL123 lookup failed"),
+        Some(101)
+    );
+    assert_eq!(
+        pk_map.get("DAL456").expect("DAL456 lookup failed"),
+        Some(202)
+    );
+
+    let race_id = pk_map
+        .get("RACE001")
+        .expect("RACE001 lookup failed")
+        .expect("RACE001 must exist after child inserts");
+    assert_eq!(
+        slots[2].load(Ordering::Acquire),
+        race_id as u32,
+        "child 2 observed unexpected row id for contended key"
+    );
+    assert_eq!(
+        slots[3].load(Ordering::Acquire),
+        race_id as u32,
+        "child 3 observed unexpected row id for contended key"
     );
 }
 
