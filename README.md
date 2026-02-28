@@ -3,163 +3,110 @@
 <img width="600" height="600" alt="Aerostore Logo" src="https://github.com/user-attachments/assets/7d64557f-9733-40b7-8f40-d251a48a5205" />
 
 Aerostore is a Rust-first, shared-memory database prototype for high-ingest flight/state workloads.
-It combines:
+It is built around lock-free shared-memory data structures, serializable OCC/SSI transaction rules,
+STAPI-style query planning, and WAL/checkpoint durability paths.
 
-- lock-free shared-memory data structures (`RelPtr`, shared arena, CAS-based updates),
-- PostgreSQL-inspired snapshot/OCC/SSI behavior,
-- shared-memory secondary indexing (V4 lock-free skiplist backend),
-- WAL + checkpoint/snapshot durability paths,
-- in-process Tcl integration (`cdylib`) for low-overhead execution.
+## What Is New In V4
 
-## How Aerostore Works (Plain Language)
+- Shared-memory secondary indexing is backed by a lock-free `ShmSkipList`.
+- Dynamic cardinality routing is enabled for equality predicates.
+- Both the shared primary-key map and shared skiplist track `distinct_key_count`.
+- STAPI parser and filter engine support full operator set used in this repo, including:
+  - `null`, `notnull`
+  - `<=`, `>=`, `!=`
+  - `notmatch`
+- Speedtable null semantics are driven by hidden `_null_bitmask` system column injection,
+  without `Option<T>` layout inflation.
 
-1. Data lives in a shared memory segment so forked worker processes see the same state.
-2. Transactions read a snapshot and build local read/write sets.
-3. Writes create new row versions and publish them atomically at commit time.
-4. Reads do not block writes; SSI validation catches conflicting commit interleavings.
-5. Commits are persisted through WAL paths (sync or async ring/daemon, depending on mode).
-6. Checkpoints/snapshots compact current state to disk.
-7. On startup, Aerostore rebuilds live state into a fresh shared memory mapping from persisted artifacts.
+## Repository Layout
 
-## What This Repository Contains
+- `aerostore_core`: engine, parser/planner/executor, shared-memory primitives, durability, tests, benches.
+- `aerostore_tcl`: Tcl extension bridge (`cdylib`) and integration tests.
+- `aerostore_macros`: `#[speedtable]` proc macro crate.
+- `docs/nightly_perf.md`: nightly/isolated performance runbook.
 
-- `aerostore_core`: engine, concurrency control, shared memory primitives, query planner/executor, durability, tests/benchmarks.
-- `aerostore_tcl`: Tcl extension bridge exposing search/ingest/config/checkpoint commands.
-- `aerostore_macros`: schema macro crate.
-- `docs/nightly_perf.md`: nightly/long-running benchmark runbook.
+## Architecture Overview
 
-The repo currently includes multiple durability/concurrency paths (legacy + newer shared-memory paths) for compatibility and validation.
+### Shared Memory Foundation
 
-## Query Support
+- POSIX shared mapping (`MAP_SHARED`) via `ShmArena`.
+- `RelPtr<T>` relative pointers instead of process-local absolute pointers.
+- Lock-free shared bump allocation (`ChunkedArena`) using CAS.
 
-### STAPI-style filters
+### Transaction Model
 
-- `null field` SQL-null bit check
-- `notnull field` SQL-not-null bit check
-- `=` / `==` exact match
-- `!=` / `<>` not-equal (residual filter)
-- `>` greater than
-- `>=` greater than or equal
-- `<` less than
-- `<=` less than or equal
-- `in field {a b c}` membership
-- `match field glob*` glob matching
-- `notmatch field glob*` glob non-match (residual filter)
+- OCC with snapshot-based reads and serializable conflict checks.
+- Partitioned lock striping in commit path to reduce hotspot contention.
+- Savepoint and rollback-to-savepoint support.
 
-### Search controls
+### Indexing
 
-- `-sort <field>`
-- `-limit <n>`
-- Tcl bridge options: `-offset <n>`, `-asc`, `-desc`
+- `ShmPrimaryKeyMap` in shared memory for fast PK lookup.
+- `SecondaryIndex` backed by `ShmSkipList` in shared memory.
+- Skiplist is lock-free and CAS-linked across levels.
+- Non-unique index semantics are supported through posting chains (duplicate keys map to multiple row IDs).
+- `distinct_key_count` is exposed on both PK and secondary index structures.
+
+### STAPI Parser and Filters
+
+- Full operator set:
+  - `=` / `==`, `!=` / `<>`
+  - `>`, `>=`, `<`, `<=`
+  - `in`, `match`, `notmatch`
+  - `null`, `notnull`
+- Sort and limit support:
+  - `-sort <field>`
+  - `-limit <n>`
+- Tcl bridge controls:
+  - `-offset <n>`, `-asc`, `-desc`
 
 ### Nullability Without `Option<T>`
 
-- `#[speedtable]` rows carry a hidden `_null_bitmask: u64` plus system columns (`_xmin`, `_xmax`).
-- If bit `i` is set, column `i` is logically SQL `NULL` even if physical column bytes contain data.
-- Query predicates use the bitmask as the source of truth for null semantics.
+`#[speedtable]` injects hidden system fields into row layout:
 
-## Rule-Based Optimizer (RBO)
+- `_null_bitmask: u64`
+- `_xmin: u64`
+- `_xmax: AtomicU64`
 
-Aerostore uses a deterministic heuristic planner in `rbo_planner.rs` + `execution.rs`.
+A set bit in `_null_bitmask` means the logical value is SQL `NULL`, regardless of the bytes in the physical field slot.
 
-Routing precedence:
+### Planner and Execution
 
-1. Primary-key equality route (`RouteKind::PrimaryKeyLookup`) through shared `ShmPrimaryKeyMap`.
-2. Indexed equality route (`RouteKind::IndexExactMatch`).
-3. Indexed range route (`RouteKind::IndexRangeScan`) for `>`, `<`, `>=`, `<=`.
-4. Full scan (`RouteKind::FullScan`) fallback.
+Planner logic (`rbo_planner.rs`) does the following:
 
-Tie-breaks are deterministic via cardinality ranking (default: `flight_id` -> `geohash` -> `dest` -> `altitude`).
+1. Build equality-route candidates from:
+   - PK equality predicate (if PK map configured)
+   - Indexed equality predicates
+2. Choose equality driver by highest `distinct_key_count`.
+3. Tie-break equality candidates by:
+   - PK over secondary index
+   - then earlier filter index in query
+4. If no equality candidate exists, choose best indexed range route by configured range rank.
+5. Otherwise fall back to full scan.
 
-Residual-only predicates:
+All non-driver predicates are compiled as residual filters and applied after candidate row ID narrowing.
 
-- `null`, `notnull`
-- `!=`, `notmatch`
+### Durability and Recovery
 
-These predicates are never used as index drivers and are applied after candidate row ID narrowing.
+- Shared ring WAL path in `wal_ring.rs` with synchronous or asynchronous commit behavior.
+- WAL writer daemon path in `wal_writer.rs`.
+- Logical WAL + snapshot recovery in `wal_logical.rs` and `recovery.rs`.
+- Legacy durability path in `wal.rs` remains for compatibility/reference.
 
-Execution pipeline:
+## Query Example
 
-1. produce candidate row IDs from the chosen route,
-2. read rows under transaction snapshot visibility,
-3. apply residual predicates,
-4. apply sort,
-5. apply limit.
+```tcl
+load ./target/debug/libaerostore_tcl.so Aerostore
+package require aerostore
+set _ [aerostore::init ./aerostore_tcl_data]
 
-## Why Queries Are Fast
+FlightState ingest_tsv "UAL123\t37.618805\t-122.375416\t35000\t451\t1709000000" 1
 
-- Shared-memory indexes avoid IPC/network overhead between worker processes.
-- Candidate narrowing happens early (PK/index route before residual filtering).
-- Residual predicates run only on narrowed candidates.
-- Snapshot-safe reads do not block writers.
-- Shared-memory PK lookup path provides O(1) route for exact key queries.
+set n [FlightState search -compare {{= flight_id UAL123} {>= altitude 10000} {notmatch typ C17*}} -sort altitude -limit 50]
+puts $n
+```
 
-## Architecture Summary
-
-### 1) Shared Memory Foundation (`shm.rs`)
-
-- POSIX shared memory mapping (`MAP_SHARED`).
-- Relative pointers (`RelPtr<T>`) instead of process-local absolute pointers.
-- Lock-free shared bump allocator (`ChunkedArena`) with CAS head movement.
-
-### 2) Active Transaction Tracking (`procarray.rs`)
-
-- Bounded, cache-line-aligned ProcArray (`PROCARRAY_SLOTS = 256`).
-- CAS slot claim/release for begin/end transaction.
-- Bounded snapshot creation cost.
-
-### 3) OCC/SSI Core (`occ_partitioned.rs` via `occ.rs`)
-
-- Serializable OCC with read-set and write-set tracking.
-- Partitioned lock striping (`1024` lock buckets) to reduce commit bottlenecks.
-- Savepoints and rollback-to-savepoint write-intent truncation.
-- Conflict outcome: `SerializationFailure`.
-
-### 4) Shared-Memory Indexing
-
-- Shared secondary index implementation in `shm_index.rs` (`SecondaryIndex`) on top of `shm_skiplist.rs` (`ShmSkipList`).
-- Lock-free CAS-based insertion/removal and multi-level skiplist traversal in shared memory.
-- Duplicate-key postings are supported (non-unique secondary index semantics).
-- Range scans and deferred reclamation horizon checks are enforced in shared memory.
-- Shared primary key map in `execution.rs` (`ShmPrimaryKeyMap`) for PK route.
-
-### 5) Query Layer
-
-- `stapi_parser.rs`: Tcl list syntax parsing to typed AST with full operator support (`null`, `notnull`, `<=`, `>=`, `!=`, `notmatch`, etc.).
-- `filters.rs`: predicate compilation and SQL-like null short-circuit semantics.
-- `rbo_planner.rs`: route selection and residual predicate compilation.
-- `execution.rs`: candidate-to-result execution path.
-- `query.rs`: typed Rust query API (`QueryBuilder`, `QueryEngine`) also retained.
-
-### 6) Ingestion and Streaming
-
-- `ingest.rs`: high-speed TSV ingestion helpers.
-- `watch.rs`: subscriptions + TTL sweeper support.
-
-### 7) Durability and Recovery
-
-- `wal_ring.rs` + `wal_writer.rs`: shared ring commit path and WAL writer daemon.
-- `wal_logical.rs` + `recovery.rs`: logical WAL framing and snapshot/WAL replay recovery.
-- `wal.rs`: legacy durability path retained.
-
-## Durability Paths and Artifacts
-
-On-disk files used by different paths:
-
-- `aerostore.wal`
-- `occ_checkpoint.dat`
-- `aerostore_logical.wal`
-- `snapshot.dat`
-- (legacy path) `wal.log`, `checkpoint.dat`
-
-Config knobs exposed through Tcl:
-
-- `aerostore.synchronous_commit` (`on` / `off`)
-- `aerostore.checkpoint_interval_secs`
-
-## Tcl Bridge (`aerostore_tcl`)
-
-The Tcl extension exports:
+## Tcl Bridge Commands
 
 - `aerostore::init ?data_dir?`
 - `aerostore::set_config <key> <value>`
@@ -168,28 +115,21 @@ The Tcl extension exports:
 - `FlightState search ...`
 - `FlightState ingest_tsv <tsv_data> ?batch_size?`
 
-Example:
+Config keys:
 
-```tcl
-load ./target/debug/libaerostore_tcl.so Aerostore
-package require aerostore
-set _ [aerostore::init ./aerostore_tcl_data]
+- `aerostore.synchronous_commit` (`on` or `off`)
+- `aerostore.checkpoint_interval_secs`
 
-FlightState ingest_tsv "UAL123\t37.618805\t-122.375416\t35000\t451\t1709000000" 1
-set n [FlightState search -compare {{= flight_id UAL123} {>= altitude 10000}} -sort altitude -limit 50]
-puts $n
-```
-
-## Build Prerequisites
+## Build Requirements
 
 Rust:
 
-- stable Rust toolchain (`cargo`, `rustc`)
+- stable toolchain (`cargo`, `rustc`)
 
 For Tcl bridge builds/tests:
 
-- Tcl 8.6 runtime and development headers
-- clang/libclang
+- Tcl 8.6 runtime + dev headers
+- clang + libclang
 
 Debian/Ubuntu example:
 
@@ -218,9 +158,9 @@ Tcl bridge only:
 cargo build -p aerostore_tcl
 ```
 
-## Test and Benchmark Runbook
+## Test Commands
 
-### Fast sanity checks
+### Fast compile sanity
 
 ```bash
 cargo test --workspace --no-run
@@ -229,132 +169,90 @@ cargo test -p aerostore_tcl --tests --no-run
 cargo test -p aerostore_macros --test ui
 ```
 
-### Targeted reliability suites
+### Cardinality and index routing gates
 
 ```bash
+cargo test -p aerostore_core --test planner_cardinality -- --nocapture
 cargo test -p aerostore_core --test rbo_planner_routing -- --nocapture
+cargo test -p aerostore_core --test shm_shared_memory forked_primary_key_map_updates_are_cross_process_visible -- --nocapture
+cargo test -p aerostore_core --test shm_index_contention -- --nocapture
+cargo test -p aerostore_core distinct_key_count_ -- --nocapture
+```
+
+### Parser/filter/bridge reliability gates
+
+```bash
 cargo test -p aerostore_core stapi_parser -- --nocapture
 cargo test -p aerostore_core filters:: -- --nocapture
 cargo test -p aerostore_core --test speedtable_arena_perf -- --nocapture
-cargo test -p aerostore_core --test occ_write_skew -- --nocapture
-cargo test -p aerostore_core --test shm_shared_memory -- --nocapture
-cargo test -p aerostore_core --test logical_recovery -- --nocapture --test-threads=1
-cargo test -p aerostore_core --test wal_crash_recovery -- --nocapture --test-threads=1
 cargo test -p aerostore_tcl --test search_stapi_bridge -- --nocapture
 cargo test -p aerostore_tcl --test config_checkpoint_integration -- --nocapture
 ```
 
-### Benchmark / long-running suites
+### Recovery and concurrency suites
 
 ```bash
-cargo test -p aerostore_core --release --test wal_ring_benchmark -- --test-threads=1 --nocapture
+cargo test -p aerostore_core --test occ_write_skew -- --nocapture
+cargo test -p aerostore_core --test logical_recovery -- --nocapture --test-threads=1
+cargo test -p aerostore_core --test wal_crash_recovery -- --nocapture --test-threads=1
+```
+
+## Benchmark Commands
+
+### Core benchmark suites
+
+```bash
 cargo test -p aerostore_core --release --test query_index_benchmark -- --test-threads=1 --nocapture
 cargo test -p aerostore_core --release --test shm_index_benchmark -- --test-threads=1 --nocapture
+cargo test -p aerostore_core --release --test wal_ring_benchmark -- --test-threads=1 --nocapture
 cargo test -p aerostore_core --release --test occ_checkpoint_benchmark -- --test-threads=1 --nocapture
 ```
 
-Ignored heavy contention/model suites:
+### Ignored heavy contention/model suites
 
 ```bash
 cargo test -p aerostore_core --release --test occ_partitioned_lock_striping_benchmark -- --ignored --test-threads=1 --nocapture
 cargo test -p aerostore_core --release --test test_concurrency -- --ignored --test-threads=1
 ```
 
-Criterion:
+### Criterion benches
 
 ```bash
 cargo bench -p aerostore_core --bench procarray_snapshot
 cargo bench -p aerostore_core --bench shm_skiplist_adversarial
 ```
 
-Nightly runbook:
+Nightly/isolated runbook:
 
 - `docs/nightly_perf.md`
 
-## Reliability Coverage Matrix
+## Reliability Coverage Highlights
 
-### Concurrency, MVCC, OCC, savepoints
-
-- `aerostore_core/tests/test_concurrency.rs`
-  - loom CAS model checks and long-running GC stress/leak accounting.
-- `aerostore_core/tests/mvcc_tokio_concurrency.rs`
-  - 50 readers + 50 writers snapshot isolation behavior.
-- `aerostore_core/tests/procarray_concurrency.rs`
-  - thread/fork ProcArray stress and slot release safety.
-- `aerostore_core/tests/occ_write_skew.rs`
-  - write-skew rejection across baseline/planner/keyed/savepoint/PK-route scenarios.
-- `aerostore_core/tests/occ_savepoint_reclaim.rs`
-  - savepoint rollback truncation/reuse and replay correctness.
-
-### Shared memory and index correctness
-
-- `aerostore_core/tests/shm_fork.rs`
-  - parent/child `RelPtr` mutation sanity.
-- `aerostore_core/tests/shm_shared_memory.rs`
-  - CAS contention, ring integrity, PK map fork visibility, OCC recycle stress.
-- `aerostore_core/tests/shm_index_fork.rs`
-  - cross-process index visibility.
-- `aerostore_core/tests/shm_index_contention.rs`
-  - same-key contention exactness.
-- `aerostore_core/tests/shm_index_gc_horizon.rs`
-  - deferred reclamation horizon enforcement.
-- `aerostore_core/tests/shm_index_bounds.rs`
-  - oversized key/payload rejection.
-
-### Planning and query behavior
-
+- `aerostore_core/tests/planner_cardinality.rs`
+  - dynamic cardinality route selection, PK-vs-secondary tie behavior, residual demotion checks.
 - `aerostore_core/tests/rbo_planner_routing.rs`
-  - route precedence, tie-breaks, residual filtering, malformed syntax handling, negative/null residual guarantees.
+  - route choice, residual negative/null handling, malformed query safety.
+- `aerostore_core/tests/shm_index_contention.rs`
+  - cross-process contention and distinct-count/index-consistency stress.
+- `aerostore_core/tests/shm_shared_memory.rs`
+  - fork visibility and shared PK map behavior under contention.
+- `aerostore_core/src/shm_skiplist.rs` unit tests
+  - ordering invariants, mark/unlink behavior, GC horizon, distinct-key churn checks.
 - `aerostore_core/tests/query_index_benchmark.rs`
-  - typed query vs STAPI path, Tcl-style path, PK route vs full scan, tie-break benchmark, negative/null residual benchmark paths.
-- `aerostore_core/src/stapi_parser.rs` (unit tests)
-  - full STAPI operator matrix and arity validation (`null`, `notnull`, `<=`, `>=`, `!=`, `notmatch`, aliases).
-- `aerostore_core/src/filters.rs` (unit tests)
-  - null-bitmask-dominant predicate semantics and negative/range correctness.
-- `aerostore_core/tests/speedtable_arena_perf.rs`
-  - `#[speedtable]` system-column injection and null-bitmask behavior over physical payload bytes.
-- `aerostore_macros/tests/ui.rs`
-  - compile-fail macro contract tests (reserved names and >64-field rejection).
-
-### WAL, checkpoint, crash recovery
-
-- `aerostore_core/tests/wal_crash_recovery.rs`
-  - replay, checkpoint tail recovery, corruption handling, idempotency, high-cardinality checks.
-- `aerostore_core/tests/logical_recovery.rs`
-  - logical snapshot/WAL crash recovery and strict malformed-log rejection.
-- `aerostore_core/tests/wal_writer_lifecycle.rs`
-  - writer daemon lifecycle guarantees.
-- `aerostore_core/tests/wal_ring_benchmark.rs`
-  - sync vs async throughput and backpressure gates.
-- `aerostore_core/tests/occ_checkpoint_benchmark.rs`
-  - checkpoint/replay cardinality performance.
-
-### Ingest, watch, TTL, Tcl integration
-
-- `aerostore_core/tests/ingest_watch_ttl.rs`
-  - ingest + watch + TTL behavior.
+  - STAPI planner/execute benchmarks, cardinality trap benchmark, residual filter benchmarks.
 - `aerostore_tcl/tests/search_stapi_bridge.rs`
-  - list/raw STAPI parity across `<=`, `>=`, `!=`, `notmatch`, `null`, `notnull`, PK routing, and arity/error boundary checks.
-- `aerostore_tcl/tests/config_checkpoint_integration.rs`
-  - Tcl config toggles, checkpoint behavior, recovery (including PK lookup checks).
+  - list/raw STAPI bridge parity and operator boundary checks.
 
 ## Current Status
 
-- Primary execution path is shared-memory OCC/SSI + partitioned lock striping.
-- Query path is RBO (`rbo_planner.rs` + `execution.rs`) with shared PK map support.
-- Shared-memory secondary indexes are cross-process visible under `fork()` and backed by lock-free shared-memory skiplist lanes.
-- STAPI grammar supports the full operational set used in this repository, including null/negative predicates.
-- Speedtable nullability is represented by `_null_bitmask` (no `Option<T>` row layout inflation).
-- Async WAL ring path and logical WAL/snapshot recovery path are both implemented and tested.
-- Legacy modules (`mvcc.rs`, `wal.rs`, `occ_legacy.rs`) remain for compatibility/reference and test coverage.
-
-## Workspace Layout
-
-- `aerostore_core/` core engine, durability, parser/planner/execution, tests, benchmarks.
-- `aerostore_tcl/` Tcl extension bridge and integration tests.
-- `aerostore_macros/` schema macro crate.
-- `docs/` operational docs (nightly benchmark runbook).
+- Shared-memory skiplist index backend is active and cross-process validated.
+- Dynamic equality route selection uses live distinct-cardinality counters.
+- STAPI negative and null operators are implemented and exercised by parser/filter/bridge tests.
+- Speedtable null semantics are bitmask-driven and ABI/layout friendly.
+- Async and sync durability paths are implemented and tested.
+- Legacy modules remain in tree for compatibility/reference and comparative testing.
 
 ## License
 
-No license file is currently present. Treat this repository as proprietary/internal unless a license is explicitly added.
+No license file is currently present.
+Treat this repository as proprietary/internal unless a license is explicitly added.

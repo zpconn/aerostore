@@ -643,6 +643,96 @@ fn benchmark_stapi_rbo_tiebreak_dest_over_altitude() {
 }
 
 #[test]
+fn benchmark_stapi_rbo_cardinality_trap_flight_id_over_aircraft_type() {
+    const ROWS: usize = 70_000;
+    const PASSES: usize = 64;
+    const TARGET_ROW_ID: usize = 42_123;
+
+    let shm = Arc::new(ShmArena::new(128 << 20).expect("failed to create shared arena"));
+    let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+        .expect("failed to create OCC table");
+    let flight_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "flight_id",
+        Arc::clone(&shm),
+    ));
+    let typ_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "typ",
+        Arc::clone(&shm),
+    ));
+
+    for row_id in 0..ROWS {
+        let alt = ((row_id % 45_000) as i64) + 500;
+        let flight = format!("U{:07}", row_id);
+        let typ = match row_id % 5 {
+            0 => "B738",
+            1 => "A320",
+            2 => "E190",
+            3 => "B77W",
+            _ => "CRJ9",
+        };
+
+        let row = StapiFlightRow::new(alt, flight.as_str(), typ);
+        occ_table
+            .seed_row(row_id, row)
+            .expect("failed to seed OCC row for cardinality-trap benchmark");
+        flight_index.insert(IndexValue::String(flight), row_id);
+        typ_index.insert(IndexValue::String(typ.to_string()), row_id);
+    }
+
+    assert_eq!(flight_index.distinct_key_count(), ROWS);
+    assert_eq!(typ_index.distinct_key_count(), 5);
+
+    let catalog = SchemaCatalog::new("pk_unused")
+        .with_index("flight_id", Arc::clone(&flight_index))
+        .with_index("typ", Arc::clone(&typ_index))
+        .with_index("type", typ_index);
+    let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
+
+    let target_flight = format!("U{:07}", TARGET_ROW_ID);
+    let target_typ = match TARGET_ROW_ID % 5 {
+        0 => "B738",
+        1 => "A320",
+        2 => "E190",
+        3 => "B77W",
+        _ => "CRJ9",
+    };
+    let stapi = format!(
+        "-compare {{{{= typ {}}} {{= flight_id {}}}}} -limit 1",
+        target_typ, target_flight
+    );
+    let plan = planner
+        .compile_from_stapi(stapi.as_str())
+        .expect("failed to compile cardinality-trap query");
+
+    assert_eq!(plan.route_kind(), RouteKind::IndexExactMatch);
+    assert_eq!(plan.driver_field(), Some("flight_id"));
+    assert_eq!(plan.residual_filter_fields(), vec!["typ"]);
+
+    let start = Instant::now();
+    for _ in 0..PASSES {
+        let mut tx = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for cardinality-trap benchmark");
+        let rows = plan
+            .execute(&occ_table, &mut tx)
+            .expect("cardinality-trap execution failed");
+        occ_table
+            .abort(&mut tx)
+            .expect("abort failed for cardinality-trap benchmark");
+
+        assert_eq!(rows.len(), 1);
+        assert_eq!(decode_ascii(&rows[0].flight), target_flight);
+        assert_eq!(decode_ascii(&rows[0].typ), target_typ);
+    }
+    let elapsed = start.elapsed();
+
+    eprintln!(
+        "rbo_cardinality_trap_flight_id_over_typ_elapsed={:?} passes={} rows={}",
+        elapsed, PASSES, ROWS
+    );
+}
+
+#[test]
 fn benchmark_stapi_residual_negative_filters_with_index_driver() {
     const ROWS: usize = 50_000;
     const PASSES: usize = 48;

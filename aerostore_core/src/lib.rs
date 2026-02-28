@@ -7,6 +7,7 @@ pub mod mvcc;
 pub mod occ;
 pub mod occ_legacy;
 pub mod occ_partitioned;
+pub mod planner_cardinality;
 pub mod procarray;
 pub mod query;
 pub mod rbo_planner;

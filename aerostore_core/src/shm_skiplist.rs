@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::marker::PhantomData;
 use std::mem::{align_of, size_of};
-use std::sync::atomic::{AtomicI32, AtomicU32, AtomicU64, Ordering as AtomicOrdering};
+use std::sync::atomic::{AtomicI32, AtomicU32, AtomicU64, AtomicUsize, Ordering as AtomicOrdering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -76,6 +76,7 @@ struct ShmSkipHeader<K: ShmSkipKey> {
     head: RelPtr<ShmSkipNode<K>>,
     current_height: AtomicU32,
     rng_state: AtomicU64,
+    distinct_key_count: AtomicUsize,
     retired_head: RelPtr<ShmSkipNode<K>>,
     retired_nodes: AtomicU64,
     reclaimed_nodes: AtomicU64,
@@ -89,6 +90,7 @@ impl<K: ShmSkipKey> ShmSkipHeader<K> {
             head: RelPtr::from_offset(head_offset),
             current_height: AtomicU32::new(1),
             rng_state: AtomicU64::new(seed.max(1)),
+            distinct_key_count: AtomicUsize::new(0),
             retired_head: RelPtr::null(),
             retired_nodes: AtomicU64::new(0),
             reclaimed_nodes: AtomicU64::new(0),
@@ -305,6 +307,9 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             {
                 continue;
             }
+            header
+                .distinct_key_count
+                .fetch_add(1, AtomicOrdering::AcqRel);
 
             for level in 1..node_height {
                 loop {
@@ -552,6 +557,13 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
     }
 
     #[inline]
+    pub fn distinct_key_count(&self) -> usize {
+        self.header_ref()
+            .map(|header| header.distinct_key_count.load(AtomicOrdering::Acquire))
+            .unwrap_or(0)
+    }
+
+    #[inline]
     pub fn reclaimed_nodes(&self) -> u64 {
         self.header_ref()
             .map(|header| header.reclaimed_nodes.load(AtomicOrdering::Acquire))
@@ -650,6 +662,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             .ok_or(ShmSkipListError::InvalidNode(node_offset))?;
 
         let mut flags = node.flags.load(AtomicOrdering::Acquire);
+        let mut newly_marked = false;
         loop {
             if flags & NODE_FLAG_MARKED != 0 {
                 break;
@@ -660,9 +673,16 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 AtomicOrdering::AcqRel,
                 AtomicOrdering::Acquire,
             ) {
-                Ok(_) => break,
+                Ok(_) => {
+                    newly_marked = true;
+                    break;
+                }
                 Err(observed) => flags = observed,
             }
+        }
+
+        if newly_marked {
+            self.decrement_distinct_key_count();
         }
 
         let height = node.height as usize;
@@ -693,6 +713,31 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
 
         self.retire_node(node_offset);
         Ok(())
+    }
+
+    fn decrement_distinct_key_count(&self) {
+        let Some(header) = self.header_ref() else {
+            return;
+        };
+        loop {
+            let current = header.distinct_key_count.load(AtomicOrdering::Acquire);
+            if current == 0 {
+                return;
+            }
+            if header
+                .distinct_key_count
+                .compare_exchange(
+                    current,
+                    current - 1,
+                    AtomicOrdering::AcqRel,
+                    AtomicOrdering::Acquire,
+                )
+                .is_ok()
+            {
+                return;
+            }
+            std::hint::spin_loop();
+        }
     }
 
     fn retire_node(&self, node_offset: u32) {
@@ -1300,5 +1345,101 @@ mod tests {
             0,
             "retired queue should drain after horizon advances"
         );
+    }
+
+    #[test]
+    fn distinct_key_count_tracks_live_keys_with_duplicate_postings() {
+        let list = make_list();
+        let payload_a = 11_u32.to_le_bytes();
+        let payload_b = 22_u32.to_le_bytes();
+
+        list.insert_payload(TestKey(42), payload_a.len() as u16, &payload_a)
+            .expect("first insert failed");
+        assert_eq!(list.distinct_key_count(), 1);
+
+        list.insert_payload(TestKey(42), payload_b.len() as u16, &payload_b)
+            .expect("duplicate-key insert failed");
+        assert_eq!(
+            list.distinct_key_count(),
+            1,
+            "duplicate postings for a key must not increase distinct count"
+        );
+
+        list.insert_payload(TestKey(7), payload_a.len() as u16, &payload_a)
+            .expect("second-key insert failed");
+        assert_eq!(list.distinct_key_count(), 2);
+
+        list.remove_payload(&TestKey(42), payload_a.len() as u16, &payload_a)
+            .expect("first posting remove failed");
+        assert_eq!(
+            list.distinct_key_count(),
+            2,
+            "distinct count should remain while key still has a live posting"
+        );
+
+        list.remove_payload(&TestKey(42), payload_b.len() as u16, &payload_b)
+            .expect("last posting remove failed");
+        assert_eq!(
+            list.distinct_key_count(),
+            1,
+            "distinct count should drop once last posting is removed"
+        );
+
+        list.remove_payload(&TestKey(7), payload_a.len() as u16, &payload_a)
+            .expect("final key remove failed");
+        assert_eq!(list.distinct_key_count(), 0);
+    }
+
+    #[test]
+    fn distinct_key_count_remains_stable_across_churn_cycles() {
+        const KEYS: i64 = 64;
+        const CYCLES: usize = 6;
+        let list = make_list();
+
+        for cycle in 0..CYCLES {
+            for key in 0..KEYS {
+                let payload = ((cycle as u64) << 32 | key as u64).to_le_bytes();
+                list.insert_payload(TestKey(key), payload.len() as u16, &payload)
+                    .expect("insert in churn cycle failed");
+            }
+            assert_eq!(
+                list.distinct_key_count(),
+                KEYS as usize,
+                "distinct key count should match key cardinality after first insert phase"
+            );
+
+            for key in 0..KEYS {
+                let payload = (((cycle + 1) as u64) << 32 | key as u64).to_le_bytes();
+                list.insert_payload(TestKey(key), payload.len() as u16, &payload)
+                    .expect("duplicate insert in churn cycle failed");
+            }
+            assert_eq!(
+                list.distinct_key_count(),
+                KEYS as usize,
+                "adding duplicate postings should not increase distinct key count"
+            );
+
+            for key in 0..KEYS {
+                let payload = ((cycle as u64) << 32 | key as u64).to_le_bytes();
+                list.remove_payload(&TestKey(key), payload.len() as u16, &payload)
+                    .expect("remove of first posting in churn cycle failed");
+            }
+            assert_eq!(
+                list.distinct_key_count(),
+                KEYS as usize,
+                "removing only one posting per key should retain key visibility"
+            );
+
+            for key in 0..KEYS {
+                let payload = (((cycle + 1) as u64) << 32 | key as u64).to_le_bytes();
+                list.remove_payload(&TestKey(key), payload.len() as u16, &payload)
+                    .expect("remove of last posting in churn cycle failed");
+            }
+            assert_eq!(
+                list.distinct_key_count(),
+                0,
+                "distinct key count should return to zero after full cycle teardown"
+            );
+        }
     }
 }
