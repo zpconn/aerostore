@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -91,7 +91,8 @@ fn crash_recovery_restores_occ_rows_and_indexes_from_wal() {
         .expect("failed to spawn wal writer daemon");
     let mut committer = OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_asynchronous(ring.clone());
 
-    let altitude_index = SecondaryIndex::<usize>::new("altitude");
+    let altitude_index =
+        SecondaryIndex::<usize>::new_in_shared("altitude", std::sync::Arc::clone(&shm));
     let mut key_to_row = HashMap::<String, usize>::new();
     let mut next_row_id = 0_usize;
     let mut expected_final = HashMap::<String, TclLikeRow>::new();
@@ -150,7 +151,8 @@ fn crash_recovery_restores_occ_rows_and_indexes_from_wal() {
     assert!(recovery_state.applied_writes >= expected_final.len());
     assert!(recovery_state.max_txid > 0);
 
-    let recovered_index = SecondaryIndex::<usize>::new("altitude");
+    let recovered_index =
+        SecondaryIndex::<usize>::new_in_shared("altitude", std::sync::Arc::clone(&recovered_shm));
     let mut recovered_by_flight = HashMap::<String, (usize, TclLikeRow)>::new();
     for row_id in 0..16 {
         let row = recovered_table
@@ -411,7 +413,8 @@ fn async_wal_daemon_crash_then_restart_replays_tcl_like_upserts_and_indexes() {
         .expect("failed to spawn first wal writer daemon");
     let mut committer = OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_asynchronous(ring.clone());
 
-    let altitude_index = SecondaryIndex::<usize>::new("altitude");
+    let altitude_index =
+        SecondaryIndex::<usize>::new_in_shared("altitude", std::sync::Arc::clone(&shm));
     let mut key_to_row = HashMap::<String, usize>::new();
     let mut next_row_id = 0_usize;
     let mut expected_final = HashMap::<String, TclLikeRow>::new();
@@ -508,7 +511,8 @@ fn async_wal_daemon_crash_then_restart_replays_tcl_like_upserts_and_indexes() {
     assert!(recovery_state.wal_records >= 1);
     assert!(recovery_state.applied_writes >= expected_final.len());
 
-    let recovered_altitude_index = SecondaryIndex::<usize>::new("altitude");
+    let recovered_altitude_index =
+        SecondaryIndex::<usize>::new_in_shared("altitude", std::sync::Arc::clone(&recovered_shm));
     let mut recovered_rows = HashMap::<String, TclLikeRow>::new();
     for row_id in 0..16 {
         let row = recovered_table
@@ -741,7 +745,8 @@ fn replaying_same_wal_into_fresh_tables_is_idempotent() {
 
     let mut committer = OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_synchronous(&wal_path)
         .expect("failed to create synchronous committer for idempotency test");
-    let altitude_index = SecondaryIndex::<usize>::new("altitude");
+    let altitude_index =
+        SecondaryIndex::<usize>::new_in_shared("altitude", std::sync::Arc::clone(&source_shm));
     let mut key_to_row = HashMap::<String, usize>::new();
     let mut next_row_id = 0_usize;
     let mut expected_final = HashMap::<String, TclLikeRow>::new();
@@ -813,6 +818,136 @@ fn replaying_same_wal_into_fresh_tables_is_idempotent() {
             recovered, expected,
             "idempotent replay mismatch for key {}",
             flight
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(data_dir);
+}
+
+#[test]
+fn recovery_large_cardinality_index_parity_matches_table_scan() {
+    const ROWS: usize = 100_000;
+
+    let data_dir = tmp_data_dir();
+    std::fs::create_dir_all(&data_dir).expect("failed to create temp data dir");
+    let wal_path = data_dir.join("large_cardinality_parity.wal");
+
+    let source_shm = Arc::new(
+        ShmArena::new(256 << 20).expect("failed to create source shared memory for parity test"),
+    );
+    let source_table = OccTable::<i32>::new(Arc::clone(&source_shm), ROWS)
+        .expect("failed to create source occ table");
+    for row_id in 0..ROWS {
+        source_table
+            .seed_row(row_id, 0_i32)
+            .expect("failed to seed source parity row");
+    }
+
+    let ring = SharedWalRing::<RING_SLOTS, RING_SLOT_BYTES>::create(Arc::clone(&source_shm))
+        .expect("failed to create parity ring");
+    let daemon =
+        spawn_wal_writer_daemon(ring.clone(), &wal_path).expect("failed to spawn parity daemon");
+    let mut committer = OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_asynchronous(ring.clone());
+
+    for row_id in 0..ROWS {
+        let altitude = (((row_id as i32) * 17) % 45_000) + 500;
+        let mut tx = source_table
+            .begin_transaction()
+            .expect("begin_transaction failed for parity source write");
+        source_table
+            .write(&mut tx, row_id, altitude)
+            .expect("write failed for parity source row");
+        committer
+            .commit(&source_table, &mut tx)
+            .expect("commit failed for parity source row");
+    }
+
+    ring.close().expect("failed to close parity ring");
+    daemon.join().expect("parity daemon did not exit cleanly");
+    drop(source_table);
+    drop(source_shm);
+
+    let recovered_shm = Arc::new(
+        ShmArena::new(256 << 20).expect("failed to create recovery shared memory for parity test"),
+    );
+    let recovered_table = OccTable::<i32>::new(Arc::clone(&recovered_shm), ROWS)
+        .expect("failed to create recovered occ table");
+    for row_id in 0..ROWS {
+        recovered_table
+            .seed_row(row_id, 0_i32)
+            .expect("failed to seed recovered parity row");
+    }
+
+    let recovery = recover_occ_table_from_wal(&recovered_table, &wal_path)
+        .expect("failed to recover parity wal");
+    assert_eq!(
+        recovery.applied_writes, ROWS,
+        "expected one recovered write per parity row"
+    );
+
+    let altitude_index =
+        SecondaryIndex::<usize>::new_in_shared("altitude", Arc::clone(&recovered_shm));
+    let mut altitude_by_row = Vec::with_capacity(ROWS);
+    for row_id in 0..ROWS {
+        let altitude = recovered_table
+            .latest_value(row_id)
+            .expect("latest_value failed for recovered parity row")
+            .expect("recovered parity row unexpectedly missing");
+        altitude_by_row.push(altitude);
+        altitude_index.insert(IndexValue::I64(altitude as i64), row_id);
+    }
+
+    let eq_predicates = [500_i64, 2_345, 11_111, 23_456, 44_999];
+    for altitude in eq_predicates {
+        let indexed: BTreeSet<usize> = altitude_index
+            .lookup(&IndexCompare::Eq(IndexValue::I64(altitude)))
+            .into_iter()
+            .collect();
+        let scanned: BTreeSet<usize> = altitude_by_row
+            .iter()
+            .enumerate()
+            .filter_map(|(row_id, value)| (*value as i64 == altitude).then_some(row_id))
+            .collect();
+        assert_eq!(
+            indexed, scanned,
+            "EQ predicate parity mismatch for altitude={}",
+            altitude
+        );
+    }
+
+    let gt_predicates = [1_000_i64, 10_000, 20_000, 30_000, 40_000];
+    for altitude in gt_predicates {
+        let indexed: BTreeSet<usize> = altitude_index
+            .lookup(&IndexCompare::Gt(IndexValue::I64(altitude)))
+            .into_iter()
+            .collect();
+        let scanned: BTreeSet<usize> = altitude_by_row
+            .iter()
+            .enumerate()
+            .filter_map(|(row_id, value)| (*value as i64 > altitude).then_some(row_id))
+            .collect();
+        assert_eq!(
+            indexed, scanned,
+            "GT predicate parity mismatch for altitude={}",
+            altitude
+        );
+    }
+
+    let lt_predicates = [1_000_i64, 10_000, 20_000, 30_000, 40_000];
+    for altitude in lt_predicates {
+        let indexed: BTreeSet<usize> = altitude_index
+            .lookup(&IndexCompare::Lt(IndexValue::I64(altitude)))
+            .into_iter()
+            .collect();
+        let scanned: BTreeSet<usize> = altitude_by_row
+            .iter()
+            .enumerate()
+            .filter_map(|(row_id, value)| ((*value as i64) < altitude).then_some(row_id))
+            .collect();
+        assert_eq!(
+            indexed, scanned,
+            "LT predicate parity mismatch for altitude={}",
+            altitude
         );
     }
 

@@ -261,7 +261,10 @@ fn run_write_skew_with_planner_reads(mode: Mode) {
         .seed_row(1, OnCallRow::new("DOC_B", 1))
         .expect("failed to seed row 1");
 
-    let on_call_index = Arc::new(SecondaryIndex::<usize>::new("on_call"));
+    let on_call_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "on_call",
+        Arc::clone(&shm),
+    ));
     on_call_index.insert(IndexValue::I64(1), 0);
     on_call_index.insert(IndexValue::I64(1), 1);
     let catalog = IndexCatalog::new().with_index("on_call", on_call_index);
@@ -454,7 +457,10 @@ fn run_write_skew_with_tcl_like_keyed_upserts(mode: Mode) {
     key_index.insert("DOC_A".to_string(), 0);
     key_index.insert("DOC_B".to_string(), 1);
 
-    let on_call_index = Arc::new(SecondaryIndex::<usize>::new("on_call"));
+    let on_call_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "on_call",
+        Arc::clone(&shm),
+    ));
     on_call_index.insert(IndexValue::I64(1), 0);
     on_call_index.insert(IndexValue::I64(1), 1);
     let catalog = IndexCatalog::new().with_index("on_call", Arc::clone(&on_call_index));

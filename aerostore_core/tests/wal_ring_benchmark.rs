@@ -351,7 +351,7 @@ fn run_synchronous_tcl_like_benchmark(wal_path: &Path) -> f64 {
     let table = OccTable::<TclBenchRow>::new(Arc::clone(&shm), TCL_BENCH_KEYS)
         .expect("failed to create sync tcl-like occ table");
     let key_index = SkipMap::<String, usize>::new();
-    let altitude_index = SecondaryIndex::<usize>::new("altitude");
+    let altitude_index = SecondaryIndex::<usize>::new_in_shared("altitude", Arc::clone(&shm));
 
     for row_id in 0..TCL_BENCH_KEYS {
         let flight = format!("FLT{:03}", row_id);
@@ -406,7 +406,7 @@ fn run_asynchronous_tcl_like_benchmark(wal_path: &Path) -> f64 {
     let table = OccTable::<TclBenchRow>::new(Arc::clone(&shm), TCL_BENCH_KEYS)
         .expect("failed to create async tcl-like occ table");
     let key_index = SkipMap::<String, usize>::new();
-    let altitude_index = SecondaryIndex::<usize>::new("altitude");
+    let altitude_index = SecondaryIndex::<usize>::new_in_shared("altitude", Arc::clone(&shm));
 
     for row_id in 0..TCL_BENCH_KEYS {
         let flight = format!("FLT{:03}", row_id);

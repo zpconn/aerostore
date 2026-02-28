@@ -8,7 +8,7 @@ It combines lock-free data structures, PostgreSQL-style concurrency control idea
 As of February 27, 2026, this repository contains:
 
 - V1 in-process MVCC + WAL/checkpoint recovery path.
-- V2 shared-memory OCC/SSI engine with ProcArray, savepoints, skip-list indexing, WAL ring, and WAL writer daemon.
+- V2 shared-memory OCC/SSI engine with ProcArray, savepoints, shared-memory lock-free secondary indexing, WAL ring, and WAL writer daemon.
 - V3 logical WAL + snapshot recovery path with strict corruption detection and crash-recovery validation.
 
 ## How It Works (Plain Language)
@@ -39,7 +39,7 @@ Execution controls:
 
 Why queries are fast:
 
-- Indexed predicates route to `crossbeam_skiplist::SkipMap`/secondary indexes first.
+- Indexed predicates route to shared-memory lock-free `SecondaryIndex` scans first.
 - Unindexed predicates use sequential scan fallback.
 - Every candidate is filtered through MVCC/OCC visibility, so results are snapshot-correct.
 - Residual filters are applied after candidate narrowing.
@@ -59,7 +59,8 @@ Why queries are fast:
 - `arena.rs`: V1 arena and version-chain primitives.
 - `txn.rs`: V1 transaction manager and snapshot model.
 - `mvcc.rs`: V1 MVCC visibility rules and table helpers.
-- `index.rs`: secondary index abstraction.
+- `index.rs`: index value/compare abstraction and `SecondaryIndex` export.
+- `shm_index.rs`: shared-memory lock-free secondary index (`AtomicU32` + `RelPtr` links) with deferred cross-process GC.
 - `query.rs`: strongly typed query builder/executor.
 - `stapi_parser.rs`: STAPI parser (nom combinators).
 - `planner.rs`: AST-to-plan compiler with index routing.
@@ -95,10 +96,10 @@ Why queries are fast:
 - SSI conflict validation at commit.
 - Abandoned/superseded write intents are recycled in shared arena free-list.
 
-### 4) Planner and Index Routing (`stapi_parser.rs`, `planner.rs`, `query.rs`)
+### 4) Planner and Index Routing (`stapi_parser.rs`, `planner.rs`, `query.rs`, `shm_index.rs`)
 
 - STAPI strings compile into typed execution plans.
-- Indexable predicates (`=`/`>`/`<`) route to index scans.
+- Indexable predicates (`=`/`>`/`<`) route to shared-memory index scans.
 - Unindexed predicates run as residual filters.
 - Reads are tracked for SSI validation.
 
@@ -282,6 +283,18 @@ Query/index planner benchmark suite:
 cargo test -p aerostore_core --release --test query_index_benchmark -- --nocapture --test-threads=1
 ```
 
+Shared-memory secondary index benchmark suite:
+
+```bash
+cargo test -p aerostore_core --release --test shm_index_benchmark -- --nocapture --test-threads=1
+```
+
+Includes hard performance gates:
+
+- `Eq` lookup vs table scan (`>= 3x`)
+- range lookup vs table scan (`>= 2x`)
+- forked multi-process contention throughput (`>= 20%` of single-process baseline)
+
 ## Reliability Coverage Matrix
 
 - `tests/test_concurrency.rs`
@@ -306,6 +319,7 @@ cargo test -p aerostore_core --release --test query_index_benchmark -- --nocaptu
   - daemon crash/restart replayability
   - malformed/truncated WAL handling
   - replay idempotency and throughput checks
+  - large-cardinality index parity (`Eq`/`Gt`/`Lt`) vs table scan after recovery
 - `tests/logical_recovery.rs`
   - hard-exit crash recovery from `snapshot.dat` + `aerostore_logical.wal`
   - mixed upsert/update/delete replay correctness
@@ -325,10 +339,20 @@ cargo test -p aerostore_core --release --test query_index_benchmark -- --nocaptu
   - shared free-list stress
 - `tests/shm_fork.rs`
   - parent/child `RelPtr` CAS mutation sanity
+- `tests/shm_index_fork.rs`
+  - parent-owned shared secondary index with concurrent child inserts and parent traversal visibility proof
+- `tests/shm_index_contention.rs`
+  - cross-process same-key duplicate insert/remove contention with exact posting-set verification
+- `tests/shm_index_gc_horizon.rs`
+  - retired-node reclamation blocked by active snapshot horizon and released after transaction end
+- `tests/shm_index_bounds.rs`
+  - oversized key and oversized row-id payload rejection without index mutation
+- `tests/shm_index_benchmark.rs`
+  - strict shared-index performance gates for Eq/range/forked contention paths
 - `tests/shm_benchmark.rs`
   - forked range scan timing
 - `tests/query_index_benchmark.rs`
-  - typed query vs STAPI planner performance paths
+  - typed query vs STAPI planner performance paths (shared secondary index route)
 - `tests/ingest_watch_ttl.rs`
   - TSV ingest, watch notifications, TTL sweeper behavior
 - `tests/speedtable_arena_perf.rs`
@@ -341,6 +365,7 @@ cargo test -p aerostore_core --release --test query_index_benchmark -- --nocaptu
 ## Current Status
 
 - Shared-memory OCC + ProcArray + savepoints are integrated and tested.
+- SecondaryIndex is now fully shared-memory-backed and cross-process visible under `fork()`.
 - Logical WAL + snapshot recovery is integrated at the core level with strict corruption detection.
 - Tcl bridge is integrated with OCC ring durability path and planner execution.
 - Legacy V1 durable path remains available for compatibility/testing.

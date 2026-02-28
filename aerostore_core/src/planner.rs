@@ -471,7 +471,10 @@ mod tests {
             FlightRow::new(35_000, "UAL555", "B77W"),
         ];
 
-        let alt_index = Arc::new(SecondaryIndex::<usize>::new("alt"));
+        let alt_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+            "alt",
+            Arc::clone(&shm),
+        ));
         for (row_id, row) in rows.into_iter().enumerate() {
             table
                 .seed_row(row_id, row)
