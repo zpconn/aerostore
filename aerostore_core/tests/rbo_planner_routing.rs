@@ -359,14 +359,16 @@ fn rbo_executes_negative_residual_predicates_correctly_with_index_driver() {
 }
 
 #[test]
-fn rbo_tie_breaker_prefers_dest_eq_over_altitude_eq() {
+fn rbo_prefers_higher_distinct_cardinality_for_eq_routes() {
     let (table, optimizer) = seed_optimizer();
     let plan = optimizer
         .compile_from_stapi("-compare {{= altitude 11000} {= dest KORD}}")
         .expect("failed to compile eq tie-break query");
 
     assert_eq!(plan.route_kind(), RouteKind::IndexExactMatch);
-    assert_eq!(plan.driver_field(), Some("dest"));
+    assert_eq!(plan.driver_field(), Some("altitude"));
+    let residual = plan.residual_filter_fields();
+    assert_eq!(residual, vec!["dest"]);
 
     let mut tx = table.begin_transaction().expect("begin_transaction failed");
     let rows = plan

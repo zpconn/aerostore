@@ -7,6 +7,9 @@ use crate::execution::{PrimaryKeyMapError, ShmPrimaryKeyMap};
 use crate::filters::{compile_filter, field_name, RowPredicate};
 use crate::index::{IndexCompare, IndexValue, SecondaryIndex};
 use crate::occ::Error as OccError;
+use crate::planner_cardinality::{
+    best_equality_candidate_index, EqualityCandidate, EqualityCandidateKind,
+};
 use crate::stapi_parser::{parse_stapi_query, Filter, ParseError, Query, Value};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -280,74 +283,70 @@ impl<T: StapiRow> RuleBasedOptimizer<T> {
         query: &Query,
     ) -> Result<(RouteKind, AccessPath, Option<usize>), PlannerError> {
         #[derive(Clone)]
-        struct Candidate {
-            precedence: u8,
+        struct AccessCandidate {
+            filter_idx: usize,
+            route_kind: RouteKind,
+            access_path: AccessPath,
+        }
+
+        #[derive(Clone)]
+        struct RangeCandidate {
             rank: u32,
             filter_idx: usize,
             route_kind: RouteKind,
             access_path: AccessPath,
         }
 
-        fn is_better(candidate: &Candidate, best: &Candidate) -> bool {
-            (candidate.precedence, candidate.rank, candidate.filter_idx)
-                < (best.precedence, best.rank, best.filter_idx)
+        fn is_better_range(candidate: &RangeCandidate, best: &RangeCandidate) -> bool {
+            (candidate.rank, candidate.filter_idx) < (best.rank, best.filter_idx)
         }
 
-        let mut best: Option<Candidate> = None;
+        let mut equality_candidates: Vec<EqualityCandidate<AccessCandidate>> = Vec::new();
+        let mut best_range: Option<RangeCandidate> = None;
         for (idx, filter) in query.filters.iter().enumerate() {
             match filter {
                 Filter::Null { .. } | Filter::NotNull { .. } => {}
                 Filter::Eq { field, value } => {
-                    // Rule 1: exact match on the primary key routes to the O(1) shared PK map.
-                    if field.as_str() == self.catalog.primary_key_field()
-                        && self.catalog.primary_key_map().is_some()
-                    {
-                        if let Some(key) = value_to_primary_key(value) {
-                            let candidate = Candidate {
-                                precedence: 1,
-                                rank: 0,
-                                filter_idx: idx,
-                                route_kind: RouteKind::PrimaryKeyLookup,
-                                access_path: AccessPath::PrimaryKeyEq {
-                                    field: field.clone(),
-                                    key,
-                                },
-                            };
-                            if best
-                                .as_ref()
-                                .map(|b| is_better(&candidate, b))
-                                .unwrap_or(true)
-                            {
-                                best = Some(candidate);
+                    if field.as_str() == self.catalog.primary_key_field() {
+                        if let Some(pk_map) = self.catalog.primary_key_map() {
+                            if let Some(key) = value_to_primary_key(value) {
+                                equality_candidates.push(EqualityCandidate {
+                                    filter_idx: idx,
+                                    distinct_key_count: pk_map.distinct_key_count(),
+                                    kind: EqualityCandidateKind::PrimaryKey,
+                                    payload: AccessCandidate {
+                                        filter_idx: idx,
+                                        route_kind: RouteKind::PrimaryKeyLookup,
+                                        access_path: AccessPath::PrimaryKeyEq {
+                                            field: field.clone(),
+                                            key,
+                                        },
+                                    },
+                                });
                             }
                         }
                     }
 
-                    // Rule 2: exact match on an indexed column.
-                    if self.catalog.contains_index(field.as_str()) {
+                    if let Some(index) = self.catalog.get_index(field.as_str()) {
                         let indexed_value = value_to_index(value).ok_or_else(|| {
                             PlannerError::InvalidIndexedValue(format!(
                                 "field '{}' cannot use this value in an indexed equality route",
                                 field
                             ))
                         })?;
-                        let candidate = Candidate {
-                            precedence: 2,
-                            rank: self.catalog.rank_for(field.as_str()),
+                        equality_candidates.push(EqualityCandidate {
                             filter_idx: idx,
-                            route_kind: RouteKind::IndexExactMatch,
-                            access_path: AccessPath::Indexed {
-                                field: field.clone(),
-                                compare: IndexCompare::Eq(indexed_value),
+                            distinct_key_count: index.distinct_key_count(),
+                            kind: EqualityCandidateKind::SecondaryIndex,
+                            payload: AccessCandidate {
+                                filter_idx: idx,
+                                route_kind: RouteKind::IndexExactMatch,
+                                access_path: AccessPath::Indexed {
+                                    field: field.clone(),
+                                    compare: IndexCompare::Eq(indexed_value),
+                                },
                             },
-                        };
-                        if best
-                            .as_ref()
-                            .map(|b| is_better(&candidate, b))
-                            .unwrap_or(true)
-                        {
-                            best = Some(candidate);
-                        }
+                        });
                     }
                 }
                 Filter::Ne { .. } => {}
@@ -359,8 +358,7 @@ impl<T: StapiRow> RuleBasedOptimizer<T> {
                                 field
                             ))
                         })?;
-                        let candidate = Candidate {
-                            precedence: 3,
+                        let candidate = RangeCandidate {
                             rank: self.catalog.rank_for(field.as_str()),
                             filter_idx: idx,
                             route_kind: RouteKind::IndexRangeScan,
@@ -369,12 +367,12 @@ impl<T: StapiRow> RuleBasedOptimizer<T> {
                                 compare: IndexCompare::Gt(indexed_value),
                             },
                         };
-                        if best
+                        if best_range
                             .as_ref()
-                            .map(|b| is_better(&candidate, b))
+                            .map(|b| is_better_range(&candidate, b))
                             .unwrap_or(true)
                         {
-                            best = Some(candidate);
+                            best_range = Some(candidate);
                         }
                     }
                 }
@@ -386,8 +384,7 @@ impl<T: StapiRow> RuleBasedOptimizer<T> {
                                 field
                             ))
                         })?;
-                        let candidate = Candidate {
-                            precedence: 3,
+                        let candidate = RangeCandidate {
                             rank: self.catalog.rank_for(field.as_str()),
                             filter_idx: idx,
                             route_kind: RouteKind::IndexRangeScan,
@@ -396,12 +393,12 @@ impl<T: StapiRow> RuleBasedOptimizer<T> {
                                 compare: IndexCompare::Lt(indexed_value),
                             },
                         };
-                        if best
+                        if best_range
                             .as_ref()
-                            .map(|b| is_better(&candidate, b))
+                            .map(|b| is_better_range(&candidate, b))
                             .unwrap_or(true)
                         {
-                            best = Some(candidate);
+                            best_range = Some(candidate);
                         }
                     }
                 }
@@ -413,8 +410,7 @@ impl<T: StapiRow> RuleBasedOptimizer<T> {
                                 field
                             ))
                         })?;
-                        let candidate = Candidate {
-                            precedence: 3,
+                        let candidate = RangeCandidate {
                             rank: self.catalog.rank_for(field.as_str()),
                             filter_idx: idx,
                             route_kind: RouteKind::IndexRangeScan,
@@ -423,12 +419,12 @@ impl<T: StapiRow> RuleBasedOptimizer<T> {
                                 compare: IndexCompare::Lte(indexed_value),
                             },
                         };
-                        if best
+                        if best_range
                             .as_ref()
-                            .map(|b| is_better(&candidate, b))
+                            .map(|b| is_better_range(&candidate, b))
                             .unwrap_or(true)
                         {
-                            best = Some(candidate);
+                            best_range = Some(candidate);
                         }
                     }
                 }
@@ -440,8 +436,7 @@ impl<T: StapiRow> RuleBasedOptimizer<T> {
                                 field
                             ))
                         })?;
-                        let candidate = Candidate {
-                            precedence: 3,
+                        let candidate = RangeCandidate {
                             rank: self.catalog.rank_for(field.as_str()),
                             filter_idx: idx,
                             route_kind: RouteKind::IndexRangeScan,
@@ -450,12 +445,12 @@ impl<T: StapiRow> RuleBasedOptimizer<T> {
                                 compare: IndexCompare::Gte(indexed_value),
                             },
                         };
-                        if best
+                        if best_range
                             .as_ref()
-                            .map(|b| is_better(&candidate, b))
+                            .map(|b| is_better_range(&candidate, b))
                             .unwrap_or(true)
                         {
-                            best = Some(candidate);
+                            best_range = Some(candidate);
                         }
                     }
                 }
@@ -463,15 +458,24 @@ impl<T: StapiRow> RuleBasedOptimizer<T> {
             }
         }
 
-        if let Some(candidate) = best {
-            Ok((
+        if let Some(best_idx) = best_equality_candidate_index(&equality_candidates) {
+            let candidate = &equality_candidates[best_idx];
+            return Ok((
+                candidate.payload.route_kind,
+                candidate.payload.access_path.clone(),
+                Some(candidate.payload.filter_idx),
+            ));
+        }
+
+        if let Some(candidate) = best_range {
+            return Ok((
                 candidate.route_kind,
                 candidate.access_path,
                 Some(candidate.filter_idx),
-            ))
-        } else {
-            Ok((RouteKind::FullScan, AccessPath::FullScan, None))
+            ));
         }
+
+        Ok((RouteKind::FullScan, AccessPath::FullScan, None))
     }
 }
 

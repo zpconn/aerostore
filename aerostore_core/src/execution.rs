@@ -1,5 +1,5 @@
 use std::fmt;
-use std::sync::atomic::{AtomicU32, Ordering as AtomicOrdering};
+use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering as AtomicOrdering};
 use std::sync::Arc;
 
 use crate::filters::compare_optional;
@@ -64,6 +64,7 @@ struct PkMapHeader {
     bucket_count: u32,
     row_capacity: u32,
     next_row_id: AtomicU32,
+    distinct_key_count: AtomicUsize,
 }
 
 impl PkMapHeader {
@@ -73,6 +74,7 @@ impl PkMapHeader {
             bucket_count,
             row_capacity,
             next_row_id: AtomicU32::new(0),
+            distinct_key_count: AtomicUsize::new(0),
         }
     }
 }
@@ -175,6 +177,13 @@ impl ShmPrimaryKeyMap {
             .unwrap_or(0)
     }
 
+    #[inline]
+    pub fn distinct_key_count(&self) -> usize {
+        self.header_ref()
+            .map(|header| header.distinct_key_count.load(AtomicOrdering::Acquire))
+            .unwrap_or(0)
+    }
+
     pub fn get(&self, key: &str) -> Result<Option<usize>, PrimaryKeyMapError> {
         let key_bytes = key.as_bytes();
         if key_bytes.len() > PK_INLINE_BYTES {
@@ -238,6 +247,9 @@ impl ShmPrimaryKeyMap {
                 .is_ok()
             {
                 self.bump_next_row_id(row_id_u32.saturating_add(1))?;
+                header
+                    .distinct_key_count
+                    .fetch_add(1, AtomicOrdering::AcqRel);
                 return Ok(row_id_u32 as usize);
             }
 
@@ -288,6 +300,9 @@ impl ShmPrimaryKeyMap {
                 )
                 .is_ok()
             {
+                self.header_ref()?
+                    .distinct_key_count
+                    .fetch_add(1, AtomicOrdering::AcqRel);
                 return Ok(reserved_row_id as usize);
             }
 

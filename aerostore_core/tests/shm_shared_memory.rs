@@ -263,6 +263,11 @@ fn forked_primary_key_map_updates_are_cross_process_visible() {
         race_id as u32,
         "child 3 observed unexpected row id for contended key"
     );
+    assert_eq!(
+        pk_map.distinct_key_count(),
+        4,
+        "distinct key count should include each novel key once under cross-process contention"
+    );
 }
 
 #[test]

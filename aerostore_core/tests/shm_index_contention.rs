@@ -12,6 +12,8 @@ const ROW_IDS: u32 = 2_000;
 const INSERT_WORKERS: u32 = 2;
 const REMOVE_WORKERS: u32 = 2;
 const READER_WORKERS: u32 = 3;
+const STRESS_WORKERS: u32 = 8;
+const STRESS_KEYS: u32 = 96;
 
 #[repr(C, align(64))]
 struct SharedPhase {
@@ -23,6 +25,12 @@ struct SharedPhase {
     reader_done: AtomicU32,
     reader_samples: AtomicU64,
     reader_bad_hits: AtomicU64,
+}
+
+#[repr(C, align(64))]
+struct StartGate {
+    ready: AtomicU32,
+    start: AtomicU32,
 }
 
 #[derive(Clone, Copy)]
@@ -136,6 +144,98 @@ fn cross_process_same_key_insert_remove_contention_with_duplicates_is_exact() {
     );
 }
 
+#[test]
+fn cross_process_distinct_key_count_matches_live_keyspace_after_stress() {
+    let shm = Arc::new(ShmArena::new(64 << 20).expect("failed to allocate shared arena"));
+    let index = SecondaryIndex::<u32>::new_in_shared("flight_id", Arc::clone(&shm));
+    let gate_ptr = shm
+        .chunked_arena()
+        .alloc(StartGate {
+            ready: AtomicU32::new(0),
+            start: AtomicU32::new(0),
+        })
+        .expect("failed to allocate stress start gate");
+    let gate_offset = gate_ptr.load(Ordering::Acquire);
+
+    let mut pids = Vec::new();
+    for worker_id in 0..STRESS_WORKERS {
+        pids.push(spawn_stress_worker(index.clone(), gate_offset, worker_id));
+    }
+
+    let gate = gate_ptr
+        .as_ref(shm.mmap_base())
+        .expect("parent failed to resolve stress start gate");
+    wait_until(
+        || gate.ready.load(Ordering::Acquire) == STRESS_WORKERS,
+        Duration::from_secs(5),
+        "stress workers did not reach ready barrier in time",
+    );
+    gate.start.store(1, Ordering::Release);
+
+    for pid in pids {
+        wait_for_child(pid);
+    }
+
+    let expected_keys: BTreeSet<String> = (0..STRESS_KEYS).map(stress_key).collect();
+    assert_eq!(
+        index.distinct_key_count(),
+        expected_keys.len(),
+        "distinct key count should match deterministic live key set after stress"
+    );
+
+    let entries = index.traverse();
+    assert_eq!(
+        entries.len(),
+        expected_keys.len(),
+        "traversal cardinality mismatch after stress"
+    );
+
+    for (value, row_ids) in entries {
+        let key = match value {
+            IndexValue::String(key) => key,
+            other => panic!("expected string key in stress traversal, got {:?}", other),
+        };
+        assert!(
+            expected_keys.contains(&key),
+            "unexpected key {} remained live after stress",
+            key
+        );
+
+        let key_id = parse_stress_key(&key);
+        let observed_rows: BTreeSet<u32> = row_ids.into_iter().collect();
+        assert_eq!(
+            observed_rows.is_empty(),
+            false,
+            "each retained key should have at least one live posting"
+        );
+
+        let mut has_even_worker = false;
+        for row_id in observed_rows {
+            assert!(
+                row_id < STRESS_WORKERS * STRESS_KEYS,
+                "row_id {} exceeded stress-domain bounds",
+                row_id
+            );
+            assert_eq!(
+                row_id % STRESS_KEYS,
+                key_id,
+                "row_id {} does not map to key {}",
+                row_id,
+                key
+            );
+            let worker_id = row_id / STRESS_KEYS;
+            if worker_id % 2 == 0 {
+                has_even_worker = true;
+            }
+        }
+        assert!(
+            has_even_worker,
+            "key {} should retain at least one non-remover worker posting",
+            key
+        );
+    }
+}
+
 fn spawn_worker(
     index: SecondaryIndex<u32>,
     phase_offset: u32,
@@ -204,6 +304,46 @@ fn spawn_worker(
     }
 }
 
+fn spawn_stress_worker(
+    index: SecondaryIndex<u32>,
+    gate_offset: u32,
+    worker_id: u32,
+) -> rustix::process::Pid {
+    // SAFETY:
+    // fork is used to validate cross-process shared-memory index behavior.
+    let fork_result = unsafe { rustix::runtime::fork() }.expect("fork failed");
+    match fork_result {
+        rustix::runtime::Fork::Child(_) => {
+            let Some(gate) = RelPtr::<StartGate>::from_offset(gate_offset)
+                .as_ref(index.shared_arena().mmap_base())
+            else {
+                // SAFETY:
+                // child exits immediately without unwinding.
+                unsafe { libc::_exit(111) };
+            };
+
+            gate.ready.fetch_add(1, Ordering::AcqRel);
+            while gate.start.load(Ordering::Acquire) == 0 {
+                std::hint::spin_loop();
+            }
+
+            for key_id in 0..STRESS_KEYS {
+                let key = stress_key(key_id);
+                let row_id = worker_id * STRESS_KEYS + key_id;
+                index.insert(IndexValue::String(key.clone()), row_id);
+                if worker_id % 2 == 1 {
+                    index.remove(&IndexValue::String(key), &row_id);
+                }
+            }
+
+            // SAFETY:
+            // child exits immediately without unwinding.
+            unsafe { libc::_exit(0) };
+        }
+        rustix::runtime::Fork::Parent(pid) => pid,
+    }
+}
+
 fn wait_for_child(pid: rustix::process::Pid) {
     let status = rustix::process::waitpid(Some(pid), rustix::process::WaitOptions::empty())
         .expect("waitpid failed")
@@ -226,4 +366,15 @@ where
         assert!(start.elapsed() < timeout, "{message}");
         std::thread::sleep(Duration::from_millis(1));
     }
+}
+
+fn stress_key(key_id: u32) -> String {
+    format!("FLT{:03}", key_id)
+}
+
+fn parse_stress_key(key: &str) -> u32 {
+    key.strip_prefix("FLT")
+        .expect("stress key missing FLT prefix")
+        .parse::<u32>()
+        .expect("stress key suffix was not numeric")
 }

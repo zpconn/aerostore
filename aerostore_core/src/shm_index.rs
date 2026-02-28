@@ -412,6 +412,11 @@ where
         self.skiplist.reclaimed_nodes()
     }
 
+    #[inline]
+    pub fn distinct_key_count(&self) -> usize {
+        self.skiplist.distinct_key_count()
+    }
+
     fn encode_row_id(row_id: &RowId) -> Result<(u16, [u8; ROWID_INLINE_BYTES]), ShmIndexError> {
         let encoded = bincode::serialize(row_id).map_err(|_| ShmIndexError::RowIdTooLarge {
             len: ROWID_INLINE_BYTES + 1,
