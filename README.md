@@ -228,7 +228,64 @@ cargo test -p aerostore_core --release --test wal_ring_benchmark -- --test-threa
 cargo test -p aerostore_core --release --test occ_checkpoint_benchmark -- --test-threads=1 --nocapture
 cargo test -p aerostore_core --release --test query_index_benchmark -- --test-threads=1 --nocapture
 cargo test -p aerostore_core --release --test shm_index_benchmark -- --test-threads=1 --nocapture
+cargo test -p aerostore_core --release --test shm_benchmark -- --test-threads=1 --nocapture
+cargo test -p aerostore_core --release --test wal_crash_recovery benchmark_occ_wal_replay_startup_throughput -- --test-threads=1 --nocapture
+cargo test -p aerostore_core --release --test occ_partitioned_lock_striping_benchmark -- --ignored --test-threads=1 --nocapture
+cargo test -p aerostore_tcl --release --test config_checkpoint_integration benchmark_tcl_synchronous_commit_modes -- --test-threads=1 --nocapture
 ```
+
+### Latest Full Benchmark Sweep
+Run timestamp: `2026-03-01 23:50:21 UTC`.
+
+All values below are host-specific and should be used primarily for trend/regression comparison on the same class of machine.
+
+#### Criterion Benches
+| Benchmark | Result | Status | What it means |
+|---|---:|---|---|
+| `procarray_snapshot/10` | `40.98 ns` | Pass | Snapshot creation is extremely fast at low txid values. |
+| `procarray_snapshot/10000000` | `40.93 ns` | Pass | Snapshot creation remains constant-time even at large txid values. |
+| `procarray_snapshot_proof` | `delta=0.17 ns` | Pass | Confirms txid growth does not materially change snapshot latency. |
+| `wal_delta_throughput` one-column | `reduction=94.12%` | Pass | Delta WAL cuts byte volume heavily for single-field updates (well above the 90% gate). |
+| `wal_delta_throughput` two-column | `reduction=92.52%` | Pass | Delta WAL still saves most bytes when mutating two fields (above 75% gate). |
+| `wal_delta_throughput` four-column | `reduction=90.93%` | Pass | Delta WAL keeps strong volume reduction for wider updates (above 60% gate). |
+| `wal_delta_throughput/full_row_100k_one_col` | `[4.2999, 4.3229] ms` | Pass | Baseline full-row serialization latency for 100k single-column updates. |
+| `wal_delta_throughput/delta_row_100k_one_col` | `[69.027, 69.094] ms` | Pass | Delta encoding is CPU-heavier but writes far fewer bytes; byte savings are the primary objective. |
+| `wal_delta_throughput/full_row_100k_two_col` | `[4.3231, 4.3416] ms` | Pass | Full-row baseline for two-column update profile. |
+| `wal_delta_throughput/delta_row_100k_two_col` | `[71.924, 72.260] ms` | Pass | Delta CPU cost for two-column updates; still meets byte-reduction targets. |
+| `wal_delta_throughput/full_row_100k_four_col` | `[4.8055, 4.8096] ms` | Pass | Full-row baseline for four-column profile. |
+| `wal_delta_throughput/delta_row_100k_four_col` | `[74.973, 75.532] ms` | Pass | Delta CPU cost for wider updates; byte volume remains significantly reduced. |
+| `tmpfs_warm_restart/warm_attach_boot` | `[57.440, 57.776] us` | Pass | Warm attach startup path is sub-0.1ms and effectively O(1). |
+| `tmpfs_warm_restart/cold_boot_fixture_build` | `[1.8466, 1.8596] ms` | Pass | Cold fixture bootstrap is materially slower than warm attach as expected. |
+| `tmpfs_warm_restart/post_restart_update_throughput` | `[1.6412, 1.6658] ms` | Pass | Immediate post-restart write path remains fast and stable. |
+| `shm_skiplist_adversarial` | `large_p99_ns=5200` | **Fail** | Tail lookup latency exceeded the strict `<5000ns` budget in this run; benchmark failed with assertion. |
+
+#### Core Benchmark-Style Tests
+| Benchmark | Result | Status | What it means |
+|---|---:|---|---|
+| `benchmark_occ_checkpoint_latency_by_cardinality` | `10k: 2.989 ms`, `100k: 4.918 ms`, `1M: 24.674 ms` | Pass | Checkpointing scales well with row count; per-row cost drops at larger batches. |
+| `benchmark_logical_snapshot_and_replay_recovery_by_cardinality` | `10k: 22.261 ms`, `100k: 173.999 ms`, `1M: 1.775 s` | Pass | Logical snapshot+WAL replay remains linear and stable across cardinalities. |
+| `benchmark_shared_index_indexed_range_scan_with_sort_and_limit` | `ingest 100k in 50.581 ms; 512 scans in 828.002 ms` | Pass | Shared index supports high-ingest plus concurrent indexed range scanning. |
+| `benchmark_stapi_null_notnull_residual_filters` | `1.129 s (40 passes, 40k rows)` | Pass | Measures cost of null/notnull residual predicate execution. |
+| `benchmark_stapi_parse_compile_execute_vs_typed_query_path` | `typed=104.819 ms`, `stapi=27.025 ms` | Pass | In this scenario, STAPI parse+compile+execute path outperformed typed path. |
+| `benchmark_stapi_rbo_cardinality_trap_flight_id_over_aircraft_type` | `30.707 us` | Pass | Planner cardinality heuristics route to the selective path efficiently. |
+| `benchmark_stapi_rbo_pk_point_lookup_vs_full_scan` | `pk=14.906 us`, `scan=16.196 s` | Pass | Primary-key routing avoids catastrophic full-scan cost. |
+| `benchmark_stapi_rbo_tiebreak_dest_over_altitude` | `1.441 s` | Pass | Evaluates route tie-break behavior under competing predicates. |
+| `benchmark_stapi_residual_negative_filters_with_index_driver` | `1.797 s` | Pass | Measures negative/residual filtering overhead after index-driven candidate selection. |
+| `benchmark_tcl_bridge_style_stapi_assembly_compile_execute` | `8.919 s` | Pass | End-to-end Tcl-style STAPI assembly+compile+execute overhead benchmark. |
+| `benchmark_tcl_style_alias_match_desc_offset_limit_path` | `10.966 s` | Pass | Complex alias/match/sort/offset/limit Tcl path throughput measurement. |
+| `benchmark_shm_allocation_throughput` | `106,099,805 rows/s` | Pass | Shared arena allocator supports very high allocation throughput. |
+| `benchmark_forked_range_scan_latency` | `258,687 ns`, `463,881,061 rows/s` | Pass | Cross-process shared-memory range scans remain very fast. |
+| `benchmark_shm_index_eq_lookup_vs_scan` | `speedup=675.82x` | Pass | Exact-match index lookups massively outperform table scans. |
+| `benchmark_shm_index_range_lookup_vs_scan` | `speedup=2.22x` | Pass | Range index lookups outperform scan baseline for tested workload. |
+| `benchmark_shm_index_forked_contention_throughput` | `single=7.77M tps`, `forked=6.06M tps`, `ratio=0.78` | Pass | Multi-process contention reduces throughput, but shared index remains high-throughput. |
+| `benchmark_async_synchronous_commit_modes` | `sync=1248.76 tps`, `async=1,474,792.26 tps`, `1181.00x` | Pass | Async WAL commit path provides massive throughput uplift vs fsync-heavy sync mode. |
+| `benchmark_async_synchronous_commit_modes_parallel_disjoint_keys` | `sync=1218.10 tps`, `async=2,017,026.73 tps`, `1655.88x` | Pass | Async mode scales strongly on parallel disjoint-key workload. |
+| `benchmark_async_synchronous_commit_modes_savepoint_churn` | `sync=1330.95 tps`, `async=1,090,306.37 tps`, `819.20x` | Pass | Savepoint-heavy churn remains far faster in async mode. |
+| `benchmark_async_synchronous_commit_modes_tcl_like_keyed_upserts` | `sync=1235.70 tps`, `async=706,446.53 tps`, `571.70x` | Pass | Tcl-like keyed upsert pattern strongly benefits from async commit mode. |
+| `benchmark_logical_async_vs_sync_commit_modes` | `sync=1052.27 tps`, `async=927,556.11 tps`, `881.48x` | Pass | Logical WAL path also shows large async advantage. |
+| `benchmark_occ_wal_replay_startup_throughput` | `4,235,384.31 writes/s` | Pass | OCC WAL replay startup path can apply writes at multi-million writes/sec. |
+| `benchmark_partitioned_occ_lock_striping_multi_process_scaling` | `contended=3.00 tps`, `disjoint=523,476.17 tps`, `174,528.96x` | Pass | Demonstrates lock-striping impact: hot-key contention collapses throughput; disjoint keys scale. |
+| `benchmark_tcl_synchronous_commit_modes` | `on=1123.60 tps`, `off=300,000.00 tps`, `267.0x` | Pass | Tcl bridge sees large throughput gain when synchronous commit is disabled. |
 
 ## Operational Notes
 Durability artifacts (under data dir):
