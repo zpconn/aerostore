@@ -192,9 +192,50 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         })
     }
 
+    pub fn from_existing(
+        shm: Arc<ShmArena>,
+        shared_header_offset: u32,
+        index_slot_offsets: Vec<u32>,
+    ) -> Result<Self, Error> {
+        let shared_header = RelPtr::<OccSharedHeader>::from_offset(shared_header_offset);
+        if shared_header.as_ref(shm.mmap_base()).is_none() {
+            return Err(Error::InvalidPointer {
+                offset: shared_header_offset,
+            });
+        }
+
+        let mut index_slots = Vec::with_capacity(index_slot_offsets.len());
+        for offset in index_slot_offsets {
+            let ptr = RelPtr::<OccIndexSlot>::from_offset(offset);
+            if ptr.as_ref(shm.mmap_base()).is_none() {
+                return Err(Error::InvalidPointer { offset });
+            }
+            index_slots.push(ptr);
+        }
+
+        Ok(Self {
+            shm,
+            shared_header,
+            index_slots,
+            _marker: PhantomData,
+        })
+    }
+
     #[inline]
     pub fn capacity(&self) -> usize {
         self.index_slots.len()
+    }
+
+    #[inline]
+    pub fn shared_header_offset(&self) -> u32 {
+        self.shared_header.load(Ordering::Acquire)
+    }
+
+    pub fn index_slot_offsets(&self) -> Vec<u32> {
+        self.index_slots
+            .iter()
+            .map(|slot| slot.load(Ordering::Acquire))
+            .collect()
     }
 
     pub fn seed_row(&self, row_id: usize, value: T) -> Result<(), Error> {

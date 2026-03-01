@@ -5,11 +5,15 @@ use std::process::Command;
 use std::process::Stdio;
 use std::time::{Duration, Instant};
 
+const SHM_PATH_ENV_KEY: &str = "AEROSTORE_SHM_PATH";
+
 #[test]
 fn tcl_search_uses_stapi_path_for_list_and_raw_compare_inputs() {
     let libpath = find_tcl_cdylib().expect("failed to locate libaerostore_tcl shared library");
     let data_dir = unique_temp_dir("aerostore_tcl_it");
+    let shm_path = unique_tmpfs_shm_path("aerostore_tcl_bridge");
     let _ = std::fs::remove_dir_all(&data_dir);
+    let _ = std::fs::remove_file(&shm_path);
     let script_template = r#"
 load __LIBPATH__ Aerostore
 package require aerostore
@@ -204,10 +208,15 @@ puts "bridge_ok"
         .replace("__DATA_DIR__", tcl_quote_path(data_dir.as_path()).as_str());
 
     let script_path = write_temp_script(script.as_str()).expect("failed to write temp Tcl script");
-    let status = run_tcl_script_with_timeout(script_path.as_path(), Duration::from_secs(20))
-        .expect("failed to execute tcl bridge script");
+    let status = run_tcl_script_with_timeout(
+        script_path.as_path(),
+        Duration::from_secs(20),
+        shm_path.as_path(),
+    )
+    .expect("failed to execute tcl bridge script");
     let _ = std::fs::remove_file(script_path);
     let _ = std::fs::remove_dir_all(&data_dir);
+    let _ = std::fs::remove_file(shm_path);
 
     assert!(
         status.success(),
@@ -219,9 +228,11 @@ puts "bridge_ok"
 fn run_tcl_script_with_timeout(
     script_path: &Path,
     timeout: Duration,
+    shm_path: &Path,
 ) -> Result<std::process::ExitStatus, String> {
     let mut child = Command::new("tclsh")
         .arg(script_path)
+        .env(SHM_PATH_ENV_KEY, shm_path)
         .stdin(Stdio::null())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
@@ -350,4 +361,12 @@ fn unique_temp_dir(prefix: &str) -> PathBuf {
         .expect("clock drift while deriving temp dir")
         .as_nanos();
     std::env::temp_dir().join(format!("{prefix}_{nonce}"))
+}
+
+fn unique_tmpfs_shm_path(prefix: &str) -> PathBuf {
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock drift while deriving tmpfs shm path")
+        .as_nanos();
+    PathBuf::from(format!("/dev/shm/{prefix}_{nonce}.mmap"))
 }

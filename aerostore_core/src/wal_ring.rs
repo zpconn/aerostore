@@ -316,6 +316,16 @@ impl<const SLOTS: usize, const SLOT_BYTES: usize> WalRing<SLOTS, SLOT_BYTES> {
             }
         }
     }
+
+    pub fn reset_for_restart(&self) {
+        self.head.store(0, Ordering::Release);
+        self.tail.store(0, Ordering::Release);
+        self.closed.store(0, Ordering::Release);
+        for (idx, slot) in self.slots.iter().enumerate() {
+            slot.len.store(0, Ordering::Release);
+            slot.sequence.store(idx as u64, Ordering::Release);
+        }
+    }
 }
 
 impl<const SLOTS: usize, const SLOT_BYTES: usize> Default for WalRing<SLOTS, SLOT_BYTES> {
@@ -398,6 +408,12 @@ impl<const SLOTS: usize, const SLOT_BYTES: usize> SharedWalRing<SLOTS, SLOT_BYTE
     #[inline]
     pub fn bump_writer_epoch(&self) -> Result<u64, WalRingError> {
         Ok(self.ring_ref()?.bump_writer_epoch())
+    }
+
+    #[inline]
+    pub fn reset_for_restart(&self) -> Result<(), WalRingError> {
+        self.ring_ref()?.reset_for_restart();
+        Ok(())
     }
 
     fn ring_ref(&self) -> Result<&WalRing<SLOTS, SLOT_BYTES>, WalRingError> {

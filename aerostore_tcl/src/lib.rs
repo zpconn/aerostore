@@ -8,11 +8,14 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use aerostore_core::{
+    alloc_u32_array, clear_persisted_boot_layout, load_boot_layout, open_boot_context,
+    persist_boot_layout as persist_shared_boot_layout, read_u32_array,
     recover_occ_table_from_checkpoint_and_wal_with_pk_map, spawn_wal_writer_daemon,
-    write_occ_checkpoint_and_truncate_wal, IndexValue, IngestStats, OccError, OccTable,
-    OccTransaction, PlannerError, RuleBasedOptimizer, SchemaCatalog, SecondaryIndex, SharedWalRing,
-    ShmArena, ShmPrimaryKeyMap, StapiRow, StapiValue, SynchronousCommit, TsvColumns,
-    TsvDecodeError, WalDeltaCodec, WalDeltaError, WalWriterError, SYNCHRONOUS_COMMIT_KEY,
+    write_occ_checkpoint_and_truncate_wal, BootLayout, BootMode, IndexValue, IngestStats, OccError,
+    OccTable, OccTransaction, PlannerError, RelPtr, RuleBasedOptimizer, SchemaCatalog,
+    SecondaryIndex, SharedWalRing, ShmArena, ShmPrimaryKeyMap, StapiRow, StapiValue,
+    SynchronousCommit, TsvColumns, TsvDecodeError, WalDeltaCodec, WalDeltaError, WalRing,
+    WalWriterError, BOOT_LAYOUT_MAX_INDEXES, DEFAULT_TMPFS_PATH, SYNCHRONOUS_COMMIT_KEY,
 };
 use serde::{Deserialize, Serialize};
 use tcl::Interp;
@@ -31,6 +34,15 @@ const WAL_FILE_NAME: &str = "aerostore.wal";
 const CHECKPOINT_FILE_NAME: &str = "occ_checkpoint.dat";
 const CHECKPOINT_INTERVAL_SECS_KEY: &str = "aerostore.checkpoint_interval_secs";
 const DEFAULT_CHECKPOINT_INTERVAL_SECS: u64 = 300;
+const SHM_PATH_ENV_KEY: &str = "AEROSTORE_SHM_PATH";
+
+const INDEX_SLOT_FLIGHT_ID: usize = 0;
+const INDEX_SLOT_ALTITUDE: usize = 1;
+const INDEX_SLOT_GS: usize = 2;
+const INDEX_SLOT_LAT: usize = 3;
+const INDEX_SLOT_LON: usize = 4;
+const INDEX_SLOT_UPDATED_AT: usize = 5;
+const INDEX_SLOT_COUNT: usize = 6;
 
 type FlightDb = SharedFlightDb;
 
@@ -317,6 +329,93 @@ impl FlightIndexes {
         }
     }
 
+    fn from_layout(shm: Arc<ShmArena>, layout: &BootLayout) -> Result<Self, String> {
+        if (layout.index_count as usize) < INDEX_SLOT_COUNT {
+            return Err(format!(
+                "boot layout index_count={} is missing required indexes ({})",
+                layout.index_count, INDEX_SLOT_COUNT
+            ));
+        }
+        if layout.index_count as usize > BOOT_LAYOUT_MAX_INDEXES {
+            return Err(format!(
+                "boot layout index_count={} exceeds max {}",
+                layout.index_count, BOOT_LAYOUT_MAX_INDEXES
+            ));
+        }
+
+        let require = |slot: usize| -> Result<u32, String> {
+            let offset = layout.index_offsets.get(slot).copied().unwrap_or(0);
+            if offset == 0 {
+                return Err(format!("boot layout index slot {} has zero offset", slot));
+            }
+            Ok(offset)
+        };
+
+        let flight_id = Arc::new(
+            SecondaryIndex::from_existing(
+                "flight_id",
+                Arc::clone(&shm),
+                require(INDEX_SLOT_FLIGHT_ID)?,
+            )
+            .map_err(|err| format!("failed to attach flight_id index from boot layout: {}", err))?,
+        );
+        let altitude = Arc::new(
+            SecondaryIndex::from_existing(
+                "altitude",
+                Arc::clone(&shm),
+                require(INDEX_SLOT_ALTITUDE)?,
+            )
+            .map_err(|err| format!("failed to attach altitude index from boot layout: {}", err))?,
+        );
+        let gs = Arc::new(
+            SecondaryIndex::from_existing("gs", Arc::clone(&shm), require(INDEX_SLOT_GS)?)
+                .map_err(|err| format!("failed to attach gs index from boot layout: {}", err))?,
+        );
+        let lat = Arc::new(
+            SecondaryIndex::from_existing("lat", Arc::clone(&shm), require(INDEX_SLOT_LAT)?)
+                .map_err(|err| format!("failed to attach lat index from boot layout: {}", err))?,
+        );
+        let lon = Arc::new(
+            SecondaryIndex::from_existing("lon", Arc::clone(&shm), require(INDEX_SLOT_LON)?)
+                .map_err(|err| format!("failed to attach lon index from boot layout: {}", err))?,
+        );
+        let updated_at = Arc::new(
+            SecondaryIndex::from_existing("updated_at", shm, require(INDEX_SLOT_UPDATED_AT)?)
+                .map_err(|err| {
+                    format!(
+                        "failed to attach updated_at index from boot layout: {}",
+                        err
+                    )
+                })?,
+        );
+
+        Ok(Self {
+            flight_id,
+            altitude,
+            gs,
+            lat,
+            lon,
+            updated_at,
+        })
+    }
+
+    fn write_layout_offsets(&self, layout: &mut BootLayout) -> Result<(), String> {
+        if BOOT_LAYOUT_MAX_INDEXES < INDEX_SLOT_COUNT {
+            return Err(format!(
+                "BOOT_LAYOUT_MAX_INDEXES={} is smaller than required {}",
+                BOOT_LAYOUT_MAX_INDEXES, INDEX_SLOT_COUNT
+            ));
+        }
+        layout.index_offsets[INDEX_SLOT_FLIGHT_ID] = self.flight_id.header_offset();
+        layout.index_offsets[INDEX_SLOT_ALTITUDE] = self.altitude.header_offset();
+        layout.index_offsets[INDEX_SLOT_GS] = self.gs.header_offset();
+        layout.index_offsets[INDEX_SLOT_LAT] = self.lat.header_offset();
+        layout.index_offsets[INDEX_SLOT_LON] = self.lon.header_offset();
+        layout.index_offsets[INDEX_SLOT_UPDATED_AT] = self.updated_at.header_offset();
+        layout.index_count = INDEX_SLOT_COUNT as u32;
+        Ok(())
+    }
+
     fn as_catalog(&self, pk_map: Arc<ShmPrimaryKeyMap>) -> SchemaCatalog {
         let mut catalog = SchemaCatalog::new("flight_id").with_primary_key_map(pk_map);
 
@@ -404,6 +503,8 @@ struct SharedFlightDb {
     checkpoint_path: PathBuf,
     checkpoint_interval_secs: AtomicU64,
     checkpointer_started: AtomicBool,
+    boot_mode: BootMode,
+    orphaned_proc_slots_cleared: usize,
     _data_dir: PathBuf,
 }
 
@@ -417,54 +518,55 @@ impl SharedFlightDb {
             )
         })?;
 
-        let shm = Arc::new(
-            ShmArena::new(DEFAULT_SHM_ARENA_BYTES)
-                .map_err(|err| format!("failed to allocate shared memory: {}", err))?,
-        );
-        let table = Arc::new(
-            OccTable::<FlightState>::new(Arc::clone(&shm), DEFAULT_ROW_CAPACITY)
-                .map_err(|err| format!("failed to create OCC table: {}", err))?,
-        );
-
-        for row_id in 0..DEFAULT_ROW_CAPACITY {
-            table
-                .seed_row(row_id, FlightState::empty())
-                .map_err(|err| format!("failed to seed OCC row {}: {}", row_id, err))?;
-        }
-
-        let indexes = FlightIndexes::new(Arc::clone(&shm));
-        let key_index = Arc::new(
-            ShmPrimaryKeyMap::new_in_shared(Arc::clone(&shm), 4096, DEFAULT_ROW_CAPACITY)
-                .map_err(|err| format!("failed to create shared primary key map: {}", err))?,
-        );
-        let optimizer = RuleBasedOptimizer::new(indexes.as_catalog(Arc::clone(&key_index)));
-
         let wal_path = data_dir.join(WAL_FILE_NAME);
         let checkpoint_path = data_dir.join(CHECKPOINT_FILE_NAME);
-        let _recovery = recover_occ_table_from_checkpoint_and_wal_with_pk_map(
-            &table,
-            Some(key_index.as_ref()),
-            &checkpoint_path,
-            &wal_path,
-        )
-        .map_err(|err| format!("failed to recover OCC state from checkpoint/WAL: {}", err))?;
+        let shm_path = resolve_shm_path();
+        let boot_context = open_boot_context(Some(shm_path.as_path()), DEFAULT_SHM_ARENA_BYTES)
+            .map_err(|err| {
+                format!(
+                    "failed to open shared tmpfs arena '{}': {}",
+                    shm_path.display(),
+                    err
+                )
+            })?;
 
-        for row_id in 0..DEFAULT_ROW_CAPACITY {
-            let row = table
-                .latest_value(row_id)
-                .map_err(|err| format!("failed to inspect recovered row {}: {}", row_id, err))?
-                .ok_or_else(|| format!("seeded row {} unexpectedly missing", row_id))?;
-            if row.exists == 0 {
-                continue;
+        let shm = Arc::clone(&boot_context.shm);
+        let mut boot_mode = boot_context.mode;
+        let orphaned_proc_slots_cleared = boot_context.orphaned_proc_slots_cleared;
+
+        let (table, indexes, key_index, optimizer, ring) = if boot_mode == BootMode::WarmAttach {
+            let layout = load_boot_layout(shm.as_ref())
+                .map_err(|err| format!("failed to load warm boot layout: {}", err))?
+                .ok_or_else(|| {
+                    "warm boot expected persisted layout, but none was found".to_string()
+                })?;
+            match Self::attach_warm_state(Arc::clone(&shm), &layout) {
+                Ok(state) => state,
+                Err(warm_err) => {
+                    shm.reinitialize_header().map_err(|err| {
+                        format!(
+                            "warm attach failed ({warm_err}); could not reinitialize shared arena: {}",
+                            err
+                        )
+                    })?;
+                    clear_persisted_boot_layout(shm.as_ref());
+                    boot_mode = BootMode::ColdReplay;
+                    Self::initialize_cold_state(
+                        Arc::clone(&shm),
+                        checkpoint_path.as_path(),
+                        wal_path.as_path(),
+                    )?
+                }
             }
-            indexes.insert_row(row_id, &row);
-            key_index
-                .insert_existing(row.flight_id_string().as_str(), row_id)
-                .map_err(|err| format!("failed to rebuild primary key map: {}", err))?;
-        }
+        } else {
+            clear_persisted_boot_layout(shm.as_ref());
+            Self::initialize_cold_state(
+                Arc::clone(&shm),
+                checkpoint_path.as_path(),
+                wal_path.as_path(),
+            )?
+        };
 
-        let ring = SharedWalRing::<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>::create(Arc::clone(&shm))
-            .map_err(|err| format!("failed to create shared WAL ring: {}", err))?;
         let wal_daemon = spawn_wal_writer_daemon(ring.clone(), &wal_path)
             .map_err(|err| format!("failed to spawn WAL writer daemon: {}", err))?;
         let committer =
@@ -491,8 +593,175 @@ impl SharedFlightDb {
             checkpoint_path,
             checkpoint_interval_secs: AtomicU64::new(DEFAULT_CHECKPOINT_INTERVAL_SECS),
             checkpointer_started: AtomicBool::new(false),
+            boot_mode,
+            orphaned_proc_slots_cleared,
             _data_dir: data_dir.to_path_buf(),
         })
+    }
+
+    fn initialize_cold_state(
+        shm: Arc<ShmArena>,
+        checkpoint_path: &Path,
+        wal_path: &Path,
+    ) -> Result<
+        (
+            Arc<OccTable<FlightState>>,
+            FlightIndexes,
+            Arc<ShmPrimaryKeyMap>,
+            RuleBasedOptimizer<FlightState>,
+            SharedWalRing<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>,
+        ),
+        String,
+    > {
+        let table = Arc::new(
+            OccTable::<FlightState>::new(Arc::clone(&shm), DEFAULT_ROW_CAPACITY)
+                .map_err(|err| format!("failed to create OCC table: {}", err))?,
+        );
+        for row_id in 0..DEFAULT_ROW_CAPACITY {
+            table
+                .seed_row(row_id, FlightState::empty())
+                .map_err(|err| format!("failed to seed OCC row {}: {}", row_id, err))?;
+        }
+
+        let indexes = FlightIndexes::new(Arc::clone(&shm));
+        let key_index = Arc::new(
+            ShmPrimaryKeyMap::new_in_shared(Arc::clone(&shm), 4096, DEFAULT_ROW_CAPACITY)
+                .map_err(|err| format!("failed to create shared primary key map: {}", err))?,
+        );
+
+        let _recovery = recover_occ_table_from_checkpoint_and_wal_with_pk_map(
+            &table,
+            Some(key_index.as_ref()),
+            checkpoint_path,
+            wal_path,
+        )
+        .map_err(|err| format!("failed to recover OCC state from checkpoint/WAL: {}", err))?;
+
+        for row_id in 0..DEFAULT_ROW_CAPACITY {
+            let row = table
+                .latest_value(row_id)
+                .map_err(|err| format!("failed to inspect recovered row {}: {}", row_id, err))?
+                .ok_or_else(|| format!("seeded row {} unexpectedly missing", row_id))?;
+            if row.exists == 0 {
+                continue;
+            }
+            indexes.insert_row(row_id, &row);
+            key_index
+                .insert_existing(row.flight_id_string().as_str(), row_id)
+                .map_err(|err| format!("failed to rebuild primary key map: {}", err))?;
+        }
+
+        let ring = SharedWalRing::<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>::create(Arc::clone(&shm))
+            .map_err(|err| format!("failed to create shared WAL ring: {}", err))?;
+        Self::persist_layout(shm.as_ref(), &table, key_index.as_ref(), &indexes, &ring)?;
+
+        let optimizer = RuleBasedOptimizer::new(indexes.as_catalog(Arc::clone(&key_index)));
+        Ok((table, indexes, key_index, optimizer, ring))
+    }
+
+    fn attach_warm_state(
+        shm: Arc<ShmArena>,
+        layout: &BootLayout,
+    ) -> Result<
+        (
+            Arc<OccTable<FlightState>>,
+            FlightIndexes,
+            Arc<ShmPrimaryKeyMap>,
+            RuleBasedOptimizer<FlightState>,
+            SharedWalRing<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>,
+        ),
+        String,
+    > {
+        if layout.row_capacity as usize != DEFAULT_ROW_CAPACITY {
+            return Err(format!(
+                "boot layout row_capacity {} does not match runtime capacity {}",
+                layout.row_capacity, DEFAULT_ROW_CAPACITY
+            ));
+        }
+
+        let occ_slot_offsets = read_u32_array(
+            shm.as_ref(),
+            layout.occ_slot_offsets_offset,
+            layout.occ_slot_offsets_len,
+        )
+        .map_err(|err| format!("failed to read OCC slot offsets from boot layout: {}", err))?;
+        let table = Arc::new(
+            OccTable::<FlightState>::from_existing(
+                Arc::clone(&shm),
+                layout.occ_shared_header_offset,
+                occ_slot_offsets,
+            )
+            .map_err(|err| format!("failed to attach OCC table from boot layout: {}", err))?,
+        );
+
+        let pk_bucket_offsets = read_u32_array(
+            shm.as_ref(),
+            layout.pk_bucket_offsets_offset,
+            layout.pk_bucket_offsets_len,
+        )
+        .map_err(|err| format!("failed to read PK bucket offsets from boot layout: {}", err))?;
+        let key_index = Arc::new(
+            ShmPrimaryKeyMap::from_existing(
+                Arc::clone(&shm),
+                layout.pk_header_offset,
+                pk_bucket_offsets,
+            )
+            .map_err(|err| format!("failed to attach primary key map from boot layout: {}", err))?,
+        );
+
+        let indexes = FlightIndexes::from_layout(Arc::clone(&shm), layout)?;
+        let optimizer = RuleBasedOptimizer::new(indexes.as_catalog(Arc::clone(&key_index)));
+
+        if layout.wal_ring_offset == 0 {
+            return Err("boot layout WAL ring offset is zero".to_string());
+        }
+        let ring_ptr = RelPtr::<WalRing<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>>::from_offset(
+            layout.wal_ring_offset,
+        );
+        let ring = SharedWalRing::<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>::from_existing(
+            Arc::clone(&shm),
+            ring_ptr,
+        );
+        ring.reset_for_restart()
+            .map_err(|err| format!("failed to reset warm-attached WAL ring: {}", err))?;
+
+        Ok((table, indexes, key_index, optimizer, ring))
+    }
+
+    fn persist_layout(
+        shm: &ShmArena,
+        table: &OccTable<FlightState>,
+        key_index: &ShmPrimaryKeyMap,
+        indexes: &FlightIndexes,
+        ring: &SharedWalRing<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>,
+    ) -> Result<(), String> {
+        let mut layout = BootLayout::new(DEFAULT_ROW_CAPACITY)
+            .map_err(|err| format!("failed to create boot layout: {}", err))?;
+
+        layout.occ_shared_header_offset = table.shared_header_offset();
+
+        let occ_slot_offsets = table.index_slot_offsets();
+        let (occ_slot_offsets_offset, occ_slot_offsets_len) =
+            alloc_u32_array(shm, occ_slot_offsets.as_slice()).map_err(|err| {
+                format!("failed to store OCC slot offsets in shared layout: {}", err)
+            })?;
+        layout.occ_slot_offsets_offset = occ_slot_offsets_offset;
+        layout.occ_slot_offsets_len = occ_slot_offsets_len;
+
+        layout.pk_header_offset = key_index.header_offset();
+        let pk_bucket_offsets = key_index.bucket_offsets();
+        let (pk_bucket_offsets_offset, pk_bucket_offsets_len) =
+            alloc_u32_array(shm, pk_bucket_offsets.as_slice())
+                .map_err(|err| format!("failed to store PK offsets in shared layout: {}", err))?;
+        layout.pk_bucket_offsets_offset = pk_bucket_offsets_offset;
+        layout.pk_bucket_offsets_len = pk_bucket_offsets_len;
+
+        layout.wal_ring_offset = ring.ring_ptr().load(AtomicOrdering::Acquire);
+        indexes.write_layout_offsets(&mut layout)?;
+
+        persist_shared_boot_layout(shm, &layout)
+            .map_err(|err| format!("failed to persist shared boot layout: {}", err))?;
+        Ok(())
     }
 
     fn start_checkpointer(self: &Arc<Self>) {
@@ -560,6 +829,16 @@ impl SharedFlightDb {
     fn set_checkpoint_interval_secs(&self, secs: u64) {
         self.checkpoint_interval_secs
             .store(secs, AtomicOrdering::Release);
+    }
+
+    #[inline]
+    fn boot_mode(&self) -> BootMode {
+        self.boot_mode
+    }
+
+    #[inline]
+    fn orphaned_proc_slots_cleared(&self) -> usize {
+        self.orphaned_proc_slots_cleared
     }
 
     fn checkpoint_interval_secs(&self) -> u64 {
@@ -906,12 +1185,18 @@ unsafe fn aerostore_init_cmd_impl(
         .get()
         .cloned()
         .unwrap_or_else(|| DEFAULT_DATA_DIR.to_string());
+    let boot_mode = match db.boot_mode() {
+        BootMode::WarmAttach => "warm",
+        BootMode::ColdReplay => "cold",
+    };
 
     Ok(set_ok_result(
         interp,
         &format!(
-            "aerostore ready (dir={dir_msg}, occ_table={:p})",
-            Arc::as_ptr(db)
+            "aerostore ready (dir={dir_msg}, occ_table={:p}, boot={}, procarray_orphans_cleared={})",
+            Arc::as_ptr(db),
+            boot_mode,
+            db.orphaned_proc_slots_cleared(),
         ),
     ))
 }
@@ -932,6 +1217,12 @@ fn ensure_database(data_dir: Option<&str>) -> Result<&'static Arc<FlightDb>, Str
         .ok_or_else(|| "failed to initialize global database".to_string())?;
     db.start_checkpointer();
     Ok(db)
+}
+
+fn resolve_shm_path() -> PathBuf {
+    std::env::var(SHM_PATH_ENV_KEY)
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from(DEFAULT_TMPFS_PATH))
 }
 
 extern "C" fn aerostore_set_config_cmd(

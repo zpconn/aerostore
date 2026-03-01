@@ -245,9 +245,27 @@ where
         }
     }
 
+    pub fn from_existing(
+        field: &'static str,
+        shm: Arc<ShmArena>,
+        header_offset: u32,
+    ) -> Result<Self, ShmIndexError> {
+        let skiplist = ShmSkipList::<EncodedKey>::from_existing(shm, header_offset)?;
+        Ok(Self {
+            field,
+            skiplist,
+            _marker: PhantomData,
+        })
+    }
+
     #[inline]
     pub fn field(&self) -> &'static str {
         self.field
+    }
+
+    #[inline]
+    pub fn header_offset(&self) -> u32 {
+        self.skiplist.header_offset()
     }
 
     #[inline]

@@ -1,4 +1,5 @@
 pub mod arena;
+pub mod bootloader;
 pub mod execution;
 pub mod filters;
 pub mod index;
@@ -16,6 +17,7 @@ pub mod recovery_delta;
 pub mod shm;
 pub mod shm_index;
 pub mod shm_skiplist;
+pub mod shm_tmpfs;
 pub mod stapi_parser;
 pub mod txn;
 pub mod wal;
@@ -26,6 +28,11 @@ pub mod wal_writer;
 pub mod watch;
 
 pub use arena::{ChunkedArena, Table, VersionNode};
+pub use bootloader::{
+    alloc_u32_array, clear_persisted_boot_layout, load_boot_layout, open_boot_context,
+    persist_boot_layout, read_u32_array, BootContext, BootLayout, BootMode, BootloaderError,
+    BOOT_LAYOUT_MAX_INDEXES,
+};
 pub use execution::{ExecutionEngine, PrimaryKeyMapError, ShmPrimaryKeyMap};
 pub use index::{IndexCompare, IndexValue, IntoIndexValue, SecondaryIndex};
 pub use ingest::{
@@ -52,6 +59,7 @@ pub use shm::{
     ChunkedArena as ShmChunkedArena, MmapBase, RelPtr, ShmAllocError, ShmArena, ShmError,
 };
 pub use shm_index::{ShmIndexError, ShmIndexGcDaemon};
+pub use shm_tmpfs::{map_tmpfs_shared, TmpfsAttachMode, TmpfsMappedArena, DEFAULT_TMPFS_PATH};
 pub use stapi_parser::{
     parse_stapi_query, Filter as StapiFilter, ParseError as StapiParseError, Query as StapiQuery,
     Value as StapiValue,

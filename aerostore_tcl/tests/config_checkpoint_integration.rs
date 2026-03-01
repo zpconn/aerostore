@@ -5,11 +5,15 @@ use std::process::Command;
 use std::process::Stdio;
 use std::time::{Duration, Instant};
 
+const SHM_PATH_ENV_KEY: &str = "AEROSTORE_SHM_PATH";
+
 #[test]
 fn mode_transition_off_to_on_checkpoint_recovers_all_rows() {
     let libpath = find_tcl_cdylib().expect("failed to locate libaerostore_tcl shared library");
     let data_dir = unique_temp_dir("aerostore_tcl_mode_transition");
+    let shm_path = unique_tmpfs_shm_path("aerostore_tcl_mode_transition");
     let _ = std::fs::remove_dir_all(&data_dir);
+    let _ = std::fs::remove_file(&shm_path);
 
     let phase1_template = r#"
 load __LIBPATH__ Aerostore
@@ -38,8 +42,11 @@ puts "phase1_ok $checkpoint"
     let phase1 = phase1_template
         .replace("__LIBPATH__", tcl_quote_path(libpath.as_path()).as_str())
         .replace("__DATA_DIR__", tcl_quote_path(data_dir.as_path()).as_str());
-    run_tcl_script(phase1.as_str(), Duration::from_secs(40))
+    run_tcl_script(phase1.as_str(), Duration::from_secs(40), shm_path.as_path())
         .expect("phase1 mode-transition script failed");
+
+    // Force a cold replay path for phase 2 so this test validates checkpoint+WAL recovery.
+    let _ = std::fs::remove_file(&shm_path);
 
     let phase2_template = r#"
 load __LIBPATH__ Aerostore
@@ -69,17 +76,20 @@ puts "phase2_ok"
     let phase2 = phase2_template
         .replace("__LIBPATH__", tcl_quote_path(libpath.as_path()).as_str())
         .replace("__DATA_DIR__", tcl_quote_path(data_dir.as_path()).as_str());
-    run_tcl_script(phase2.as_str(), Duration::from_secs(30))
+    run_tcl_script(phase2.as_str(), Duration::from_secs(30), shm_path.as_path())
         .expect("phase2 recovery validation script failed");
 
     let _ = std::fs::remove_dir_all(data_dir);
+    let _ = std::fs::remove_file(shm_path);
 }
 
 #[test]
 fn periodic_checkpointer_creates_checkpoint_and_shrinks_wal() {
     let libpath = find_tcl_cdylib().expect("failed to locate libaerostore_tcl shared library");
     let data_dir = unique_temp_dir("aerostore_tcl_periodic_checkpoint");
+    let shm_path = unique_tmpfs_shm_path("aerostore_tcl_periodic_checkpoint");
     let _ = std::fs::remove_dir_all(&data_dir);
+    let _ = std::fs::remove_file(&shm_path);
 
     let script_template = r#"
 load __LIBPATH__ Aerostore
@@ -135,16 +145,19 @@ puts "periodic_ok before=$before after=$after checkpoint_bytes=$checkpoint_bytes
         .replace("__LIBPATH__", tcl_quote_path(libpath.as_path()).as_str())
         .replace("__DATA_DIR__", tcl_quote_path(data_dir.as_path()).as_str());
 
-    run_tcl_script(script.as_str(), Duration::from_secs(45))
+    run_tcl_script(script.as_str(), Duration::from_secs(45), shm_path.as_path())
         .expect("periodic checkpoint script failed");
     let _ = std::fs::remove_dir_all(data_dir);
+    let _ = std::fs::remove_file(shm_path);
 }
 
 #[test]
 fn benchmark_tcl_synchronous_commit_modes() {
     let libpath = find_tcl_cdylib().expect("failed to locate libaerostore_tcl shared library");
     let data_dir = unique_temp_dir("aerostore_tcl_sync_benchmark");
+    let shm_path = unique_tmpfs_shm_path("aerostore_tcl_sync_benchmark");
     let _ = std::fs::remove_dir_all(&data_dir);
+    let _ = std::fs::remove_file(&shm_path);
 
     let script_template = r#"
 load __LIBPATH__ Aerostore
@@ -180,14 +193,15 @@ if {$ratio < 2.0} {
         .replace("__LIBPATH__", tcl_quote_path(libpath.as_path()).as_str())
         .replace("__DATA_DIR__", tcl_quote_path(data_dir.as_path()).as_str());
 
-    run_tcl_script(script.as_str(), Duration::from_secs(90))
+    run_tcl_script(script.as_str(), Duration::from_secs(90), shm_path.as_path())
         .expect("tcl throughput benchmark script failed");
     let _ = std::fs::remove_dir_all(data_dir);
+    let _ = std::fs::remove_file(shm_path);
 }
 
-fn run_tcl_script(script: &str, timeout: Duration) -> Result<(), String> {
+fn run_tcl_script(script: &str, timeout: Duration, shm_path: &Path) -> Result<(), String> {
     let script_path = write_temp_script(script)?;
-    let status = run_tcl_script_with_timeout(script_path.as_path(), timeout)?;
+    let status = run_tcl_script_with_timeout(script_path.as_path(), timeout, shm_path)?;
     let _ = std::fs::remove_file(script_path);
     if status.success() {
         Ok(())
@@ -199,9 +213,11 @@ fn run_tcl_script(script: &str, timeout: Duration) -> Result<(), String> {
 fn run_tcl_script_with_timeout(
     script_path: &Path,
     timeout: Duration,
+    shm_path: &Path,
 ) -> Result<std::process::ExitStatus, String> {
     let mut child = Command::new("tclsh")
         .arg(script_path)
+        .env(SHM_PATH_ENV_KEY, shm_path)
         .stdin(Stdio::null())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
@@ -329,4 +345,12 @@ fn unique_temp_dir(prefix: &str) -> PathBuf {
         .expect("clock drift while deriving temp dir")
         .as_nanos();
     std::env::temp_dir().join(format!("{prefix}_{nonce}"))
+}
+
+fn unique_tmpfs_shm_path(prefix: &str) -> PathBuf {
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock drift while deriving tmpfs shm path")
+        .as_nanos();
+    PathBuf::from(format!("/dev/shm/{prefix}_{nonce}.mmap"))
 }

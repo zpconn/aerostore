@@ -170,6 +170,33 @@ impl ShmPrimaryKeyMap {
         })
     }
 
+    pub fn from_existing(
+        shm: Arc<ShmArena>,
+        header_offset: u32,
+        bucket_offsets: Vec<u32>,
+    ) -> Result<Self, PrimaryKeyMapError> {
+        if bucket_offsets.is_empty() {
+            return Err(PrimaryKeyMapError::InvalidBucketCount(0));
+        }
+
+        let map = Self {
+            shm,
+            header_offset,
+            bucket_offsets: Arc::from(bucket_offsets.into_boxed_slice()),
+        };
+
+        let header = map.header_ref()?;
+        if header.bucket_count as usize != map.bucket_offsets.len() {
+            return Err(PrimaryKeyMapError::InvalidBucketCount(
+                header.bucket_count as usize,
+            ));
+        }
+        for idx in 0..map.bucket_offsets.len() {
+            let _ = map.bucket_ref(idx)?;
+        }
+        Ok(map)
+    }
+
     #[inline]
     pub fn row_capacity(&self) -> usize {
         self.header_ref()
@@ -182,6 +209,15 @@ impl ShmPrimaryKeyMap {
         self.header_ref()
             .map(|header| header.distinct_key_count.load(AtomicOrdering::Acquire))
             .unwrap_or(0)
+    }
+
+    #[inline]
+    pub fn header_offset(&self) -> u32 {
+        self.header_offset
+    }
+
+    pub fn bucket_offsets(&self) -> Vec<u32> {
+        self.bucket_offsets.to_vec()
     }
 
     pub fn get(&self, key: &str) -> Result<Option<usize>, PrimaryKeyMapError> {

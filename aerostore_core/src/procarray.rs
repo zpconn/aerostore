@@ -115,6 +115,19 @@ impl ProcArray {
         }
     }
 
+    pub fn clear_orphaned_slots(&self) -> usize {
+        let mut cleared = 0_usize;
+        for slot in self.slots.iter() {
+            let txid = slot.load(Ordering::Acquire);
+            if txid == EMPTY_SLOT {
+                continue;
+            }
+            slot.txid.store(EMPTY_SLOT, Ordering::Release);
+            cleared += 1;
+        }
+        cleared
+    }
+
     #[inline]
     pub fn slots_len(&self) -> usize {
         PROCARRAY_SLOTS
