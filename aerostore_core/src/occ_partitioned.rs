@@ -71,6 +71,7 @@ struct PendingWrite<T: Copy> {
     row_id: usize,
     base_ptr: RelPtr<OccRow<T>>,
     new_ptr: RelPtr<OccRow<T>>,
+    dirty_columns_bitmask: u64,
 }
 
 #[derive(Clone)]
@@ -102,7 +103,9 @@ pub struct OccCommittedWrite<T: Copy> {
     pub row_id: usize,
     pub base_offset: u32,
     pub new_offset: u32,
+    pub base_value: T,
     pub value: T,
+    pub dirty_columns_bitmask: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -333,6 +336,10 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             visible_ptr.ok_or(Error::RowMissing { row_id })?
         };
 
+        let base_row = self.resolve_row_ptr(&base_ptr)?;
+        let dirty_columns_bitmask =
+            crate::wal_delta::coarse_dirty_mask_for_copy(&base_row.value, &value);
+
         let base_offset = base_ptr.load(Ordering::Acquire);
         let new_ptr = self.allocate_row(value, tx.txid, base_offset)?;
 
@@ -340,6 +347,59 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             row_id,
             base_ptr,
             new_ptr,
+            dirty_columns_bitmask,
+        });
+        Ok(())
+    }
+
+    pub fn write_with_dirty_mask(
+        &self,
+        tx: &mut OccTransaction<T>,
+        row_id: usize,
+        value: T,
+        dirty_columns_bitmask: u64,
+    ) -> Result<(), Error> {
+        self.ensure_open(tx)?;
+        if row_id >= self.capacity() {
+            return Err(Error::RowOutOfBounds {
+                row_id,
+                capacity: self.capacity(),
+            });
+        }
+
+        let base_ptr = if let Some(last_for_row) = tx
+            .write_set
+            .iter()
+            .rev()
+            .find(|entry| entry.row_id == row_id)
+        {
+            last_for_row.base_ptr.clone()
+        } else {
+            let slot = self.slot_ref(row_id)?;
+            let mut head_offset = slot.head.load(Ordering::Acquire);
+            let mut visible_ptr: Option<RelPtr<OccRow<T>>> = None;
+
+            while head_offset != EMPTY_PTR {
+                let row_ptr = RelPtr::from_offset(head_offset);
+                let row = self.resolve_row_ptr(&row_ptr)?;
+                if self.is_visible(row, tx) {
+                    visible_ptr = Some(row_ptr);
+                    break;
+                }
+                head_offset = row.next.load(Ordering::Acquire);
+            }
+
+            visible_ptr.ok_or(Error::RowMissing { row_id })?
+        };
+
+        let base_offset = base_ptr.load(Ordering::Acquire);
+        let new_ptr = self.allocate_row(value, tx.txid, base_offset)?;
+
+        tx.write_set.push(PendingWrite {
+            row_id,
+            base_ptr,
+            new_ptr,
+            dirty_columns_bitmask,
         });
         Ok(())
     }
@@ -413,8 +473,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
 
             let base_offset = write.base_ptr.load(Ordering::Acquire);
             let new_offset = write.new_ptr.load(Ordering::Acquire);
-
-            if base_offset != EMPTY_PTR {
+            let base_value = if base_offset != EMPTY_PTR {
                 let base_row = self.resolve_row_ptr(&write.base_ptr)?;
                 if base_row
                     .xmax
@@ -423,7 +482,11 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
                 {
                     return Err(Error::SerializationFailure);
                 }
-            }
+                base_row.value
+            } else {
+                let new_row = self.resolve_row_ptr(&write.new_ptr)?;
+                new_row.value
+            };
 
             let new_row = self.resolve_row_ptr(&write.new_ptr)?;
             new_row.next.store(base_offset, Ordering::Release);
@@ -440,7 +503,9 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
                 row_id: write.row_id,
                 base_offset,
                 new_offset,
+                base_value,
                 value: new_row.value,
+                dirty_columns_bitmask: write.dirty_columns_bitmask,
             });
         }
 
@@ -887,6 +952,54 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         let new_row = self.resolve_row_ptr(&new_ptr)?;
         new_row.next.store(base_offset, Ordering::Release);
         slot.head.store(new_offset, Ordering::Release);
+        self.advance_global_txid_floor(txid.saturating_add(1));
+        Ok(())
+    }
+
+    pub fn apply_recovered_write_cas(
+        &self,
+        row_id: usize,
+        txid: TxId,
+        expected_base_offset: u32,
+        value: T,
+    ) -> Result<(), Error> {
+        if row_id >= self.capacity() {
+            return Err(Error::RowOutOfBounds {
+                row_id,
+                capacity: self.capacity(),
+            });
+        }
+        if txid == 0 {
+            return Err(Error::SerializationFailure);
+        }
+
+        let _lock = self.acquire_row_lock(row_id);
+        let slot = self.slot_ref(row_id)?;
+        let base_offset = slot.head.load(Ordering::Acquire);
+        if base_offset != expected_base_offset {
+            return Err(Error::SerializationFailure);
+        }
+
+        let new_ptr = self.allocate_row(value, txid, base_offset)?;
+        let new_offset = new_ptr.load(Ordering::Acquire);
+
+        if base_offset != EMPTY_PTR {
+            let base_ptr = RelPtr::<OccRow<T>>::from_offset(base_offset);
+            let base_row = self.resolve_row_ptr(&base_ptr)?;
+            let _ = base_row
+                .xmax
+                .compare_exchange(0, txid, Ordering::AcqRel, Ordering::Acquire);
+        }
+
+        let new_row = self.resolve_row_ptr(&new_ptr)?;
+        new_row.next.store(base_offset, Ordering::Release);
+        if slot
+            .head
+            .compare_exchange(base_offset, new_offset, Ordering::AcqRel, Ordering::Acquire)
+            .is_err()
+        {
+            return Err(Error::SerializationFailure);
+        }
         self.advance_global_txid_floor(txid.saturating_add(1));
         Ok(())
     }

@@ -4,6 +4,7 @@ use std::thread;
 use aerostore_core::{
     spawn_wal_writer_daemon, IndexValue, OccCommitter, OccError, OccTable, RuleBasedOptimizer,
     SchemaCatalog, SecondaryIndex, SharedWalRing, ShmArena, ShmPrimaryKeyMap, StapiRow, StapiValue,
+    WalDeltaCodec,
 };
 use crossbeam_skiplist::SkipMap;
 use serde::{Deserialize, Serialize};
@@ -66,6 +67,8 @@ struct OnCallRow {
     doctor: [u8; 8],
     on_call: i64,
 }
+
+impl WalDeltaCodec for OnCallRow {}
 
 impl OnCallRow {
     fn new(doctor: &str, on_call: i64) -> Self {
