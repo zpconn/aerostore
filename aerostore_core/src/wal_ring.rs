@@ -5,12 +5,16 @@ use std::sync::Arc;
 use rkyv::{
     AlignedVec, Archive, Deserialize as RkyvDeserialize, Infallible, Serialize as RkyvSerialize,
 };
-use serde::Serialize;
 
 use crate::occ::OccCommitRecord;
 use crate::shm::{RelPtr, ShmAllocError, ShmArena};
+use crate::wal_delta::{
+    build_update_record, serialize_wal_record as serialize_delta_wal_record, WalDeltaCodec,
+    WalRecord,
+};
 
 pub const SYNCHRONOUS_COMMIT_KEY: &str = "aerostore.synchronous_commit";
+pub const WAL_RING_COMMIT_VERSION: u16 = 2;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SynchronousCommit {
@@ -29,6 +33,12 @@ impl SynchronousCommit {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WalEncodingPolicy {
+    DeltaAllowed,
+    ForceFull,
+}
+
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, Clone, Debug, PartialEq, Eq)]
 #[archive(check_bytes)]
 #[archive_attr(derive(Debug))]
@@ -37,32 +47,66 @@ pub struct WalRingWrite {
     pub base_offset: u32,
     pub new_offset: u32,
     pub value_payload: Vec<u8>,
+    pub wal_record_payload: Vec<u8>,
 }
 
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, Clone, Debug, PartialEq, Eq)]
 #[archive(check_bytes)]
 #[archive_attr(derive(Debug))]
 pub struct WalRingCommit {
+    pub version: u16,
     pub txid: u64,
     pub writes: Vec<WalRingWrite>,
 }
 
-pub fn wal_commit_from_occ_record<T: Copy + Serialize>(
+pub fn wal_commit_from_occ_record<T>(
     record: &OccCommitRecord<T>,
-) -> Result<WalRingCommit, WalRingError> {
+) -> Result<WalRingCommit, WalRingError>
+where
+    T: WalDeltaCodec + Copy,
+{
+    wal_commit_from_occ_record_with_policy(record, |_| WalEncodingPolicy::DeltaAllowed)
+}
+
+pub fn wal_commit_from_occ_record_with_policy<T, F>(
+    record: &OccCommitRecord<T>,
+    mut encoding_for_row: F,
+) -> Result<WalRingCommit, WalRingError>
+where
+    T: WalDeltaCodec + Copy,
+    F: FnMut(usize) -> WalEncodingPolicy,
+{
     let mut writes = Vec::with_capacity(record.writes.len());
     for w in &record.writes {
-        let value_payload =
-            bincode::serialize(&w.value).map_err(|err| WalRingError::Serialize(err.to_string()))?;
+        let pk = T::wal_primary_key(w.row_id, &w.value);
+        let wal_record = match encoding_for_row(w.row_id) {
+            WalEncodingPolicy::DeltaAllowed => {
+                build_update_record(pk, &w.base_value, &w.value, w.dirty_columns_bitmask)
+                    .map_err(|err| WalRingError::Serialize(err.to_string()))?
+            }
+            WalEncodingPolicy::ForceFull => WalRecord::UpdateFull {
+                pk,
+                payload: bincode::serialize(&w.value)
+                    .map_err(|err| WalRingError::Serialize(err.to_string()))?,
+            },
+        };
+        let wal_record_payload = serialize_delta_wal_record(&wal_record)
+            .map_err(|err| WalRingError::Serialize(err.to_string()))?;
+        let value_payload = match wal_record {
+            WalRecord::UpdateFull { payload, .. } => payload,
+            WalRecord::UpdateDelta { .. } => Vec::new(),
+        };
         writes.push(WalRingWrite {
             row_id: w.row_id as u64,
             base_offset: w.base_offset,
             new_offset: w.new_offset,
             value_payload,
+            wal_record_payload,
         });
     }
 
     Ok(WalRingCommit {
+        version: WAL_RING_COMMIT_VERSION,
         txid: record.txid,
         writes,
     })
@@ -140,6 +184,7 @@ pub struct WalRing<const SLOTS: usize, const SLOT_BYTES: usize> {
     head: AtomicU64,
     tail: AtomicU64,
     closed: AtomicU32,
+    writer_epoch: AtomicU64,
     slots: [WalRingSlot<SLOT_BYTES>; SLOTS],
 }
 
@@ -150,6 +195,7 @@ impl<const SLOTS: usize, const SLOT_BYTES: usize> WalRing<SLOTS, SLOT_BYTES> {
             head: AtomicU64::new(0),
             tail: AtomicU64::new(0),
             closed: AtomicU32::new(0),
+            writer_epoch: AtomicU64::new(0),
             slots: std::array::from_fn(|idx| WalRingSlot::new(idx as u64)),
         }
     }
@@ -167,6 +213,18 @@ impl<const SLOTS: usize, const SLOT_BYTES: usize> WalRing<SLOTS, SLOT_BYTES> {
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.head.load(Ordering::Acquire) == self.tail.load(Ordering::Acquire)
+    }
+
+    #[inline]
+    pub fn writer_epoch(&self) -> u64 {
+        self.writer_epoch.load(Ordering::Acquire)
+    }
+
+    #[inline]
+    pub fn bump_writer_epoch(&self) -> u64 {
+        self.writer_epoch
+            .fetch_add(1, Ordering::AcqRel)
+            .wrapping_add(1)
     }
 
     pub fn push_blocking(&self, bytes: &[u8]) -> Result<(), WalRingError> {
@@ -332,6 +390,16 @@ impl<const SLOTS: usize, const SLOT_BYTES: usize> SharedWalRing<SLOTS, SLOT_BYTE
         Ok(self.ring_ref()?.is_empty())
     }
 
+    #[inline]
+    pub fn writer_epoch(&self) -> Result<u64, WalRingError> {
+        Ok(self.ring_ref()?.writer_epoch())
+    }
+
+    #[inline]
+    pub fn bump_writer_epoch(&self) -> Result<u64, WalRingError> {
+        Ok(self.ring_ref()?.bump_writer_epoch())
+    }
+
     fn ring_ref(&self) -> Result<&WalRing<SLOTS, SLOT_BYTES>, WalRingError> {
         let offset = self.ring_ptr.load(Ordering::Acquire);
         self.ring_ptr
@@ -350,8 +418,16 @@ pub fn deserialize_commit_record(bytes: &[u8]) -> Result<WalRingCommit, WalRingE
 
     let archived = rkyv::check_archived_root::<WalRingCommit>(aligned.as_slice())
         .map_err(|err| WalRingError::Deserialize(err.to_string()))?;
-    match archived.deserialize(&mut Infallible) {
-        Ok(decoded) => Ok(decoded),
+    match RkyvDeserialize::<WalRingCommit, Infallible>::deserialize(archived, &mut Infallible) {
+        Ok(decoded) => {
+            if decoded.version != WAL_RING_COMMIT_VERSION {
+                return Err(WalRingError::Deserialize(format!(
+                    "unsupported wal commit version {} (expected {})",
+                    decoded.version, WAL_RING_COMMIT_VERSION
+                )));
+            }
+            Ok(decoded)
+        }
         Err(_) => Err(WalRingError::Deserialize(
             "infallible deserialize unexpectedly failed".to_string(),
         )),

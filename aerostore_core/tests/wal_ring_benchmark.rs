@@ -10,7 +10,7 @@ use std::time::Instant;
 use aerostore_core::{
     deserialize_commit_record, spawn_wal_writer_daemon, wal_commit_from_occ_record, IndexValue,
     LogicalDatabase, LogicalDatabaseConfig, OccCommitter, OccTable, SecondaryIndex, SharedWalRing,
-    ShmArena, SyncWalWriter, WalRingCommit, WalRingWrite, WalWriterDaemon,
+    ShmArena, SyncWalWriter, WalDeltaCodec, WalRingCommit, WalRingWrite, WalWriterDaemon,
 };
 use crossbeam_skiplist::SkipMap;
 use serde::{Deserialize, Serialize};
@@ -60,6 +60,8 @@ struct TclBenchRow {
     altitude: i32,
     gs: u16,
 }
+
+impl WalDeltaCodec for TclBenchRow {}
 
 impl TclBenchRow {
     fn new(flight: &str, altitude: i32, gs: u16) -> Self {
@@ -241,12 +243,14 @@ fn wal_ring_backpressure_blocks_producers_without_corruption() {
     for txid in 1..=TOTAL_MESSAGES as u64 {
         let payload_value = txid.rotate_left(17) ^ 0xA5A5_5A5A_5A5A_A5A5_u64;
         let msg = WalRingCommit {
+            version: aerostore_core::wal_ring::WAL_RING_COMMIT_VERSION,
             txid,
             writes: vec![WalRingWrite {
                 row_id: 0,
                 base_offset: txid as u32 - 1,
                 new_offset: txid as u32,
                 value_payload: payload_value.to_le_bytes().to_vec(),
+                wal_record_payload: Vec::new(),
             }],
         };
         ring.push_commit_record(&msg)

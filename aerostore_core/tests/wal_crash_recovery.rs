@@ -12,7 +12,7 @@ use aerostore_core::{
     deserialize_commit_record, read_wal_file, recover_occ_table_from_checkpoint_and_wal,
     recover_occ_table_from_wal, spawn_wal_writer_daemon, write_occ_checkpoint_and_truncate_wal,
     IndexCompare, IndexValue, OccCommitter, OccTable, SecondaryIndex, SharedWalRing, ShmArena,
-    WalWriterError,
+    WalDeltaCodec, WalWriterError,
 };
 
 fn tmp_data_dir() -> PathBuf {
@@ -33,6 +33,8 @@ struct TclLikeRow {
     altitude: i32,
     gs: u16,
 }
+
+impl WalDeltaCodec for TclLikeRow {}
 
 impl TclLikeRow {
     #[inline]

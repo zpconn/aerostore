@@ -31,3 +31,7 @@ harness = false
 [[bench]]
 name = "shm_skiplist_adversarial"
 harness = false
+
+[[bench]]
+name = "wal_delta_throughput"
+harness = false

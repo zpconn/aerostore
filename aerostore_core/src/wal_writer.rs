@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fmt;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, BufWriter, Write};
@@ -5,13 +6,17 @@ use std::os::fd::AsRawFd;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::occ::{Error as OccError, OccTable, OccTransaction};
+use crate::recovery_delta::{replay_update_record, replay_update_record_with_pk_map};
+use crate::wal_delta::{deserialize_wal_record as deserialize_delta_wal_record, WalDeltaCodec};
 use crate::wal_ring::{
-    deserialize_commit_record, serialize_commit_record, wal_commit_from_occ_record, SharedWalRing,
-    SynchronousCommit, WalRingCommit, WalRingError,
+    deserialize_commit_record, serialize_commit_record, wal_commit_from_occ_record,
+    wal_commit_from_occ_record_with_policy, SharedWalRing, SynchronousCommit, WalEncodingPolicy,
+    WalRingCommit, WalRingError, WalRingWrite,
 };
+use crate::ShmPrimaryKeyMap;
 
 #[derive(Debug)]
 pub enum WalWriterError {
@@ -200,6 +205,10 @@ fn wal_writer_daemon_loop<const SLOTS: usize, const SLOT_BYTES: usize>(
     ring: SharedWalRing<SLOTS, SLOT_BYTES>,
     wal_path: &Path,
 ) -> Result<(), WalWriterError> {
+    // Each daemon start (or restart) advances epoch so async committers can
+    // force a full-row baseline before emitting deltas again.
+    let _writer_epoch = ring.bump_writer_epoch()?;
+
     let file = OpenOptions::new()
         .create(true)
         .append(true)
@@ -244,10 +253,17 @@ enum CommitSink<const SLOTS: usize, const SLOT_BYTES: usize> {
     Asynchronous(SharedWalRing<SLOTS, SLOT_BYTES>),
 }
 
+#[derive(Clone, Debug, Default)]
+struct AsyncDeltaState {
+    observed_writer_epoch: u64,
+    rows_with_full_baseline_in_epoch: HashSet<u64>,
+}
+
 pub struct OccCommitter<const SLOTS: usize, const SLOT_BYTES: usize> {
     mode: SynchronousCommit,
     sink: CommitSink<SLOTS, SLOT_BYTES>,
     sync_writer: Option<SyncWalWriter>,
+    async_delta_state: Option<AsyncDeltaState>,
 }
 
 impl<const SLOTS: usize, const SLOT_BYTES: usize> OccCommitter<SLOTS, SLOT_BYTES> {
@@ -258,6 +274,7 @@ impl<const SLOTS: usize, const SLOT_BYTES: usize> OccCommitter<SLOTS, SLOT_BYTES
             mode: SynchronousCommit::On,
             sink: CommitSink::Synchronous(wal_path),
             sync_writer: Some(sync_writer),
+            async_delta_state: None,
         })
     }
 
@@ -266,6 +283,7 @@ impl<const SLOTS: usize, const SLOT_BYTES: usize> OccCommitter<SLOTS, SLOT_BYTES
             mode: SynchronousCommit::Off,
             sink: CommitSink::Asynchronous(ring),
             sync_writer: None,
+            async_delta_state: Some(AsyncDeltaState::default()),
         }
     }
 
@@ -298,10 +316,37 @@ impl<const SLOTS: usize, const SLOT_BYTES: usize> OccCommitter<SLOTS, SLOT_BYTES
         tx: &mut OccTransaction<T>,
     ) -> Result<usize, WalWriterError>
     where
-        T: serde::Serialize,
+        T: WalDeltaCodec,
     {
         let record = table.commit_with_record(tx)?;
-        let wal_commit = wal_commit_from_occ_record(&record)?;
+        let wal_commit = match &self.sink {
+            CommitSink::Synchronous(_) => wal_commit_from_occ_record(&record)?,
+            CommitSink::Asynchronous(ring) => {
+                let Some(async_delta_state) = self.async_delta_state.as_mut() else {
+                    return Err(WalWriterError::InvalidMode(
+                        "missing async delta state for asynchronous mode",
+                    ));
+                };
+
+                let writer_epoch = ring.writer_epoch()?;
+                if writer_epoch != async_delta_state.observed_writer_epoch {
+                    async_delta_state.observed_writer_epoch = writer_epoch;
+                    async_delta_state.rows_with_full_baseline_in_epoch.clear();
+                }
+
+                wal_commit_from_occ_record_with_policy(&record, |row_id| {
+                    let row_id = row_id as u64;
+                    if async_delta_state
+                        .rows_with_full_baseline_in_epoch
+                        .insert(row_id)
+                    {
+                        WalEncodingPolicy::ForceFull
+                    } else {
+                        WalEncodingPolicy::DeltaAllowed
+                    }
+                })?
+            }
+        };
 
         match &self.sink {
             CommitSink::Synchronous(_) => {
@@ -395,7 +440,19 @@ pub fn recover_occ_table_from_checkpoint_and_wal<T: Copy + Send + Sync + 'static
     wal_path: impl AsRef<Path>,
 ) -> Result<OccRecoveryState, WalWriterError>
 where
-    T: DeserializeOwned,
+    T: WalDeltaCodec,
+{
+    recover_occ_table_from_checkpoint_and_wal_with_pk_map(table, None, checkpoint_path, wal_path)
+}
+
+pub fn recover_occ_table_from_checkpoint_and_wal_with_pk_map<T: Copy + Send + Sync + 'static>(
+    table: &OccTable<T>,
+    pk_map: Option<&ShmPrimaryKeyMap>,
+    checkpoint_path: impl AsRef<Path>,
+    wal_path: impl AsRef<Path>,
+) -> Result<OccRecoveryState, WalWriterError>
+where
+    T: WalDeltaCodec,
 {
     let checkpoint_path = checkpoint_path.as_ref();
     let mut checkpoint_applied = 0_usize;
@@ -414,7 +471,22 @@ where
 
         checkpoint_max_txid = frame.max_txid.max(1);
         for row in frame.rows {
-            table.apply_recovered_write(row.row_id as usize, checkpoint_max_txid, row.value)?;
+            let row_id = row.row_id as usize;
+            if let Some(pk_map) = pk_map {
+                let pk = T::wal_primary_key(row_id, &row.value);
+                if !pk.is_empty() {
+                    let mapped = pk_map
+                        .insert_existing(pk.as_str(), row_id)
+                        .map_err(|err| WalWriterError::Codec(err.to_string()))?;
+                    if mapped != row_id {
+                        return Err(WalWriterError::Codec(format!(
+                            "checkpoint pk '{}' row mismatch: expected {}, mapped {}",
+                            pk, row_id, mapped
+                        )));
+                    }
+                }
+            }
+            table.apply_recovered_write(row_id, checkpoint_max_txid, row.value)?;
             checkpoint_applied += 1;
         }
         table.advance_global_txid_floor(checkpoint_max_txid.saturating_add(1));
@@ -434,9 +506,7 @@ where
             max_txid = commit.txid;
         }
         for write in &commit.writes {
-            let value: T = bincode::deserialize(write.value_payload.as_slice())
-                .map_err(|err| WalWriterError::Codec(err.to_string()))?;
-            table.apply_recovered_write(write.row_id as usize, commit.txid, value)?;
+            apply_recovered_wal_write(table, pk_map, commit.txid, write)?;
             wal_applied += 1;
         }
     }
@@ -502,7 +572,18 @@ pub fn recover_occ_table_from_wal<T: Copy + Send + Sync + 'static>(
     wal_path: impl AsRef<Path>,
 ) -> Result<OccRecoveryState, WalWriterError>
 where
-    T: DeserializeOwned,
+    T: WalDeltaCodec,
+{
+    recover_occ_table_from_wal_with_pk_map(table, None, wal_path)
+}
+
+pub fn recover_occ_table_from_wal_with_pk_map<T: Copy + Send + Sync + 'static>(
+    table: &OccTable<T>,
+    pk_map: Option<&ShmPrimaryKeyMap>,
+    wal_path: impl AsRef<Path>,
+) -> Result<OccRecoveryState, WalWriterError>
+where
+    T: WalDeltaCodec,
 {
     let commits = read_wal_file(wal_path)?;
     let mut applied_writes = 0_usize;
@@ -513,9 +594,7 @@ where
             max_txid = commit.txid;
         }
         for write in &commit.writes {
-            let value: T = bincode::deserialize(write.value_payload.as_slice())
-                .map_err(|err| WalWriterError::Codec(err.to_string()))?;
-            table.apply_recovered_write(write.row_id as usize, commit.txid, value)?;
+            apply_recovered_wal_write(table, pk_map, commit.txid, write)?;
             applied_writes += 1;
         }
     }
@@ -529,6 +608,34 @@ where
         applied_writes,
         max_txid,
     })
+}
+
+fn apply_recovered_wal_write<T>(
+    table: &OccTable<T>,
+    pk_map: Option<&ShmPrimaryKeyMap>,
+    txid: u64,
+    write: &WalRingWrite,
+) -> Result<(), WalWriterError>
+where
+    T: WalDeltaCodec + Copy + Send + Sync + 'static,
+{
+    if !write.wal_record_payload.is_empty() {
+        let record = deserialize_delta_wal_record(write.wal_record_payload.as_slice())
+            .map_err(|err| WalWriterError::Codec(err.to_string()))?;
+        if let Some(pk_map) = pk_map {
+            replay_update_record_with_pk_map(table, pk_map, txid, &record)
+                .map_err(|err| WalWriterError::Codec(err.to_string()))?;
+        } else {
+            replay_update_record(table, txid, write.row_id as usize, &record)
+                .map_err(|err| WalWriterError::Codec(err.to_string()))?;
+        }
+        return Ok(());
+    }
+
+    let value: T = bincode::deserialize(write.value_payload.as_slice())
+        .map_err(|err| WalWriterError::Codec(err.to_string()))?;
+    table.apply_recovered_write(write.row_id as usize, txid, value)?;
+    Ok(())
 }
 
 fn fdatasync(fd: libc::c_int) -> io::Result<()> {

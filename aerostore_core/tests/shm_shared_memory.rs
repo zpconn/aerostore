@@ -379,12 +379,14 @@ fn forked_mpsc_ring_producers_preserve_message_integrity() {
                 let txid = ((producer_idx as u64) << 32) | (seq as u64 + 1);
                 let payload_value = txid.rotate_left(11) ^ 0x9E37_79B1_85EB_CA87_u64;
                 let msg = WalRingCommit {
+                    version: aerostore_core::wal_ring::WAL_RING_COMMIT_VERSION,
                     txid,
                     writes: vec![WalRingWrite {
                         row_id: producer_idx as u64,
                         base_offset: seq as u32,
                         new_offset: seq as u32 + 1,
                         value_payload: payload_value.to_le_bytes().to_vec(),
+                        wal_record_payload: Vec::new(),
                     }],
                 };
 

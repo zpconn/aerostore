@@ -8,11 +8,11 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use aerostore_core::{
-    recover_occ_table_from_checkpoint_and_wal, spawn_wal_writer_daemon,
+    recover_occ_table_from_checkpoint_and_wal_with_pk_map, spawn_wal_writer_daemon,
     write_occ_checkpoint_and_truncate_wal, IndexValue, IngestStats, OccError, OccTable,
     OccTransaction, PlannerError, RuleBasedOptimizer, SchemaCatalog, SecondaryIndex, SharedWalRing,
     ShmArena, ShmPrimaryKeyMap, StapiRow, StapiValue, SynchronousCommit, TsvColumns,
-    TsvDecodeError, WalWriterError, SYNCHRONOUS_COMMIT_KEY,
+    TsvDecodeError, WalDeltaCodec, WalDeltaError, WalWriterError, SYNCHRONOUS_COMMIT_KEY,
 };
 use serde::{Deserialize, Serialize};
 use tcl::Interp;
@@ -49,6 +49,14 @@ struct FlightState {
 }
 
 impl FlightState {
+    const MASK_EXISTS: u64 = 1_u64 << 0;
+    const MASK_FLIGHT_ID: u64 = 1_u64 << 1;
+    const MASK_LAT: u64 = 1_u64 << 2;
+    const MASK_LON: u64 = 1_u64 << 3;
+    const MASK_ALTITUDE: u64 = 1_u64 << 4;
+    const MASK_GS: u64 = 1_u64 << 5;
+    const MASK_UPDATED_AT: u64 = 1_u64 << 6;
+
     #[inline]
     fn empty() -> Self {
         Self {
@@ -91,6 +99,130 @@ impl FlightState {
     #[inline]
     fn flight_id_string(&self) -> String {
         decode_fixed_ascii(self.flight_id.as_slice())
+    }
+}
+
+impl WalDeltaCodec for FlightState {
+    const COLUMN_COUNT: u8 = 7;
+
+    fn wal_primary_key(_row_id_hint: usize, value: &Self) -> String {
+        value.flight_id_string()
+    }
+
+    fn compute_dirty_mask(base_value: &Self, new_value: &Self) -> Result<u64, WalDeltaError> {
+        let mut mask = 0_u64;
+        if base_value.exists != new_value.exists {
+            mask |= Self::MASK_EXISTS;
+        }
+        if base_value.flight_id != new_value.flight_id {
+            mask |= Self::MASK_FLIGHT_ID;
+        }
+        if base_value.lat_scaled != new_value.lat_scaled {
+            mask |= Self::MASK_LAT;
+        }
+        if base_value.lon_scaled != new_value.lon_scaled {
+            mask |= Self::MASK_LON;
+        }
+        if base_value.altitude != new_value.altitude {
+            mask |= Self::MASK_ALTITUDE;
+        }
+        if base_value.gs != new_value.gs {
+            mask |= Self::MASK_GS;
+        }
+        if base_value.updated_at != new_value.updated_at {
+            mask |= Self::MASK_UPDATED_AT;
+        }
+        Ok(mask)
+    }
+
+    fn encode_changed_fields(
+        value: &Self,
+        dirty_mask: u64,
+        out: &mut Vec<u8>,
+    ) -> Result<(), WalDeltaError> {
+        if dirty_mask & Self::MASK_EXISTS != 0 {
+            out.push(value.exists);
+        }
+        if dirty_mask & Self::MASK_FLIGHT_ID != 0 {
+            out.extend_from_slice(value.flight_id.as_slice());
+        }
+        if dirty_mask & Self::MASK_LAT != 0 {
+            out.extend_from_slice(value.lat_scaled.to_le_bytes().as_slice());
+        }
+        if dirty_mask & Self::MASK_LON != 0 {
+            out.extend_from_slice(value.lon_scaled.to_le_bytes().as_slice());
+        }
+        if dirty_mask & Self::MASK_ALTITUDE != 0 {
+            out.extend_from_slice(value.altitude.to_le_bytes().as_slice());
+        }
+        if dirty_mask & Self::MASK_GS != 0 {
+            out.extend_from_slice(value.gs.to_le_bytes().as_slice());
+        }
+        if dirty_mask & Self::MASK_UPDATED_AT != 0 {
+            out.extend_from_slice(value.updated_at.to_le_bytes().as_slice());
+        }
+        Ok(())
+    }
+
+    fn apply_changed_fields(
+        base_value: &mut Self,
+        dirty_mask: u64,
+        delta_bytes: &[u8],
+    ) -> Result<(), WalDeltaError> {
+        let mut cursor = 0_usize;
+        let mut take = |len: usize| -> Result<&[u8], WalDeltaError> {
+            if cursor + len > delta_bytes.len() {
+                return Err(WalDeltaError::InvalidDeltaLength {
+                    expected_min: cursor + len,
+                    expected_max: cursor + len,
+                    actual: delta_bytes.len(),
+                });
+            }
+            let slice = &delta_bytes[cursor..cursor + len];
+            cursor += len;
+            Ok(slice)
+        };
+
+        if dirty_mask & Self::MASK_EXISTS != 0 {
+            base_value.exists = take(1)?[0];
+        }
+        if dirty_mask & Self::MASK_FLIGHT_ID != 0 {
+            base_value.flight_id.copy_from_slice(take(FLIGHT_ID_BYTES)?);
+        }
+        if dirty_mask & Self::MASK_LAT != 0 {
+            let mut arr = [0_u8; 8];
+            arr.copy_from_slice(take(8)?);
+            base_value.lat_scaled = i64::from_le_bytes(arr);
+        }
+        if dirty_mask & Self::MASK_LON != 0 {
+            let mut arr = [0_u8; 8];
+            arr.copy_from_slice(take(8)?);
+            base_value.lon_scaled = i64::from_le_bytes(arr);
+        }
+        if dirty_mask & Self::MASK_ALTITUDE != 0 {
+            let mut arr = [0_u8; 4];
+            arr.copy_from_slice(take(4)?);
+            base_value.altitude = i32::from_le_bytes(arr);
+        }
+        if dirty_mask & Self::MASK_GS != 0 {
+            let mut arr = [0_u8; 2];
+            arr.copy_from_slice(take(2)?);
+            base_value.gs = u16::from_le_bytes(arr);
+        }
+        if dirty_mask & Self::MASK_UPDATED_AT != 0 {
+            let mut arr = [0_u8; 8];
+            arr.copy_from_slice(take(8)?);
+            base_value.updated_at = u64::from_le_bytes(arr);
+        }
+
+        if cursor != delta_bytes.len() {
+            return Err(WalDeltaError::InvalidDeltaLength {
+                expected_min: cursor,
+                expected_max: cursor,
+                actual: delta_bytes.len(),
+            });
+        }
+        Ok(())
     }
 }
 
@@ -309,11 +441,13 @@ impl SharedFlightDb {
 
         let wal_path = data_dir.join(WAL_FILE_NAME);
         let checkpoint_path = data_dir.join(CHECKPOINT_FILE_NAME);
-        let _recovery =
-            recover_occ_table_from_checkpoint_and_wal(&table, &checkpoint_path, &wal_path)
-                .map_err(|err| {
-                    format!("failed to recover OCC state from checkpoint/WAL: {}", err)
-                })?;
+        let _recovery = recover_occ_table_from_checkpoint_and_wal_with_pk_map(
+            &table,
+            Some(key_index.as_ref()),
+            &checkpoint_path,
+            &wal_path,
+        )
+        .map_err(|err| format!("failed to recover OCC state from checkpoint/WAL: {}", err))?;
 
         for row_id in 0..DEFAULT_ROW_CAPACITY {
             let row = table
