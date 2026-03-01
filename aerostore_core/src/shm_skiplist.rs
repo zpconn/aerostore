@@ -223,6 +223,18 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         })
     }
 
+    pub fn from_existing(shm: Arc<ShmArena>, header_offset: u32) -> Result<Self, ShmSkipListError> {
+        let out = Self {
+            shm,
+            header_offset,
+            _marker: PhantomData,
+        };
+        if out.header_ref().is_none() {
+            return Err(ShmSkipListError::InvalidHeader(header_offset));
+        }
+        Ok(out)
+    }
+
     #[inline]
     pub fn shared_arena(&self) -> &Arc<ShmArena> {
         &self.shm

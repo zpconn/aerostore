@@ -8,7 +8,7 @@ use crate::procarray::{
     ProcArray, ProcArrayError, ProcArrayRegistration, ProcSnapshot, PROCARRAY_SLOTS,
 };
 
-const SHM_HEADER_MAGIC: u32 = 0xA3E0_5202;
+const SHM_HEADER_MAGIC: u32 = 0xAEB0_B007;
 const SHM_HEADER_ALIGN: u32 = 64;
 pub(crate) const OCC_PARTITION_LOCKS: usize = 1024;
 
@@ -222,6 +222,8 @@ struct ShmHeader {
     magic: u32,
     capacity: u32,
     data_start: u32,
+    clean_shutdown: AtomicBool,
+    boot_layout_offset: AtomicU32,
     next_txid: AtomicU64,
     proc_array: ProcArray,
     occ_partition_locks: [OccPartitionLock; OCC_PARTITION_LOCKS],
@@ -239,18 +241,7 @@ unsafe impl Sync for ShmArena {}
 
 impl ShmArena {
     pub fn new(byte_len: usize) -> Result<Self, ShmError> {
-        if byte_len == 0 {
-            return Err(ShmError::InvalidSize(byte_len));
-        }
-        if byte_len > u32::MAX as usize {
-            return Err(ShmError::SizeExceedsRelPtrLimit(byte_len));
-        }
-
-        let data_start = align_up(size_of::<ShmHeader>() as u32, SHM_HEADER_ALIGN)
-            .ok_or(ShmError::InvalidSize(byte_len))?;
-        if data_start as usize >= byte_len {
-            return Err(ShmError::InvalidSize(byte_len));
-        }
+        Self::validate_size(byte_len)?;
 
         // SAFETY:
         // - `mmap` is called with MAP_SHARED to ensure visibility across forked processes.
@@ -273,27 +264,63 @@ impl ShmArena {
         let base = NonNull::new(map_ptr.cast::<u8>()).ok_or(ShmError::MmapFailed(
             std::io::Error::new(std::io::ErrorKind::Other, "mmap returned null"),
         ))?;
-        let header = base.cast::<ShmHeader>();
-
         // SAFETY:
-        // The region was freshly mapped. Writing the header initializes allocator metadata.
+        // `mmap` returned a writable region of length `byte_len`.
+        unsafe { Self::from_mapped_region(base, byte_len, true) }
+    }
+
+    /// # Safety
+    /// Caller must guarantee `base..base+byte_len` points to a valid writable mapping.
+    pub(crate) unsafe fn from_mapped_region(
+        base: NonNull<u8>,
+        byte_len: usize,
+        initialize_header: bool,
+    ) -> Result<Self, ShmError> {
+        Self::validate_size(byte_len)?;
+        let arena = Self {
+            base,
+            len: byte_len,
+            header: base.cast::<ShmHeader>(),
+        };
+        if initialize_header {
+            arena.reinitialize_header()?;
+        }
+        Ok(arena)
+    }
+
+    pub fn reinitialize_header(&self) -> Result<(), ShmError> {
+        let data_start = Self::validate_size(self.len)?;
+        // SAFETY:
+        // This writes allocator metadata at offset 0 of the mapped region.
         unsafe {
-            header.as_ptr().write(ShmHeader {
+            self.header.as_ptr().write(ShmHeader {
                 magic: SHM_HEADER_MAGIC,
-                capacity: byte_len as u32,
+                capacity: self.len as u32,
                 data_start,
+                clean_shutdown: AtomicBool::new(true),
+                boot_layout_offset: AtomicU32::new(0),
                 next_txid: AtomicU64::new(1),
                 proc_array: ProcArray::new(),
                 occ_partition_locks: std::array::from_fn(|_| OccPartitionLock::new()),
                 head: AtomicU32::new(data_start),
             });
         }
+        Ok(())
+    }
 
-        Ok(Self {
-            base,
-            len: byte_len,
-            header,
-        })
+    fn validate_size(byte_len: usize) -> Result<u32, ShmError> {
+        if byte_len == 0 {
+            return Err(ShmError::InvalidSize(byte_len));
+        }
+        if byte_len > u32::MAX as usize {
+            return Err(ShmError::SizeExceedsRelPtrLimit(byte_len));
+        }
+        let data_start = align_up(size_of::<ShmHeader>() as u32, SHM_HEADER_ALIGN)
+            .ok_or(ShmError::InvalidSize(byte_len))?;
+        if data_start as usize >= byte_len {
+            return Err(ShmError::InvalidSize(byte_len));
+        }
+        Ok(data_start)
     }
 
     #[inline]
@@ -326,11 +353,20 @@ impl ShmArena {
         // SAFETY:
         // `header` points into the current mapping. We verify the magic before use.
         let header = unsafe { self.header.as_ref() };
-        if header.magic == SHM_HEADER_MAGIC {
-            Some(header)
-        } else {
+        if header.magic != SHM_HEADER_MAGIC {
             None
+        } else if header.capacity as usize != self.len {
+            None
+        } else if header.data_start as usize >= self.len {
+            None
+        } else {
+            Some(header)
         }
+    }
+
+    #[inline]
+    pub fn is_header_valid(&self) -> bool {
+        self.header_ref().is_some()
     }
 
     #[inline]
@@ -379,10 +415,41 @@ impl ShmArena {
     pub fn max_workers(&self) -> usize {
         PROCARRAY_SLOTS
     }
+
+    #[inline]
+    pub fn set_clean_shutdown_flag(&self, value: bool) {
+        if let Some(header) = self.header_ref() {
+            header.clean_shutdown.store(value, Ordering::Release);
+        }
+    }
+
+    #[inline]
+    pub fn clean_shutdown_flag(&self) -> bool {
+        self.header_ref()
+            .map(|header| header.clean_shutdown.load(Ordering::Acquire))
+            .unwrap_or(false)
+    }
+
+    #[inline]
+    pub fn boot_layout_offset(&self) -> u32 {
+        self.header_ref()
+            .map(|header| header.boot_layout_offset.load(Ordering::Acquire))
+            .unwrap_or(0)
+    }
+
+    #[inline]
+    pub fn set_boot_layout_offset(&self, offset: u32) {
+        if let Some(header) = self.header_ref() {
+            header.boot_layout_offset.store(offset, Ordering::Release);
+        }
+    }
 }
 
 impl Drop for ShmArena {
     fn drop(&mut self) {
+        if let Some(header) = self.header_ref() {
+            header.clean_shutdown.store(true, Ordering::Release);
+        }
         // SAFETY:
         // `self.base` and `self.len` originate from successful `mmap`.
         let rc = unsafe { libc::munmap(self.base.as_ptr().cast(), self.len) };

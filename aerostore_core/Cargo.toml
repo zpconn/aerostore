@@ -16,7 +16,7 @@ ryu = "1.0"
 libc = "0.2"
 rkyv = { version = "0.7", features = ["validation"] }
 nom = "7.1"
-rustix = { version = "0.38", features = ["runtime", "process"] }
+rustix = { version = "0.38", features = ["runtime", "process", "fs"] }
 
 [dev-dependencies]
 aerostore_macros = { path = "../aerostore_macros" }
@@ -34,4 +34,8 @@ harness = false
 
 [[bench]]
 name = "wal_delta_throughput"
+harness = false
+
+[[bench]]
+name = "tmpfs_warm_restart"
 harness = false
