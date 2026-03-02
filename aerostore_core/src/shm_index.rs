@@ -11,7 +11,7 @@ use serde::Serialize;
 use crate::index::{IndexCompare, IndexValue};
 use crate::shm::ShmArena;
 use crate::shm_skiplist::{
-    ShmSkipKey, ShmSkipList, ShmSkipListError, ShmSkipListGcDaemon, MAX_PAYLOAD_BYTES,
+    ScanBound, ShmSkipKey, ShmSkipList, ShmSkipListError, ShmSkipListGcDaemon, MAX_PAYLOAD_BYTES,
 };
 
 const KEY_INLINE_BYTES: usize = 128;
@@ -340,8 +340,9 @@ where
                 let Ok(bound) = EncodedKey::from_index_value(v) else {
                     return Vec::new();
                 };
-                let _ = self.skiplist.scan_payloads(
-                    |key| key.cmp(&bound) == Ordering::Greater,
+                let _ = self.skiplist.scan_payloads_bounded(
+                    Some((&bound, ScanBound::Exclusive)),
+                    None,
                     |_, _, payload| {
                         if let Some(row_id) = Self::decode_row_id(payload) {
                             out.insert(row_id);
@@ -353,8 +354,9 @@ where
                 let Ok(bound) = EncodedKey::from_index_value(v) else {
                     return Vec::new();
                 };
-                let _ = self.skiplist.scan_payloads(
-                    |key| matches!(key.cmp(&bound), Ordering::Greater | Ordering::Equal),
+                let _ = self.skiplist.scan_payloads_bounded(
+                    Some((&bound, ScanBound::Inclusive)),
+                    None,
                     |_, _, payload| {
                         if let Some(row_id) = Self::decode_row_id(payload) {
                             out.insert(row_id);
@@ -366,8 +368,9 @@ where
                 let Ok(bound) = EncodedKey::from_index_value(v) else {
                     return Vec::new();
                 };
-                let _ = self.skiplist.scan_payloads(
-                    |key| key.cmp(&bound) == Ordering::Less,
+                let _ = self.skiplist.scan_payloads_bounded(
+                    None,
+                    Some((&bound, ScanBound::Exclusive)),
                     |_, _, payload| {
                         if let Some(row_id) = Self::decode_row_id(payload) {
                             out.insert(row_id);
@@ -379,8 +382,9 @@ where
                 let Ok(bound) = EncodedKey::from_index_value(v) else {
                     return Vec::new();
                 };
-                let _ = self.skiplist.scan_payloads(
-                    |key| matches!(key.cmp(&bound), Ordering::Less | Ordering::Equal),
+                let _ = self.skiplist.scan_payloads_bounded(
+                    None,
+                    Some((&bound, ScanBound::Inclusive)),
                     |_, _, payload| {
                         if let Some(row_id) = Self::decode_row_id(payload) {
                             out.insert(row_id);

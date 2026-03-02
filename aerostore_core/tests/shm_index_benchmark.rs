@@ -16,6 +16,61 @@ struct BenchRow {
     payload: [u8; 128],
 }
 
+#[derive(Clone, Copy, Debug)]
+enum RangeMode {
+    Gt,
+    Gte,
+    Lt,
+    Lte,
+}
+
+impl RangeMode {
+    #[inline]
+    fn idx(self) -> usize {
+        match self {
+            RangeMode::Gt => 0,
+            RangeMode::Gte => 1,
+            RangeMode::Lt => 2,
+            RangeMode::Lte => 3,
+        }
+    }
+
+    #[inline]
+    fn label(self) -> &'static str {
+        match self {
+            RangeMode::Gt => "gt",
+            RangeMode::Gte => "gte",
+            RangeMode::Lt => "lt",
+            RangeMode::Lte => "lte",
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct RangeScenario {
+    label: &'static str,
+    mode: RangeMode,
+    threshold: i64,
+}
+
+fn range_compare(mode: RangeMode, threshold: i64) -> IndexCompare {
+    match mode {
+        RangeMode::Gt => IndexCompare::Gt(IndexValue::I64(threshold)),
+        RangeMode::Gte => IndexCompare::Gte(IndexValue::I64(threshold)),
+        RangeMode::Lt => IndexCompare::Lt(IndexValue::I64(threshold)),
+        RangeMode::Lte => IndexCompare::Lte(IndexValue::I64(threshold)),
+    }
+}
+
+fn matches_range(mode: RangeMode, altitude: i64, threshold: i64) -> bool {
+    match mode {
+        RangeMode::Gt => altitude > threshold,
+        RangeMode::Gte => altitude >= threshold,
+        RangeMode::Lt => altitude < threshold,
+        RangeMode::Lte => altitude <= threshold,
+    }
+}
+
 #[repr(C, align(64))]
 struct ForkBenchState {
     ready: AtomicU32,
@@ -152,6 +207,192 @@ fn benchmark_shm_index_range_lookup_vs_scan() {
         speedup >= 2.0,
         "range index lookup regression: expected >= 2x speedup, observed {:.2}x",
         speedup
+    );
+}
+
+#[test]
+fn benchmark_shm_index_range_modes_selectivity_vs_scan() {
+    const ROWS: u32 = 30_000;
+    const QUERIES_PER_SCENARIO: usize = 24;
+    const SCAN_PASSES_PER_QUERY: usize = 3;
+    const PER_MODE_MIN_SPEEDUP: f64 = 1.2;
+    const OVERALL_MIN_SPEEDUP: f64 = 2.0;
+
+    let shm = Arc::new(ShmArena::new(96 << 20).expect("failed to allocate benchmark shm arena"));
+    let index = SecondaryIndex::<u32>::new_in_shared("altitude", Arc::clone(&shm));
+    let mut rows = Vec::with_capacity(ROWS as usize);
+
+    for row_id in 0..ROWS {
+        let altitude = ((row_id * 37) % ROWS) as i64;
+        let row = BenchRow {
+            altitude,
+            row_id,
+            payload: [((row_id % 193) as u8); 128],
+        };
+        index.insert(IndexValue::I64(row.altitude), row.row_id);
+        rows.push(row);
+    }
+
+    let scenarios = [
+        RangeScenario {
+            label: "gt_sparse",
+            mode: RangeMode::Gt,
+            threshold: 29_700,
+        },
+        RangeScenario {
+            label: "gt_medium",
+            mode: RangeMode::Gt,
+            threshold: 15_000,
+        },
+        RangeScenario {
+            label: "gt_dense",
+            mode: RangeMode::Gt,
+            threshold: 300,
+        },
+        RangeScenario {
+            label: "gte_sparse",
+            mode: RangeMode::Gte,
+            threshold: 29_700,
+        },
+        RangeScenario {
+            label: "gte_medium",
+            mode: RangeMode::Gte,
+            threshold: 15_000,
+        },
+        RangeScenario {
+            label: "gte_dense",
+            mode: RangeMode::Gte,
+            threshold: 300,
+        },
+        RangeScenario {
+            label: "lt_sparse",
+            mode: RangeMode::Lt,
+            threshold: 300,
+        },
+        RangeScenario {
+            label: "lt_medium",
+            mode: RangeMode::Lt,
+            threshold: 15_000,
+        },
+        RangeScenario {
+            label: "lt_dense",
+            mode: RangeMode::Lt,
+            threshold: 29_700,
+        },
+        RangeScenario {
+            label: "lte_sparse",
+            mode: RangeMode::Lte,
+            threshold: 300,
+        },
+        RangeScenario {
+            label: "lte_medium",
+            mode: RangeMode::Lte,
+            threshold: 15_000,
+        },
+        RangeScenario {
+            label: "lte_dense",
+            mode: RangeMode::Lte,
+            threshold: 29_700,
+        },
+    ];
+
+    let mut payload_checksum = 0_u64;
+    let mut per_mode_index = [Duration::ZERO; 4];
+    let mut per_mode_scan = [Duration::ZERO; 4];
+    let mut total_index = Duration::ZERO;
+    let mut total_scan = Duration::ZERO;
+
+    for scenario in scenarios {
+        let index_start = Instant::now();
+        let mut index_total = 0_usize;
+        for _ in 0..QUERIES_PER_SCENARIO {
+            let hits = index.lookup(&range_compare(scenario.mode, scenario.threshold));
+            index_total = index_total.saturating_add(hits.len());
+        }
+        let index_elapsed = index_start.elapsed();
+
+        let scan_start = Instant::now();
+        let mut scan_total = 0_usize;
+        for _ in 0..QUERIES_PER_SCENARIO {
+            let mut hits = 0_usize;
+            for pass in 0..SCAN_PASSES_PER_QUERY {
+                for row in &rows {
+                    let mut row_sum = 0_u64;
+                    for byte in row.payload {
+                        row_sum = row_sum.wrapping_add(byte as u64);
+                    }
+                    payload_checksum = payload_checksum.wrapping_add(row_sum);
+
+                    if pass == 0 && matches_range(scenario.mode, row.altitude, scenario.threshold) {
+                        hits = hits.saturating_add(1);
+                    }
+                }
+            }
+            scan_total = scan_total.saturating_add(hits);
+        }
+        let scan_elapsed = scan_start.elapsed();
+        assert_eq!(
+            index_total, scan_total,
+            "range parity mismatch for scenario={}",
+            scenario.label
+        );
+
+        per_mode_index[scenario.mode.idx()] += index_elapsed;
+        per_mode_scan[scenario.mode.idx()] += scan_elapsed;
+        total_index += index_elapsed;
+        total_scan += scan_elapsed;
+
+        let speedup = scan_elapsed.as_secs_f64() / index_elapsed.as_secs_f64().max(1e-12);
+        eprintln!(
+            "shm_index_range_mode_benchmark: scenario={} mode={} threshold={} queries={} index_elapsed={:?} scan_elapsed={:?} speedup={:.2}x",
+            scenario.label,
+            scenario.mode.label(),
+            scenario.threshold,
+            QUERIES_PER_SCENARIO,
+            index_elapsed,
+            scan_elapsed,
+            speedup
+        );
+    }
+
+    assert!(
+        payload_checksum > 0,
+        "scan checksum guard should be non-zero"
+    );
+
+    for mode in [RangeMode::Gt, RangeMode::Gte, RangeMode::Lt, RangeMode::Lte] {
+        let idx = mode.idx();
+        let speedup =
+            per_mode_scan[idx].as_secs_f64() / per_mode_index[idx].as_secs_f64().max(1e-12);
+        eprintln!(
+            "shm_index_range_mode_rollup: mode={} index_elapsed={:?} scan_elapsed={:?} speedup={:.2}x",
+            mode.label(),
+            per_mode_index[idx],
+            per_mode_scan[idx],
+            speedup
+        );
+        assert!(
+            speedup >= PER_MODE_MIN_SPEEDUP,
+            "range {} regression: expected >= {:.1}x speedup, observed {:.2}x",
+            mode.label(),
+            PER_MODE_MIN_SPEEDUP,
+            speedup
+        );
+    }
+
+    let overall_speedup = total_scan.as_secs_f64() / total_index.as_secs_f64().max(1e-12);
+    eprintln!(
+        "shm_index_range_mode_overall: scenarios={} index_elapsed={:?} scan_elapsed={:?} speedup={:.2}x",
+        scenarios.len(),
+        total_index,
+        total_scan,
+        overall_speedup
+    );
+    assert!(
+        overall_speedup >= OVERALL_MIN_SPEEDUP,
+        "overall range benchmark regression: expected >= {:.1}x speedup, observed {:.2}x",
+        OVERALL_MIN_SPEEDUP,
+        overall_speedup
     );
 }
 
