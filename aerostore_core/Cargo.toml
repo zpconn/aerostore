@@ -24,6 +24,9 @@ criterion = "0.5"
 loom = "0.7"
 tempfile = "3.15"
 proptest = "1.6"
+postgres = { version = "0.19", features = ["with-serde_json-1"] }
+testcontainers = "0.15"
+serde_json = "1.0"
 
 [[bench]]
 name = "procarray_snapshot"
@@ -43,4 +46,8 @@ harness = false
 
 [[bench]]
 name = "shm_skiplist_seek_bounds"
+harness = false
+
+[[bench]]
+name = "hyperfeed_crucible"
 harness = false

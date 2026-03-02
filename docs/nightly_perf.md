@@ -16,7 +16,21 @@ cargo bench -p aerostore_core --bench wal_delta_throughput
 cargo bench -p aerostore_core --bench shm_skiplist_adversarial
 cargo bench -p aerostore_core --bench shm_skiplist_seek_bounds
 cargo bench -p aerostore_core --bench tmpfs_warm_restart
+cargo bench -p aerostore_core --bench hyperfeed_crucible -- --noplot
 ```
+
+`hyperfeed_crucible` notes:
+- requires Docker daemon access (PostgreSQL is launched via `testcontainers`).
+- runs two Aerostore profiles per execution (`profile_512m`, `profile_1g`).
+- defaults to a 60-second sustained workload; set `AEROSTORE_CRUCIBLE_DURATION_SECS` for shorter smoke runs.
+- optional daemon cadence controls:
+  - `AEROSTORE_CRUCIBLE_VACUUM_INTERVAL_MS`
+  - `AEROSTORE_CRUCIBLE_INDEX_GC_INTERVAL_MS`
+- output includes:
+  - Aerostore/Postgres TPS and latency ratios,
+  - PostgreSQL server-exec vs client-RTT scan breakdown,
+  - Aerostore index update failure counters and reclaim telemetry deltas.
+- exits with a clear error when Docker is unavailable.
 
 ## Benchmark-Style Test Suites (Release)
 

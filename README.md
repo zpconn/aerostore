@@ -260,7 +260,18 @@ cargo bench -p aerostore_core --bench wal_delta_throughput
 cargo bench -p aerostore_core --bench shm_skiplist_adversarial
 cargo bench -p aerostore_core --bench shm_skiplist_seek_bounds
 cargo bench -p aerostore_core --bench tmpfs_warm_restart
+cargo bench -p aerostore_core --bench hyperfeed_crucible -- --noplot
 ```
+
+Hyperfeed Crucible note:
+- requires Docker (`testcontainers` starts a local PostgreSQL container).
+- runs two Aerostore memory profiles per invocation: `profile_512m` and `profile_1g`.
+- default sustained duration is 60 seconds; override with `AEROSTORE_CRUCIBLE_DURATION_SECS` for local smoke runs.
+- optional daemon tuning knobs:
+  - `AEROSTORE_CRUCIBLE_VACUUM_INTERVAL_MS`
+  - `AEROSTORE_CRUCIBLE_INDEX_GC_INTERVAL_MS`
+- output includes index update failure counters, vacuum/index reclaim telemetry, and PostgreSQL scan server-vs-client latency breakdown.
+- hard gates enforce `Aerostore TPS >= 2.0x Postgres TPS` and `Aerostore p99 <= 0.6x Postgres p99`.
 
 Benchmark-style test harness suites:
 ```bash
@@ -284,6 +295,7 @@ Run scope:
 - Benchmark-style functions executed: 28
 - Total benchmark entrypoints executed: 33
 - Overall status: completed; all benchmark gates passed in this run.
+- `hyperfeed_crucible` is tracked separately below as a targeted diagnostic (5-second smoke runs).
 
 ### Cross-Process Vacuum Addendum (2026-03-02)
 Focused rerun after implementing shared free-list + vacuum daemon.
@@ -314,6 +326,31 @@ Focused rerun after implementing shared free-list + vacuum daemon.
 | `vacuum_free_list_invariants` | multi-process churn preserves `pushes >= pops`; bounded allocator growth | pass (3 consecutive runs) |
 | `vacuum_recycle_ab_benchmark` | vacuum-enabled run completes all updates; disabled run OOMs under same 10MB constraint | pass |
 | `vacuum_index_cleanup_tests` (Tcl unit) | reclaimed index cleanup removes stale postings while preserving live unchanged postings | pass |
+
+### Hyperfeed Crucible Diagnostic (2026-03-02)
+Command:
+```bash
+AEROSTORE_CRUCIBLE_DURATION_SECS=5 cargo bench -p aerostore_core --bench hyperfeed_crucible -- --noplot
+```
+
+Default daemon cadence (`AEROSTORE_CRUCIBLE_VACUUM_INTERVAL_MS=50`, `AEROSTORE_CRUCIBLE_INDEX_GC_INTERVAL_MS=50`):
+
+| Profile | Aerostore TPS | Postgres TPS | TPS Ratio | Aerostore p99 (us) | Postgres p99 (us) | Index Insert Failures | Vacuum Reclaimed Rows | Index Reclaimed Nodes (delta) | Free-List Pushes/Pops (delta) | Status |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| `profile_512m` | `929094.64` | `80362.92` | `11.56x` | `65.54` | `262.14` | `2,926,665` | `3,763,473` | `41,984` | `3,763,473 / 3,710,787` | pass |
+| `profile_1g` | `831202.83` | `78311.82` | `10.61x` | `65.54` | `262.14` | `1,709,937` | `3,392,498` | `28,672` | `3,392,498 / 3,313,632` | pass |
+
+Aggressive daemon cadence (`AEROSTORE_CRUCIBLE_VACUUM_INTERVAL_MS=1`, `AEROSTORE_CRUCIBLE_INDEX_GC_INTERVAL_MS=1`):
+
+| Profile | Aerostore TPS | Postgres TPS | TPS Ratio | Aerostore p99 (us) | Postgres p99 (us) | Index Insert Failures | Vacuum Reclaimed Rows | Index Reclaimed Nodes (delta) | Free-List Pushes/Pops (delta) | Status |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| `profile_512m` | `1094203.15` | `81470.71` | `13.43x` | `65.54` | `262.14` | `3,569,762` | `4,433,107` | `883,383` | `4,433,107 / 4,418,320` | pass |
+| `profile_1g` | `863022.45` | `79465.72` | `10.86x` | `65.54` | `262.14` | `1,787,719` | `3,543,073` | `1,744,983` | `3,543,073 / 3,513,786` | pass |
+
+Interpretation:
+- Gate checks are met in all four profile/cadence combinations (`TPS >= 2.0x`, `p99 <= 0.6x`).
+- PostgreSQL scan server execution (`~16.38us` p50) is much smaller than end-to-end client RTT (`~131.07us` p50), showing transport/protocol overhead as the dominant scan-path cost.
+- Vacuum/index daemons increase reclaim activity, but index insert failures remain non-zero under sustained hot update churn, indicating further skiplist/index allocation reuse work is still needed.
 
 ### Criterion Benchmarks (`aerostore_core/benches`)
 | Suite | Benchmark | Key Results | Status | What It Means |
