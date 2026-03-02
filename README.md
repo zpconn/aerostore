@@ -9,6 +9,7 @@ The project is optimized around:
 - serializable OCC with hybrid optimistic/pessimistic hot-row handling,
 - WAL durability with checkpoint and recovery,
 - delta-encoded WAL updates to reduce write amplification,
+- cross-process vacuum + shared free-list recycling for update-heavy MVCC churn,
 - tmpfs warm restarts to avoid routine cold-start replay,
 - Tcl FFI ingestion/search integration.
 
@@ -20,6 +21,7 @@ The project is optimized around:
 - [Hybrid OCC Livelock Mitigation](#hybrid-occ-livelock-mitigation)
 - [Delta-Encoded WAL](#delta-encoded-wal)
 - [Tmpfs Warm Restart](#tmpfs-warm-restart)
+- [Cross-Process Vacuum GC](#cross-process-vacuum-gc)
 - [Tcl Bridge](#tcl-bridge)
 - [Build and Prerequisites](#build-and-prerequisites)
 - [Quick Start](#quick-start)
@@ -37,6 +39,7 @@ Aerostore is under active development. Current focus:
 - STAPI parser + rule-based planner + index-aware execution,
 - synchronous/asynchronous WAL commit modes,
 - delta WAL update records + delta replay,
+- cross-process vacuum reclaim + shared free-list reuse,
 - tmpfs-backed warm attach boot path.
 
 Current non-goals:
@@ -57,6 +60,7 @@ Core modules in `aerostore_core/src`:
 - Query/planner: `stapi_parser.rs`, `rbo_planner.rs`, `execution.rs`, `query.rs`.
 - WAL and recovery: `wal_ring.rs`, `wal_writer.rs`, `wal_delta.rs`, `recovery_delta.rs`, `recovery.rs`.
 - Warm restart bootstrap: `bootloader.rs`.
+- Vacuum and reclaim: `vacuum.rs`.
 
 ## Bound-Seeking SkipList Range Scans
 Aerostore now uses true bound-seeking traversals for skiplist-backed range predicates.
@@ -121,6 +125,31 @@ Key behavior:
 - clean shutdown flag in shared header,
 - warm attach path skips snapshot load and WAL replay when shared layout is valid,
 - orphaned ProcArray slots are cleaned on warm attach after crash.
+
+## Cross-Process Vacuum GC
+Aerostore now includes a cross-process vacuum path to prevent `/dev/shm` exhaustion under heavy update churn.
+
+Implemented components:
+- Shared lock-free free-list in shared header (`SharedFreeList` equivalent):
+  - `free_list_head`, push/pop counters, and daemon PID slot in `ShmHeader`.
+- Allocator recycle-first policy:
+  - `ChunkedArena::alloc_raw` attempts free-list pop before bumping high-water mark.
+  - `ChunkedArena::recycle_raw` pushes reclaimed blocks for O(1) reuse.
+- Vacuum daemon in `aerostore_core/src/vacuum.rs`:
+  - 1-second sweep cadence by default.
+  - computes `global_xmin` from the 256-slot `ProcArray`.
+  - leader election/ownership via shared daemon PID slot.
+- Dead tuple reclaim in OCC:
+  - unlinks versions where `xmax < global_xmin` from row version chains,
+  - pushes reclaimed row blocks back into shared free-list.
+- Secondary index cleanup hook:
+  - reclaimed-row callbacks in Tcl runtime remove stale postings while preserving live postings for unchanged indexed fields.
+
+Primary files:
+- `aerostore_core/src/shm.rs`
+- `aerostore_core/src/occ_partitioned.rs`
+- `aerostore_core/src/vacuum.rs`
+- `aerostore_tcl/src/lib.rs`
 
 ## Tcl Bridge
 Tcl package: `aerostore`.
@@ -214,6 +243,15 @@ cargo test -p aerostore_core --test tmpfs_warm_restart_chaos -- --nocapture --te
 cargo test -p aerostore_core --test tmpfs_warm_restart_expansions -- --nocapture --test-threads=1
 ```
 
+### Vacuum and recycle checks
+```bash
+cargo test -p aerostore_core --test vacuum_recycle_stress -- --nocapture
+cargo test -p aerostore_core --test vacuum_leader_handoff -- --nocapture
+cargo test -p aerostore_core --test vacuum_free_list_invariants -- --nocapture --test-threads=1
+cargo test -p aerostore_core --test vacuum_recycle_ab_benchmark -- --nocapture
+cargo test -p aerostore_tcl --lib vacuum_index_cleanup_tests -- --nocapture
+```
+
 ## Benchmark Runbook
 Criterion benches:
 ```bash
@@ -231,13 +269,14 @@ cargo test -p aerostore_core --release --test occ_checkpoint_benchmark -- --test
 cargo test -p aerostore_core --release --test query_index_benchmark -- --test-threads=1 --nocapture
 cargo test -p aerostore_core --release --test shm_index_benchmark -- --test-threads=1 --nocapture
 cargo test -p aerostore_core --release --test shm_benchmark -- --test-threads=1 --nocapture
+cargo test -p aerostore_core --release --test vacuum_recycle_ab_benchmark -- --test-threads=1 --nocapture
 cargo test -p aerostore_core --release --test wal_crash_recovery benchmark_occ_wal_replay_startup_throughput -- --test-threads=1 --nocapture
 cargo test -p aerostore_core --release --test occ_partitioned_lock_striping_benchmark -- --ignored --test-threads=1 --nocapture
 cargo test -p aerostore_tcl --release --test config_checkpoint_integration benchmark_tcl_synchronous_commit_modes -- --test-threads=1 --nocapture
 ```
 
 ## Latest Validated Results (2026-03-02)
-This section reports a full benchmark sweep across the repository.
+This section reports a full benchmark sweep across the repository, plus a vacuum-gc addendum from the latest implementation pass.
 
 Run scope:
 - Criterion benches executed: 5
@@ -245,6 +284,36 @@ Run scope:
 - Benchmark-style functions executed: 28
 - Total benchmark entrypoints executed: 33
 - Overall status: completed; all benchmark gates passed in this run.
+
+### Cross-Process Vacuum Addendum (2026-03-02)
+Focused rerun after implementing shared free-list + vacuum daemon.
+
+#### Regression-sensitive checks
+| Check Group | Result | Notes |
+| --- | --- | --- |
+| `shm_shared_memory` | pass | 6/6 tests passed; includes forked recycle stress. |
+| `occ_savepoint_reclaim` | pass | 3/3 tests passed. |
+| `procarray_concurrency` | pass | 5/5 tests passed; slot release invariants hold. |
+| `wal_crash_recovery` | pass | 11/11 tests passed on rerun; one transient failure observed in an earlier attempt. |
+| `tmpfs_warm_restart_chaos` + `tmpfs_warm_restart_expansions` | pass | 5/5 tests passed; warm attach behavior unchanged. |
+| `aerostore_tcl/config_checkpoint_integration` | pass | 3/3 tests passed; Tcl mode/config/checkpoint flow unchanged. |
+
+#### Benchmark reruns
+| Suite | Key Results | Status |
+| --- | --- | --- |
+| `shm_benchmark` | alloc throughput `15,318,114 rows/s`; fork scan `75,427,296 rows/s` | pass |
+| `occ_checkpoint_benchmark` | checkpoint: `10k=10.91ms`, `100k=16.09ms`, `1M=158.43ms`; logical replay: `10k=143ms`, `100k=1.21s`, `1M=12.28s` | pass |
+| `wal_ring_benchmark` | async/sync ratios from `72.52x` to `480.42x` across benchmark functions | pass |
+| `tmpfs_warm_restart` (criterion) | warm attach `[53.419us 53.581us 53.803us]`; cold fixture `[2.4550ms 2.4638ms 2.4745ms]`; post-restart throughput case `[1.8304ms 1.8404ms 1.8534ms]` | pass |
+
+#### New vacuum-specific coverage
+| Test | Key Assertion | Status |
+| --- | --- | --- |
+| `vacuum_recycle_stress` | 10MB arena handles 500,000 updates without OOM; free-list push/pop counters advance | pass |
+| `vacuum_leader_handoff` | single leader ownership, stale-pid takeover, and leadership reacquisition | pass |
+| `vacuum_free_list_invariants` | multi-process churn preserves `pushes >= pops`; bounded allocator growth | pass (3 consecutive runs) |
+| `vacuum_recycle_ab_benchmark` | vacuum-enabled run completes all updates; disabled run OOMs under same 10MB constraint | pass |
+| `vacuum_index_cleanup_tests` (Tcl unit) | reclaimed index cleanup removes stale postings while preserving live unchanged postings | pass |
 
 ### Criterion Benchmarks (`aerostore_core/benches`)
 | Suite | Benchmark | Key Results | Status | What It Means |
@@ -320,6 +389,7 @@ For parallel integration jobs:
 - Many strongest tests are Unix/Linux specific (`fork`, `/dev/shm`, signals).
 - Throughput thresholds are host-sensitive.
 - Tcl bridge uses process-global initialization (`OnceLock`), so one DB instance per process.
+- `wal_crash_recovery` includes a known intermittent test (`async_wal_daemon_restart_does_not_persist_rolled_back_savepoint_intents`) that can require rerun under high host contention.
 
 ## License
 No license file is currently present.
