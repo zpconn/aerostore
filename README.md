@@ -237,54 +237,155 @@ cargo test -p aerostore_tcl --release --test config_checkpoint_integration bench
 ```
 
 ## Latest Validated Results (2026-03-02)
-This reflects the latest targeted validation run for skiplist bound-seeking/range behavior and related regressions.
+This section reports a full benchmark sweep across the repository.
 
-### Bound-seeking SkipList benchmark (`criterion`)
-- Command:
-  - `cargo bench -p aerostore_core --bench shm_skiplist_seek_bounds`
+Run scope:
+- Criterion benches executed: 5
+- Benchmark-style test suites executed: 8
+- Benchmark-style functions executed: 27
+- Total benchmark entrypoints executed: 32
+- Overall status: completed, with 2 benchmark gate failures:
+  - `benchmark_shm_index_range_modes_selectivity_vs_scan`
+  - `benchmark_hybrid_hot_row_outperforms_pure_occ_baseline`
+
+### Criterion Benchmarks (`aerostore_core/benches`)
+
+1. `procarray_snapshot`
+- Result:
+  - `procarray_snapshot/10`: `[40.842 ns 40.872 ns 40.905 ns]`
+  - `procarray_snapshot/10000000`: `[40.827 ns 40.863 ns 40.906 ns]`
+  - proof line: `txid_10=41.28ns txid_10_000_000=41.18ns delta=0.10ns`
+- Meaning:
+  - snapshot lookup latency is effectively constant with respect to txid scale (no growth from 10 to 10M).
+
+2. `wal_delta_throughput`
+- Result:
+  - one-column update workload:
+    - full bytes: `81,600,000`
+    - delta bytes: `4,799,987`
+    - byte reduction: `94.12%`
+    - full encode time: `[4.3262 ms 4.3349 ms 4.3417 ms]`
+    - delta encode time: `[69.771 ms 69.849 ms 69.934 ms]`
+  - two-column update workload:
+    - byte reduction: `92.52%`
+    - full encode time: `[4.3200 ms 4.3230 ms 4.3279 ms]`
+    - delta encode time: `[72.749 ms 72.801 ms 72.885 ms]`
+  - four-column update workload:
+    - byte reduction: `90.93%`
+    - full encode time: `[4.8149 ms 4.8178 ms 4.8212 ms]`
+    - delta encode time: `[76.237 ms 76.357 ms 76.457 ms]`
+- Meaning:
+  - delta encoding dramatically reduces WAL byte volume, while this benchmark harness shows higher CPU encode cost for per-field delta packing.
+
+3. `shm_skiplist_adversarial`
+- Result:
+  - `small_p99_ns=2200`, `medium_p99_ns=2800`, `large_p99_ns=3500`
+  - slopes: `small->medium=0.410`, `medium->large=0.388`
+  - criterion line: `[187.68 ps 188.11 ps 188.69 ps]`
+  - gate status: pass (`large p99 < 5000ns`)
+- Meaning:
+  - shared skiplist lookup latency remains under strict p99 budget and scales sublinearly under adversarial load.
+
+4. `shm_skiplist_seek_bounds`
 - Result:
   - `keys=1,000,000`, query `> 999,990`
-  - average latency: `77.93 ns`
-  - gate: `< 5,000 ns`
-  - status: pass
+  - criterion line: `[77.630 ns 77.730 ns 77.844 ns]`
+  - computed average: `77.85 ns`
+  - gate status: pass (`< 5000 ns`)
 - Meaning:
-  - the range query starts near the tail and does not linearly scan from head.
+  - bound-seeking starts near tail and bypasses the first `999,990` keys, avoiding O(N) head scan behavior.
 
-### Adversarial SkipList latency gate (`criterion`)
-- Command:
-  - `cargo bench -p aerostore_core --bench shm_skiplist_adversarial`
+5. `tmpfs_warm_restart`
 - Result:
-  - `small_p99_ns=2400`, `medium_p99_ns=3100`, `large_p99_ns=4000`
-  - slope small->medium `0.435`, medium->large `0.443`
-  - gates: `large p99 < 5000ns`, slope checks `< 0.6`
-  - status: pass
+  - `warm_attach_boot`: `[55.210 us 55.335 us 55.437 us]`
+  - `cold_boot_fixture_build`: `[2.0275 ms 2.0322 ms 2.0360 ms]`
+  - `post_restart_update_throughput`: `[1.7442 ms 1.7500 ms 1.7532 ms]`
+  - note: this benchmark needed `/dev/shm` access and was run outside sandbox restrictions.
 - Meaning:
-  - lookup latency remains under strict tail budget and scales sublinearly.
+  - warm attach path is much faster than rebuilding a cold fixture and supports immediate post-restart update throughput.
 
-### Shared-index range regression checks
-- `benchmark_shm_index_range_lookup_vs_scan`:
-  - speedup `11.86x`
-  - gate `>= 2.0x`
-  - status: pass
-- `benchmark_shm_index_range_modes_selectivity_vs_scan`:
-  - per-mode speedup rollups:
-    - `gt: 8.14x`
-    - `gte: 8.14x`
-    - `lt: 8.13x`
-    - `lte: 8.14x`
-  - overall speedup `8.14x`
-  - gates: per-mode `>= 1.2x`, overall `>= 2.0x`
-  - status: pass
+### Benchmark-Style Test Suites
+
+1. `wal_ring_benchmark` (5 benchmark functions)
+- Result:
+  - `benchmark_async_synchronous_commit_modes`: `sync_tps=1228.10`, `async_tps=1360532.37`, ratio `1107.83x`
+  - `benchmark_async_synchronous_commit_modes_parallel_disjoint_keys`: ratio `1014.28x`
+  - `benchmark_async_synchronous_commit_modes_savepoint_churn`: ratio `733.14x`
+  - `benchmark_async_synchronous_commit_modes_tcl_like_keyed_upserts`: ratio `601.04x`
+  - `benchmark_logical_async_vs_sync_commit_modes`: ratio `911.88x`
 - Meaning:
-  - range acceleration is sustained across operator modes and sparse/medium/dense selectivity.
+  - asynchronous WAL commit mode is vastly higher-throughput than synchronous mode in this benchmark environment.
 
-### Correctness regression checks
-- `benchmark_shared_index_indexed_range_scan_with_sort_and_limit`: pass.
-- `rbo_uses_index_range_scan_for_*` planner tests: pass.
-- `recovery_large_cardinality_index_parity_matches_table_scan`: pass (now includes `Gt/Gte/Lt/Lte` parity).
-- `retired_nodes_are_not_reclaimed_before_oldest_active_snapshot_finishes`: pass.
-- `range_operators_*` bounds tests: pass.
-- `seek_ge_and_bounded_scan_stay_correct_with_tombstone_heavy_keys`: pass.
+2. `occ_checkpoint_benchmark` (2 benchmark functions)
+- Result:
+  - `benchmark_occ_checkpoint_latency_by_cardinality`:
+    - `10k rows: 3.445576ms (344.56 ns/row)`
+    - `100k rows: 6.623267ms (66.23 ns/row)`
+    - `1M rows: 33.283742ms (33.28 ns/row)`
+  - `benchmark_logical_snapshot_and_replay_recovery_by_cardinality`:
+    - `10k rows: 21.920646ms (490,405 rows/s)`
+    - `100k rows: 195.629607ms (515,004 rows/s)`
+    - `1M rows: 1.816991139s (550,773 rows/s)`
+- Meaning:
+  - checkpoint and logical replay remain bounded and scale to high cardinalities with sustained per-row throughput.
+
+3. `query_index_benchmark` (9 benchmark functions)
+- Result:
+  - `benchmark_shared_index_indexed_range_scan_with_sort_and_limit`: `100k` ingest in `50.836ms`, `512` scans in `787.330ms`
+  - `benchmark_stapi_parse_compile_execute_vs_typed_query_path`: typed `91.627ms`, STAPI `8.428ms`
+  - `benchmark_tcl_style_alias_match_desc_offset_limit_path`: `10.765663s`
+  - `benchmark_tcl_bridge_style_stapi_assembly_compile_execute`: `8.685921s`
+  - `benchmark_stapi_rbo_pk_point_lookup_vs_full_scan`: pk `14.574us`, scan `16.089316s`
+  - `benchmark_stapi_rbo_tiebreak_dest_over_altitude`: `1.458486s`
+  - `benchmark_stapi_rbo_cardinality_trap_flight_id_over_aircraft_type`: `54.913us`
+  - `benchmark_stapi_residual_negative_filters_with_index_driver`: `1.752238s`
+  - `benchmark_stapi_null_notnull_residual_filters`: `1.017999s`
+- Meaning:
+  - planner/index routing and STAPI execution paths strongly outperform equivalent scan-heavy paths in targeted scenarios.
+
+4. `shm_index_benchmark` (4 benchmark functions)
+- Result:
+  - `benchmark_shm_index_eq_lookup_vs_scan`: speedup `486.27x` (pass)
+  - `benchmark_shm_index_forked_contention_throughput`: ratio `0.78` (pass, gate `>=0.20`)
+  - `benchmark_shm_index_range_lookup_vs_scan`: speedup `2.93x` (pass, gate `>=2.0`)
+  - `benchmark_shm_index_range_modes_selectivity_vs_scan`: failed
+    - overall speedup `1.69x` in full-suite run (`1.65x` on isolated rerun)
+    - failure against gate `>=2.0x`
+- Meaning:
+  - equality and simple range lookups are healthy, but mixed selectivity range-mode benchmark currently underperforms its configured gate.
+
+5. `shm_benchmark` (2 benchmark functions)
+- Result:
+  - `benchmark_shm_allocation_throughput`: `107,825,593 rows/s`
+  - `benchmark_forked_range_scan_latency`: `660,182,210 rows/s` (`120k` rows, threshold `10000`)
+- Meaning:
+  - shared arena allocation and forked scan memory access are both very high-throughput on this host.
+
+6. `wal_crash_recovery` benchmark function
+- Result:
+  - `benchmark_occ_wal_replay_startup_throughput`: `3,891,039 writes/s` (`12000` txns)
+- Meaning:
+  - OCC WAL replay startup path can apply recovered writes at multi-million-writes/second scale in this run.
+
+7. `occ_partitioned_lock_striping_benchmark` (3 benchmark functions)
+- Result:
+  - `benchmark_hybrid_hot_row_backoff_and_pessimistic_throughput`:
+    - `throughput_tps=940549.29`, `commits=16000/16000`, `conflicts=44`, `escalations=12` (pass)
+  - `benchmark_hybrid_hot_row_outperforms_pure_occ_baseline`:
+    - hybrid run samples: `482878.40 TPS`, `768711.85 TPS`, `826885.26 TPS`
+    - pure OCC run: `43.60 TPS`, `commits=872/16000`, `timed_out_workers=16`
+    - status: failed (`pure_occ` timed out workers assertion)
+  - `benchmark_partitioned_occ_lock_striping_multi_process_scaling` (ignored run):
+    - `contended_tps=1790.10`, `disjoint_tps=349069.76`, ratio `195.00x`
+    - `contended_timed_out_workers=16`, `disjoint_timed_out_workers=0` (pass)
+- Meaning:
+  - hybrid mode can sustain very high hot-row throughput, while pure OCC collapses under extreme contention in this host run; disjoint-key workloads remain dramatically faster than contended ones.
+
+8. `aerostore_tcl/config_checkpoint_integration` benchmark function
+- Result:
+  - `benchmark_tcl_synchronous_commit_modes`: `on_tps=987.65`, `off_tps=240000.0`, ratio `243.0x`
+- Meaning:
+  - Tcl ingest throughput is highly sensitive to synchronous durability mode; async mode is much faster in this benchmark.
 
 ## Operational Notes
 Durability artifacts under the configured data directory include:
