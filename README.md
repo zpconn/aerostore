@@ -249,143 +249,55 @@ Run scope:
   - `benchmark_hybrid_hot_row_outperforms_pure_occ_baseline`
 
 ### Criterion Benchmarks (`aerostore_core/benches`)
+| Suite | Benchmark | Key Results | Status | What It Means |
+| --- | --- | --- | --- | --- |
+| `procarray_snapshot` | `procarray_snapshot/10` | `[40.842 ns 40.872 ns 40.905 ns]`; proof line `txid_10=41.28ns` | pass | Snapshot acquisition at low txid stays in tens-of-ns range. |
+| `procarray_snapshot` | `procarray_snapshot/10000000` | `[40.827 ns 40.863 ns 40.906 ns]`; proof line `txid_10_000_000=41.18ns` | pass | Snapshot acquisition is flat vs txid scale (no txid-growth penalty). |
+| `wal_delta_throughput` | `full_row_100k_one_col` | `[4.3262 ms 4.3349 ms 4.3417 ms]`; paired full bytes `81,600,000` | pass/info | Full-row baseline for one-column mutation workload. |
+| `wal_delta_throughput` | `delta_row_100k_one_col` | `[69.771 ms 69.849 ms 69.934 ms]`; delta bytes `4,799,987`; reduction `94.12%` | pass/info | Delta path massively cuts WAL volume for one-column updates. |
+| `wal_delta_throughput` | `full_row_100k_two_col` | `[4.3200 ms 4.3230 ms 4.3279 ms]`; paired full bytes `81,600,000` | pass/info | Full-row baseline for two-column mutation workload. |
+| `wal_delta_throughput` | `delta_row_100k_two_col` | `[72.749 ms 72.801 ms 72.885 ms]`; delta bytes `6,099,987`; reduction `92.52%` | pass/info | Delta still saves most WAL bytes with two dirty columns. |
+| `wal_delta_throughput` | `full_row_100k_four_col` | `[4.8149 ms 4.8178 ms 4.8212 ms]`; paired full bytes `81,600,000` | pass/info | Full-row baseline for four-column mutation workload. |
+| `wal_delta_throughput` | `delta_row_100k_four_col` | `[76.237 ms 76.357 ms 76.457 ms]`; delta bytes `7,399,987`; reduction `90.93%` | pass/info | Delta retains high byte savings as dirty-column count increases. |
+| `shm_skiplist_adversarial` | `p99_ns` | `small=2200ns`, `medium=2800ns`, `large=3500ns`, slopes `0.410/0.388`, criterion `[187.68 ps 188.11 ps 188.69 ps]` | pass (gate `<5000ns`) | Skiplist lookup p99 remains within strict budget under adversarial writer/reader pressure. |
+| `shm_skiplist_seek_bounds` | `gt_999_990` | criterion `[77.630 ns 77.730 ns 77.844 ns]`; computed avg `77.85ns`; budget `5000ns` | pass | Bound-seeking traversal bypasses head scan for tail predicate (`> 999,990`). |
+| `tmpfs_warm_restart` | `warm_attach_boot` | `[55.210 us 55.335 us 55.437 us]` | pass | Warm attach is very fast (microsecond-scale attach path). |
+| `tmpfs_warm_restart` | `cold_boot_fixture_build` | `[2.0275 ms 2.0322 ms 2.0360 ms]` | pass/info | Cold fixture construction is millisecond-scale and much slower than warm attach. |
+| `tmpfs_warm_restart` | `post_restart_update_throughput` | `[1.7442 ms 1.7500 ms 1.7532 ms]` | pass/info | Post-restart writes are immediately high-throughput after warm attach. |
 
-1. `procarray_snapshot`
-- Result:
-  - `procarray_snapshot/10`: `[40.842 ns 40.872 ns 40.905 ns]`
-  - `procarray_snapshot/10000000`: `[40.827 ns 40.863 ns 40.906 ns]`
-  - proof line: `txid_10=41.28ns txid_10_000_000=41.18ns delta=0.10ns`
-- Meaning:
-  - snapshot lookup latency is effectively constant with respect to txid scale (no growth from 10 to 10M).
-
-2. `wal_delta_throughput`
-- Result:
-  - one-column update workload:
-    - full bytes: `81,600,000`
-    - delta bytes: `4,799,987`
-    - byte reduction: `94.12%`
-    - full encode time: `[4.3262 ms 4.3349 ms 4.3417 ms]`
-    - delta encode time: `[69.771 ms 69.849 ms 69.934 ms]`
-  - two-column update workload:
-    - byte reduction: `92.52%`
-    - full encode time: `[4.3200 ms 4.3230 ms 4.3279 ms]`
-    - delta encode time: `[72.749 ms 72.801 ms 72.885 ms]`
-  - four-column update workload:
-    - byte reduction: `90.93%`
-    - full encode time: `[4.8149 ms 4.8178 ms 4.8212 ms]`
-    - delta encode time: `[76.237 ms 76.357 ms 76.457 ms]`
-- Meaning:
-  - delta encoding dramatically reduces WAL byte volume, while this benchmark harness shows higher CPU encode cost for per-field delta packing.
-
-3. `shm_skiplist_adversarial`
-- Result:
-  - `small_p99_ns=2200`, `medium_p99_ns=2800`, `large_p99_ns=3500`
-  - slopes: `small->medium=0.410`, `medium->large=0.388`
-  - criterion line: `[187.68 ps 188.11 ps 188.69 ps]`
-  - gate status: pass (`large p99 < 5000ns`)
-- Meaning:
-  - shared skiplist lookup latency remains under strict p99 budget and scales sublinearly under adversarial load.
-
-4. `shm_skiplist_seek_bounds`
-- Result:
-  - `keys=1,000,000`, query `> 999,990`
-  - criterion line: `[77.630 ns 77.730 ns 77.844 ns]`
-  - computed average: `77.85 ns`
-  - gate status: pass (`< 5000 ns`)
-- Meaning:
-  - bound-seeking starts near tail and bypasses the first `999,990` keys, avoiding O(N) head scan behavior.
-
-5. `tmpfs_warm_restart`
-- Result:
-  - `warm_attach_boot`: `[55.210 us 55.335 us 55.437 us]`
-  - `cold_boot_fixture_build`: `[2.0275 ms 2.0322 ms 2.0360 ms]`
-  - `post_restart_update_throughput`: `[1.7442 ms 1.7500 ms 1.7532 ms]`
-  - note: this benchmark needed `/dev/shm` access and was run outside sandbox restrictions.
-- Meaning:
-  - warm attach path is much faster than rebuilding a cold fixture and supports immediate post-restart update throughput.
+Notes:
+- `tmpfs_warm_restart` requires access to `/dev/shm`; it was run with elevated execution permissions.
 
 ### Benchmark-Style Test Suites
-
-1. `wal_ring_benchmark` (5 benchmark functions)
-- Result:
-  - `benchmark_async_synchronous_commit_modes`: `sync_tps=1228.10`, `async_tps=1360532.37`, ratio `1107.83x`
-  - `benchmark_async_synchronous_commit_modes_parallel_disjoint_keys`: ratio `1014.28x`
-  - `benchmark_async_synchronous_commit_modes_savepoint_churn`: ratio `733.14x`
-  - `benchmark_async_synchronous_commit_modes_tcl_like_keyed_upserts`: ratio `601.04x`
-  - `benchmark_logical_async_vs_sync_commit_modes`: ratio `911.88x`
-- Meaning:
-  - asynchronous WAL commit mode is vastly higher-throughput than synchronous mode in this benchmark environment.
-
-2. `occ_checkpoint_benchmark` (2 benchmark functions)
-- Result:
-  - `benchmark_occ_checkpoint_latency_by_cardinality`:
-    - `10k rows: 3.445576ms (344.56 ns/row)`
-    - `100k rows: 6.623267ms (66.23 ns/row)`
-    - `1M rows: 33.283742ms (33.28 ns/row)`
-  - `benchmark_logical_snapshot_and_replay_recovery_by_cardinality`:
-    - `10k rows: 21.920646ms (490,405 rows/s)`
-    - `100k rows: 195.629607ms (515,004 rows/s)`
-    - `1M rows: 1.816991139s (550,773 rows/s)`
-- Meaning:
-  - checkpoint and logical replay remain bounded and scale to high cardinalities with sustained per-row throughput.
-
-3. `query_index_benchmark` (9 benchmark functions)
-- Result:
-  - `benchmark_shared_index_indexed_range_scan_with_sort_and_limit`: `100k` ingest in `50.836ms`, `512` scans in `787.330ms`
-  - `benchmark_stapi_parse_compile_execute_vs_typed_query_path`: typed `91.627ms`, STAPI `8.428ms`
-  - `benchmark_tcl_style_alias_match_desc_offset_limit_path`: `10.765663s`
-  - `benchmark_tcl_bridge_style_stapi_assembly_compile_execute`: `8.685921s`
-  - `benchmark_stapi_rbo_pk_point_lookup_vs_full_scan`: pk `14.574us`, scan `16.089316s`
-  - `benchmark_stapi_rbo_tiebreak_dest_over_altitude`: `1.458486s`
-  - `benchmark_stapi_rbo_cardinality_trap_flight_id_over_aircraft_type`: `54.913us`
-  - `benchmark_stapi_residual_negative_filters_with_index_driver`: `1.752238s`
-  - `benchmark_stapi_null_notnull_residual_filters`: `1.017999s`
-- Meaning:
-  - planner/index routing and STAPI execution paths strongly outperform equivalent scan-heavy paths in targeted scenarios.
-
-4. `shm_index_benchmark` (4 benchmark functions)
-- Result:
-  - `benchmark_shm_index_eq_lookup_vs_scan`: speedup `486.27x` (pass)
-  - `benchmark_shm_index_forked_contention_throughput`: ratio `0.78` (pass, gate `>=0.20`)
-  - `benchmark_shm_index_range_lookup_vs_scan`: speedup `2.93x` (pass, gate `>=2.0`)
-  - `benchmark_shm_index_range_modes_selectivity_vs_scan`: failed
-    - overall speedup `1.69x` in full-suite run (`1.65x` on isolated rerun)
-    - failure against gate `>=2.0x`
-- Meaning:
-  - equality and simple range lookups are healthy, but mixed selectivity range-mode benchmark currently underperforms its configured gate.
-
-5. `shm_benchmark` (2 benchmark functions)
-- Result:
-  - `benchmark_shm_allocation_throughput`: `107,825,593 rows/s`
-  - `benchmark_forked_range_scan_latency`: `660,182,210 rows/s` (`120k` rows, threshold `10000`)
-- Meaning:
-  - shared arena allocation and forked scan memory access are both very high-throughput on this host.
-
-6. `wal_crash_recovery` benchmark function
-- Result:
-  - `benchmark_occ_wal_replay_startup_throughput`: `3,891,039 writes/s` (`12000` txns)
-- Meaning:
-  - OCC WAL replay startup path can apply recovered writes at multi-million-writes/second scale in this run.
-
-7. `occ_partitioned_lock_striping_benchmark` (3 benchmark functions)
-- Result:
-  - `benchmark_hybrid_hot_row_backoff_and_pessimistic_throughput`:
-    - `throughput_tps=940549.29`, `commits=16000/16000`, `conflicts=44`, `escalations=12` (pass)
-  - `benchmark_hybrid_hot_row_outperforms_pure_occ_baseline`:
-    - hybrid run samples: `482878.40 TPS`, `768711.85 TPS`, `826885.26 TPS`
-    - pure OCC run: `43.60 TPS`, `commits=872/16000`, `timed_out_workers=16`
-    - status: failed (`pure_occ` timed out workers assertion)
-  - `benchmark_partitioned_occ_lock_striping_multi_process_scaling` (ignored run):
-    - `contended_tps=1790.10`, `disjoint_tps=349069.76`, ratio `195.00x`
-    - `contended_timed_out_workers=16`, `disjoint_timed_out_workers=0` (pass)
-- Meaning:
-  - hybrid mode can sustain very high hot-row throughput, while pure OCC collapses under extreme contention in this host run; disjoint-key workloads remain dramatically faster than contended ones.
-
-8. `aerostore_tcl/config_checkpoint_integration` benchmark function
-- Result:
-  - `benchmark_tcl_synchronous_commit_modes`: `on_tps=987.65`, `off_tps=240000.0`, ratio `243.0x`
-- Meaning:
-  - Tcl ingest throughput is highly sensitive to synchronous durability mode; async mode is much faster in this benchmark.
+| Suite | Benchmark | Key Results | Status | What It Means |
+| --- | --- | --- | --- | --- |
+| `wal_ring_benchmark` | `benchmark_async_synchronous_commit_modes` | `sync_tps=1228.10`, `async_tps=1360532.37`, ratio `1107.83x` | pass | Async WAL commit massively outperforms sync commit in this host run. |
+| `wal_ring_benchmark` | `benchmark_async_synchronous_commit_modes_parallel_disjoint_keys` | `sync_tps=1262.24`, `async_tps=1280267.42`, ratio `1014.28x` | pass | Async advantage remains under parallel disjoint-key ingest. |
+| `wal_ring_benchmark` | `benchmark_async_synchronous_commit_modes_savepoint_churn` | `sync_tps=1282.31`, `async_tps=940115.58`, ratio `733.14x` | pass | Savepoint-heavy workloads still favor async commit heavily. |
+| `wal_ring_benchmark` | `benchmark_async_synchronous_commit_modes_tcl_like_keyed_upserts` | `sync_tps=1136.55`, `async_tps=683117.92`, ratio `601.04x` | pass | Tcl-style keyed upsert ingest is strongly commit-mode sensitive. |
+| `wal_ring_benchmark` | `benchmark_logical_async_vs_sync_commit_modes` | `sync_tps=1011.45`, `async_tps=922315.32`, ratio `911.88x` | pass | Logical WAL path also shows very large async-vs-sync gap. |
+| `occ_checkpoint_benchmark` | `benchmark_occ_checkpoint_latency_by_cardinality` | `10k: 3.445576ms (344.56ns/row)`, `100k: 6.623267ms (66.23ns/row)`, `1M: 33.283742ms (33.28ns/row)` | pass | Checkpoint latency scales smoothly with strong per-row amortization at larger cardinalities. |
+| `occ_checkpoint_benchmark` | `benchmark_logical_snapshot_and_replay_recovery_by_cardinality` | `10k: 21.920646ms (490,405 rows/s)`, `100k: 195.629607ms (515,004 rows/s)`, `1M: 1.816991139s (550,773 rows/s)` | pass | Snapshot+replay recovery throughput remains stable across data sizes. |
+| `query_index_benchmark` | `benchmark_shared_index_indexed_range_scan_with_sort_and_limit` | ingest `100k` rows in `50.836373ms`; `512` scans in `787.330252ms` | pass | Indexed range+sort+limit path sustains high concurrent read throughput. |
+| `query_index_benchmark` | `benchmark_stapi_parse_compile_execute_vs_typed_query_path` | typed `91.627101ms`; STAPI `8.428373ms` | pass | STAPI parse/compile/execute path was faster than typed path in this scenario. |
+| `query_index_benchmark` | `benchmark_tcl_style_alias_match_desc_offset_limit_path` | `10.765663204s` | pass | End-to-end alias/match/offset/limit query stack cost at configured workload. |
+| `query_index_benchmark` | `benchmark_tcl_bridge_style_stapi_assembly_compile_execute` | `8.685921493s` | pass | Measures full Tcl-bridge-style STAPI assembly+compile+execute overhead. |
+| `query_index_benchmark` | `benchmark_stapi_rbo_pk_point_lookup_vs_full_scan` | pk `14.574us`; scan `16.089316278s` | pass | Planner PK route avoids catastrophic full-scan cost (orders-of-magnitude win). |
+| `query_index_benchmark` | `benchmark_stapi_rbo_tiebreak_dest_over_altitude` | `1.458485781s` | pass | Verifies/quantifies planner tie-break routing behavior under competing indexes. |
+| `query_index_benchmark` | `benchmark_stapi_rbo_cardinality_trap_flight_id_over_aircraft_type` | `54.913us` | pass | Planner avoids cardinality trap and picks the more selective access path. |
+| `query_index_benchmark` | `benchmark_stapi_residual_negative_filters_with_index_driver` | `1.75223821s` | pass | Shows cost when index driver must apply residual negative predicates. |
+| `query_index_benchmark` | `benchmark_stapi_null_notnull_residual_filters` | `1.017999583s` | pass | Captures null/not-null residual filtering overhead in STAPI path. |
+| `shm_index_benchmark` | `benchmark_shm_index_eq_lookup_vs_scan` | speedup `486.27x` (`224.817us` vs `109.321917ms`) | pass | EQ index lookup massively outperforms full scan. |
+| `shm_index_benchmark` | `benchmark_shm_index_range_lookup_vs_scan` | speedup `2.93x` (`218.570092ms` vs `641.127582ms`) | pass (gate `>=2.0x`) | Core range index path clears its regression target. |
+| `shm_index_benchmark` | `benchmark_shm_index_range_modes_selectivity_vs_scan` | overall speedup `1.69x` in full run (`1.65x` isolated rerun) | **failed** (gate `>=2.0x`) | Mixed-selectivity mode mix currently misses configured overall speedup gate. |
+| `shm_index_benchmark` | `benchmark_shm_index_forked_contention_throughput` | `single_tps=7162178.40`, `forked_tps=5610793.82`, ratio `0.78` | pass (gate `>=0.20`) | Cross-process contention retains most single-process throughput. |
+| `shm_benchmark` | `benchmark_shm_allocation_throughput` | `107,825,593 rows/s` | pass | Shared arena allocator throughput is very high on this host. |
+| `shm_benchmark` | `benchmark_forked_range_scan_latency` | `660,182,210 rows/s`; `rows=120000`; `threshold=10000` | pass | Forked-process scan over shared memory is bandwidth-efficient. |
+| `wal_crash_recovery` | `benchmark_occ_wal_replay_startup_throughput` | `3,891,039 writes/s` (`12000` applied writes) | pass | WAL replay startup can apply writes at multi-million/s scale. |
+| `occ_partitioned_lock_striping_benchmark` | `benchmark_hybrid_hot_row_backoff_and_pessimistic_throughput` | `throughput_tps=940549.29`, `commits=16000/16000`, `conflicts=44`, `escalations=12` | pass | Hybrid path sustains high TPS on hot-row contention workload. |
+| `occ_partitioned_lock_striping_benchmark` | `benchmark_hybrid_hot_row_outperforms_pure_occ_baseline` | hybrid samples: `482878.40/768711.85/826885.26 TPS`; pure OCC: `43.60 TPS`, `commits=872/16000`, `timed_out_workers=16` | **failed** (timeout assertion in pure OCC run) | Demonstrates extreme pure-OCC collapse under hot-row contention on this host run. |
+| `occ_partitioned_lock_striping_benchmark` | `benchmark_partitioned_occ_lock_striping_multi_process_scaling` (ignored) | `contended_tps=1790.10`, `disjoint_tps=349069.76`, ratio `195.00x`; contended timed-out workers `16` | pass (ignored run) | Disjoint-key throughput is dramatically higher than contended hot-row workload. |
+| `aerostore_tcl/config_checkpoint_integration` | `benchmark_tcl_synchronous_commit_modes` | `on_tps=987.65`, `off_tps=240000.0`, ratio `243.0x` | pass | Tcl ingest path is highly sensitive to synchronous commit setting. |
 
 ## Operational Notes
 Durability artifacts under the configured data directory include:
