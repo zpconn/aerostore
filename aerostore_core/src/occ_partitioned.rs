@@ -146,6 +146,13 @@ pub struct OccCommitRecord<T: Copy> {
     pub writes: Vec<OccCommittedWrite<T>>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VacuumReclaimedRow<T: Copy> {
+    pub row_id: usize,
+    pub reclaimed_value: T,
+    pub live_head_value: Option<T>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
     RowOutOfBounds { row_id: usize, capacity: usize },
@@ -1306,6 +1313,59 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         }
 
         Ok(rows)
+    }
+
+    pub fn vacuum_reclaim_once(
+        &self,
+        global_xmin: TxId,
+    ) -> Result<Vec<VacuumReclaimedRow<T>>, Error> {
+        let row_size = std::mem::size_of::<OccRow<T>>();
+        let row_align = std::mem::align_of::<OccRow<T>>();
+        let mut reclaimed = Vec::new();
+
+        for row_id in 0..self.capacity() {
+            let _lock = self.acquire_row_lock(row_id);
+            let slot = self.slot_ref(row_id)?;
+            let head_offset = slot.head.load(Ordering::Acquire);
+            if head_offset == EMPTY_PTR {
+                continue;
+            }
+
+            let head_ptr = RelPtr::<OccRow<T>>::from_offset(head_offset);
+            let head_row = self.resolve_row_ptr(&head_ptr)?;
+            let live_head_value = head_row.value;
+
+            let mut prev_offset = head_offset;
+            let mut curr_offset = head_row.next.load(Ordering::Acquire);
+            while curr_offset != EMPTY_PTR {
+                let curr_ptr = RelPtr::<OccRow<T>>::from_offset(curr_offset);
+                let curr_row = self.resolve_row_ptr(&curr_ptr)?;
+                let next_offset = curr_row.next.load(Ordering::Acquire);
+                let xmax = curr_row.xmax.load(Ordering::Acquire);
+
+                if xmax != 0 && xmax < global_xmin {
+                    let prev_ptr = RelPtr::<OccRow<T>>::from_offset(prev_offset);
+                    let prev_row = self.resolve_row_ptr(&prev_ptr)?;
+                    prev_row.next.store(next_offset, Ordering::Release);
+                    let reclaimed_value = curr_row.value;
+                    self.shm
+                        .chunked_arena()
+                        .recycle_raw(curr_offset, row_size, row_align)?;
+                    reclaimed.push(VacuumReclaimedRow {
+                        row_id,
+                        reclaimed_value,
+                        live_head_value: Some(live_head_value),
+                    });
+                    curr_offset = next_offset;
+                    continue;
+                }
+
+                prev_offset = curr_offset;
+                curr_offset = next_offset;
+            }
+        }
+
+        Ok(reclaimed)
     }
 }
 
