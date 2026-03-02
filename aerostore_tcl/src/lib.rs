@@ -10,15 +10,19 @@ use std::time::{Duration, Instant};
 use aerostore_core::{
     alloc_u32_array, clear_persisted_boot_layout, load_boot_layout, open_boot_context,
     persist_boot_layout as persist_shared_boot_layout, read_u32_array,
-    recover_occ_table_from_checkpoint_and_wal_with_pk_map, spawn_wal_writer_daemon,
-    write_occ_checkpoint_and_truncate_wal, BootLayout, BootMode, IndexValue, IngestStats, OccError,
-    OccTable, OccTransaction, PlannerError, RelPtr, RetryBackoff, RetryPolicy, RuleBasedOptimizer,
-    SchemaCatalog, SecondaryIndex, SharedWalRing, ShmArena, ShmPrimaryKeyMap, StapiRow, StapiValue,
-    SynchronousCommit, TsvColumns, TsvDecodeError, WalDeltaCodec, WalDeltaError, WalRing,
+    recover_occ_table_from_checkpoint_and_wal_with_pk_map, spawn_vacuum_daemon_with_callback,
+    spawn_wal_writer_daemon, write_occ_checkpoint_and_truncate_wal, BootLayout, BootMode,
+    IndexValue, IngestStats, OccError, OccTable, OccTransaction, PlannerError, RelPtr,
+    RetryBackoff, RetryPolicy, RuleBasedOptimizer, SchemaCatalog, SecondaryIndex, SharedWalRing,
+    ShmArena, ShmPrimaryKeyMap, StapiRow, StapiValue, SynchronousCommit, TsvColumns,
+    TsvDecodeError, VacuumDaemon, VacuumReclaimedRow, WalDeltaCodec, WalDeltaError, WalRing,
     WalWriterError, BOOT_LAYOUT_MAX_INDEXES, DEFAULT_TMPFS_PATH, SYNCHRONOUS_COMMIT_KEY,
 };
 use serde::{Deserialize, Serialize};
 use tcl::Interp;
+
+#[cfg(test)]
+mod vacuum_index_cleanup_tests;
 
 const PACKAGE_NAME: &str = "aerostore";
 const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -502,6 +506,64 @@ impl FlightIndexes {
     }
 }
 
+fn cleanup_reclaimed_index_entries(
+    indexes: &FlightIndexes,
+    reclaimed_rows: &[VacuumReclaimedRow<FlightState>],
+) {
+    for reclaimed in reclaimed_rows {
+        let row_id = reclaimed.row_id;
+        let old = reclaimed.reclaimed_value;
+        if old.exists == 0 {
+            continue;
+        }
+
+        let live = reclaimed.live_head_value.filter(|row| row.exists != 0);
+
+        if live
+            .map(|row| row.flight_id != old.flight_id)
+            .unwrap_or(true)
+        {
+            indexes
+                .flight_id
+                .remove(&IndexValue::String(old.flight_id_string()), &row_id);
+        }
+        if live.map(|row| row.altitude != old.altitude).unwrap_or(true) {
+            indexes
+                .altitude
+                .remove(&IndexValue::I64(old.altitude as i64), &row_id);
+        }
+        if live.map(|row| row.gs != old.gs).unwrap_or(true) {
+            indexes.gs.remove(&IndexValue::I64(old.gs as i64), &row_id);
+        }
+        if live
+            .map(|row| row.lat_scaled != old.lat_scaled)
+            .unwrap_or(true)
+        {
+            indexes
+                .lat
+                .remove(&IndexValue::I64(old.lat_scaled), &row_id);
+        }
+        if live
+            .map(|row| row.lon_scaled != old.lon_scaled)
+            .unwrap_or(true)
+        {
+            indexes
+                .lon
+                .remove(&IndexValue::I64(old.lon_scaled), &row_id);
+        }
+        if live
+            .map(|row| row.updated_at != old.updated_at)
+            .unwrap_or(true)
+        {
+            if let Ok(updated_at) = i64::try_from(old.updated_at) {
+                indexes
+                    .updated_at
+                    .remove(&IndexValue::I64(updated_at), &row_id);
+            }
+        }
+    }
+}
+
 struct WalRuntime {
     configured_mode: SynchronousCommit,
     committer: aerostore_core::OccCommitter<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>,
@@ -512,6 +574,7 @@ struct WalRuntime {
 struct SharedFlightDb {
     _shm: Arc<ShmArena>,
     table: Arc<OccTable<FlightState>>,
+    _vacuum_daemon: VacuumDaemon<FlightState>,
     optimizer: RuleBasedOptimizer<FlightState>,
     key_index: Arc<ShmPrimaryKeyMap>,
     row_capacity: usize,
@@ -598,10 +661,12 @@ impl SharedFlightDb {
             ring,
             _wal_daemon: wal_daemon,
         };
+        let vacuum_daemon = Self::spawn_vacuum_daemon(Arc::clone(&table), indexes.clone())?;
 
         Ok(Self {
             _shm: shm,
             table,
+            _vacuum_daemon: vacuum_daemon,
             optimizer,
             key_index,
             row_capacity: DEFAULT_ROW_CAPACITY,
@@ -780,6 +845,17 @@ impl SharedFlightDb {
         persist_shared_boot_layout(shm, &layout)
             .map_err(|err| format!("failed to persist shared boot layout: {}", err))?;
         Ok(())
+    }
+
+    fn spawn_vacuum_daemon(
+        table: Arc<OccTable<FlightState>>,
+        indexes: FlightIndexes,
+    ) -> Result<VacuumDaemon<FlightState>, String> {
+        let callback = Arc::new(move |reclaimed: &[VacuumReclaimedRow<FlightState>]| {
+            cleanup_reclaimed_index_entries(&indexes, reclaimed);
+        });
+        spawn_vacuum_daemon_with_callback(table, callback)
+            .map_err(|err| format!("failed to spawn vacuum daemon: {}", err))
     }
 
     fn start_checkpointer(self: &Arc<Self>) {

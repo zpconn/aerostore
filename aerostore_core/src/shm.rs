@@ -2,7 +2,7 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::mem::{align_of, size_of};
 use std::ptr::{self, NonNull};
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicU64, Ordering};
 
 use crate::procarray::{
     ProcArray, ProcArrayError, ProcArrayRegistration, ProcSnapshot, PROCARRAY_SLOTS,
@@ -11,6 +11,7 @@ use crate::procarray::{
 const SHM_HEADER_MAGIC: u32 = 0xAEB0_B007;
 const SHM_HEADER_ALIGN: u32 = 64;
 pub(crate) const OCC_PARTITION_LOCKS: usize = 1024;
+const FREE_LIST_NODE_MAGIC: u32 = 0xAEB0_F1E5;
 
 #[repr(C, align(64))]
 pub(crate) struct OccPartitionLock {
@@ -218,6 +219,24 @@ impl<T> fmt::Debug for RelPtr<T> {
 }
 
 #[repr(C)]
+struct SharedFreeListNode {
+    next: AtomicU32,
+    block_size: AtomicU32,
+    block_align: AtomicU32,
+    magic: AtomicU32,
+}
+
+impl SharedFreeListNode {
+    #[inline]
+    fn initialize(&self, next: u32, block_size: u32, block_align: u32) {
+        self.next.store(next, Ordering::Release);
+        self.block_size.store(block_size, Ordering::Release);
+        self.block_align.store(block_align, Ordering::Release);
+        self.magic.store(FREE_LIST_NODE_MAGIC, Ordering::Release);
+    }
+}
+
+#[repr(C)]
 struct ShmHeader {
     magic: u32,
     capacity: u32,
@@ -227,6 +246,11 @@ struct ShmHeader {
     next_txid: AtomicU64,
     proc_array: ProcArray,
     occ_partition_locks: [OccPartitionLock; OCC_PARTITION_LOCKS],
+    free_list_head: AtomicU32,
+    free_list_pushes: AtomicU64,
+    free_list_pops: AtomicU64,
+    free_list_pop_misses: AtomicU64,
+    vacuum_daemon_pid: AtomicI32,
     head: AtomicU32,
 }
 
@@ -302,6 +326,11 @@ impl ShmArena {
                 next_txid: AtomicU64::new(1),
                 proc_array: ProcArray::new(),
                 occ_partition_locks: std::array::from_fn(|_| OccPartitionLock::new()),
+                free_list_head: AtomicU32::new(0),
+                free_list_pushes: AtomicU64::new(0),
+                free_list_pops: AtomicU64::new(0),
+                free_list_pop_misses: AtomicU64::new(0),
+                vacuum_daemon_pid: AtomicI32::new(0),
                 head: AtomicU32::new(data_start),
             });
         }
@@ -356,6 +385,10 @@ impl ShmArena {
         if header.magic != SHM_HEADER_MAGIC {
             None
         } else if header.capacity as usize != self.len {
+            None
+        } else if header.data_start
+            != align_up(size_of::<ShmHeader>() as u32, SHM_HEADER_ALIGN).unwrap_or(0)
+        {
             None
         } else if header.data_start as usize >= self.len {
             None
@@ -443,6 +476,58 @@ impl ShmArena {
             header.boot_layout_offset.store(offset, Ordering::Release);
         }
     }
+
+    #[inline]
+    pub fn free_list_pushes(&self) -> u64 {
+        self.header_ref()
+            .map(|header| header.free_list_pushes.load(Ordering::Acquire))
+            .unwrap_or(0)
+    }
+
+    #[inline]
+    pub fn free_list_pops(&self) -> u64 {
+        self.header_ref()
+            .map(|header| header.free_list_pops.load(Ordering::Acquire))
+            .unwrap_or(0)
+    }
+
+    #[inline]
+    pub fn free_list_pop_misses(&self) -> u64 {
+        self.header_ref()
+            .map(|header| header.free_list_pop_misses.load(Ordering::Acquire))
+            .unwrap_or(0)
+    }
+
+    #[inline]
+    pub fn free_list_head_offset(&self) -> u32 {
+        self.header_ref()
+            .map(|header| header.free_list_head.load(Ordering::Acquire))
+            .unwrap_or(0)
+    }
+
+    #[inline]
+    pub fn vacuum_daemon_pid(&self) -> i32 {
+        self.header_ref()
+            .map(|header| header.vacuum_daemon_pid.load(Ordering::Acquire))
+            .unwrap_or(0)
+    }
+
+    #[inline]
+    pub fn compare_exchange_vacuum_daemon_pid(&self, current: i32, new: i32) -> Result<i32, i32> {
+        let Some(header) = self.header_ref() else {
+            return Err(current);
+        };
+        header
+            .vacuum_daemon_pid
+            .compare_exchange(current, new, Ordering::AcqRel, Ordering::Acquire)
+    }
+
+    #[inline]
+    pub fn set_vacuum_daemon_pid(&self, pid: i32) {
+        if let Some(header) = self.header_ref() {
+            header.vacuum_daemon_pid.store(pid, Ordering::Release);
+        }
+    }
 }
 
 impl Drop for ShmArena {
@@ -479,6 +564,10 @@ impl<'a> ChunkedArena<'a> {
         }
         if align == 0 || !align.is_power_of_two() {
             return Err(ShmAllocError::SizeOverflow);
+        }
+
+        if let Some(offset) = self.try_pop_recycled(size, align)? {
+            return Ok(offset);
         }
 
         let size = u32::try_from(size).map_err(|_| ShmAllocError::SizeOverflow)?;
@@ -536,6 +625,123 @@ impl<'a> ChunkedArena<'a> {
         }
 
         Ok(RelPtr::from_offset(start))
+    }
+
+    pub fn recycle_raw(&self, offset: u32, size: usize, align: usize) -> Result<(), ShmAllocError> {
+        if offset == 0 || size == 0 {
+            return Ok(());
+        }
+        if align == 0 || !align.is_power_of_two() {
+            return Err(ShmAllocError::SizeOverflow);
+        }
+
+        let size_u32 = u32::try_from(size).map_err(|_| ShmAllocError::SizeOverflow)?;
+        let align_u32 = u32::try_from(align).map_err(|_| ShmAllocError::SizeOverflow)?;
+        let end = (offset as usize)
+            .checked_add(size)
+            .ok_or(ShmAllocError::SizeOverflow)?;
+        if end > self.header.capacity as usize {
+            return Err(ShmAllocError::SizeOverflow);
+        }
+        if size < size_of::<SharedFreeListNode>()
+            || (offset as usize) % align_of::<SharedFreeListNode>() != 0
+        {
+            return Ok(());
+        }
+
+        let node = self
+            .free_list_node_ref(offset)
+            .ok_or(ShmAllocError::SizeOverflow)?;
+        let mut spins = 0_u32;
+        loop {
+            let old_head = self.header.free_list_head.load(Ordering::Acquire);
+            node.initialize(old_head, size_u32, align_u32);
+            if self
+                .header
+                .free_list_head
+                .compare_exchange(old_head, offset, Ordering::AcqRel, Ordering::Acquire)
+                .is_ok()
+            {
+                self.header.free_list_pushes.fetch_add(1, Ordering::AcqRel);
+                return Ok(());
+            }
+            spins = spins.wrapping_add(1);
+            if spins & 0x3f == 0 {
+                std::thread::yield_now();
+            }
+            if spins & 0x3ff == 0 {
+                std::thread::sleep(std::time::Duration::from_micros(25));
+            }
+            std::hint::spin_loop();
+        }
+    }
+
+    fn try_pop_recycled(&self, size: usize, align: usize) -> Result<Option<u32>, ShmAllocError> {
+        let size_u32 = u32::try_from(size).map_err(|_| ShmAllocError::SizeOverflow)?;
+        let align_u32 = u32::try_from(align).map_err(|_| ShmAllocError::SizeOverflow)?;
+        let mut spins = 0_u32;
+
+        loop {
+            let head = self.header.free_list_head.load(Ordering::Acquire);
+            if head == 0 {
+                self.header
+                    .free_list_pop_misses
+                    .fetch_add(1, Ordering::AcqRel);
+                return Ok(None);
+            }
+
+            let Some(node) = self.free_list_node_ref(head) else {
+                self.header
+                    .free_list_pop_misses
+                    .fetch_add(1, Ordering::AcqRel);
+                return Ok(None);
+            };
+
+            if node.magic.load(Ordering::Acquire) != FREE_LIST_NODE_MAGIC
+                || node.block_size.load(Ordering::Acquire) != size_u32
+                || node.block_align.load(Ordering::Acquire) != align_u32
+            {
+                self.header
+                    .free_list_pop_misses
+                    .fetch_add(1, Ordering::AcqRel);
+                return Ok(None);
+            }
+
+            let next = node.next.load(Ordering::Acquire);
+            if self
+                .header
+                .free_list_head
+                .compare_exchange(head, next, Ordering::AcqRel, Ordering::Acquire)
+                .is_ok()
+            {
+                self.header.free_list_pops.fetch_add(1, Ordering::AcqRel);
+                return Ok(Some(head));
+            }
+
+            spins = spins.wrapping_add(1);
+            if spins & 0x3f == 0 {
+                std::thread::yield_now();
+            }
+            if spins & 0x3ff == 0 {
+                return Ok(None);
+            }
+            std::hint::spin_loop();
+        }
+    }
+
+    fn free_list_node_ref(&self, offset: u32) -> Option<&SharedFreeListNode> {
+        let start = offset as usize;
+        let end = start.checked_add(size_of::<SharedFreeListNode>())?;
+        if end > self.mmap_base.len() {
+            return None;
+        }
+        let addr = (self.mmap_base.as_ptr() as usize).checked_add(start)?;
+        if addr % align_of::<SharedFreeListNode>() != 0 {
+            return None;
+        }
+        // SAFETY:
+        // Bounds and alignment are validated above against this mapped region.
+        Some(unsafe { &*(addr as *const SharedFreeListNode) })
     }
 }
 

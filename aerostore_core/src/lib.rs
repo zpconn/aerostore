@@ -21,6 +21,7 @@ pub mod shm_skiplist;
 pub mod shm_tmpfs;
 pub mod stapi_parser;
 pub mod txn;
+pub mod vacuum;
 pub mod wal;
 pub mod wal_delta;
 pub mod wal_logical;
@@ -40,7 +41,9 @@ pub use ingest::{
     bulk_upsert_tsv, IngestError, IngestStats, TsvColumns, TsvDecodeError, TsvDecoder,
 };
 pub use mvcc::{is_visible, MvccError, MvccTable, RowVersion};
-pub use occ::{Error as OccError, OccRow, OccTable, OccTransaction, RowLockGuard};
+pub use occ::{
+    Error as OccError, OccRow, OccTable, OccTransaction, RowLockGuard, VacuumReclaimedRow,
+};
 pub use procarray::{
     ProcArray, ProcArrayError, ProcArrayRegistration, ProcSlot, ProcSnapshot, PROCARRAY_SLOTS,
 };
@@ -67,6 +70,11 @@ pub use stapi_parser::{
     Value as StapiValue,
 };
 pub use txn::{Snapshot, Transaction, TransactionManager, TxId};
+pub use vacuum::{
+    compute_global_xmin, run_vacuum_pass, spawn_vacuum_daemon, spawn_vacuum_daemon_with_callback,
+    spawn_vacuum_daemon_with_config, VacuumDaemon, VacuumDaemonConfig, VacuumError,
+    VacuumReclaimCallback,
+};
 pub use wal::{
     DurableDatabase, DurableTransaction, IndexDefinition, RecoveryStage, RecoveryStateMachine,
     WalOperation, WalRecord,
