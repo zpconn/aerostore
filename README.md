@@ -25,7 +25,7 @@ The repository contains:
 - [License](#license)
 
 ## Current Scope
-Aerostore currently focuses on:
+Aerostore is under rapid active development. The project currently focuses on:
 - shared-memory data structures with relative pointers (`RelPtr<T>`),
 - serializable OCC validation with savepoints,
 - shared primary/secondary index paths for STAPI-style search,
