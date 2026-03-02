@@ -199,10 +199,7 @@ fn warm_attach_does_not_touch_wal_and_cold_control_fails_on_malformed_wal() {
     let _ = std::fs::remove_file(&shm_path);
     let _ = build_cold_fixture(shm_path.as_path());
 
-    let wal_path = std::env::temp_dir().join(format!(
-        "aerostore_wal_touch_{}.wal",
-        unique_nonce()
-    ));
+    let wal_path = std::env::temp_dir().join(format!("aerostore_wal_touch_{}.wal", unique_nonce()));
     std::fs::write(&wal_path, MALFORMED_WAL_BYTES).expect("failed to write malformed wal bytes");
     let wal_before = wal_signature(wal_path.as_path());
 
@@ -320,9 +317,12 @@ fn capture_warm_attach_state(shm_path: &Path) -> WarmAttachState {
         layout.occ_slot_offsets_len,
     )
     .expect("failed to read warm slot offsets");
-    let table =
-        OccTable::<WarmRow>::from_existing(Arc::clone(&shm), layout.occ_shared_header_offset, slot_offsets.clone())
-            .expect("failed to attach warm table");
+    let table = OccTable::<WarmRow>::from_existing(
+        Arc::clone(&shm),
+        layout.occ_shared_header_offset,
+        slot_offsets.clone(),
+    )
+    .expect("failed to attach warm table");
     let warm_elapsed = started.elapsed();
     let checksum = table_checksum(&table);
     let head_offset = shm.chunked_arena().head_offset();
@@ -355,9 +355,12 @@ fn warm_attach_table(shm_path: &Path) -> (Arc<ShmArena>, OccTable<WarmRow>, Dura
         layout.occ_slot_offsets_len,
     )
     .expect("failed to decode warm slot offsets");
-    let table =
-        OccTable::<WarmRow>::from_existing(Arc::clone(&shm), layout.occ_shared_header_offset, slot_offsets)
-            .expect("failed to attach warm table");
+    let table = OccTable::<WarmRow>::from_existing(
+        Arc::clone(&shm),
+        layout.occ_shared_header_offset,
+        slot_offsets,
+    )
+    .expect("failed to attach warm table");
     let elapsed = started.elapsed();
     (shm, table, elapsed)
 }

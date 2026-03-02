@@ -128,9 +128,12 @@ fn warm_attach_table(shm_path: &Path) -> (Arc<ShmArena>, OccTable<WarmRow>) {
         layout.occ_slot_offsets_len,
     )
     .expect("failed to decode warm slot offsets");
-    let table =
-        OccTable::<WarmRow>::from_existing(Arc::clone(&shm), layout.occ_shared_header_offset, slot_offsets)
-            .expect("failed to attach warm table");
+    let table = OccTable::<WarmRow>::from_existing(
+        Arc::clone(&shm),
+        layout.occ_shared_header_offset,
+        slot_offsets,
+    )
+    .expect("failed to attach warm table");
     (shm, table)
 }
 

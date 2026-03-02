@@ -14,6 +14,7 @@ pub mod query;
 pub mod rbo_planner;
 pub mod recovery;
 pub mod recovery_delta;
+pub mod retry;
 pub mod shm;
 pub mod shm_index;
 pub mod shm_skiplist;
@@ -39,7 +40,7 @@ pub use ingest::{
     bulk_upsert_tsv, IngestError, IngestStats, TsvColumns, TsvDecodeError, TsvDecoder,
 };
 pub use mvcc::{is_visible, MvccError, MvccTable, RowVersion};
-pub use occ::{Error as OccError, OccRow, OccTable, OccTransaction};
+pub use occ::{Error as OccError, OccRow, OccTable, OccTransaction, RowLockGuard};
 pub use procarray::{
     ProcArray, ProcArrayError, ProcArrayRegistration, ProcSlot, ProcSnapshot, PROCARRAY_SLOTS,
 };
@@ -55,6 +56,7 @@ pub use recovery::{
 pub use recovery_delta::{
     replay_update_record, replay_update_record_with_pk_map, RecoveryDeltaError,
 };
+pub use retry::{RetryBackoff, RetryPolicy};
 pub use shm::{
     ChunkedArena as ShmChunkedArena, MmapBase, RelPtr, ShmAllocError, ShmArena, ShmError,
 };
