@@ -935,6 +935,24 @@ fn recovery_large_cardinality_index_parity_matches_table_scan() {
         );
     }
 
+    let gte_predicates = [1_000_i64, 10_000, 20_000, 30_000, 40_000];
+    for altitude in gte_predicates {
+        let indexed: BTreeSet<usize> = altitude_index
+            .lookup(&IndexCompare::Gte(IndexValue::I64(altitude)))
+            .into_iter()
+            .collect();
+        let scanned: BTreeSet<usize> = altitude_by_row
+            .iter()
+            .enumerate()
+            .filter_map(|(row_id, value)| (*value as i64 >= altitude).then_some(row_id))
+            .collect();
+        assert_eq!(
+            indexed, scanned,
+            "GTE predicate parity mismatch for altitude={}",
+            altitude
+        );
+    }
+
     let lt_predicates = [1_000_i64, 10_000, 20_000, 30_000, 40_000];
     for altitude in lt_predicates {
         let indexed: BTreeSet<usize> = altitude_index
@@ -949,6 +967,24 @@ fn recovery_large_cardinality_index_parity_matches_table_scan() {
         assert_eq!(
             indexed, scanned,
             "LT predicate parity mismatch for altitude={}",
+            altitude
+        );
+    }
+
+    let lte_predicates = [1_000_i64, 10_000, 20_000, 30_000, 40_000];
+    for altitude in lte_predicates {
+        let indexed: BTreeSet<usize> = altitude_index
+            .lookup(&IndexCompare::Lte(IndexValue::I64(altitude)))
+            .into_iter()
+            .collect();
+        let scanned: BTreeSet<usize> = altitude_by_row
+            .iter()
+            .enumerate()
+            .filter_map(|(row_id, value)| (*value as i64 <= altitude).then_some(row_id))
+            .collect();
+        assert_eq!(
+            indexed, scanned,
+            "LTE predicate parity mismatch for altitude={}",
             altitude
         );
     }

@@ -15,6 +15,12 @@ pub const MAX_PAYLOAD_BYTES: usize = 192;
 const NODE_FLAG_MARKED: u32 = 1 << 0;
 const NODE_FLAG_FULLY_LINKED: u32 = 1 << 1;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ScanBound {
+    Inclusive,
+    Exclusive,
+}
+
 pub trait ShmSkipKey: Copy + Send + Sync + 'static {
     fn sentinel() -> Self;
     fn cmp_key(&self, other: &Self) -> Ordering;
@@ -478,23 +484,73 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         P: Fn(&K) -> bool,
         F: FnMut(&K, u16, &[u8]),
     {
-        let header = self
-            .header_ref()
-            .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
-        let head_offset = header.head.load(AtomicOrdering::Acquire);
-        let head_lane = self.lane_ref_by_offset(head_offset, 0)?;
-        let mut curr_offset = head_lane.next.load(AtomicOrdering::Acquire);
+        self.scan_payloads_bounded(None, None, |key, len, payload| {
+            if predicate(key) {
+                visit(key, len, payload);
+            }
+        })
+    }
+
+    pub fn scan_payloads_bounded<F>(
+        &self,
+        lower: Option<(&K, ScanBound)>,
+        upper: Option<(&K, ScanBound)>,
+        mut visit: F,
+    ) -> Result<(), ShmSkipListError>
+    where
+        F: FnMut(&K, u16, &[u8]),
+    {
+        let mut curr_offset = match lower {
+            Some((bound, mode)) => {
+                let mut start = self.seek_ge(bound)?.load(AtomicOrdering::Acquire);
+                if start != NULL_OFFSET && matches!(mode, ScanBound::Exclusive) {
+                    let node = self
+                        .node_ref(start)
+                        .ok_or(ShmSkipListError::InvalidNode(start))?;
+                    if node.key.cmp_key(bound) == Ordering::Equal {
+                        start = self.node_next_offset(start, 0)?;
+                    }
+                }
+                start
+            }
+            None => {
+                let header = self
+                    .header_ref()
+                    .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
+                let head_offset = header.head.load(AtomicOrdering::Acquire);
+                let head_lane = self.lane_ref_by_offset(head_offset, 0)?;
+                head_lane.next.load(AtomicOrdering::Acquire)
+            }
+        };
 
         while curr_offset != NULL_OFFSET {
             let node = self
                 .node_ref(curr_offset)
                 .ok_or(ShmSkipListError::InvalidNode(curr_offset))?;
             let next = self.node_next_offset(curr_offset, 0)?;
+            if let Some((bound, mode)) = upper {
+                let cmp = node.key.cmp_key(bound);
+                let should_break = match mode {
+                    ScanBound::Inclusive => cmp == Ordering::Greater,
+                    ScanBound::Exclusive => matches!(cmp, Ordering::Equal | Ordering::Greater),
+                };
+                if should_break {
+                    break;
+                }
+            }
             let flags = node.flags.load(AtomicOrdering::Acquire);
-            if flags & NODE_FLAG_MARKED == 0
-                && flags & NODE_FLAG_FULLY_LINKED != 0
-                && predicate(&node.key)
-            {
+            if flags & NODE_FLAG_MARKED == 0 && flags & NODE_FLAG_FULLY_LINKED != 0 {
+                if let Some((bound, mode)) = lower {
+                    let cmp = node.key.cmp_key(bound);
+                    let below_lower = match mode {
+                        ScanBound::Inclusive => cmp == Ordering::Less,
+                        ScanBound::Exclusive => !matches!(cmp, Ordering::Greater),
+                    };
+                    if below_lower {
+                        curr_offset = next;
+                        continue;
+                    }
+                }
                 let mut post_offset = node.postings_head.load(AtomicOrdering::Acquire);
                 while post_offset != NULL_OFFSET {
                     let post = self
@@ -511,6 +567,115 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         }
 
         Ok(())
+    }
+
+    fn seek_ge(&self, bound: &K) -> Result<RelPtr<ShmSkipNode<K>>, ShmSkipListError> {
+        let header = self
+            .header_ref()
+            .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
+        if header.has_tombstones.load(AtomicOrdering::Acquire) == 0 {
+            return self.seek_ge_fast(header, bound);
+        }
+        self.seek_ge_with_tombstones(header, bound)
+    }
+
+    fn seek_ge_fast(
+        &self,
+        header: &ShmSkipHeader<K>,
+        bound: &K,
+    ) -> Result<RelPtr<ShmSkipNode<K>>, ShmSkipListError> {
+        let base = self.shm.mmap_base().as_ptr();
+        let head_offset = header.head.load(AtomicOrdering::Acquire);
+        let mut pred_offset = head_offset;
+
+        let top = header
+            .current_height
+            .load(AtomicOrdering::Acquire)
+            .clamp(1, MAX_HEIGHT as u32) as usize
+            - 1;
+        for level in (0..=top).rev() {
+            let mut curr_offset = unsafe {
+                self.lane_ref_by_offset_unchecked(base, pred_offset, level)
+                    .next
+                    .load(AtomicOrdering::Acquire)
+            };
+            loop {
+                if curr_offset == NULL_OFFSET {
+                    break;
+                }
+                let curr = unsafe { self.node_ref_unchecked(base, curr_offset) };
+                let curr_lane = unsafe { self.lane_ref_node_unchecked(base, curr, level) };
+                let curr_next = curr_lane.next.load(AtomicOrdering::Acquire);
+
+                if curr.key.cmp_key(bound) == Ordering::Less {
+                    pred_offset = curr_offset;
+                    curr_offset = curr_next;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        let candidate = unsafe {
+            self.lane_ref_by_offset_unchecked(base, pred_offset, 0)
+                .next
+                .load(AtomicOrdering::Acquire)
+        };
+        Ok(RelPtr::from_offset(candidate))
+    }
+
+    fn seek_ge_with_tombstones(
+        &self,
+        header: &ShmSkipHeader<K>,
+        bound: &K,
+    ) -> Result<RelPtr<ShmSkipNode<K>>, ShmSkipListError> {
+        let head_offset = header.head.load(AtomicOrdering::Acquire);
+        let mut pred_offset = head_offset;
+
+        let top = header
+            .current_height
+            .load(AtomicOrdering::Acquire)
+            .clamp(1, MAX_HEIGHT as u32) as usize
+            - 1;
+        for level in (0..=top).rev() {
+            let mut curr_offset = self
+                .lane_ref_by_offset(pred_offset, level)?
+                .next
+                .load(AtomicOrdering::Acquire);
+            loop {
+                if curr_offset == NULL_OFFSET {
+                    break;
+                }
+                let curr = self
+                    .node_ref(curr_offset)
+                    .ok_or(ShmSkipListError::InvalidNode(curr_offset))?;
+                let curr_lane = self.lane_ref(curr_offset, curr, level)?;
+                let curr_next = curr_lane.next.load(AtomicOrdering::Acquire);
+
+                let flags = curr.flags.load(AtomicOrdering::Acquire);
+                if flags & NODE_FLAG_MARKED != 0 {
+                    curr_offset = curr_next;
+                    continue;
+                }
+                if curr_lane.marked.load(AtomicOrdering::Acquire) != 0 {
+                    curr_offset = curr_next;
+                    continue;
+                }
+
+                if curr.key.cmp_key(bound) == Ordering::Less {
+                    pred_offset = curr_offset;
+                    curr_offset = curr_next;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        let candidate = self
+            .lane_ref_by_offset(pred_offset, 0)?
+            .next
+            .load(AtomicOrdering::Acquire);
+        Ok(RelPtr::from_offset(candidate))
     }
 
     pub fn collect_garbage_once(&self, max_nodes: usize) -> usize {
@@ -1482,6 +1647,204 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn seek_ge_returns_exact_gap_and_end_candidates() {
+        let list = make_list();
+        for key in [10_i64, 20_i64, 30_i64] {
+            let payload = (key as u32).to_le_bytes();
+            list.insert_payload(TestKey(key), payload.len() as u16, &payload)
+                .expect("insert failed");
+        }
+
+        let key_at = |offset: u32| -> i64 {
+            list.node_ref(offset)
+                .expect("seek_ge returned invalid node")
+                .key
+                .0
+        };
+
+        let ge_10 = list
+            .seek_ge(&TestKey(10))
+            .expect("seek_ge(10) failed")
+            .load(AtomicOrdering::Acquire);
+        assert_ne!(ge_10, NULL_OFFSET, "seek_ge(10) should find first node");
+        assert_eq!(key_at(ge_10), 10, "seek_ge(10) should return key 10");
+
+        let ge_25 = list
+            .seek_ge(&TestKey(25))
+            .expect("seek_ge(25) failed")
+            .load(AtomicOrdering::Acquire);
+        assert_ne!(ge_25, NULL_OFFSET, "seek_ge(25) should find successor node");
+        assert_eq!(key_at(ge_25), 30, "seek_ge(25) should return key 30");
+
+        let ge_40 = list
+            .seek_ge(&TestKey(40))
+            .expect("seek_ge(40) failed")
+            .load(AtomicOrdering::Acquire);
+        assert_eq!(
+            ge_40, NULL_OFFSET,
+            "seek_ge(40) should return NULL when bound exceeds max key"
+        );
+    }
+
+    #[test]
+    fn bounded_scan_gt_starts_at_seek_ge_and_collects_tail_only() {
+        const KEYS: i64 = 100;
+        let list = make_list();
+        for key in 0..KEYS {
+            let payload = (key as u32).to_le_bytes();
+            list.insert_payload(TestKey(key), payload.len() as u16, &payload)
+                .expect("insert failed");
+        }
+
+        let bound = TestKey(90);
+        let seek_offset = list
+            .seek_ge(&bound)
+            .expect("seek_ge failed")
+            .load(AtomicOrdering::Acquire);
+        let seek_key = list
+            .node_ref(seek_offset)
+            .expect("seek_ge should return a node for key 90")
+            .key
+            .0;
+        assert_eq!(seek_key, 90, "seek_ge should land on key 90 exactly");
+
+        let mut keys = Vec::new();
+        list.scan_payloads_bounded(Some((&bound, ScanBound::Exclusive)), None, |key, _, _| {
+            keys.push(key.0);
+        })
+        .expect("bounded gt scan failed");
+
+        let expected: Vec<i64> = (91..KEYS).collect();
+        assert_eq!(
+            keys, expected,
+            "GT bounded scan should yield strict tail keys"
+        );
+    }
+
+    #[test]
+    fn bounded_scan_lt_and_lte_apply_strict_early_termination() {
+        const KEYS: i64 = 32;
+        let list = make_list();
+        for key in 0..KEYS {
+            let payload = (key as u32).to_le_bytes();
+            list.insert_payload(TestKey(key), payload.len() as u16, &payload)
+                .expect("insert failed");
+        }
+
+        let mut lt_keys = Vec::new();
+        let lt_bound = TestKey(10);
+        list.scan_payloads_bounded(
+            None,
+            Some((&lt_bound, ScanBound::Exclusive)),
+            |key, _, _| {
+                lt_keys.push(key.0);
+            },
+        )
+        .expect("bounded lt scan failed");
+        assert_eq!(lt_keys, (0..10).collect::<Vec<_>>(), "LT scan mismatch");
+
+        let mut lte_keys = Vec::new();
+        let lte_bound = TestKey(10);
+        list.scan_payloads_bounded(
+            None,
+            Some((&lte_bound, ScanBound::Inclusive)),
+            |key, _, _| {
+                lte_keys.push(key.0);
+            },
+        )
+        .expect("bounded lte scan failed");
+        assert_eq!(lte_keys, (0..=10).collect::<Vec<_>>(), "LTE scan mismatch");
+    }
+
+    #[test]
+    fn seek_ge_and_bounded_scan_stay_correct_with_tombstone_heavy_keys() {
+        const KEYS: i64 = 128;
+        let list = make_list();
+
+        for key in 0..KEYS {
+            let payload = (key as u32).to_le_bytes();
+            list.insert_payload(TestKey(key), payload.len() as u16, &payload)
+                .expect("insert failed");
+        }
+
+        // Delete 75% of keys so seek/scans are forced through a tombstone-heavy structure.
+        for key in 0..KEYS {
+            if key % 4 != 0 {
+                let payload = (key as u32).to_le_bytes();
+                list.remove_payload(&TestKey(key), payload.len() as u16, &payload)
+                    .expect("remove failed");
+            }
+        }
+
+        let seek_offset = list
+            .seek_ge(&TestKey(50))
+            .expect("seek_ge failed for tombstone-heavy lower bound")
+            .load(AtomicOrdering::Acquire);
+        assert_ne!(
+            seek_offset, NULL_OFFSET,
+            "seek_ge should return a live successor"
+        );
+        let seek_key = list
+            .node_ref(seek_offset)
+            .expect("seek_ge returned invalid node")
+            .key
+            .0;
+        assert_eq!(
+            seek_key, 52,
+            "seek_ge should skip deleted bound and land at 52"
+        );
+
+        let mut tail_keys = Vec::new();
+        list.scan_payloads_bounded(
+            Some((&TestKey(50), ScanBound::Exclusive)),
+            None,
+            |key, _, _| {
+                tail_keys.push(key.0);
+            },
+        )
+        .expect("bounded GT scan failed under tombstones");
+        let expected_tail: Vec<i64> = (0..KEYS).filter(|key| *key > 50 && key % 4 == 0).collect();
+        assert_eq!(
+            tail_keys, expected_tail,
+            "GT bounded scan should return only live tail keys under tombstones"
+        );
+
+        let mut window_keys = Vec::new();
+        list.scan_payloads_bounded(
+            Some((&TestKey(52), ScanBound::Inclusive)),
+            Some((&TestKey(80), ScanBound::Exclusive)),
+            |key, _, _| {
+                window_keys.push(key.0);
+            },
+        )
+        .expect("bounded [52,80) scan failed under tombstones");
+        let expected_window: Vec<i64> = (0..KEYS)
+            .filter(|key| *key >= 52 && *key < 80 && key % 4 == 0)
+            .collect();
+        assert_eq!(
+            window_keys, expected_window,
+            "bounded [52,80) scan mismatch under tombstones"
+        );
+
+        let mut mixed_bound_keys = Vec::new();
+        list.scan_payloads_bounded(
+            Some((&TestKey(52), ScanBound::Exclusive)),
+            Some((&TestKey(64), ScanBound::Inclusive)),
+            |key, _, _| {
+                mixed_bound_keys.push(key.0);
+            },
+        )
+        .expect("bounded (52,64] scan failed under tombstones");
+        let expected_mixed: Vec<i64> = (0..KEYS)
+            .filter(|key| *key > 52 && *key <= 64 && key % 4 == 0)
+            .collect();
+        assert_eq!(
+            mixed_bound_keys, expected_mixed,
+            "bounded (52,64] scan mismatch under tombstones"
+        );
     }
 
     #[test]
