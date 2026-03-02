@@ -8,11 +8,11 @@ use std::time::{Duration, Instant};
 use aerostore_core::{IndexValue, RelPtr, SecondaryIndex, ShmArena};
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
-const WRITERS: u32 = 8;
-const READERS: u32 = 8;
+const MAX_WRITERS: u32 = 8;
+const MAX_READERS: u32 = 8;
 const INSERTS_PER_WRITER_SMALL: u32 = 50_000;
-const INSERTS_PER_WRITER_MEDIUM: u32 = 75_000;
-const INSERTS_PER_WRITER_LARGE: u32 = 100_000;
+const INSERTS_PER_WRITER_MEDIUM: u32 = 90_000;
+const INSERTS_PER_WRITER_LARGE: u32 = 160_000;
 const HIST_BUCKET_NS: u64 = 100;
 const HIST_BUCKETS: usize = 4_096;
 const LOOKUP_P99_BUDGET_NS: u64 = 5_000;
@@ -61,7 +61,7 @@ impl ReaderHistogram {
 
 #[repr(C, align(64))]
 struct BenchMetrics {
-    readers: [ReaderHistogram; READERS as usize],
+    readers: [ReaderHistogram; MAX_READERS as usize],
 }
 
 impl BenchMetrics {
@@ -80,9 +80,10 @@ struct ScenarioResult {
 }
 
 fn bench_shm_skiplist_adversarial(c: &mut Criterion) {
-    let small = run_adversarial_scenario(INSERTS_PER_WRITER_SMALL);
-    let medium = run_adversarial_scenario(INSERTS_PER_WRITER_MEDIUM);
-    let large = run_adversarial_scenario(INSERTS_PER_WRITER_LARGE);
+    let (writers, readers) = active_worker_counts();
+    let small = run_adversarial_scenario(INSERTS_PER_WRITER_SMALL, writers, readers);
+    let medium = run_adversarial_scenario(INSERTS_PER_WRITER_MEDIUM, writers, readers);
+    let large = run_adversarial_scenario(INSERTS_PER_WRITER_LARGE, writers, readers);
 
     let small_p99 = small.p99_ns.max(1);
     let medium_p99 = medium.p99_ns.max(1);
@@ -100,7 +101,9 @@ fn bench_shm_skiplist_adversarial(c: &mut Criterion) {
     );
 
     println!(
-        "shm_skiplist_adversarial: small_p99_ns={} medium_p99_ns={} large_p99_ns={} slope_small_to_medium={:.3} slope_medium_to_large={:.3} small_samples={} medium_samples={} large_samples={}",
+        "shm_skiplist_adversarial: writers={} readers={} small_p99_ns={} medium_p99_ns={} large_p99_ns={} slope_small_to_medium={:.3} slope_medium_to_large={:.3} small_samples={} medium_samples={} large_samples={}",
+        writers,
+        readers,
         small.p99_ns,
         medium.p99_ns,
         large.p99_ns,
@@ -137,9 +140,9 @@ fn bench_shm_skiplist_adversarial(c: &mut Criterion) {
     group.finish();
 }
 
-fn run_adversarial_scenario(inserts_per_writer: u32) -> ScenarioResult {
-    let keyspace = WRITERS.saturating_mul(inserts_per_writer).saturating_mul(4);
-    let arena_bytes = scenario_arena_bytes(inserts_per_writer);
+fn run_adversarial_scenario(inserts_per_writer: u32, writers: u32, readers: u32) -> ScenarioResult {
+    let keyspace = writers.saturating_mul(inserts_per_writer).saturating_mul(4);
+    let arena_bytes = scenario_arena_bytes(writers, inserts_per_writer);
     let shm = Arc::new(ShmArena::new(arena_bytes).expect("failed to allocate shared arena"));
     let index = SecondaryIndex::<u64>::new_in_shared("aircraft_id", Arc::clone(&shm));
 
@@ -155,9 +158,9 @@ fn run_adversarial_scenario(inserts_per_writer: u32) -> ScenarioResult {
     let control_offset = control_ptr.load(Ordering::Acquire);
     let metrics_offset = metrics_ptr.load(Ordering::Acquire);
 
-    let mut pids = Vec::with_capacity((WRITERS + READERS) as usize);
+    let mut pids = Vec::with_capacity((writers + readers) as usize);
 
-    for writer_id in 0..WRITERS {
+    for writer_id in 0..writers {
         let fork_result = unsafe { rustix::runtime::fork() }.expect("fork failed for writer");
         match fork_result {
             rustix::runtime::Fork::Child(_) => {
@@ -173,7 +176,7 @@ fn run_adversarial_scenario(inserts_per_writer: u32) -> ScenarioResult {
         }
     }
 
-    for reader_id in 0..READERS {
+    for reader_id in 0..readers {
         let fork_result = unsafe { rustix::runtime::fork() }.expect("fork failed for reader");
         match fork_result {
             rustix::runtime::Fork::Child(_) => {
@@ -195,8 +198,8 @@ fn run_adversarial_scenario(inserts_per_writer: u32) -> ScenarioResult {
 
     wait_until(
         || {
-            control.ready_writers.load(Ordering::Acquire) == WRITERS
-                && control.ready_readers.load(Ordering::Acquire) == READERS
+            control.ready_writers.load(Ordering::Acquire) == writers
+                && control.ready_readers.load(Ordering::Acquire) == readers
         },
         Duration::from_secs(20),
         "workers did not reach startup barrier",
@@ -205,7 +208,7 @@ fn run_adversarial_scenario(inserts_per_writer: u32) -> ScenarioResult {
     control.go.store(1, Ordering::Release);
 
     wait_until(
-        || control.done_writers.load(Ordering::Acquire) == WRITERS,
+        || control.done_writers.load(Ordering::Acquire) == writers,
         Duration::from_secs(120),
         "writers did not finish in time",
     );
@@ -216,7 +219,7 @@ fn run_adversarial_scenario(inserts_per_writer: u32) -> ScenarioResult {
     control.stop_readers.store(1, Ordering::Release);
 
     wait_until(
-        || control.done_readers.load(Ordering::Acquire) == READERS,
+        || control.done_readers.load(Ordering::Acquire) == readers,
         Duration::from_secs(30),
         "readers did not finish in time",
     );
@@ -228,12 +231,12 @@ fn run_adversarial_scenario(inserts_per_writer: u32) -> ScenarioResult {
     let metrics = metrics_ptr
         .as_ref(shm.mmap_base())
         .expect("parent failed to resolve metrics block");
-    let (p99_ns, total_samples) = aggregate_p99(metrics);
+    let (p99_ns, total_samples) = aggregate_p99(metrics, readers as usize);
 
     ScenarioResult {
         p99_ns,
         total_samples,
-        inserted_rows: (WRITERS as u64) * (inserts_per_writer as u64),
+        inserted_rows: (writers as u64) * (inserts_per_writer as u64),
     }
 }
 
@@ -244,6 +247,8 @@ fn writer_main(
     keyspace: u32,
     inserts_per_writer: u32,
 ) -> ! {
+    pin_current_process(writer_id as usize);
+
     let Some(control) = RelPtr::<BenchControl>::from_offset(control_offset)
         .as_ref(index.shared_arena().mmap_base())
     else {
@@ -273,6 +278,8 @@ fn reader_main(
     reader_slot: usize,
     keyspace: u32,
 ) -> ! {
+    pin_current_process((MAX_WRITERS as usize).saturating_add(reader_slot));
+
     let Some(control) = RelPtr::<BenchControl>::from_offset(control_offset)
         .as_ref(index.shared_arena().mmap_base())
     else {
@@ -294,7 +301,7 @@ fn reader_main(
     while control.stop_readers.load(Ordering::Acquire) == 0 {
         let aircraft_id = (next_u64(&mut rng) % keyspace as u64) as u32;
         let t0 = Instant::now();
-        let hits = index.lookup_posting_count(&IndexValue::U64(aircraft_id as u64));
+        let hits = index.lookup_u64_posting_count(aircraft_id as u64);
         black_box(hits);
         if control.sample_phase.load(Ordering::Acquire) != 0 {
             let elapsed_ns = t0.elapsed().as_nanos() as u64;
@@ -312,12 +319,13 @@ fn reader_main(
     unsafe { libc::_exit(0) };
 }
 
-fn aggregate_p99(metrics: &BenchMetrics) -> (u64, u64) {
+fn aggregate_p99(metrics: &BenchMetrics, active_readers: usize) -> (u64, u64) {
+    let reader_count = active_readers.min(MAX_READERS as usize).max(1);
     let mut combined = vec![0_u64; HIST_BUCKETS];
     let mut total = 0_u64;
     let mut overflow = 0_u64;
 
-    for reader in &metrics.readers {
+    for reader in metrics.readers.iter().take(reader_count) {
         total = total.saturating_add(reader.samples.load(Ordering::Acquire));
         overflow = overflow.saturating_add(reader.overflow.load(Ordering::Acquire));
         for (idx, slot) in combined.iter_mut().enumerate() {
@@ -369,11 +377,47 @@ where
     }
 }
 
-fn scenario_arena_bytes(inserts_per_writer: u32) -> usize {
-    let total_rows = (WRITERS as usize).saturating_mul(inserts_per_writer as usize);
+fn scenario_arena_bytes(writers: u32, inserts_per_writer: u32) -> usize {
+    let total_rows = (writers as usize).saturating_mul(inserts_per_writer as usize);
     let estimated = total_rows.saturating_mul(640);
     estimated.clamp(256 << 20, 1_536 << 20)
 }
+
+fn active_worker_counts() -> (u32, u32) {
+    let cpus = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1);
+    // Avoid oversubscribing heavily on small runners; benchmark behavior should
+    // stay compute-bound rather than scheduler-bound.
+    let cap = cpus.max(2).min(MAX_WRITERS as usize) as u32;
+    (cap.min(MAX_WRITERS), cap.min(MAX_READERS))
+}
+
+#[cfg(target_os = "linux")]
+fn pin_current_process(slot: usize) {
+    let cpus = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1);
+    if cpus == 0 {
+        return;
+    }
+    let cpu = slot % cpus;
+    // SAFETY:
+    // we provide a valid cpu_set_t pointer and size for the current process (pid=0).
+    unsafe {
+        let mut set: libc::cpu_set_t = std::mem::zeroed();
+        libc::CPU_ZERO(&mut set);
+        libc::CPU_SET(cpu, &mut set);
+        let _ = libc::sched_setaffinity(
+            0,
+            std::mem::size_of::<libc::cpu_set_t>(),
+            &set as *const libc::cpu_set_t,
+        );
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn pin_current_process(_slot: usize) {}
 
 #[inline]
 fn seed_rng(seed: u64) -> u64 {
