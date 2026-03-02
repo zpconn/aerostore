@@ -257,7 +257,7 @@ All values below are host-specific and should be used primarily for trend/regres
 | `tmpfs_warm_restart/warm_attach_boot` | `[57.440, 57.776] us` | Pass | Warm attach startup path is sub-0.1ms and effectively O(1). |
 | `tmpfs_warm_restart/cold_boot_fixture_build` | `[1.8466, 1.8596] ms` | Pass | Cold fixture bootstrap is materially slower than warm attach as expected. |
 | `tmpfs_warm_restart/post_restart_update_throughput` | `[1.6412, 1.6658] ms` | Pass | Immediate post-restart write path remains fast and stable. |
-| `shm_skiplist_adversarial` | `large_p99_ns=5200` | **Fail** | Tail lookup latency exceeded the strict `<5000ns` budget in this run; benchmark failed with assertion. |
+| `shm_skiplist_adversarial` | `large_p99_ns=3500` | Pass | Tail lookup latency now stays well below the strict `<5000ns` gate on the optimized skiplist path. |
 
 #### Core Benchmark-Style Tests
 | Benchmark | Result | Status | What it means |

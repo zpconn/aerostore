@@ -77,6 +77,7 @@ struct ShmSkipHeader<K: ShmSkipKey> {
     current_height: AtomicU32,
     rng_state: AtomicU64,
     distinct_key_count: AtomicUsize,
+    has_tombstones: AtomicU32,
     retired_head: RelPtr<ShmSkipNode<K>>,
     retired_nodes: AtomicU64,
     reclaimed_nodes: AtomicU64,
@@ -91,6 +92,7 @@ impl<K: ShmSkipKey> ShmSkipHeader<K> {
             current_height: AtomicU32::new(1),
             rng_state: AtomicU64::new(seed.max(1)),
             distinct_key_count: AtomicUsize::new(0),
+            has_tombstones: AtomicU32::new(0),
             retired_head: RelPtr::null(),
             retired_nodes: AtomicU64::new(0),
             reclaimed_nodes: AtomicU64::new(0),
@@ -123,13 +125,14 @@ struct ShmSkipNode<K: ShmSkipKey> {
     flags: AtomicU32,
     tower_offset: u32,
     postings_head: RelPtr<PostingEntry>,
+    live_postings: AtomicU32,
     retire_txid: AtomicU64,
     retire_next: RelPtr<ShmSkipNode<K>>,
 }
 
 impl<K: ShmSkipKey> ShmSkipNode<K> {
     #[inline]
-    fn new(key: K, height: u8, tower_offset: u32, postings_head: u32) -> Self {
+    fn new(key: K, height: u8, tower_offset: u32, postings_head: u32, live_postings: u32) -> Self {
         Self {
             key,
             height,
@@ -137,6 +140,7 @@ impl<K: ShmSkipKey> ShmSkipNode<K> {
             flags: AtomicU32::new(0),
             tower_offset,
             postings_head: RelPtr::from_offset(postings_head),
+            live_postings: AtomicU32::new(live_postings),
             retire_txid: AtomicU64::new(0),
             retire_next: RelPtr::null(),
         }
@@ -204,7 +208,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         }
 
         let head_offset = shm.chunked_arena().alloc(
-            ShmSkipNode::new(K::sentinel(), MAX_HEIGHT as u8, tower_offset, NULL_OFFSET)
+            ShmSkipNode::new(K::sentinel(), MAX_HEIGHT as u8, tower_offset, NULL_OFFSET, 0)
                 .with_flags(NODE_FLAG_FULLY_LINKED),
         )?;
         let head_offset = head_offset.load(AtomicOrdering::Acquire);
@@ -303,6 +307,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                     node_height as u8,
                     tower_offset,
                     posting_offset,
+                    1,
                 ))?
                 .load(AtomicOrdering::Acquire);
 
@@ -375,6 +380,9 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         let node = self
             .node_ref(node_offset)
             .ok_or(ShmSkipListError::InvalidNode(node_offset))?;
+        if node.live_postings.load(AtomicOrdering::Acquire) == 0 {
+            return Ok(());
+        }
 
         let mut post_offset = node.postings_head.load(AtomicOrdering::Acquire);
         while post_offset != NULL_OFFSET {
@@ -390,14 +398,14 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                     .compare_exchange(0, 1, AtomicOrdering::AcqRel, AtomicOrdering::Acquire)
                     .is_ok()
                 {
-                    break;
+                    self.mark_tombstone_seen();
+                    if self.decrement_live_postings(node) == 0 {
+                        self.unlink_node(key, node_offset)?;
+                    }
+                    return Ok(());
                 }
             }
             post_offset = post.next.load(AtomicOrdering::Acquire);
-        }
-
-        if !self.has_live_postings(node)? {
-            self.unlink_node(key, node_offset)?;
         }
 
         Ok(())
@@ -423,6 +431,9 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         if node.key.cmp_key(key) != Ordering::Equal {
             return Ok(());
         }
+        if node.live_postings.load(AtomicOrdering::Acquire) == 0 {
+            return Ok(());
+        }
 
         let mut post_offset = node.postings_head.load(AtomicOrdering::Acquire);
         while post_offset != NULL_OFFSET {
@@ -437,6 +448,23 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         }
 
         Ok(())
+    }
+
+    pub fn count_payloads(&self, key: &K) -> Result<usize, ShmSkipListError> {
+        let Some(node_offset) = self.find_readonly_exact(key)? else {
+            return Ok(0);
+        };
+        let node = self
+            .node_ref(node_offset)
+            .ok_or(ShmSkipListError::InvalidNode(node_offset))?;
+        let flags = node.flags.load(AtomicOrdering::Acquire);
+        if flags & NODE_FLAG_MARKED != 0 || flags & NODE_FLAG_FULLY_LINKED == 0 {
+            return Ok(0);
+        }
+        if node.key.cmp_key(key) != Ordering::Equal {
+            return Ok(0);
+        }
+        Ok(node.live_postings.load(AtomicOrdering::Acquire) as usize)
     }
 
     pub fn scan_payloads<P, F>(&self, predicate: P, mut visit: F) -> Result<(), ShmSkipListError>
@@ -613,15 +641,12 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                     let curr = self
                         .node_ref(curr_offset)
                         .ok_or(ShmSkipListError::InvalidNode(curr_offset))?;
-                    let curr_next = self.node_next_offset(curr_offset, level)?;
+                    let curr_lane = self.lane_ref(curr_offset, curr, level)?;
+                    let curr_next = curr_lane.next.load(AtomicOrdering::Acquire);
 
                     let node_marked =
                         curr.flags.load(AtomicOrdering::Acquire) & NODE_FLAG_MARKED != 0;
-                    let lane_marked = self
-                        .lane_ref(curr_offset, curr, level)?
-                        .marked
-                        .load(AtomicOrdering::Acquire)
-                        != 0;
+                    let lane_marked = curr_lane.marked.load(AtomicOrdering::Acquire) != 0;
                     if node_marked || lane_marked {
                         let pred_lane = self.lane_ref_by_offset(pred_offset, level)?;
                         if pred_lane
@@ -668,6 +693,110 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         }
     }
 
+    fn find_readonly_exact(&self, key: &K) -> Result<Option<u32>, ShmSkipListError> {
+        let header = self
+            .header_ref()
+            .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
+        if header.has_tombstones.load(AtomicOrdering::Acquire) == 0 {
+            return self.find_readonly_exact_fast(header, key);
+        }
+        self.find_readonly_exact_with_tombstones(header, key)
+    }
+
+    fn find_readonly_exact_fast(
+        &self,
+        header: &ShmSkipHeader<K>,
+        key: &K,
+    ) -> Result<Option<u32>, ShmSkipListError> {
+        let base = self.shm.mmap_base().as_ptr();
+        let head_offset = header.head.load(AtomicOrdering::Acquire);
+        let mut pred_offset = head_offset;
+
+        let top = header
+            .current_height
+            .load(AtomicOrdering::Acquire)
+            .clamp(1, MAX_HEIGHT as u32) as usize
+            - 1;
+        for level in (0..=top).rev() {
+            let mut curr_offset = unsafe {
+                self.lane_ref_by_offset_unchecked(base, pred_offset, level)
+                    .next
+                    .load(AtomicOrdering::Acquire)
+            };
+            loop {
+                if curr_offset == NULL_OFFSET {
+                    break;
+                }
+                let curr = unsafe { self.node_ref_unchecked(base, curr_offset) };
+                let curr_lane = unsafe { self.lane_ref_node_unchecked(base, curr, level) };
+                let curr_next = curr_lane.next.load(AtomicOrdering::Acquire);
+
+                match curr.key.cmp_key(key) {
+                    Ordering::Less => {
+                        pred_offset = curr_offset;
+                        curr_offset = curr_next;
+                    }
+                    Ordering::Equal => return Ok(Some(curr_offset)),
+                    Ordering::Greater => break,
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
+    fn find_readonly_exact_with_tombstones(
+        &self,
+        header: &ShmSkipHeader<K>,
+        key: &K,
+    ) -> Result<Option<u32>, ShmSkipListError> {
+        let head_offset = header.head.load(AtomicOrdering::Acquire);
+        let mut pred_offset = head_offset;
+
+        let top = header
+            .current_height
+            .load(AtomicOrdering::Acquire)
+            .clamp(1, MAX_HEIGHT as u32) as usize
+            - 1;
+        for level in (0..=top).rev() {
+            let mut curr_offset = self
+                .lane_ref_by_offset(pred_offset, level)?
+                .next
+                .load(AtomicOrdering::Acquire);
+            loop {
+                if curr_offset == NULL_OFFSET {
+                    break;
+                }
+                let curr = self
+                    .node_ref(curr_offset)
+                    .ok_or(ShmSkipListError::InvalidNode(curr_offset))?;
+                let curr_lane = self.lane_ref(curr_offset, curr, level)?;
+                let curr_next = curr_lane.next.load(AtomicOrdering::Acquire);
+
+                let flags = curr.flags.load(AtomicOrdering::Acquire);
+                if flags & NODE_FLAG_MARKED != 0 {
+                    curr_offset = curr_next;
+                    continue;
+                }
+                if curr_lane.marked.load(AtomicOrdering::Acquire) != 0 {
+                    curr_offset = curr_next;
+                    continue;
+                }
+
+                match curr.key.cmp_key(key) {
+                    Ordering::Less => {
+                        pred_offset = curr_offset;
+                        curr_offset = curr_next;
+                    }
+                    Ordering::Equal => return Ok(Some(curr_offset)),
+                    Ordering::Greater => break,
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
     fn unlink_node(&self, key: &K, node_offset: u32) -> Result<(), ShmSkipListError> {
         let node = self
             .node_ref(node_offset)
@@ -694,6 +823,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         }
 
         if newly_marked {
+            self.mark_tombstone_seen();
             self.decrement_distinct_key_count();
         }
 
@@ -809,23 +939,40 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 )
                 .is_ok()
             {
+                node.live_postings.fetch_add(1, AtomicOrdering::AcqRel);
                 return Ok(());
             }
         }
     }
 
-    fn has_live_postings(&self, node: &ShmSkipNode<K>) -> Result<bool, ShmSkipListError> {
-        let mut curr = node.postings_head.load(AtomicOrdering::Acquire);
-        while curr != NULL_OFFSET {
-            let post = self
-                .posting_ref(curr)
-                .ok_or(ShmSkipListError::InvalidPosting(curr))?;
-            if post.deleted.load(AtomicOrdering::Acquire) == 0 {
-                return Ok(true);
-            }
-            curr = post.next.load(AtomicOrdering::Acquire);
+    #[inline]
+    fn mark_tombstone_seen(&self) {
+        if let Some(header) = self.header_ref() {
+            header.has_tombstones.store(1, AtomicOrdering::Release);
         }
-        Ok(false)
+    }
+
+    fn decrement_live_postings(&self, node: &ShmSkipNode<K>) -> u32 {
+        loop {
+            let current = node.live_postings.load(AtomicOrdering::Acquire);
+            if current == 0 {
+                return 0;
+            }
+            let next = current - 1;
+            if node
+                .live_postings
+                .compare_exchange(
+                    current,
+                    next,
+                    AtomicOrdering::AcqRel,
+                    AtomicOrdering::Acquire,
+                )
+                .is_ok()
+            {
+                return next;
+            }
+            std::hint::spin_loop();
+        }
     }
 
     fn alloc_tower(
@@ -893,9 +1040,9 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
 
         let mut h = 1_u8;
         let mut bits = new;
-        while h < MAX_HEIGHT as u8 && (bits & 0b11) == 0 {
+        while h < MAX_HEIGHT as u8 && (bits & 0b1) == 0 {
             h += 1;
-            bits >>= 2;
+            bits >>= 1;
         }
         h
     }
@@ -908,6 +1055,13 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
     #[inline]
     fn node_ref(&self, offset: u32) -> Option<&ShmSkipNode<K>> {
         RelPtr::<ShmSkipNode<K>>::from_offset(offset).as_ref(self.shm.mmap_base())
+    }
+
+    #[inline]
+    unsafe fn node_ref_unchecked(&self, base: *mut u8, offset: u32) -> &ShmSkipNode<K> {
+        // SAFETY:
+        // Callers guarantee `offset` is a valid `ShmSkipNode<K>` inside this arena.
+        unsafe { &*base.add(offset as usize).cast::<ShmSkipNode<K>>() }
     }
 
     #[inline]
@@ -926,6 +1080,17 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         self.lane_ref(node_offset, node, level)
     }
 
+    #[inline]
+    unsafe fn lane_ref_by_offset_unchecked(
+        &self,
+        base: *mut u8,
+        node_offset: u32,
+        level: usize,
+    ) -> &SkipLane<K> {
+        let node = unsafe { self.node_ref_unchecked(base, node_offset) };
+        unsafe { self.lane_ref_node_unchecked(base, node, level) }
+    }
+
     fn lane_ref(
         &self,
         node_offset: u32,
@@ -942,6 +1107,22 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             node.height as usize,
         )
         .ok_or(ShmSkipListError::InvalidLane { node_offset, level })
+    }
+
+    #[inline]
+    unsafe fn lane_ref_node_unchecked(
+        &self,
+        base: *mut u8,
+        node: &ShmSkipNode<K>,
+        level: usize,
+    ) -> &SkipLane<K> {
+        debug_assert!(level < node.height as usize);
+        let lane_offset = node
+            .tower_offset
+            .wrapping_add((level * size_of::<SkipLane<K>>()) as u32) as usize;
+        // SAFETY:
+        // Callers guarantee tower offsets/levels are valid and aligned.
+        unsafe { &*base.add(lane_offset).cast::<SkipLane<K>>() }
     }
 
     fn node_next_offset(&self, node_offset: u32, level: usize) -> Result<u32, ShmSkipListError> {
@@ -1453,5 +1634,34 @@ mod tests {
                 "distinct key count should return to zero after full cycle teardown"
             );
         }
+    }
+
+    #[test]
+    fn count_payloads_matches_lookup_payloads() {
+        let list = make_list();
+        let a = 1_u32.to_le_bytes();
+        let b = 2_u32.to_le_bytes();
+        let c = 3_u32.to_le_bytes();
+
+        list.insert_payload(TestKey(10), a.len() as u16, &a)
+            .expect("insert a failed");
+        list.insert_payload(TestKey(10), b.len() as u16, &b)
+            .expect("insert b failed");
+        list.insert_payload(TestKey(10), c.len() as u16, &c)
+            .expect("insert c failed");
+        list.remove_payload(&TestKey(10), b.len() as u16, &b)
+            .expect("remove b failed");
+
+        let mut via_lookup = 0_usize;
+        list.lookup_payloads(&TestKey(10), |_, _| via_lookup += 1)
+            .expect("lookup failed");
+        let via_count = list.count_payloads(&TestKey(10)).expect("count failed");
+        assert_eq!(via_count, via_lookup);
+        assert_eq!(via_count, 2);
+
+        let missing = list
+            .count_payloads(&TestKey(999))
+            .expect("count on missing key failed");
+        assert_eq!(missing, 0);
     }
 }

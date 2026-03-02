@@ -105,25 +105,16 @@ impl EncodedKey {
     }
 
     fn from_index_value(value: &IndexValue) -> Result<Self, ShmIndexError> {
-        let mut out = Self {
-            tag: 0,
-            len: 0,
-            _pad: 0,
-            data: [0_u8; KEY_INLINE_BYTES],
-        };
-
         match value {
-            IndexValue::I64(v) => {
-                out.tag = KEY_TAG_I64;
-                out.len = 8;
-                out.data[..8].copy_from_slice(&v.to_le_bytes());
-            }
-            IndexValue::U64(v) => {
-                out.tag = KEY_TAG_U64;
-                out.len = 8;
-                out.data[..8].copy_from_slice(&v.to_le_bytes());
-            }
+            IndexValue::I64(v) => Ok(Self::from_i64(*v)),
+            IndexValue::U64(v) => Ok(Self::from_u64(*v)),
             IndexValue::String(v) => {
+                let mut out = Self {
+                    tag: KEY_TAG_STRING,
+                    len: 0,
+                    _pad: 0,
+                    data: [0_u8; KEY_INLINE_BYTES],
+                };
                 let bytes = v.as_bytes();
                 if bytes.len() > KEY_INLINE_BYTES {
                     return Err(ShmIndexError::KeyTooLong {
@@ -131,13 +122,35 @@ impl EncodedKey {
                         max: KEY_INLINE_BYTES,
                     });
                 }
-                out.tag = KEY_TAG_STRING;
                 out.len = bytes.len() as u16;
                 out.data[..bytes.len()].copy_from_slice(bytes);
+                Ok(out)
             }
         }
+    }
 
-        Ok(out)
+    #[inline]
+    fn from_u64(value: u64) -> Self {
+        let mut out = Self {
+            tag: KEY_TAG_U64,
+            len: 8,
+            _pad: 0,
+            data: [0_u8; KEY_INLINE_BYTES],
+        };
+        out.data[..8].copy_from_slice(&value.to_le_bytes());
+        out
+    }
+
+    #[inline]
+    fn from_i64(value: i64) -> Self {
+        let mut out = Self {
+            tag: KEY_TAG_I64,
+            len: 8,
+            _pad: 0,
+            data: [0_u8; KEY_INLINE_BYTES],
+        };
+        out.data[..8].copy_from_slice(&value.to_le_bytes());
+        out
     }
 
     fn as_index_value(&self) -> Option<IndexValue> {
@@ -162,6 +175,7 @@ impl EncodedKey {
         }
     }
 
+    #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
         if self.tag == KEY_TAG_SENTINEL && other.tag == KEY_TAG_SENTINEL {
             return Ordering::Equal;
@@ -177,20 +191,8 @@ impl EncodedKey {
         }
 
         match self.tag {
-            KEY_TAG_I64 => {
-                let mut lhs = [0_u8; 8];
-                let mut rhs = [0_u8; 8];
-                lhs.copy_from_slice(&self.data[..8]);
-                rhs.copy_from_slice(&other.data[..8]);
-                i64::from_le_bytes(lhs).cmp(&i64::from_le_bytes(rhs))
-            }
-            KEY_TAG_U64 => {
-                let mut lhs = [0_u8; 8];
-                let mut rhs = [0_u8; 8];
-                lhs.copy_from_slice(&self.data[..8]);
-                rhs.copy_from_slice(&other.data[..8]);
-                u64::from_le_bytes(lhs).cmp(&u64::from_le_bytes(rhs))
-            }
+            KEY_TAG_I64 => read_i64_le(self.data.as_ptr()).cmp(&read_i64_le(other.data.as_ptr())),
+            KEY_TAG_U64 => read_u64_le(self.data.as_ptr()).cmp(&read_u64_le(other.data.as_ptr())),
             KEY_TAG_STRING => {
                 let lhs_len = self.len as usize;
                 let rhs_len = other.len as usize;
@@ -211,6 +213,22 @@ impl ShmSkipKey for EncodedKey {
     fn cmp_key(&self, other: &Self) -> Ordering {
         self.cmp(other)
     }
+}
+
+#[inline]
+fn read_u64_le(ptr: *const u8) -> u64 {
+    // SAFETY:
+    // `ptr` points to at least 8 bytes inside EncodedKey::data.
+    let raw = unsafe { std::ptr::read_unaligned(ptr.cast::<u64>()) };
+    u64::from_le(raw)
+}
+
+#[inline]
+fn read_i64_le(ptr: *const u8) -> i64 {
+    // SAFETY:
+    // `ptr` points to at least 8 bytes inside EncodedKey::data.
+    let raw = unsafe { std::ptr::read_unaligned(ptr.cast::<i64>()) };
+    i64::from_le(raw)
 }
 
 #[derive(Clone)]
@@ -385,12 +403,13 @@ where
         let Ok(key) = EncodedKey::from_index_value(indexed_value) else {
             return 0;
         };
+        self.skiplist.count_payloads(&key).unwrap_or(0)
+    }
 
-        let mut count = 0_usize;
-        let _ = self.skiplist.lookup_payloads(&key, |_, _| {
-            count = count.saturating_add(1);
-        });
-        count
+    #[inline]
+    pub fn lookup_u64_posting_count(&self, indexed_value: u64) -> usize {
+        let key = EncodedKey::from_u64(indexed_value);
+        self.skiplist.count_payloads(&key).unwrap_or(0)
     }
 
     pub fn traverse(&self) -> Vec<(IndexValue, Vec<RowId>)> {
