@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::marker::PhantomData;
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -43,6 +43,8 @@ impl OccIndexSlot {
 pub struct OccRow<T: Copy> {
     pub xmin: TxId,
     pub xmax: AtomicU64,
+    pub is_locked: AtomicBool,
+    lock_owner_txid: AtomicU64,
     next: AtomicU32,
     recycle_next: AtomicU32,
     pub value: T,
@@ -54,11 +56,19 @@ impl<T: Copy> OccRow<T> {
         Self {
             xmin,
             xmax: AtomicU64::new(0),
+            is_locked: AtomicBool::new(false),
+            lock_owner_txid: AtomicU64::new(0),
             next: AtomicU32::new(next),
             recycle_next: AtomicU32::new(EMPTY_PTR),
             value,
         }
     }
+}
+
+pub struct RowLockGuard<'a, T: Copy + Send + Sync + 'static> {
+    table: &'a OccTable<T>,
+    row_ptr: RelPtr<OccRow<T>>,
+    release_on_drop: bool,
 }
 
 struct ReadSetEntry<T: Copy> {
@@ -305,6 +315,54 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         Ok(())
     }
 
+    pub fn lock_for_update(
+        &self,
+        tx: &OccTransaction<T>,
+        row_id: usize,
+    ) -> Result<RowLockGuard<'_, T>, Error> {
+        self.ensure_open(tx)?;
+        if row_id >= self.capacity() {
+            return Err(Error::RowOutOfBounds {
+                row_id,
+                capacity: self.capacity(),
+            });
+        }
+
+        let _lock = self.acquire_row_lock(row_id);
+        let Some(row_ptr) = self.find_visible_row_ptr(tx, row_id)? else {
+            return Err(Error::RowMissing { row_id });
+        };
+        let row = self.resolve_row_ptr(&row_ptr)?;
+
+        if self.row_locked_by_other_tx(row, tx.txid) {
+            std::thread::yield_now();
+            return Err(Error::SerializationFailure);
+        }
+
+        let release_on_drop = if row
+            .is_locked
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
+        {
+            row.lock_owner_txid.store(tx.txid, Ordering::Release);
+            true
+        } else {
+            let owner = row.lock_owner_txid.load(Ordering::Acquire);
+            if owner == tx.txid {
+                false
+            } else {
+                std::thread::yield_now();
+                return Err(Error::SerializationFailure);
+            }
+        };
+
+        Ok(RowLockGuard {
+            table: self,
+            row_ptr,
+            release_on_drop,
+        })
+    }
+
     pub fn read(&self, tx: &mut OccTransaction<T>, row_id: usize) -> Result<Option<T>, Error> {
         self.ensure_open(tx)?;
         if row_id >= self.capacity() {
@@ -324,20 +382,15 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             return Ok(Some(pending_row.value));
         }
 
-        let slot = self.slot_ref(row_id)?;
-        let mut head_offset = slot.head.load(Ordering::Acquire);
-
-        while head_offset != EMPTY_PTR {
-            let row_ptr = RelPtr::from_offset(head_offset);
+        if let Some(row_ptr) = self.find_visible_row_ptr(tx, row_id)? {
             let row = self.resolve_row_ptr(&row_ptr)?;
-
-            if self.is_visible(row, tx) {
-                let observed_xmin = row.xmin;
-                self.record_read(tx, row_id, row_ptr, observed_xmin);
-                return Ok(Some(row.value));
+            if self.row_locked_by_other_tx(row, tx.txid) {
+                std::thread::yield_now();
+                return Err(Error::SerializationFailure);
             }
-
-            head_offset = row.next.load(Ordering::Acquire);
+            let observed_xmin = row.xmin;
+            self.record_read(tx, row_id, row_ptr, observed_xmin);
+            return Ok(Some(row.value));
         }
 
         Ok(None)
@@ -360,21 +413,15 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         {
             last_for_row.base_ptr.clone()
         } else {
-            let slot = self.slot_ref(row_id)?;
-            let mut head_offset = slot.head.load(Ordering::Acquire);
-            let mut visible_ptr: Option<RelPtr<OccRow<T>>> = None;
-
-            while head_offset != EMPTY_PTR {
-                let row_ptr = RelPtr::from_offset(head_offset);
-                let row = self.resolve_row_ptr(&row_ptr)?;
-                if self.is_visible(row, tx) {
-                    visible_ptr = Some(row_ptr);
-                    break;
-                }
-                head_offset = row.next.load(Ordering::Acquire);
+            let visible_ptr = self
+                .find_visible_row_ptr(tx, row_id)?
+                .ok_or(Error::RowMissing { row_id })?;
+            let row = self.resolve_row_ptr(&visible_ptr)?;
+            if self.row_locked_by_other_tx(row, tx.txid) {
+                std::thread::yield_now();
+                return Err(Error::SerializationFailure);
             }
-
-            visible_ptr.ok_or(Error::RowMissing { row_id })?
+            visible_ptr
         };
 
         let base_row = self.resolve_row_ptr(&base_ptr)?;
@@ -416,21 +463,15 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         {
             last_for_row.base_ptr.clone()
         } else {
-            let slot = self.slot_ref(row_id)?;
-            let mut head_offset = slot.head.load(Ordering::Acquire);
-            let mut visible_ptr: Option<RelPtr<OccRow<T>>> = None;
-
-            while head_offset != EMPTY_PTR {
-                let row_ptr = RelPtr::from_offset(head_offset);
-                let row = self.resolve_row_ptr(&row_ptr)?;
-                if self.is_visible(row, tx) {
-                    visible_ptr = Some(row_ptr);
-                    break;
-                }
-                head_offset = row.next.load(Ordering::Acquire);
+            let visible_ptr = self
+                .find_visible_row_ptr(tx, row_id)?
+                .ok_or(Error::RowMissing { row_id })?;
+            let row = self.resolve_row_ptr(&visible_ptr)?;
+            if self.row_locked_by_other_tx(row, tx.txid) {
+                std::thread::yield_now();
+                return Err(Error::SerializationFailure);
             }
-
-            visible_ptr.ok_or(Error::RowMissing { row_id })?
+            visible_ptr
         };
 
         let base_offset = base_ptr.load(Ordering::Acquire);
@@ -461,6 +502,12 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         self.ensure_open(tx)?;
         let final_write_indices = self.final_write_indices(tx);
         let locks = self.acquire_partition_locks(tx);
+
+        if self.has_row_lock_conflict(tx)? {
+            drop(locks);
+            self.abort_for_serialization_failure(tx);
+            return Err(Error::SerializationFailure);
+        }
 
         if self.has_serialization_conflict(tx)? {
             drop(locks);
@@ -579,6 +626,28 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         Ok(false)
     }
 
+    fn has_row_lock_conflict(&self, tx: &OccTransaction<T>) -> Result<bool, Error> {
+        let mut seen_rows = BTreeMap::<usize, ()>::new();
+        for read in &tx.read_set {
+            seen_rows.insert(read.row_id, ());
+        }
+        for write in &tx.write_set {
+            seen_rows.insert(write.row_id, ());
+        }
+
+        for row_id in seen_rows.keys() {
+            let Some(visible_ptr) = self.find_visible_row_ptr(tx, *row_id)? else {
+                continue;
+            };
+            let visible = self.resolve_row_ptr(&visible_ptr)?;
+            if self.row_locked_by_other_tx(visible, tx.txid) {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
+    }
+
     fn has_serialization_conflict(&self, tx: &OccTransaction<T>) -> Result<bool, Error> {
         for read in &tx.read_set {
             let row = self.resolve_row_ptr(&read.row_ptr)?;
@@ -640,6 +709,42 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             self.recycle_row_ptr(&write.new_ptr)?;
         }
 
+        Ok(())
+    }
+
+    fn find_visible_row_ptr(
+        &self,
+        tx: &OccTransaction<T>,
+        row_id: usize,
+    ) -> Result<Option<RelPtr<OccRow<T>>>, Error> {
+        let slot = self.slot_ref(row_id)?;
+        let mut head_offset = slot.head.load(Ordering::Acquire);
+
+        while head_offset != EMPTY_PTR {
+            let row_ptr = RelPtr::from_offset(head_offset);
+            let row = self.resolve_row_ptr(&row_ptr)?;
+            if self.is_visible(row, tx) {
+                return Ok(Some(row_ptr));
+            }
+            head_offset = row.next.load(Ordering::Acquire);
+        }
+
+        Ok(None)
+    }
+
+    #[inline]
+    fn row_locked_by_other_tx(&self, row: &OccRow<T>, txid: TxId) -> bool {
+        if !row.is_locked.load(Ordering::Acquire) {
+            return false;
+        }
+        let owner = row.lock_owner_txid.load(Ordering::Acquire);
+        owner != txid
+    }
+
+    fn release_row_lock(&self, row_ptr: &RelPtr<OccRow<T>>) -> Result<(), Error> {
+        let row = self.resolve_row_ptr(row_ptr)?;
+        row.lock_owner_txid.store(0, Ordering::Release);
+        row.is_locked.store(false, Ordering::Release);
         Ok(())
     }
 
@@ -908,6 +1013,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
     fn abort_for_serialization_failure(&self, tx: &mut OccTransaction<T>) {
         let _ = self.clear_local_sets(tx);
         let _ = self.finish_transaction(tx);
+        std::thread::yield_now();
     }
 
     fn finish_transaction(&self, tx: &mut OccTransaction<T>) -> Result<(), Error> {
@@ -1097,5 +1203,14 @@ impl Drop for PartitionLockGuard<'_> {
         for idx in self.lock_indices.iter().rev() {
             self.locks[*idx].unlock();
         }
+    }
+}
+
+impl<T: Copy + Send + Sync + 'static> Drop for RowLockGuard<'_, T> {
+    fn drop(&mut self) {
+        if !self.release_on_drop {
+            return;
+        }
+        let _ = self.table.release_row_lock(&self.row_ptr);
     }
 }

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::os::raw::{c_char, c_int};
 use std::path::{Path, PathBuf};
 use std::slice;
@@ -12,8 +12,8 @@ use aerostore_core::{
     persist_boot_layout as persist_shared_boot_layout, read_u32_array,
     recover_occ_table_from_checkpoint_and_wal_with_pk_map, spawn_wal_writer_daemon,
     write_occ_checkpoint_and_truncate_wal, BootLayout, BootMode, IndexValue, IngestStats, OccError,
-    OccTable, OccTransaction, PlannerError, RelPtr, RuleBasedOptimizer, SchemaCatalog,
-    SecondaryIndex, SharedWalRing, ShmArena, ShmPrimaryKeyMap, StapiRow, StapiValue,
+    OccTable, OccTransaction, PlannerError, RelPtr, RetryBackoff, RetryPolicy, RuleBasedOptimizer,
+    SchemaCatalog, SecondaryIndex, SharedWalRing, ShmArena, ShmPrimaryKeyMap, StapiRow, StapiValue,
     SynchronousCommit, TsvColumns, TsvDecodeError, WalDeltaCodec, WalDeltaError, WalRing,
     WalWriterError, BOOT_LAYOUT_MAX_INDEXES, DEFAULT_TMPFS_PATH, SYNCHRONOUS_COMMIT_KEY,
 };
@@ -35,6 +35,7 @@ const CHECKPOINT_FILE_NAME: &str = "occ_checkpoint.dat";
 const CHECKPOINT_INTERVAL_SECS_KEY: &str = "aerostore.checkpoint_interval_secs";
 const DEFAULT_CHECKPOINT_INTERVAL_SECS: u64 = 300;
 const SHM_PATH_ENV_KEY: &str = "AEROSTORE_SHM_PATH";
+const MAX_BATCH_RETRY_ATTEMPTS: u32 = RetryPolicy::MAX_RETRIES_PER_UNIT;
 
 const INDEX_SLOT_FLIGHT_ID: usize = 0;
 const INDEX_SLOT_ALTITUDE: usize = 1;
@@ -305,6 +306,23 @@ impl FlightTsvDecoder {
 struct PendingIndexUpdate {
     before: FlightState,
     after: FlightState,
+}
+
+#[derive(Clone)]
+struct PendingBatchRow {
+    flight_key: String,
+    row: FlightState,
+}
+
+#[derive(Default)]
+struct BatchStats {
+    rows_inserted: usize,
+    rows_updated: usize,
+}
+
+enum BatchRetryError {
+    RetryableSerialization { row_id: Option<usize> },
+    Fatal(String),
 }
 
 #[derive(Clone)]
@@ -910,14 +928,7 @@ impl SharedFlightDb {
         let decoder = FlightTsvDecoder;
         let started = Instant::now();
         let mut stats = IngestStats::default();
-
-        let mut tx = self
-            .table
-            .begin_transaction()
-            .map_err(|err| format!("begin_transaction failed: {}", err))?;
-
-        let mut pending_index_updates: HashMap<usize, PendingIndexUpdate> = HashMap::new();
-        let mut batch_ops = 0_usize;
+        let mut batch_rows = Vec::<PendingBatchRow>::with_capacity(batch_size);
 
         let mut cursor = 0_usize;
         let mut line_no = 0_usize;
@@ -952,59 +963,198 @@ impl SharedFlightDb {
                 .map_err(|err| format_decode_error(line_no, err))?;
 
             stats.rows_seen += 1;
-            self.upsert_one(
-                &mut tx,
-                &mut pending_index_updates,
-                flight_key,
-                row,
-                &mut stats,
-            )?;
-            batch_ops += 1;
+            batch_rows.push(PendingBatchRow { flight_key, row });
 
-            if batch_ops >= batch_size {
-                self.commit_batch(&mut tx, &mut pending_index_updates)?;
+            if batch_rows.len() >= batch_size {
+                self.apply_batch_with_retry(batch_rows.as_slice(), &mut stats)?;
                 stats.batches_committed += 1;
-                tx = self
-                    .table
-                    .begin_transaction()
-                    .map_err(|err| format!("begin_transaction failed: {}", err))?;
-                batch_ops = 0;
+                batch_rows.clear();
             }
         }
 
-        if batch_ops > 0 {
-            self.commit_batch(&mut tx, &mut pending_index_updates)?;
+        if !batch_rows.is_empty() {
+            self.apply_batch_with_retry(batch_rows.as_slice(), &mut stats)?;
             stats.batches_committed += 1;
-        } else {
-            self.table
-                .abort(&mut tx)
-                .map_err(|err| format!("abort failed: {}", err))?;
         }
 
         stats.elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
         Ok(stats)
     }
 
+    fn apply_batch_with_retry(
+        &self,
+        batch_rows: &[PendingBatchRow],
+        stats: &mut IngestStats,
+    ) -> Result<(), String> {
+        if batch_rows.is_empty() {
+            return Ok(());
+        }
+
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos() as u64;
+        let mut backoff = RetryBackoff::with_seed(
+            now ^ ((std::process::id() as u64) << 17),
+            RetryPolicy::hot_key_default(),
+        );
+        let policy = backoff.policy();
+        let mut conflict_streak_by_row = HashMap::<usize, u32>::new();
+        let mut touched_rows = Vec::<usize>::with_capacity(batch_rows.len());
+
+        for attempt in 0..MAX_BATCH_RETRY_ATTEMPTS {
+            let mut tx = self
+                .table
+                .begin_transaction()
+                .map_err(|err| format!("begin_transaction failed: {}", err))?;
+            let mut pending_index_updates: HashMap<usize, PendingIndexUpdate> = HashMap::new();
+            let mut batch_stats = BatchStats::default();
+            let mut touched_set = HashSet::<usize>::with_capacity(batch_rows.len());
+            let mut locked_row_ids = HashSet::<usize>::new();
+            let mut row_locks = Vec::new();
+            touched_rows.clear();
+
+            let mut attempt_result = Ok(());
+            for pending in batch_rows {
+                let row_id = self.resolve_or_allocate_row_id(pending.flight_key.as_str())?;
+                if touched_set.insert(row_id) {
+                    touched_rows.push(row_id);
+                }
+
+                let streak = conflict_streak_by_row.get(&row_id).copied().unwrap_or(0);
+                if streak >= policy.escalate_after_failures && locked_row_ids.insert(row_id) {
+                    match self.table.lock_for_update(&tx, row_id) {
+                        Ok(guard) => row_locks.push(guard),
+                        Err(OccError::SerializationFailure) => {
+                            attempt_result = Err(BatchRetryError::RetryableSerialization {
+                                row_id: Some(row_id),
+                            });
+                            break;
+                        }
+                        Err(err) => {
+                            attempt_result = Err(BatchRetryError::Fatal(format!(
+                                "lock_for_update failed for row {}: {}",
+                                row_id, err
+                            )));
+                            break;
+                        }
+                    }
+                }
+
+                attempt_result = self.upsert_one(
+                    &mut tx,
+                    &mut pending_index_updates,
+                    row_id,
+                    pending.row,
+                    &mut batch_stats,
+                );
+                if attempt_result.is_err() {
+                    break;
+                }
+            }
+
+            if attempt_result.is_ok() {
+                attempt_result = self.commit_batch(&mut tx, &mut pending_index_updates);
+            }
+
+            match attempt_result {
+                Ok(()) => {
+                    stats.rows_inserted += batch_stats.rows_inserted;
+                    stats.rows_updated += batch_stats.rows_updated;
+                    for row_id in &touched_rows {
+                        conflict_streak_by_row.remove(row_id);
+                    }
+                    return Ok(());
+                }
+                Err(BatchRetryError::Fatal(message)) => {
+                    let _ = self.table.abort(&mut tx);
+                    return Err(message);
+                }
+                Err(BatchRetryError::RetryableSerialization { row_id }) => {
+                    let _ = self.table.abort(&mut tx);
+
+                    if let Some(row_id) = row_id {
+                        let next = conflict_streak_by_row
+                            .get(&row_id)
+                            .copied()
+                            .unwrap_or(0)
+                            .saturating_add(1);
+                        conflict_streak_by_row.insert(row_id, next);
+                    } else {
+                        for touched in &touched_rows {
+                            let next = conflict_streak_by_row
+                                .get(touched)
+                                .copied()
+                                .unwrap_or(0)
+                                .saturating_add(1);
+                            conflict_streak_by_row.insert(*touched, next);
+                        }
+                    }
+                }
+            }
+
+            if attempt + 1 >= MAX_BATCH_RETRY_ATTEMPTS {
+                return Err(format!(
+                    "serialization failure during OCC commit after {} retries",
+                    MAX_BATCH_RETRY_ATTEMPTS
+                ));
+            }
+
+            backoff.sleep_for_attempt(attempt);
+            std::thread::yield_now();
+        }
+
+        Err(format!(
+            "serialization failure during OCC commit after {} retries",
+            MAX_BATCH_RETRY_ATTEMPTS
+        ))
+    }
+
     fn upsert_one(
         &self,
         tx: &mut OccTransaction<FlightState>,
         pending_index_updates: &mut HashMap<usize, PendingIndexUpdate>,
-        flight_key: String,
+        row_id: usize,
         next_row: FlightState,
-        stats: &mut IngestStats,
-    ) -> Result<(), String> {
-        let row_id = self.resolve_or_allocate_row_id(flight_key.as_str())?;
-        let current = self
-            .table
-            .read(tx, row_id)
-            .map_err(|err| format!("read failed for row {}: {}", row_id, err))?
-            .ok_or_else(|| format!("row {} is unexpectedly missing", row_id))?;
+        batch_stats: &mut BatchStats,
+    ) -> Result<(), BatchRetryError> {
+        let current = match self.table.read(tx, row_id) {
+            Ok(Some(value)) => value,
+            Ok(None) => {
+                return Err(BatchRetryError::Fatal(format!(
+                    "row {} is unexpectedly missing",
+                    row_id
+                )));
+            }
+            Err(OccError::SerializationFailure) => {
+                return Err(BatchRetryError::RetryableSerialization {
+                    row_id: Some(row_id),
+                });
+            }
+            Err(err) => {
+                return Err(BatchRetryError::Fatal(format!(
+                    "read failed for row {}: {}",
+                    row_id, err
+                )));
+            }
+        };
 
         let was_live = current.exists != 0;
 
-        self.table
-            .write(tx, row_id, next_row)
-            .map_err(|err| format!("write failed for row {}: {}", row_id, err))?;
+        match self.table.write(tx, row_id, next_row) {
+            Ok(()) => {}
+            Err(OccError::SerializationFailure) => {
+                return Err(BatchRetryError::RetryableSerialization {
+                    row_id: Some(row_id),
+                });
+            }
+            Err(err) => {
+                return Err(BatchRetryError::Fatal(format!(
+                    "write failed for row {}: {}",
+                    row_id, err
+                )));
+            }
+        }
 
         pending_index_updates
             .entry(row_id)
@@ -1015,9 +1165,9 @@ impl SharedFlightDb {
             });
 
         if was_live {
-            stats.rows_updated += 1;
+            batch_stats.rows_updated += 1;
         } else {
-            stats.rows_inserted += 1;
+            batch_stats.rows_inserted += 1;
         }
 
         Ok(())
@@ -1043,12 +1193,12 @@ impl SharedFlightDb {
         &self,
         tx: &mut OccTransaction<FlightState>,
         pending_index_updates: &mut HashMap<usize, PendingIndexUpdate>,
-    ) -> Result<(), String> {
+    ) -> Result<(), BatchRetryError> {
         let commit_result = {
             let mut guard = self
                 .wal_runtime
                 .lock()
-                .map_err(|_| "wal runtime lock poisoned".to_string())?;
+                .map_err(|_| BatchRetryError::Fatal("wal runtime lock poisoned".to_string()))?;
             guard.committer.commit(&self.table, tx)
         };
 
@@ -1062,11 +1212,11 @@ impl SharedFlightDb {
             }
             Err(WalWriterError::Occ(OccError::SerializationFailure)) => {
                 pending_index_updates.clear();
-                Err("serialization failure during OCC commit; retry the operation".to_string())
+                Err(BatchRetryError::RetryableSerialization { row_id: None })
             }
             Err(err) => {
                 pending_index_updates.clear();
-                Err(format!("commit failed: {}", err))
+                Err(BatchRetryError::Fatal(format!("commit failed: {}", err)))
             }
         }
     }

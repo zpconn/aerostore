@@ -6,7 +6,7 @@ use crate::shm_tmpfs::{map_tmpfs_shared, TmpfsAttachMode, DEFAULT_TMPFS_PATH};
 use crate::{RelPtr, ShmAllocError, ShmArena, ShmError};
 
 pub const BOOT_LAYOUT_MAGIC: u32 = 0xAEB0_4C59;
-pub const BOOT_LAYOUT_VERSION: u32 = 1;
+pub const BOOT_LAYOUT_VERSION: u32 = 2;
 pub const BOOT_LAYOUT_MAX_INDEXES: usize = 8;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

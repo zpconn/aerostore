@@ -208,8 +208,14 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         }
 
         let head_offset = shm.chunked_arena().alloc(
-            ShmSkipNode::new(K::sentinel(), MAX_HEIGHT as u8, tower_offset, NULL_OFFSET, 0)
-                .with_flags(NODE_FLAG_FULLY_LINKED),
+            ShmSkipNode::new(
+                K::sentinel(),
+                MAX_HEIGHT as u8,
+                tower_offset,
+                NULL_OFFSET,
+                0,
+            )
+            .with_flags(NODE_FLAG_FULLY_LINKED),
         )?;
         let head_offset = head_offset.load(AtomicOrdering::Acquire);
 
@@ -1117,9 +1123,9 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         level: usize,
     ) -> &SkipLane<K> {
         debug_assert!(level < node.height as usize);
-        let lane_offset = node
-            .tower_offset
-            .wrapping_add((level * size_of::<SkipLane<K>>()) as u32) as usize;
+        let lane_offset =
+            node.tower_offset
+                .wrapping_add((level * size_of::<SkipLane<K>>()) as u32) as usize;
         // SAFETY:
         // Callers guarantee tower offsets/levels are valid and aligned.
         unsafe { &*base.add(lane_offset).cast::<SkipLane<K>>() }
