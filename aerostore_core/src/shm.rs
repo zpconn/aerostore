@@ -483,6 +483,7 @@ impl<'a> ChunkedArena<'a> {
 
         let size = u32::try_from(size).map_err(|_| ShmAllocError::SizeOverflow)?;
         let align = u32::try_from(align).map_err(|_| ShmAllocError::SizeOverflow)?;
+        let mut spins = 0_u32;
 
         loop {
             let head = self.header.head.load(Ordering::Acquire);
@@ -506,6 +507,13 @@ impl<'a> ChunkedArena<'a> {
                 return Ok(start);
             }
 
+            spins = spins.wrapping_add(1);
+            if spins & 0x3f == 0 {
+                std::thread::yield_now();
+            }
+            if spins & 0x3ff == 0 {
+                std::thread::sleep(std::time::Duration::from_micros(25));
+            }
             std::hint::spin_loop();
         }
     }

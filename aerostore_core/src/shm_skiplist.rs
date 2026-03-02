@@ -1439,6 +1439,8 @@ fn arm_parent_death_signal(_expected_parent: libc::pid_t) -> Result<(), ShmSkipL
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
+
     use super::*;
     use std::collections::HashSet;
     use std::sync::Arc;
@@ -2032,5 +2034,63 @@ mod tests {
             .count_payloads(&TestKey(999))
             .expect("count on missing key failed");
         assert_eq!(missing, 0);
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(32))]
+
+        #[test]
+        fn bounded_scan_matches_btreeset_model(
+            keys in prop::collection::btree_set(-256_i16..256_i16, 1..96),
+            lower in -300_i16..300_i16,
+            upper in -300_i16..300_i16,
+            include_lower in any::<bool>(),
+            include_upper in any::<bool>(),
+            has_lower in any::<bool>(),
+            has_upper in any::<bool>(),
+        ) {
+            let list = make_list();
+            for key in &keys {
+                let payload = (*key as i32).to_le_bytes();
+                list.insert_payload(TestKey(i64::from(*key)), payload.len() as u16, &payload)
+                    .expect("insert failed");
+            }
+
+            let lower_key = TestKey(i64::from(lower));
+            let upper_key = TestKey(i64::from(upper));
+            let lower_bound = if has_lower {
+                Some((&lower_key, if include_lower { ScanBound::Inclusive } else { ScanBound::Exclusive }))
+            } else {
+                None
+            };
+            let upper_bound = if has_upper {
+                Some((&upper_key, if include_upper { ScanBound::Inclusive } else { ScanBound::Exclusive }))
+            } else {
+                None
+            };
+
+            let mut actual = Vec::new();
+            list.scan_payloads_bounded(lower_bound, upper_bound, |key, _, _| actual.push(key.0))
+                .expect("bounded scan failed");
+
+            let expected: Vec<i64> = keys
+                .iter()
+                .map(|v| i64::from(*v))
+                .filter(|key| {
+                    let lower_ok = if has_lower {
+                        if include_lower { *key >= i64::from(lower) } else { *key > i64::from(lower) }
+                    } else {
+                        true
+                    };
+                    let upper_ok = if has_upper {
+                        if include_upper { *key <= i64::from(upper) } else { *key < i64::from(upper) }
+                    } else {
+                        true
+                    };
+                    lower_ok && upper_ok
+                })
+                .collect();
+            prop_assert_eq!(actual, expected);
+        }
     }
 }

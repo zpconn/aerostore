@@ -262,3 +262,103 @@ fn validate_layout(layout: &BootLayout) -> Result<(), BootloaderError> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        alloc_u32_array, clear_persisted_boot_layout, load_boot_layout, persist_boot_layout,
+        read_u32_array, BootLayout, BootloaderError, BOOT_LAYOUT_MAGIC, BOOT_LAYOUT_VERSION,
+    };
+    use crate::ShmArena;
+    use std::sync::Arc;
+
+    #[test]
+    fn bootlayout_new_rejects_row_capacity_over_u32() {
+        let err = BootLayout::new((u32::MAX as usize).saturating_add(1))
+            .expect_err("row capacity > u32::MAX should fail");
+        assert!(matches!(err, BootloaderError::LayoutCorrupt(_)));
+    }
+
+    #[test]
+    fn persist_then_load_layout_roundtrip() {
+        let shm = ShmArena::new(8 << 20).expect("create shm");
+        let mut layout = BootLayout::new(1024).expect("layout");
+        layout.occ_shared_header_offset = 123;
+        persist_boot_layout(&shm, &layout).expect("persist");
+
+        let loaded = load_boot_layout(&shm)
+            .expect("load")
+            .expect("layout present");
+        assert_eq!(loaded, layout);
+    }
+
+    #[test]
+    fn persist_updates_existing_layout_in_place() {
+        let shm = ShmArena::new(8 << 20).expect("create shm");
+        let mut layout = BootLayout::new(64).expect("layout");
+        let first_offset = persist_boot_layout(&shm, &layout).expect("persist first");
+
+        layout.pk_header_offset = 99;
+        let second_offset = persist_boot_layout(&shm, &layout).expect("persist second");
+        assert_eq!(first_offset, second_offset);
+
+        let loaded = load_boot_layout(&shm)
+            .expect("load")
+            .expect("layout present");
+        assert_eq!(loaded.pk_header_offset, 99);
+    }
+
+    #[test]
+    fn load_rejects_bad_magic_bad_version_zero_row_capacity() {
+        let shm = ShmArena::new(8 << 20).expect("create shm");
+        let mut bad_magic = BootLayout::new(64).expect("layout");
+        bad_magic.magic = 0;
+        assert!(persist_boot_layout(&shm, &bad_magic).is_err());
+
+        let mut bad_version = BootLayout::new(64).expect("layout");
+        bad_version.version = BOOT_LAYOUT_VERSION + 1;
+        assert!(persist_boot_layout(&shm, &bad_version).is_err());
+
+        let mut bad_capacity = BootLayout::new(64).expect("layout");
+        bad_capacity.magic = BOOT_LAYOUT_MAGIC;
+        bad_capacity.row_capacity = 0;
+        assert!(persist_boot_layout(&shm, &bad_capacity).is_err());
+    }
+
+    #[test]
+    fn alloc_u32_array_and_read_u32_array_roundtrip() {
+        let shm = ShmArena::new(8 << 20).expect("create shm");
+        let values = [7_u32, 8, 9, 10];
+        let (offset, len) = alloc_u32_array(&shm, &values).expect("alloc array");
+        let loaded = read_u32_array(&shm, offset, len).expect("read array");
+        assert_eq!(loaded, values);
+    }
+
+    #[test]
+    fn read_u32_array_rejects_out_of_bounds() {
+        let shm = ShmArena::new(8 << 20).expect("create shm");
+        let err = read_u32_array(&shm, (shm.len() as u32).saturating_sub(2), 8)
+            .expect_err("out of bounds should fail");
+        assert!(matches!(err, BootloaderError::LayoutCorrupt(_)));
+    }
+
+    #[test]
+    fn clear_persisted_boot_layout_makes_layout_missing() {
+        let shm = ShmArena::new(8 << 20).expect("create shm");
+        let layout = BootLayout::new(128).expect("layout");
+        persist_boot_layout(&shm, &layout).expect("persist");
+        assert!(load_boot_layout(&shm).expect("load").is_some());
+
+        clear_persisted_boot_layout(&shm);
+        assert!(load_boot_layout(&shm).expect("load").is_none());
+    }
+
+    #[test]
+    fn alloc_empty_u32_array_returns_zero_tuple() {
+        let shm = Arc::new(ShmArena::new(8 << 20).expect("create shm"));
+        assert_eq!(
+            alloc_u32_array(shm.as_ref(), &[]).expect("alloc empty"),
+            (0, 0)
+        );
+    }
+}

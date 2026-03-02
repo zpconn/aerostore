@@ -557,3 +557,160 @@ fn hash_key(bytes: &[u8]) -> u64 {
     }
     hash
 }
+
+#[cfg(test)]
+mod tests {
+    use super::ShmPrimaryKeyMap;
+    use crate::occ::OccTable;
+    use crate::rbo_planner::{RuleBasedOptimizer, SchemaCatalog, StapiRow};
+    use crate::shm::ShmArena;
+    use crate::stapi_parser::Value;
+    use std::sync::Arc;
+
+    #[derive(Clone, Copy)]
+    struct TestRow {
+        pk: [u8; 8],
+        value: i64,
+    }
+
+    impl TestRow {
+        fn new(pk: &str, value: i64) -> Self {
+            let mut buf = [0_u8; 8];
+            let bytes = pk.as_bytes();
+            let n = bytes.len().min(buf.len());
+            buf[..n].copy_from_slice(&bytes[..n]);
+            Self { pk: buf, value }
+        }
+
+        fn pk_text(&self) -> String {
+            let len = self
+                .pk
+                .iter()
+                .position(|b| *b == 0)
+                .unwrap_or(self.pk.len());
+            String::from_utf8_lossy(&self.pk[..len]).to_string()
+        }
+    }
+
+    impl StapiRow for TestRow {
+        fn has_field(field: &str) -> bool {
+            matches!(field, "pk" | "value")
+        }
+
+        fn field_value(&self, field: &str) -> Option<Value> {
+            match field {
+                "pk" => Some(Value::Text(self.pk_text())),
+                "value" => Some(Value::Int(self.value)),
+                _ => None,
+            }
+        }
+    }
+
+    fn write_row(table: &OccTable<TestRow>, row_id: usize, row: TestRow) {
+        let mut tx = table.begin_transaction().expect("begin");
+        table.write(&mut tx, row_id, row).expect("write");
+        table.commit(&mut tx).expect("commit");
+    }
+
+    #[test]
+    fn pk_map_get_or_insert_is_idempotent_for_same_key() {
+        let shm = Arc::new(ShmArena::new(8 << 20).expect("shm"));
+        let map = ShmPrimaryKeyMap::new_in_shared(Arc::clone(&shm), 32, 64).expect("pk map");
+
+        let first = map.get_or_insert("UAL123").expect("first");
+        let second = map.get_or_insert("UAL123").expect("second");
+        assert_eq!(first, second);
+        assert_eq!(map.distinct_key_count(), 1);
+    }
+
+    #[test]
+    fn pk_map_insert_existing_bumps_next_row_id_floor() {
+        let shm = Arc::new(ShmArena::new(8 << 20).expect("shm"));
+        let map = ShmPrimaryKeyMap::new_in_shared(Arc::clone(&shm), 32, 256).expect("pk map");
+
+        let inserted = map.insert_existing("DAL777", 100).expect("insert existing");
+        assert_eq!(inserted, 100);
+
+        let next = map.get_or_insert("NEW001").expect("new key");
+        assert!(
+            next >= 101,
+            "next reserved row id should be bumped above explicit insert"
+        );
+    }
+
+    #[test]
+    fn pk_map_capacity_exceeded_is_reported() {
+        let shm = Arc::new(ShmArena::new(8 << 20).expect("shm"));
+        let map = ShmPrimaryKeyMap::new_in_shared(Arc::clone(&shm), 8, 1).expect("pk map");
+        map.get_or_insert("A").expect("first insert");
+        let err = map
+            .get_or_insert("B")
+            .expect_err("capacity should be exhausted");
+        assert!(matches!(
+            err,
+            super::PrimaryKeyMapError::CapacityExceeded { .. }
+        ));
+    }
+
+    #[test]
+    fn execution_engine_primary_key_path_returns_single_candidate() {
+        let shm = Arc::new(ShmArena::new(16 << 20).expect("shm"));
+        let table = OccTable::<TestRow>::new(Arc::clone(&shm), 4).expect("table");
+        for row_id in 0..4 {
+            table
+                .seed_row(row_id, TestRow::new("", 0))
+                .expect("seed row");
+        }
+
+        write_row(&table, 1, TestRow::new("UAL123", 42));
+        write_row(&table, 2, TestRow::new("DAL456", 10));
+
+        let pk_map =
+            Arc::new(ShmPrimaryKeyMap::new_in_shared(Arc::clone(&shm), 32, 4).expect("pk map"));
+        pk_map.insert_existing("UAL123", 1).expect("insert pk");
+        pk_map.insert_existing("DAL456", 2).expect("insert pk");
+
+        let catalog = SchemaCatalog::new("pk").with_primary_key_map(Arc::clone(&pk_map));
+        let optimizer = RuleBasedOptimizer::<TestRow>::new(catalog);
+        let plan = optimizer
+            .compile_from_stapi("-compare {{= pk UAL123}}")
+            .expect("compile");
+
+        let mut tx = table.begin_transaction().expect("begin");
+        let rows = plan.execute(&table, &mut tx).expect("execute");
+        table.abort(&mut tx).expect("abort");
+
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].value, 42);
+        assert_eq!(rows[0].pk_text(), "UAL123");
+    }
+
+    #[test]
+    fn execution_engine_applies_residual_filter_then_sort_then_limit() {
+        let shm = Arc::new(ShmArena::new(16 << 20).expect("shm"));
+        let table = OccTable::<TestRow>::new(Arc::clone(&shm), 6).expect("table");
+        for row_id in 0..6 {
+            table
+                .seed_row(row_id, TestRow::new("", 0))
+                .expect("seed row");
+        }
+
+        write_row(&table, 0, TestRow::new("A", 40));
+        write_row(&table, 1, TestRow::new("B", 10));
+        write_row(&table, 2, TestRow::new("C", 30));
+        write_row(&table, 3, TestRow::new("D", 20));
+        write_row(&table, 4, TestRow::new("E", 50));
+
+        let optimizer = RuleBasedOptimizer::<TestRow>::new(SchemaCatalog::new("pk"));
+        let plan = optimizer
+            .compile_from_stapi("-compare {{> value 15}} -sort value -limit 3")
+            .expect("compile");
+
+        let mut tx = table.begin_transaction().expect("begin");
+        let rows = plan.execute(&table, &mut tx).expect("execute");
+        table.abort(&mut tx).expect("abort");
+
+        let values: Vec<i64> = rows.into_iter().map(|row| row.value).collect();
+        assert_eq!(values, vec![20, 30, 40]);
+    }
+}

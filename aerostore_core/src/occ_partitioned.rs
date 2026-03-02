@@ -10,6 +10,28 @@ use crate::shm::{RelPtr, ShmAllocError, ShmArena, OCC_PARTITION_LOCKS};
 use crate::TxId;
 
 const EMPTY_PTR: u32 = 0;
+const COMMIT_LOCK_SPIN_LIMIT: u32 = 512;
+const RECYCLE_STARVATION_SPIN_LIMIT: u32 = 32 * 1024;
+const MAX_VISIBLE_CHAIN_STEPS: u32 = 262_144;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct StarvedRecycleKey {
+    mmap_base: usize,
+    mmap_len: usize,
+    shared_header_offset: u32,
+    row_size: usize,
+    row_align: usize,
+}
+
+#[derive(Clone, Copy)]
+struct StarvedRecycleEntry {
+    key: StarvedRecycleKey,
+    offset: u32,
+}
+
+thread_local! {
+    static STARVED_RECYCLE_SLOT: std::cell::Cell<Option<StarvedRecycleEntry>> = const { std::cell::Cell::new(None) };
+}
 
 #[repr(C, align(64))]
 struct OccSharedHeader {
@@ -501,7 +523,14 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
     ) -> Result<OccCommitRecord<T>, Error> {
         self.ensure_open(tx)?;
         let final_write_indices = self.final_write_indices(tx);
-        let locks = self.acquire_partition_locks(tx);
+        let locks = match self.acquire_partition_locks(tx) {
+            Ok(locks) => locks,
+            Err(Error::SerializationFailure) => {
+                self.abort_for_serialization_failure(tx);
+                return Err(Error::SerializationFailure);
+            }
+            Err(err) => return Err(err),
+        };
 
         if self.has_row_lock_conflict(tx)? {
             drop(locks);
@@ -719,8 +748,14 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
     ) -> Result<Option<RelPtr<OccRow<T>>>, Error> {
         let slot = self.slot_ref(row_id)?;
         let mut head_offset = slot.head.load(Ordering::Acquire);
+        let mut steps = 0_u32;
 
         while head_offset != EMPTY_PTR {
+            steps = steps.wrapping_add(1);
+            if steps > MAX_VISIBLE_CHAIN_STEPS {
+                std::thread::yield_now();
+                return Err(Error::SerializationFailure);
+            }
             let row_ptr = RelPtr::from_offset(head_offset);
             let row = self.resolve_row_ptr(&row_ptr)?;
             if self.is_visible(row, tx) {
@@ -795,16 +830,22 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         });
     }
 
-    fn acquire_partition_locks(&self, tx: &OccTransaction<T>) -> PartitionLockGuard<'_> {
-        self.acquire_lock_indices(self.collect_lock_indices(tx))
+    fn acquire_partition_locks(
+        &self,
+        tx: &OccTransaction<T>,
+    ) -> Result<PartitionLockGuard<'_>, Error> {
+        self.try_acquire_lock_indices(self.collect_lock_indices(tx), Some(COMMIT_LOCK_SPIN_LIMIT))
+            .ok_or(Error::SerializationFailure)
     }
 
     fn acquire_row_lock(&self, row_id: usize) -> PartitionLockGuard<'_> {
-        self.acquire_lock_indices(vec![Self::lock_bucket_for_row_id(row_id)])
+        self.try_acquire_lock_indices(vec![Self::lock_bucket_for_row_id(row_id)], None)
+            .expect("row lock acquisition should not fail in blocking mode")
     }
 
     fn acquire_all_partition_locks(&self) -> PartitionLockGuard<'_> {
-        self.acquire_lock_indices((0..OCC_PARTITION_LOCKS).collect())
+        self.try_acquire_lock_indices((0..OCC_PARTITION_LOCKS).collect(), None)
+            .expect("global partition lock acquisition should not fail in blocking mode")
     }
 
     fn collect_lock_indices(&self, tx: &OccTransaction<T>) -> Vec<usize> {
@@ -838,31 +879,52 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         (mixed as usize) % OCC_PARTITION_LOCKS
     }
 
-    fn acquire_lock_indices(&self, mut lock_indices: Vec<usize>) -> PartitionLockGuard<'_> {
+    fn try_acquire_lock_indices(
+        &self,
+        mut lock_indices: Vec<usize>,
+        spin_limit: Option<u32>,
+    ) -> Option<PartitionLockGuard<'_>> {
         lock_indices.sort_unstable();
         lock_indices.dedup();
 
         let locks = self.shm.occ_partition_locks();
+        let mut acquired: Vec<usize> = Vec::with_capacity(lock_indices.len());
+        let mut observed_contention = false;
         for idx in &lock_indices {
             let mut spins = 0_u32;
             while !locks[*idx].try_lock() {
+                observed_contention = true;
                 spins = spins.wrapping_add(1);
+                if let Some(limit) = spin_limit {
+                    if spins >= limit {
+                        for held in acquired.iter().rev() {
+                            locks[*held].unlock();
+                        }
+                        std::thread::sleep(Duration::from_micros(100));
+                        return None;
+                    }
+                }
                 if spins & 0x3f == 0 {
                     std::thread::yield_now();
                 }
                 // Under heavy cross-process contention, periodic micro-sleeps
                 // reduce lock-holder starvation from pure busy spinning.
                 if spins & 0x3ff == 0 {
-                    std::thread::sleep(Duration::from_micros(25));
+                    std::thread::sleep(Duration::from_micros(100));
                 }
                 std::hint::spin_loop();
             }
+            acquired.push(*idx);
         }
 
-        PartitionLockGuard {
-            locks,
-            lock_indices,
+        if spin_limit.is_some() && observed_contention {
+            std::thread::sleep(Duration::from_micros(50));
         }
+
+        Some(PartitionLockGuard {
+            locks,
+            lock_indices: acquired,
+        })
     }
 
     fn shared_header_ref(&self) -> Result<&OccSharedHeader, Error> {
@@ -894,6 +956,11 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
     }
 
     fn allocate_row(&self, value: T, xmin: TxId, next: u32) -> Result<RelPtr<OccRow<T>>, Error> {
+        if let Some(recycled_ptr) = self.try_take_starved_recycled_row() {
+            self.initialize_row(&recycled_ptr, value, xmin, next)?;
+            return Ok(recycled_ptr);
+        }
+
         if let Some(recycled_ptr) = self.try_pop_recycled_row()? {
             self.initialize_row(&recycled_ptr, value, xmin, next)?;
             return Ok(recycled_ptr);
@@ -976,6 +1043,11 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             if spins & 0x3f == 0 {
                 std::thread::yield_now();
             }
+            if spins & 0x3ff == 0 {
+                // Avoid long stalls under extreme CAS contention; caller can
+                // fall back to allocating a fresh row from the arena.
+                return Ok(None);
+            }
             std::hint::spin_loop();
         }
     }
@@ -1006,7 +1078,51 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             if spins & 0x3f == 0 {
                 std::thread::yield_now();
             }
+            if spins & 0x3ff == 0 {
+                std::thread::sleep(Duration::from_micros(25));
+            }
+            if spins >= RECYCLE_STARVATION_SPIN_LIMIT && self.stash_starved_recycled_row(offset) {
+                return Ok(());
+            }
             std::hint::spin_loop();
+        }
+    }
+
+    fn try_take_starved_recycled_row(&self) -> Option<RelPtr<OccRow<T>>> {
+        let key = self.starved_recycle_key();
+        STARVED_RECYCLE_SLOT.with(|slot| {
+            let Some(entry) = slot.get() else {
+                return None;
+            };
+            if entry.key != key {
+                return None;
+            }
+
+            slot.set(None);
+            Some(RelPtr::from_offset(entry.offset))
+        })
+    }
+
+    fn stash_starved_recycled_row(&self, offset: u32) -> bool {
+        if offset == EMPTY_PTR {
+            return true;
+        }
+
+        let key = self.starved_recycle_key();
+        STARVED_RECYCLE_SLOT.with(|slot| {
+            slot.set(Some(StarvedRecycleEntry { key, offset }));
+            true
+        })
+    }
+
+    fn starved_recycle_key(&self) -> StarvedRecycleKey {
+        let mmap = self.shm.mmap_base();
+        StarvedRecycleKey {
+            mmap_base: mmap.as_ptr() as usize,
+            mmap_len: mmap.len(),
+            shared_header_offset: self.shared_header.load(Ordering::Acquire),
+            row_size: std::mem::size_of::<OccRow<T>>(),
+            row_align: std::mem::align_of::<OccRow<T>>(),
         }
     }
 

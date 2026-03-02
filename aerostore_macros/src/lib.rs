@@ -180,3 +180,29 @@ fn to_screaming_snake(input: &str) -> String {
 
     out.trim_matches('_').to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::to_screaming_snake;
+
+    #[test]
+    fn converts_camel_and_snake_case_inputs() {
+        assert_eq!(to_screaming_snake("flightId"), "FLIGHT_ID");
+        assert_eq!(to_screaming_snake("flight_id"), "FLIGHT_ID");
+        assert_eq!(to_screaming_snake("FlightID"), "FLIGHT_ID");
+    }
+
+    #[test]
+    fn collapses_non_alnum_separators() {
+        assert_eq!(to_screaming_snake("altitude-ft"), "ALTITUDE_FT");
+        assert_eq!(to_screaming_snake("__ground.speed__"), "GROUND_SPEED");
+        assert_eq!(to_screaming_snake("a__b"), "A_B");
+    }
+
+    #[test]
+    fn strips_outer_underscores_after_conversion() {
+        assert_eq!(to_screaming_snake("_foo"), "FOO");
+        assert_eq!(to_screaming_snake("bar_"), "BAR");
+        assert_eq!(to_screaming_snake("__"), "");
+    }
+}

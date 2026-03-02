@@ -1,0 +1,5 @@
+error: #[speedtable] supports only structs with named fields
+ --> tests/ui/compile_fail_tuple_struct.rs:4:1
+  |
+4 | #[repr(C)]
+  | ^

@@ -234,3 +234,81 @@ impl Drop for TransactionManager {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::TransactionManager;
+
+    #[test]
+    fn begin_with_txid_advances_global_txid_floor() {
+        let tm = TransactionManager::new();
+        let tx = tm.begin_with_txid(10_000);
+        assert_eq!(tx.txid, 10_000);
+        tm.abort(&tx);
+
+        let next = tm.begin();
+        assert!(
+            next.txid > 10_000,
+            "global txid should advance above explicit floor"
+        );
+        tm.abort(&next);
+    }
+
+    #[test]
+    fn snapshot_excludes_current_txid_from_active_set() {
+        let tm = TransactionManager::new();
+        let tx = tm.begin();
+        assert!(
+            !tx.snapshot.is_active(tx.txid),
+            "current txid must not appear in its own active set"
+        );
+        tm.abort(&tx);
+    }
+
+    #[test]
+    fn oldest_active_txid_tracks_live_transactions() {
+        let tm = TransactionManager::new();
+        let tx1 = tm.begin_with_txid(20_000);
+        let tx2 = tm.begin_with_txid(20_010);
+        assert_eq!(tm.oldest_active_txid(), tx1.txid);
+
+        tm.commit(&tx1);
+        assert_eq!(tm.oldest_active_txid(), tx2.txid);
+
+        tm.abort(&tx2);
+        assert!(tm.oldest_active_txid() >= tx2.txid);
+    }
+
+    #[test]
+    fn oldest_active_snapshot_xmin_uses_snapshot_xmin_not_txid() {
+        let tm = TransactionManager::new();
+        let tx1 = tm.begin_with_txid(30_000);
+        let tx2 = tm.begin_with_txid(30_001);
+        let oldest_snapshot_xmin = tm.oldest_active_snapshot_xmin();
+        assert!(
+            oldest_snapshot_xmin <= tx1.txid,
+            "snapshot xmin should reflect oldest visible horizon"
+        );
+        tm.abort(&tx1);
+        tm.abort(&tx2);
+    }
+
+    #[test]
+    fn commit_and_abort_mark_node_inactive() {
+        let tm = TransactionManager::new();
+        let tx1 = tm.begin_with_txid(40_000);
+        let tx2 = tm.begin_with_txid(40_001);
+        tm.commit(&tx1);
+        tm.abort(&tx2);
+
+        let snap = tm.snapshot_for(99_999);
+        assert!(
+            !snap.is_active(tx1.txid),
+            "committed transaction should not remain active"
+        );
+        assert!(
+            !snap.is_active(tx2.txid),
+            "aborted transaction should not remain active"
+        );
+    }
+}
