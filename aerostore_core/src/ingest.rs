@@ -276,3 +276,136 @@ where
     stats.elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
     Ok(stats)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        bulk_upsert_tsv, IngestError, IngestStats, TsvColumns, TsvDecodeError, TsvDecoder,
+    };
+    use crate::wal::DurableDatabase;
+    use serde::{Deserialize, Serialize};
+    use tempfile::tempdir;
+
+    #[test]
+    fn tsv_columns_next_bytes_handles_empty_and_terminal_columns() {
+        let line = b"A\t\tC\t";
+        let mut cols = TsvColumns::new(line);
+        assert_eq!(cols.next_bytes(), Some(&b"A"[..]));
+        assert_eq!(cols.next_bytes(), Some(&b""[..]));
+        assert_eq!(cols.next_bytes(), Some(&b"C"[..]));
+        assert_eq!(cols.next_bytes(), Some(&b""[..]));
+        assert_eq!(cols.next_bytes(), None);
+    }
+
+    #[test]
+    fn tsv_columns_expect_reports_correct_column_number() {
+        let mut cols = TsvColumns::new(b"A\tB");
+        assert_eq!(cols.expect_str().unwrap_or_default(), "A");
+        assert_eq!(cols.expect_str().unwrap_or_default(), "B");
+        let err = cols.expect_str().expect_err("missing column should error");
+        assert_eq!(err.column, 3);
+    }
+
+    #[test]
+    fn tsv_columns_ensure_end_rejects_extra_columns() {
+        let mut cols = TsvColumns::new(b"A\tB\tC");
+        assert_eq!(cols.expect_str().unwrap_or_default(), "A");
+        let err = cols
+            .ensure_end()
+            .expect_err("ensure_end should fail before all columns are consumed");
+        assert_eq!(err.column, 2);
+    }
+
+    #[test]
+    fn ingest_stats_metrics_line_contains_all_fields() {
+        let stats = IngestStats {
+            rows_seen: 10,
+            rows_inserted: 6,
+            rows_updated: 4,
+            batches_committed: 2,
+            elapsed_ms: 12.5,
+        };
+        let line = stats.metrics_line();
+        assert!(line.contains("rows_seen=10"));
+        assert!(line.contains("inserted=6"));
+        assert!(line.contains("updated=4"));
+        assert!(line.contains("batches=2"));
+        assert!(line.contains("elapsed_ms=12.5"));
+    }
+
+    struct RowDecoder;
+
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+    struct TestRow {
+        key: String,
+        payload: Vec<u8>,
+    }
+
+    impl TsvDecoder<String, TestRow> for RowDecoder {
+        fn decode(&self, cols: &mut TsvColumns<'_>) -> Result<(String, TestRow), TsvDecodeError> {
+            let key = cols.expect_str()?.to_string();
+            let payload = cols.expect_str()?.as_bytes().to_vec();
+            let row = TestRow {
+                key: key.clone(),
+                payload,
+            };
+            Ok((key, row))
+        }
+    }
+
+    struct FailDecoder;
+
+    impl TsvDecoder<String, TestRow> for FailDecoder {
+        fn decode(&self, _cols: &mut TsvColumns<'_>) -> Result<(String, TestRow), TsvDecodeError> {
+            Err(TsvDecodeError::new(2, "bad payload"))
+        }
+    }
+
+    async fn open_test_db() -> DurableDatabase<String, TestRow> {
+        let dir = tempdir().expect("tempdir");
+        let path = dir.path().to_path_buf();
+        // Keep directory alive for test duration by leaking it intentionally in test context.
+        let _ = Box::leak(Box::new(dir));
+        let (db, _) = DurableDatabase::open_with_recovery(
+            path,
+            256,
+            std::time::Duration::from_secs(60),
+            Vec::new(),
+        )
+        .await
+        .expect("open_with_recovery");
+        db
+    }
+
+    #[tokio::test]
+    async fn bulk_upsert_tsv_rejects_zero_batch_size() {
+        let db = open_test_db().await;
+        let decoder = RowDecoder;
+        let err = bulk_upsert_tsv(&db, b"K\tV\n", 0, &decoder)
+            .await
+            .expect_err("zero batch size should fail");
+        assert!(matches!(err, IngestError::EmptyBatchSize));
+    }
+
+    #[tokio::test]
+    async fn bulk_upsert_tsv_maps_decode_error_line_and_column() {
+        let db = open_test_db().await;
+        let decoder = FailDecoder;
+        let err = bulk_upsert_tsv(&db, b"K\tV\n", 1, &decoder)
+            .await
+            .expect_err("decode should fail");
+
+        match err {
+            IngestError::Decode {
+                line,
+                column,
+                message,
+            } => {
+                assert_eq!(line, 1);
+                assert_eq!(column, 2);
+                assert_eq!(message, "bad payload");
+            }
+            other => panic!("unexpected error: {other}"),
+        }
+    }
+}

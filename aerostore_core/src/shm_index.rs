@@ -324,7 +324,7 @@ where
     }
 
     pub fn lookup(&self, predicate: &IndexCompare) -> Vec<RowId> {
-        let mut out = BTreeSet::new();
+        let mut out = Vec::new();
         match predicate {
             IndexCompare::Eq(v) => {
                 let Ok(key) = EncodedKey::from_index_value(v) else {
@@ -332,7 +332,7 @@ where
                 };
                 let _ = self.skiplist.lookup_payloads(&key, |_, payload| {
                     if let Some(row_id) = Self::decode_row_id(payload) {
-                        out.insert(row_id);
+                        out.push(row_id);
                     }
                 });
             }
@@ -345,7 +345,7 @@ where
                     None,
                     |_, _, payload| {
                         if let Some(row_id) = Self::decode_row_id(payload) {
-                            out.insert(row_id);
+                            out.push(row_id);
                         }
                     },
                 );
@@ -359,7 +359,7 @@ where
                     None,
                     |_, _, payload| {
                         if let Some(row_id) = Self::decode_row_id(payload) {
-                            out.insert(row_id);
+                            out.push(row_id);
                         }
                     },
                 );
@@ -373,7 +373,7 @@ where
                     Some((&bound, ScanBound::Exclusive)),
                     |_, _, payload| {
                         if let Some(row_id) = Self::decode_row_id(payload) {
-                            out.insert(row_id);
+                            out.push(row_id);
                         }
                     },
                 );
@@ -387,7 +387,7 @@ where
                     Some((&bound, ScanBound::Inclusive)),
                     |_, _, payload| {
                         if let Some(row_id) = Self::decode_row_id(payload) {
-                            out.insert(row_id);
+                            out.push(row_id);
                         }
                     },
                 );
@@ -400,7 +400,13 @@ where
             }
         }
 
-        out.into_iter().collect()
+        if out.len() <= 1 {
+            return out;
+        }
+
+        out.sort_unstable();
+        out.dedup();
+        out
     }
 
     pub fn lookup_posting_count(&self, indexed_value: &IndexValue) -> usize {
@@ -495,5 +501,203 @@ impl ShmIndexGcDaemon {
 
     pub fn join(&self) -> Result<(), ShmIndexError> {
         self.inner.join().map_err(Into::into)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{SecondaryIndex, ShmIndexError, DEFAULT_INDEX_ARENA_BYTES, ROWID_INLINE_BYTES};
+    use crate::index::{IndexCompare, IndexValue};
+    use crate::shm::ShmArena;
+    use proptest::prelude::*;
+    use std::collections::{BTreeMap, BTreeSet};
+    use std::sync::Arc;
+
+    fn collect_from_model(
+        model: &BTreeMap<u64, BTreeSet<u32>>,
+        predicate: &IndexCompare,
+    ) -> Vec<u32> {
+        let mut out = Vec::new();
+        match predicate {
+            IndexCompare::Eq(IndexValue::U64(v)) => {
+                if let Some(rows) = model.get(v) {
+                    out.extend(rows.iter().copied());
+                }
+            }
+            IndexCompare::Gt(IndexValue::U64(v)) => {
+                for (_, rows) in
+                    model.range((std::ops::Bound::Excluded(*v), std::ops::Bound::Unbounded))
+                {
+                    out.extend(rows.iter().copied());
+                }
+            }
+            IndexCompare::Gte(IndexValue::U64(v)) => {
+                for (_, rows) in model.range(*v..) {
+                    out.extend(rows.iter().copied());
+                }
+            }
+            IndexCompare::Lt(IndexValue::U64(v)) => {
+                for (_, rows) in model.range(..*v) {
+                    out.extend(rows.iter().copied());
+                }
+            }
+            IndexCompare::Lte(IndexValue::U64(v)) => {
+                for (_, rows) in model.range(..=*v) {
+                    out.extend(rows.iter().copied());
+                }
+            }
+            IndexCompare::In(values) => {
+                for value in values {
+                    if let IndexValue::U64(v) = value {
+                        if let Some(rows) = model.get(v) {
+                            out.extend(rows.iter().copied());
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+        out.sort_unstable();
+        out.dedup();
+        out
+    }
+
+    #[test]
+    fn lookup_and_remove_match_expected_postings() {
+        let index: SecondaryIndex<u32> = SecondaryIndex::new("altitude");
+        index.insert(IndexValue::U64(30000), 1);
+        index.insert(IndexValue::U64(30000), 2);
+        index.insert(IndexValue::U64(31000), 3);
+        index.insert(IndexValue::U64(32000), 4);
+
+        assert_eq!(index.lookup_posting_count(&IndexValue::U64(30000)), 2);
+        assert_eq!(
+            index.lookup(&IndexCompare::Eq(IndexValue::U64(30000))),
+            vec![1, 2]
+        );
+        assert_eq!(
+            index.lookup(&IndexCompare::Gt(IndexValue::U64(30000))),
+            vec![3, 4]
+        );
+        assert_eq!(
+            index.lookup(&IndexCompare::Lt(IndexValue::U64(32000))),
+            vec![1, 2, 3]
+        );
+        assert_eq!(
+            index.lookup(&IndexCompare::In(vec![
+                IndexValue::U64(30000),
+                IndexValue::U64(32000),
+                IndexValue::U64(30000),
+            ])),
+            vec![1, 2, 4]
+        );
+
+        index.remove(&IndexValue::U64(30000), &1);
+        assert_eq!(
+            index.lookup(&IndexCompare::Eq(IndexValue::U64(30000))),
+            vec![2]
+        );
+        assert_eq!(index.lookup_posting_count(&IndexValue::U64(30000)), 1);
+    }
+
+    #[test]
+    fn from_existing_attaches_to_same_shared_skiplist() {
+        let shm = Arc::new(ShmArena::new(DEFAULT_INDEX_ARENA_BYTES).expect("alloc shm"));
+        let index: SecondaryIndex<u32> = SecondaryIndex::new_in_shared("gs", Arc::clone(&shm));
+        index.insert(IndexValue::U64(450), 7);
+        index.insert(IndexValue::U64(450), 9);
+        let header = index.header_offset();
+
+        let attached =
+            SecondaryIndex::<u32>::from_existing("gs", shm, header).expect("attach existing index");
+        assert_eq!(
+            attached.lookup(&IndexCompare::Eq(IndexValue::U64(450))),
+            vec![7, 9]
+        );
+    }
+
+    #[test]
+    fn rejects_oversized_string_keys() {
+        let index: SecondaryIndex<u32> = SecondaryIndex::new("flight");
+        let huge = "X".repeat(129);
+        let err = index
+            .try_insert(IndexValue::String(huge.clone()), 1)
+            .expect_err("oversized key must fail");
+        match err {
+            ShmIndexError::KeyTooLong { len, max } => {
+                assert_eq!(len, huge.len());
+                assert_eq!(max, 128);
+            }
+            other => panic!("expected KeyTooLong, got {other:?}"),
+        }
+    }
+
+    #[derive(
+        Clone, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+    )]
+    struct LargeRowId {
+        bytes: Vec<u8>,
+    }
+
+    #[test]
+    fn rejects_oversized_row_id_payloads() {
+        let index: SecondaryIndex<LargeRowId> = SecondaryIndex::new("oversized_rowid");
+        let err = index
+            .try_insert(
+                IndexValue::U64(1),
+                LargeRowId {
+                    bytes: vec![7_u8; ROWID_INLINE_BYTES + 16],
+                },
+            )
+            .expect_err("oversized row-id must fail");
+        match err {
+            ShmIndexError::RowIdTooLarge { len, max } => {
+                assert!(len > max);
+                assert_eq!(max, ROWID_INLINE_BYTES);
+            }
+            other => panic!("expected RowIdTooLarge, got {other:?}"),
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn range_queries_match_btree_model(
+            rows in prop::collection::vec((0_u16..500_u16, 0_u16..400_u16), 1..120),
+            bound in 0_u16..500_u16,
+            in_values in prop::collection::vec(0_u16..500_u16, 1..8),
+        ) {
+            let index: SecondaryIndex<u32> = SecondaryIndex::new("prop_altitude");
+            let mut model: BTreeMap<u64, BTreeSet<u32>> = BTreeMap::new();
+
+            for (k, row_id) in &rows {
+                let key = u64::from(*k);
+                let row = u32::from(*row_id);
+                index.try_insert(IndexValue::U64(key), row).expect("insert");
+                model.entry(key).or_default().insert(row);
+            }
+
+            let predicates = vec![
+                IndexCompare::Eq(IndexValue::U64(u64::from(bound))),
+                IndexCompare::Gt(IndexValue::U64(u64::from(bound))),
+                IndexCompare::Gte(IndexValue::U64(u64::from(bound))),
+                IndexCompare::Lt(IndexValue::U64(u64::from(bound))),
+                IndexCompare::Lte(IndexValue::U64(u64::from(bound))),
+                IndexCompare::In(
+                    in_values
+                        .iter()
+                        .map(|v| IndexValue::U64(u64::from(*v)))
+                        .collect(),
+                ),
+            ];
+
+            for predicate in predicates {
+                let mut actual = index.lookup(&predicate);
+                actual.sort_unstable();
+                actual.dedup();
+
+                let expected = collect_from_model(&model, &predicate);
+                prop_assert_eq!(actual, expected);
+            }
+        }
     }
 }

@@ -140,3 +140,106 @@ where
         task,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{spawn_ttl_sweeper, ChangeKind, RowChange, TableWatch};
+    use crate::wal::DurableDatabase;
+    use serde::{Deserialize, Serialize};
+    use std::time::Duration;
+    use tempfile::tempdir;
+
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+    struct TestValue {
+        tag: String,
+        payload: u8,
+    }
+
+    fn logical_row(tag: &str, payload: u8) -> TestValue {
+        TestValue {
+            tag: tag.to_string(),
+            payload,
+        }
+    }
+
+    #[tokio::test]
+    async fn table_watch_watch_key_filters_only_target_key() {
+        let watch = TableWatch::<String, TestValue>::with_capacity(4);
+        let mut sub = watch.watch_key("K1".to_string());
+
+        watch.publish(RowChange {
+            txid: 1,
+            key: "K2".to_string(),
+            kind: ChangeKind::Insert,
+            value: Some(logical_row("K2", 1)),
+        });
+        watch.publish(RowChange {
+            txid: 2,
+            key: "K1".to_string(),
+            kind: ChangeKind::Update,
+            value: Some(logical_row("K1", 2)),
+        });
+
+        let next = sub.recv().await.expect("recv");
+        assert_eq!(next.txid, 2);
+        assert_eq!(next.key, "K1");
+        assert_eq!(next.kind, ChangeKind::Update);
+    }
+
+    #[tokio::test]
+    async fn subscribe_filtered_skips_nonmatching_events_in_order() {
+        let watch = TableWatch::<String, TestValue>::with_capacity(8);
+        let mut sub = watch.subscribe_filtered(|change| change.txid % 2 == 0);
+
+        for txid in 1..=4_u64 {
+            watch.publish(RowChange {
+                txid,
+                key: format!("K{txid}"),
+                kind: ChangeKind::Insert,
+                value: Some(logical_row("K", txid as u8)),
+            });
+        }
+
+        let first = sub.recv().await.expect("first");
+        let second = sub.recv().await.expect("second");
+        assert_eq!(first.txid, 2);
+        assert_eq!(second.txid, 4);
+    }
+
+    #[test]
+    fn with_capacity_zero_clamps_to_minimum_channel_capacity() {
+        let watch = TableWatch::<u64, TestValue>::with_capacity(0);
+        let mut sub = watch.subscribe();
+        watch.publish(RowChange {
+            txid: 1,
+            key: 9,
+            kind: ChangeKind::Insert,
+            value: Some(logical_row("N", 9)),
+        });
+        let received = sub.try_recv().expect("should have at least one slot");
+        assert_eq!(received.key, 9);
+    }
+
+    #[tokio::test]
+    async fn ttl_sweeper_drop_stops_background_task() {
+        let temp = tempdir().expect("tempdir");
+        let (db, _) = DurableDatabase::<String, TestValue>::open_with_recovery(
+            temp.path(),
+            128,
+            Duration::from_secs(30),
+            Vec::new(),
+        )
+        .await
+        .expect("open db");
+        let db = std::sync::Arc::new(db);
+
+        let sweeper = spawn_ttl_sweeper(
+            db,
+            Duration::from_millis(10),
+            Duration::from_secs(60),
+            |_| 0,
+        );
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        drop(sweeper);
+    }
+}

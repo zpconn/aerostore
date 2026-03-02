@@ -525,3 +525,94 @@ fn write_ack_txid(fd: libc::c_int, txid: u64) -> Result<(), LogicalWalError> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        append_logical_wal_record, deserialize_wal_record, read_logical_wal_records,
+        serialize_wal_record, LogicalWalError, WalRecord,
+    };
+    use tempfile::tempdir;
+
+    #[test]
+    fn wal_record_txid_accessor_all_variants() {
+        let upsert = WalRecord::Upsert {
+            txid: 11,
+            table: "flight".to_string(),
+            pk: "A".to_string(),
+            payload: vec![1, 2, 3],
+        };
+        let delete = WalRecord::Delete {
+            txid: 12,
+            table: "flight".to_string(),
+            pk: "A".to_string(),
+        };
+        let commit = WalRecord::Commit { txid: 13 };
+        assert_eq!(upsert.txid(), 11);
+        assert_eq!(delete.txid(), 12);
+        assert_eq!(commit.txid(), 13);
+    }
+
+    #[test]
+    fn serialize_deserialize_wal_record_roundtrip() {
+        let record = WalRecord::Upsert {
+            txid: 42,
+            table: "flight".to_string(),
+            pk: "UAL123".to_string(),
+            payload: vec![9, 8, 7],
+        };
+        let bytes = serialize_wal_record(&record).expect("serialize");
+        let decoded = deserialize_wal_record(bytes.as_slice()).expect("deserialize");
+        assert_eq!(decoded, record);
+    }
+
+    #[test]
+    fn read_logical_wal_records_rejects_truncated_length_prefix() {
+        let dir = tempdir().expect("tempdir");
+        let wal = dir.path().join("logical.wal");
+        std::fs::write(&wal, [0x01_u8, 0x02, 0x03]).expect("write");
+
+        let err = read_logical_wal_records(&wal).expect_err("must reject truncated prefix");
+        assert!(matches!(err, LogicalWalError::CorruptFrame { .. }));
+    }
+
+    #[test]
+    fn read_logical_wal_records_rejects_truncated_frame_payload() {
+        let dir = tempdir().expect("tempdir");
+        let wal = dir.path().join("logical.wal");
+        // Declares 10-byte frame but stores only 3 bytes.
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&10_u32.to_le_bytes());
+        bytes.extend_from_slice(&[1_u8, 2, 3]);
+        std::fs::write(&wal, bytes).expect("write");
+
+        let err = read_logical_wal_records(&wal).expect_err("must reject truncated frame");
+        assert!(matches!(err, LogicalWalError::CorruptFrame { .. }));
+    }
+
+    #[test]
+    fn append_and_read_logical_wal_record_roundtrip() {
+        let dir = tempdir().expect("tempdir");
+        let wal = dir.path().join("logical.wal");
+        let records = [
+            WalRecord::Upsert {
+                txid: 1,
+                table: "flight".to_string(),
+                pk: "A".to_string(),
+                payload: vec![1],
+            },
+            WalRecord::Delete {
+                txid: 1,
+                table: "flight".to_string(),
+                pk: "B".to_string(),
+            },
+            WalRecord::Commit { txid: 1 },
+        ];
+
+        for rec in &records {
+            append_logical_wal_record(&wal, rec).expect("append");
+        }
+        let loaded = read_logical_wal_records(&wal).expect("read");
+        assert_eq!(loaded, records);
+    }
+}

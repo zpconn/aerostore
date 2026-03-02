@@ -426,6 +426,8 @@ fn normalize_dirty_mask(segs: usize, dirty_mask: u64) -> u64 {
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
+
     use super::{
         apply_delta_bytes, apply_update_record, build_update_record, compute_dirty_mask,
         pack_delta_bytes, WalRecord,
@@ -772,6 +774,60 @@ mod tests {
                 assert_eq!(actual, 3);
             }
             other => panic!("expected InvalidDeltaLength, got {other:?}"),
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn random_bytes_round_trip_through_delta_overlay(
+            pairs in prop::collection::vec((any::<u8>(), any::<u8>()), 0..256),
+        ) {
+            let (base, new_bytes): (Vec<u8>, Vec<u8>) = pairs.into_iter().unzip();
+            let mask = compute_dirty_mask(base.as_slice(), new_bytes.as_slice());
+            let delta = pack_delta_bytes(new_bytes.as_slice(), mask);
+            let overlaid = apply_delta_bytes(base.as_slice(), mask, delta.as_slice())
+                .expect("delta overlay should succeed for packed payload");
+            prop_assert_eq!(overlaid, new_bytes);
+        }
+
+        #[test]
+        fn random_delta_rejects_trailing_junk_bytes(
+            pairs in prop::collection::vec((any::<u8>(), any::<u8>()), 1..256),
+            trailer in any::<u8>(),
+        ) {
+            let (base, new_bytes): (Vec<u8>, Vec<u8>) = pairs.into_iter().unzip();
+            let mask = compute_dirty_mask(base.as_slice(), new_bytes.as_slice());
+            let mut delta = pack_delta_bytes(new_bytes.as_slice(), mask);
+            delta.push(trailer);
+            let err = apply_delta_bytes(base.as_slice(), mask, delta.as_slice())
+                .expect_err("trailing bytes must be rejected");
+            let is_invalid_delta_len = matches!(err, super::WalDeltaError::InvalidDeltaLength { .. });
+            prop_assert!(is_invalid_delta_len);
+        }
+
+        #[test]
+        fn tiny_row_round_trips_for_random_values(
+            a in any::<u64>(),
+            b in any::<u64>(),
+            c in any::<u64>(),
+            d in any::<u64>(),
+            na in any::<u64>(),
+            nb in any::<u64>(),
+            nc in any::<u64>(),
+            nd in any::<u64>(),
+        ) {
+            let base = TinyRow { a, b, c, d };
+            let updated = TinyRow {
+                a: na,
+                b: nb,
+                c: nc,
+                d: nd,
+            };
+            let record = build_update_record("prop-row".to_string(), &base, &updated, u64::MAX)
+                .expect("build_update_record failed");
+            let (_, replayed) = apply_update_record(&base, &record)
+                .expect("apply_update_record failed");
+            prop_assert_eq!(replayed, updated);
         }
     }
 }

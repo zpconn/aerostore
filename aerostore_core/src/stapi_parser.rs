@@ -338,7 +338,17 @@ fn take_balanced_braced_word(input: &str) -> IResult<&str, String> {
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
+
     use super::{parse_stapi_query, Filter, ParseError, Value};
+
+    fn field_strategy() -> impl Strategy<Value = String> {
+        "[a-z][a-z0-9_]{0,15}".prop_map(|s| s.to_string())
+    }
+
+    fn text_atom_strategy() -> impl Strategy<Value = String> {
+        "[A-Za-z][A-Za-z0-9_]{0,15}".prop_map(|s| s.to_string())
+    }
 
     #[test]
     fn parses_complex_nested_compare_list() {
@@ -545,5 +555,56 @@ mod tests {
     fn parse_error_display_is_human_readable() {
         let err = ParseError::new("bad query");
         assert_eq!(err.to_string(), "bad query");
+    }
+
+    proptest! {
+        #[test]
+        fn parser_never_panics_for_arbitrary_input(input in ".{0,256}") {
+            let result = std::panic::catch_unwind(|| parse_stapi_query(input.as_str()));
+            prop_assert!(result.is_ok());
+        }
+
+        #[test]
+        fn value_from_atom_parses_all_i64_values(v in any::<i64>()) {
+            let atom = v.to_string();
+            prop_assert_eq!(Value::from_atom(atom.as_str()), Value::Int(v));
+        }
+
+        #[test]
+        fn parses_eq_clause_with_generated_identifiers(
+            field in field_strategy(),
+            value in text_atom_strategy(),
+        ) {
+            let query = format!("-compare {{= {} {}}}", field, value);
+            let parsed = parse_stapi_query(query.as_str()).expect("generated equality query should parse");
+            prop_assert_eq!(parsed.filters.len(), 1);
+            prop_assert_eq!(
+                &parsed.filters[0],
+                &Filter::Eq {
+                    field,
+                    value: Value::Text(value),
+                }
+            );
+        }
+
+        #[test]
+        fn parses_in_clause_with_generated_atoms(
+            field in field_strategy(),
+            values in prop::collection::vec(text_atom_strategy(), 1..8),
+        ) {
+            let values_expr = values.join(" ");
+            let query = format!("-compare {{in {} {{{}}}}}", field, values_expr);
+            let parsed = parse_stapi_query(query.as_str()).expect("generated in query should parse");
+            prop_assert_eq!(parsed.filters.len(), 1);
+
+            match &parsed.filters[0] {
+                Filter::In { field: parsed_field, values: parsed_values } => {
+                    prop_assert_eq!(parsed_field, &field);
+                    let expected: Vec<Value> = values.into_iter().map(Value::Text).collect();
+                    prop_assert_eq!(parsed_values, &expected);
+                }
+                other => prop_assert!(false, "expected Filter::In, got {:?}", other),
+            }
+        }
     }
 }

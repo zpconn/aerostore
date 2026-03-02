@@ -1713,3 +1713,86 @@ unsafe fn set_wide_result(interp: *mut clib::Tcl_Interp, value: i64) -> c_int {
     clib::Tcl_SetObjResult(interp, obj);
     clib::TCL_OK as c_int
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{Mutex, OnceLock};
+
+    fn env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    #[test]
+    fn fixed_ascii_round_trip_and_overflow_rejection() {
+        let encoded = encode_fixed_ascii::<8>("UAL123").expect("short id should encode");
+        assert_eq!(decode_fixed_ascii(encoded.as_slice()), "UAL123");
+        assert!(encode_fixed_ascii::<4>("TOO-LONG").is_none());
+    }
+
+    #[test]
+    fn decode_fixed_ascii_stops_at_first_nul() {
+        let buf = [b'A', b'B', 0, b'C', b'D'];
+        assert_eq!(decode_fixed_ascii(buf.as_slice()), "AB");
+    }
+
+    #[test]
+    fn scale_coord_rounds_to_microdegrees() {
+        assert_eq!(scale_coord(37.6189994), 37_618_999);
+        assert_eq!(scale_coord(37.6189996), 37_619_000);
+        assert_eq!(scale_coord(-122.3750014), -122_375_001);
+    }
+
+    #[test]
+    fn append_stapi_option_wraps_values_in_braces() {
+        let mut stapi = String::new();
+        append_stapi_option(&mut stapi, "-compare", "{> alt 10000}");
+        append_stapi_option(&mut stapi, "-sort", "altitude");
+        assert_eq!(stapi, "-compare {{> alt 10000}} -sort {altitude}");
+    }
+
+    #[test]
+    fn resolve_shm_path_honors_environment_override() {
+        let _guard = env_lock().lock().expect("env lock poisoned");
+        std::env::set_var(SHM_PATH_ENV_KEY, "/dev/shm/aerostore.test.mmap");
+        assert_eq!(
+            resolve_shm_path(),
+            PathBuf::from("/dev/shm/aerostore.test.mmap")
+        );
+        std::env::remove_var(SHM_PATH_ENV_KEY);
+        assert_eq!(resolve_shm_path(), PathBuf::from(DEFAULT_TMPFS_PATH));
+    }
+
+    #[test]
+    fn format_decode_error_includes_line_column_and_message() {
+        let err = TsvDecodeError::new(4, "missing column");
+        assert_eq!(
+            format_decode_error(88, err),
+            "decode error at line 88 column 4: missing column"
+        );
+    }
+
+    #[test]
+    fn flight_state_delta_codec_round_trips_changed_fields() {
+        let base = FlightState::from_decoded("UAL123", 37.6189, -122.3750, 30_000, 450, 100)
+            .expect("base row");
+        let updated = FlightState::from_decoded("UAL123", 37.6192, -122.3750, 30_500, 455, 101)
+            .expect("updated row");
+        let mask = <FlightState as WalDeltaCodec>::compute_dirty_mask(&base, &updated)
+            .expect("compute dirty mask");
+        assert_ne!(mask & FlightState::MASK_LAT, 0);
+        assert_ne!(mask & FlightState::MASK_ALTITUDE, 0);
+        assert_ne!(mask & FlightState::MASK_GS, 0);
+        assert_ne!(mask & FlightState::MASK_UPDATED_AT, 0);
+        assert_eq!(mask & FlightState::MASK_FLIGHT_ID, 0);
+
+        let mut delta = Vec::new();
+        <FlightState as WalDeltaCodec>::encode_changed_fields(&updated, mask, &mut delta)
+            .expect("encode changed fields");
+        let mut replayed = base;
+        <FlightState as WalDeltaCodec>::apply_changed_fields(&mut replayed, mask, delta.as_slice())
+            .expect("apply changed fields");
+        assert_eq!(replayed, updated);
+    }
+}

@@ -449,3 +449,118 @@ pub fn deserialize_commit_record(bytes: &[u8]) -> Result<WalRingCommit, WalRingE
         )),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        deserialize_commit_record, serialize_commit_record, wal_commit_from_occ_record_with_policy,
+        SharedWalRing, WalEncodingPolicy, WalRing, WalRingCommit, WalRingError,
+        WAL_RING_COMMIT_VERSION,
+    };
+    use crate::occ::OccCommitRecord;
+    use crate::occ::OccCommittedWrite;
+    use crate::wal_delta::deserialize_wal_record;
+    use crate::ShmArena;
+    use std::sync::Arc;
+
+    #[test]
+    fn shared_ring_create_rejects_zero_slots_or_slot_bytes() {
+        let shm = Arc::new(ShmArena::new(4 << 20).expect("shm"));
+        assert!(matches!(
+            SharedWalRing::<0, 64>::create(Arc::clone(&shm)),
+            Err(WalRingError::InvalidConfiguration(_))
+        ));
+        assert!(matches!(
+            SharedWalRing::<8, 0>::create(Arc::clone(&shm)),
+            Err(WalRingError::InvalidConfiguration(_))
+        ));
+    }
+
+    #[test]
+    fn push_pop_roundtrip_preserves_payload_bytes() {
+        let ring = WalRing::<8, 64>::new();
+        let payload = b"hello wal ring";
+        ring.push_blocking(payload).expect("push");
+
+        let mut out = [0_u8; 64];
+        let len = ring.pop_into(&mut out).expect("pop").expect("entry");
+        assert_eq!(&out[..len], payload);
+    }
+
+    #[test]
+    fn close_causes_push_to_return_closed() {
+        let ring = WalRing::<4, 32>::new();
+        ring.close();
+        let err = ring
+            .push_blocking(b"x")
+            .expect_err("push should fail after close");
+        assert!(matches!(err, WalRingError::Closed));
+    }
+
+    #[test]
+    fn reset_for_restart_clears_closed_and_sequence_state() {
+        let ring = WalRing::<4, 32>::new();
+        ring.push_blocking(b"abc").expect("push");
+        ring.close();
+        ring.reset_for_restart();
+        assert!(!ring.is_closed());
+        assert!(ring.is_empty());
+        ring.push_blocking(b"xyz").expect("push after reset");
+    }
+
+    #[test]
+    fn deserialize_commit_rejects_wrong_version() {
+        let commit = WalRingCommit {
+            version: WAL_RING_COMMIT_VERSION + 1,
+            txid: 7,
+            writes: Vec::new(),
+        };
+        let bytes = serialize_commit_record(&commit).expect("serialize");
+        let err = deserialize_commit_record(bytes.as_slice()).expect_err("version mismatch");
+        assert!(matches!(err, WalRingError::Deserialize(_)));
+    }
+
+    #[test]
+    fn wal_commit_policy_force_full_and_delta_allowed_paths() {
+        let record = OccCommitRecord {
+            txid: 9,
+            writes: vec![OccCommittedWrite {
+                row_id: 1,
+                base_offset: 100,
+                new_offset: 200,
+                base_value: 10_u64,
+                value: 20_u64,
+                dirty_columns_bitmask: 1,
+            }],
+        };
+
+        let delta =
+            wal_commit_from_occ_record_with_policy(&record, |_| WalEncodingPolicy::DeltaAllowed)
+                .expect("delta commit");
+        assert_eq!(delta.writes.len(), 1);
+        let parsed_delta = deserialize_wal_record(delta.writes[0].wal_record_payload.as_slice())
+            .expect("parse delta");
+        assert!(matches!(
+            parsed_delta,
+            crate::wal_delta::WalRecord::UpdateDelta { .. }
+        ));
+        assert!(
+            delta.writes[0].value_payload.is_empty(),
+            "delta commit should not duplicate full value payload"
+        );
+
+        let full =
+            wal_commit_from_occ_record_with_policy(&record, |_| WalEncodingPolicy::ForceFull)
+                .expect("full commit");
+        let parsed_full = deserialize_wal_record(full.writes[0].wal_record_payload.as_slice())
+            .expect("parse full");
+        assert!(matches!(
+            parsed_full,
+            crate::wal_delta::WalRecord::UpdateFull { .. }
+        ));
+        assert!(
+            !full.writes[0].value_payload.is_empty(),
+            "forced full commit should carry value payload"
+        );
+    }
+}

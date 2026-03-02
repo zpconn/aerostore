@@ -219,3 +219,111 @@ impl fmt::Display for ProcArrayError {
 }
 
 impl std::error::Error for ProcArrayError {}
+
+#[cfg(test)]
+mod tests {
+    use super::{ProcArray, ProcArrayError, PROCARRAY_SLOTS};
+    use std::sync::atomic::AtomicU64;
+
+    #[test]
+    fn begin_transaction_exhausts_slots_and_returns_no_free_slot() {
+        let procarray = ProcArray::new();
+        let global = AtomicU64::new(1);
+        let mut regs = Vec::with_capacity(PROCARRAY_SLOTS);
+        for _ in 0..PROCARRAY_SLOTS {
+            regs.push(
+                procarray
+                    .begin_transaction(&global)
+                    .expect("slot should be available"),
+            );
+        }
+
+        let err = procarray
+            .begin_transaction(&global)
+            .expect_err("slots should be exhausted");
+        assert!(matches!(err, ProcArrayError::NoFreeSlot { .. }));
+
+        for reg in regs {
+            procarray
+                .end_transaction(reg)
+                .expect("release occupied slot");
+        }
+    }
+
+    #[test]
+    fn end_transaction_rejects_invalid_slot() {
+        let procarray = ProcArray::new();
+        let err = procarray
+            .end_transaction(super::ProcArrayRegistration {
+                slot_idx: u16::MAX,
+                txid: 1,
+            })
+            .expect_err("invalid slot should fail");
+        assert!(matches!(err, ProcArrayError::InvalidSlot { .. }));
+    }
+
+    #[test]
+    fn end_transaction_rejects_slot_ownership_mismatch() {
+        let procarray = ProcArray::new();
+        let global = AtomicU64::new(1);
+        let reg = procarray
+            .begin_transaction(&global)
+            .expect("begin_transaction should succeed");
+        let err = procarray
+            .end_transaction(super::ProcArrayRegistration {
+                slot_idx: reg.slot_idx,
+                txid: reg.txid + 1,
+            })
+            .expect_err("mismatched txid should fail");
+        assert!(matches!(err, ProcArrayError::SlotOwnershipMismatch { .. }));
+
+        procarray
+            .end_transaction(reg)
+            .expect("cleanup should still succeed");
+    }
+
+    #[test]
+    fn snapshot_xmin_xmax_and_inflight_set_consistent() {
+        let procarray = ProcArray::new();
+        let global = AtomicU64::new(100);
+        let a = procarray.begin_transaction(&global).expect("slot A");
+        let b = procarray.begin_transaction(&global).expect("slot B");
+        let snap = procarray.create_snapshot(&global);
+
+        assert!(snap.len() >= 2);
+        assert!(snap.in_flight_txids().contains(&a.txid));
+        assert!(snap.in_flight_txids().contains(&b.txid));
+        assert!(snap.xmin <= a.txid.min(b.txid));
+        assert!(snap.xmax > a.txid.max(b.txid));
+
+        procarray.end_transaction(a).expect("end A");
+        procarray.end_transaction(b).expect("end B");
+    }
+
+    #[test]
+    fn clear_orphaned_slots_clears_and_reports_count() {
+        let procarray = ProcArray::new();
+        let global = AtomicU64::new(1);
+        let a = procarray.begin_transaction(&global).expect("slot A");
+        let b = procarray.begin_transaction(&global).expect("slot B");
+
+        let cleared = procarray.clear_orphaned_slots();
+        assert_eq!(cleared, 2);
+        for idx in 0..procarray.slots_len() {
+            assert_eq!(procarray.slot_txid(idx).unwrap_or_default(), 0);
+        }
+
+        // Double-clear should be a no-op.
+        assert_eq!(procarray.clear_orphaned_slots(), 0);
+
+        // Releasing old registrations should now fail due to cleared slots.
+        assert!(matches!(
+            procarray.end_transaction(a),
+            Err(ProcArrayError::SlotOwnershipMismatch { .. })
+        ));
+        assert!(matches!(
+            procarray.end_transaction(b),
+            Err(ProcArrayError::SlotOwnershipMismatch { .. })
+        ));
+    }
+}
