@@ -9,6 +9,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::index::{IndexCompare, IndexValue};
+use crate::procarray::ProcArrayError;
 use crate::shm::ShmArena;
 use crate::shm_skiplist::{
     ScanBound, ShmSkipKey, ShmSkipList, ShmSkipListError, ShmSkipListGcDaemon, MAX_PAYLOAD_BYTES,
@@ -31,6 +32,7 @@ pub enum ShmIndexError {
     KeyTooLong { len: usize, max: usize },
     RowIdTooLarge { len: usize, max: usize },
     Alloc(crate::shm::ShmAllocError),
+    Epoch(ProcArrayError),
     Fork(std::io::Error),
     Wait(std::io::Error),
     Signal(std::io::Error),
@@ -55,6 +57,7 @@ impl fmt::Display for ShmIndexError {
                 write!(f, "row-id payload length {} exceeds max {}", len, max)
             }
             ShmIndexError::Alloc(err) => write!(f, "shared index allocation failed: {}", err),
+            ShmIndexError::Epoch(err) => write!(f, "index ProcArray registration failed: {}", err),
             ShmIndexError::Fork(err) => write!(f, "fork failed: {}", err),
             ShmIndexError::Wait(err) => write!(f, "wait failed: {}", err),
             ShmIndexError::Signal(err) => write!(f, "signal failed: {}", err),
@@ -77,6 +80,7 @@ impl From<ShmSkipListError> for ShmIndexError {
                 ShmIndexError::RowIdTooLarge { len, max }
             }
             ShmSkipListError::Alloc(err) => ShmIndexError::Alloc(err),
+            ShmSkipListError::Epoch(err) => ShmIndexError::Epoch(err),
             ShmSkipListError::Fork(err) => ShmIndexError::Fork(err),
             ShmSkipListError::Wait(err) => ShmIndexError::Wait(err),
             ShmSkipListError::Signal(err) => ShmIndexError::Signal(err),
