@@ -114,6 +114,7 @@ struct ShmSkipHeader<K: ShmSkipKey> {
     rng_state: AtomicU64,
     distinct_key_count: AtomicUsize,
     has_tombstones: AtomicU32,
+    recycled_towers: [AtomicU64; MAX_HEIGHT],
     recycled_nodes: AtomicU64,
     recycled_postings: AtomicU64,
     retired_head: RelPtr<ShmSkipNode<K>>,
@@ -131,6 +132,7 @@ impl<K: ShmSkipKey> ShmSkipHeader<K> {
             rng_state: AtomicU64::new(seed.max(1)),
             distinct_key_count: AtomicUsize::new(0),
             has_tombstones: AtomicU32::new(0),
+            recycled_towers: std::array::from_fn(|_| AtomicU64::new(0)),
             recycled_nodes: AtomicU64::new(0),
             recycled_postings: AtomicU64::new(0),
             retired_head: RelPtr::null(),
@@ -1384,6 +1386,75 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         }
     }
 
+    fn push_recycled_tower(
+        &self,
+        tower_offset: u32,
+        tower_height: usize,
+    ) -> Result<(), ShmSkipListError> {
+        if !(1..=MAX_HEIGHT).contains(&tower_height) {
+            return Err(ShmSkipListError::InvalidLane {
+                node_offset: NULL_OFFSET,
+                level: tower_height,
+            });
+        }
+        let header = self
+            .header_ref()
+            .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
+        let lane0_ptr = tower_ptr::<K>(self.shm.mmap_base(), tower_offset, 0, tower_height).ok_or(
+            ShmSkipListError::InvalidLane {
+                node_offset: NULL_OFFSET,
+                level: 0,
+            },
+        )?;
+        // SAFETY:
+        // `tower_ptr` validated the pointer bounds and alignment for lane-0.
+        let lane0 = unsafe { &*lane0_ptr };
+
+        let head = &header.recycled_towers[tower_height - 1];
+        loop {
+            let old = head.load(AtomicOrdering::Acquire);
+            let old_head = stack_head_offset(old);
+            lane0.next.store(old_head, AtomicOrdering::Release);
+            lane0.marked.store(0, AtomicOrdering::Release);
+            let new = pack_stack_head(tower_offset, stack_head_tag(old).wrapping_add(1));
+            if head
+                .compare_exchange(old, new, AtomicOrdering::AcqRel, AtomicOrdering::Acquire)
+                .is_ok()
+            {
+                return Ok(());
+            }
+            std::hint::spin_loop();
+        }
+    }
+
+    fn pop_recycled_tower(&self, tower_height: usize) -> Option<u32> {
+        if !(1..=MAX_HEIGHT).contains(&tower_height) {
+            return None;
+        }
+        let header = self.header_ref()?;
+        let head = &header.recycled_towers[tower_height - 1];
+        loop {
+            let old = head.load(AtomicOrdering::Acquire);
+            let tower_offset = stack_head_offset(old);
+            if tower_offset == NULL_OFFSET {
+                return None;
+            }
+            let lane0_ptr = tower_ptr::<K>(self.shm.mmap_base(), tower_offset, 0, tower_height)?;
+            // SAFETY:
+            // `tower_ptr` validated the pointer bounds and alignment for lane-0.
+            let lane0 = unsafe { &*lane0_ptr };
+            let next = lane0.next.load(AtomicOrdering::Acquire);
+            let new = pack_stack_head(next, stack_head_tag(old).wrapping_add(1));
+            if head
+                .compare_exchange(old, new, AtomicOrdering::AcqRel, AtomicOrdering::Acquire)
+                .is_ok()
+            {
+                return Some(tower_offset);
+            }
+            std::hint::spin_loop();
+        }
+    }
+
     fn node_ptr(&self, offset: u32) -> Result<*mut ShmSkipNode<K>, ShmSkipListError> {
         let start = offset as usize;
         let end = start
@@ -1424,14 +1495,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         node_height: usize,
     ) -> Result<(), ShmSkipListError> {
         self.push_recycled_posting(posting_offset)?;
-        let tower_bytes = size_of::<SkipLane<K>>()
-            .checked_mul(node_height)
-            .ok_or(ShmAllocError::SizeOverflow)?;
-        self.shm.chunked_arena().recycle_raw(
-            tower_offset,
-            tower_bytes,
-            align_of::<SkipLane<K>>(),
-        )?;
+        self.push_recycled_tower(tower_offset, node_height)?;
         self.push_recycled_node(node_offset)?;
         Ok(())
     }
@@ -1451,14 +1515,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             posting_offset = next;
         }
 
-        let tower_bytes = size_of::<SkipLane<K>>()
-            .checked_mul(node.height as usize)
-            .ok_or(ShmAllocError::SizeOverflow)?;
-        self.shm.chunked_arena().recycle_raw(
-            node.tower_offset,
-            tower_bytes,
-            align_of::<SkipLane<K>>(),
-        )?;
+        self.push_recycled_tower(node.tower_offset, node.height as usize)?;
         self.push_recycled_node(node_offset)?;
         Ok(())
     }
@@ -1471,10 +1528,13 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         let bytes = size_of::<SkipLane<K>>()
             .checked_mul(height)
             .ok_or(ShmAllocError::SizeOverflow)?;
-        let tower_offset = self
-            .shm
-            .chunked_arena()
-            .alloc_raw(bytes, align_of::<SkipLane<K>>())?;
+        let tower_offset = if let Some(offset) = self.pop_recycled_tower(height) {
+            offset
+        } else {
+            self.shm
+                .chunked_arena()
+                .alloc_raw(bytes, align_of::<SkipLane<K>>())?
+        };
         let base = self.shm.mmap_base();
         for level in 0..height {
             let ptr = tower_ptr::<K>(base, tower_offset, level, height).ok_or(
