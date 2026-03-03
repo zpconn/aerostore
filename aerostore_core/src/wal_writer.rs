@@ -147,6 +147,11 @@ pub fn spawn_wal_writer_daemon<const SLOTS: usize, const SLOT_BYTES: usize>(
 ) -> io::Result<WalWriterDaemon> {
     let wal_path = wal_path.as_ref().to_path_buf();
     let parent_pid = unsafe { libc::getpid() };
+    // Advance the writer epoch in the parent before forking so any immediately
+    // following commits observe the new epoch and force full-row baselines.
+    let _ = ring
+        .bump_writer_epoch()
+        .map_err(|err| io::Error::new(io::ErrorKind::Other, err.to_string()))?;
 
     // SAFETY:
     // `fork` is used intentionally to emulate a dedicated WAL writer OS process.
@@ -205,10 +210,6 @@ fn wal_writer_daemon_loop<const SLOTS: usize, const SLOT_BYTES: usize>(
     ring: SharedWalRing<SLOTS, SLOT_BYTES>,
     wal_path: &Path,
 ) -> Result<(), WalWriterError> {
-    // Each daemon start (or restart) advances epoch so async committers can
-    // force a full-row baseline before emitting deltas again.
-    let _writer_epoch = ring.bump_writer_epoch()?;
-
     let file = OpenOptions::new()
         .create(true)
         .append(true)
