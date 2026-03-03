@@ -37,6 +37,7 @@ const SHM_BYTES_METRICS: usize = 16 << 20;
 const PG_EXPLAIN_SAMPLE_EVERY: u64 = 128;
 const SHM_BYTES_AEROSTORE_512M: usize = 512 << 20;
 const SHM_BYTES_AEROSTORE_1G: usize = 1 << 30;
+const SHM_BYTES_AEROSTORE_2G: usize = 2 << 30;
 const DEFAULT_VACUUM_INTERVAL_MS: u64 = 50;
 const DEFAULT_INDEX_GC_INTERVAL_MS: u64 = 50;
 
@@ -45,7 +46,7 @@ const HOT_RATIO_TOLERANCE: f64 = 0.01;
 const REQUIRED_TPS_RATIO: f64 = 2.0;
 const REQUIRED_P99_RATIO: f64 = 0.6;
 
-const PROFILES: [CrucibleProfile; 2] = [
+const PROFILES: [CrucibleProfile; 3] = [
     CrucibleProfile {
         label: "profile_512m",
         aerostore_shm_bytes: SHM_BYTES_AEROSTORE_512M,
@@ -53,6 +54,10 @@ const PROFILES: [CrucibleProfile; 2] = [
     CrucibleProfile {
         label: "profile_1g",
         aerostore_shm_bytes: SHM_BYTES_AEROSTORE_1G,
+    },
+    CrucibleProfile {
+        label: "profile_2g",
+        aerostore_shm_bytes: SHM_BYTES_AEROSTORE_2G,
     },
 ];
 
@@ -212,6 +217,11 @@ struct ReclaimTelemetry {
     index_reclaimed_nodes_delta: u64,
     free_list_pushes_delta: u64,
     free_list_pops_delta: u64,
+    epoch_lag_start: u64,
+    epoch_lag_end: u64,
+    epoch_lag_peak: u64,
+    active_slots_start: u32,
+    active_slots_end: u32,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -310,6 +320,7 @@ fn run_aerostore_crucible(
         index_reclaimed_nodes: time_index.reclaimed_nodes(),
         free_list_pushes: shm.free_list_pushes(),
         free_list_pops: shm.free_list_pops(),
+        epoch: read_epoch_lag_snapshot(shm.as_ref()),
     };
     let vacuum_reclaimed_rows = Arc::new(AtomicU64::new(0));
     let reclaim_counter = Arc::clone(&vacuum_reclaimed_rows);
@@ -401,7 +412,19 @@ fn run_aerostore_crucible(
 
     let started = Instant::now();
     state.go.store(1, Ordering::Release);
-    std::thread::sleep(duration);
+    let deadline = started + duration;
+    let mut epoch_lag_peak = reclaim_start.epoch.lag();
+    while Instant::now() < deadline {
+        let now = Instant::now();
+        if now >= deadline {
+            break;
+        }
+        let remaining = deadline.saturating_duration_since(now);
+        let sleep_for = remaining.min(Duration::from_millis(25));
+        std::thread::sleep(sleep_for);
+        let snapshot = read_epoch_lag_snapshot(shm.as_ref());
+        epoch_lag_peak = epoch_lag_peak.max(snapshot.lag());
+    }
     state.stop.store(1, Ordering::Release);
 
     let timed_out_workers =
@@ -420,6 +443,7 @@ fn run_aerostore_crucible(
         index_reclaimed_nodes: time_index.reclaimed_nodes(),
         free_list_pushes: shm.free_list_pushes(),
         free_list_pops: shm.free_list_pops(),
+        epoch: read_epoch_lag_snapshot(shm.as_ref()),
     };
     let reclaim_telemetry = ReclaimTelemetry {
         vacuum_reclaimed_rows: vacuum_reclaimed_rows.load(Ordering::Acquire),
@@ -435,6 +459,11 @@ fn run_aerostore_crucible(
         free_list_pops_delta: reclaim_end
             .free_list_pops
             .saturating_sub(reclaim_start.free_list_pops),
+        epoch_lag_start: reclaim_start.epoch.lag(),
+        epoch_lag_end: reclaim_end.epoch.lag(),
+        epoch_lag_peak,
+        active_slots_start: reclaim_start.epoch.active_slots,
+        active_slots_end: reclaim_end.epoch.active_slots,
     };
     let index_retry = time_index.mutation_telemetry();
     let index_retry_telemetry = IndexRetryTelemetry {
@@ -474,6 +503,21 @@ struct ReclaimSnapshot {
     index_reclaimed_nodes: u64,
     free_list_pushes: u64,
     free_list_pops: u64,
+    epoch: EpochLagSnapshot,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct EpochLagSnapshot {
+    global_txid: u64,
+    global_xmin: u64,
+    active_slots: u32,
+}
+
+impl EpochLagSnapshot {
+    #[inline]
+    fn lag(self) -> u64 {
+        self.global_txid.saturating_sub(self.global_xmin)
+    }
 }
 
 fn run_aerostore_worker(
@@ -1270,6 +1314,19 @@ fn print_results(result: &ProfileRunResult, duration: Duration) {
             reclaim.free_list_pushes_delta,
             reclaim.free_list_pops_delta,
         );
+        println!(
+            "| Aerostore Epoch Lag Telemetry | epoch_lag_start | epoch_lag_end | epoch_lag_peak | active_slots_start | active_slots_end |"
+        );
+        println!("|---|---:|---:|---:|---:|---:|");
+        println!(
+            "| {} | {} | {} | {} | {} | {} |",
+            result.profile.label,
+            reclaim.epoch_lag_start,
+            reclaim.epoch_lag_end,
+            reclaim.epoch_lag_peak,
+            reclaim.active_slots_start,
+            reclaim.active_slots_end,
+        );
     }
 
     if let Some(retry) = aerostore.index_retry_telemetry {
@@ -1678,6 +1735,28 @@ fn index_gc_interval() -> Duration {
         .filter(|v| *v > 0)
         .unwrap_or(DEFAULT_INDEX_GC_INTERVAL_MS);
     Duration::from_millis(millis)
+}
+
+fn read_epoch_lag_snapshot(shm: &ShmArena) -> EpochLagSnapshot {
+    let global_txid = shm.global_txid().load(Ordering::Acquire);
+    let proc_array = shm.proc_array();
+    let mut global_xmin = global_txid;
+    let mut active_slots = 0_u32;
+    for slot_idx in 0..proc_array.slots_len() {
+        let txid = proc_array.slot_txid(slot_idx).unwrap_or(0);
+        if txid == 0 {
+            continue;
+        }
+        active_slots = active_slots.saturating_add(1);
+        if txid < global_xmin {
+            global_xmin = txid;
+        }
+    }
+    EpochLagSnapshot {
+        global_txid,
+        global_xmin,
+        active_slots,
+    }
 }
 
 fn stop_background_daemons(

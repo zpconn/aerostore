@@ -369,6 +369,10 @@ where
 
         let (payload_len, payload) = Self::encode_row_id(row_id)?;
         let payload = &payload[..payload_len as usize];
+        if self.try_move_relink_fast(&old_key, new_key, payload_len, payload)? {
+            return Ok(());
+        }
+
         self.try_remove_encoded(&old_key, payload_len, payload)?;
         if let Err(err) = self.try_insert_encoded(new_key, payload_len, payload) {
             // Keep strict-sync semantics best-effort: if move fails mid-flight,
@@ -758,6 +762,42 @@ where
 
         unreachable!("remove retry loop must return before exhaustion")
     }
+
+    fn try_move_relink_fast(
+        &self,
+        old_key: &EncodedKey,
+        new_key: EncodedKey,
+        payload_len: u16,
+        payload: &[u8],
+    ) -> Result<bool, ShmIndexError> {
+        for attempt in 0..=INDEX_INSERT_RETRY_LIMIT {
+            match self
+                .skiplist
+                .move_payload_relink(old_key, new_key, payload_len, payload)
+            {
+                Ok(moved) => return Ok(moved),
+                Err(err) => {
+                    let Some(kind) = classify_transient_skiplist_error(&err) else {
+                        return Err(err.into());
+                    };
+                    match kind {
+                        RetryKind::Alloc => {
+                            let _ = self.skiplist.collect_garbage_once(INDEX_RECLAIM_BATCH);
+                        }
+                        RetryKind::Structural => {
+                            let _ = self.skiplist.collect_garbage_once(INDEX_RECLAIM_BATCH / 4);
+                        }
+                        RetryKind::Epoch => {}
+                    }
+                    if attempt == INDEX_INSERT_RETRY_LIMIT {
+                        return Err(err.into());
+                    }
+                    retry_pause_with_kind(attempt, kind);
+                }
+            }
+        }
+        unreachable!("fast move retry loop must return before exhaustion")
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -958,6 +998,54 @@ mod tests {
         assert_eq!(
             index.lookup(&IndexCompare::Eq(IndexValue::I64(100))),
             vec![7]
+        );
+    }
+
+    #[test]
+    fn move_payload_relinks_into_existing_target_key() {
+        let index: SecondaryIndex<u32> = SecondaryIndex::new("event_ts");
+        index.insert(IndexValue::I64(100), 42);
+        index.insert(IndexValue::I64(101), 7);
+
+        index
+            .try_move_payload(&IndexValue::I64(100), IndexValue::I64(101), &42)
+            .expect("move into existing key should succeed");
+
+        assert_eq!(index.lookup_posting_count(&IndexValue::I64(100)), 0);
+        assert_eq!(index.lookup_posting_count(&IndexValue::I64(101)), 2);
+        assert_eq!(
+            index.lookup(&IndexCompare::Eq(IndexValue::I64(101))),
+            vec![7, 42]
+        );
+    }
+
+    #[test]
+    fn move_payload_avoids_duplicate_when_target_already_contains_row() {
+        let index: SecondaryIndex<u32> = SecondaryIndex::new("event_ts");
+        index.insert(IndexValue::I64(100), 42);
+        index.insert(IndexValue::I64(101), 42);
+
+        index
+            .try_move_payload(&IndexValue::I64(100), IndexValue::I64(101), &42)
+            .expect("move should not duplicate existing target payload");
+
+        assert_eq!(index.lookup_posting_count(&IndexValue::I64(100)), 0);
+        assert_eq!(index.lookup_posting_count(&IndexValue::I64(101)), 1);
+    }
+
+    #[test]
+    fn move_payload_old_missing_still_ensures_target_contains_row() {
+        let index: SecondaryIndex<u32> = SecondaryIndex::new("event_ts");
+
+        index
+            .try_move_payload(&IndexValue::I64(100), IndexValue::I64(101), &42)
+            .expect("move should upsert target posting when old key is absent");
+
+        assert_eq!(index.lookup_posting_count(&IndexValue::I64(100)), 0);
+        assert_eq!(index.lookup_posting_count(&IndexValue::I64(101)), 1);
+        assert_eq!(
+            index.lookup(&IndexCompare::Eq(IndexValue::I64(101))),
+            vec![42]
         );
     }
 

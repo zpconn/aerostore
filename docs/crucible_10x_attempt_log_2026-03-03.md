@@ -161,6 +161,31 @@ Reliability restored, but sustained latency tail still failed benchmark criteria
 - All experimental changes were rolled back.
 - Experimental code state before this write-up: **clean**.
 
+## Addendum: 60s Run With `profile_2g`
+Command used:
+```bash
+AEROSTORE_CRUCIBLE_DURATION_SECS=60 cargo bench -p aerostore_core --bench hyperfeed_crucible -- --noplot
+```
+
+Run included `profile_512m`, `profile_1g`, and `profile_2g` (with `profile_2g` added to the crucible profile matrix for this measurement):
+
+- `profile_512m`: Aerostore `414,079.75 TPS`, Postgres `84,560.54 TPS`, ratio `4.90x`.
+  - p99 ratio `0.125` (Aerostore `32.77us`, Postgres `262.14us`)
+  - Index failures: insert `0`, remove `0`
+  - Aerostore elapsed `65.746s`
+- `profile_1g`: Aerostore `520,402.73 TPS`, Postgres `84,089.43 TPS`, ratio `6.19x`.
+  - p99 ratio `0.250` (Aerostore `65.54us`, Postgres `262.14us`)
+  - Index failures: insert `0`, remove `0`
+  - Aerostore elapsed `68.218s`
+- `profile_2g`: Aerostore `958,751.38 TPS`, Postgres `83,671.27 TPS`, ratio `11.46x`.
+  - p99 ratio `0.125` (Aerostore `32.77us`, Postgres `262.14us`)
+  - Index failures: insert `0`, remove `0`
+  - Aerostore elapsed `60.143s`
+
+Interpretation:
+- `2g` hit and exceeded the sustained 10x objective (`11.46x`) while keeping index failure counts at zero.
+- `512m` and `1g` improved versus prior 4.23x/4.62x snapshots in this run, but still remained below 10x.
+
 ## What This Cycle Demonstrated
 1. 10s wins are not predictive; 60s exposes allocator/epoch/retry feedback loops.
 2. The dominant sustained failure mode is not base scan/index speed (those remain fast), but long-tail behavior under prolonged churn.
