@@ -2,6 +2,7 @@
 
 use std::fs;
 use std::hint::black_box;
+use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicI64, AtomicU32, AtomicU64, Ordering};
@@ -38,15 +39,19 @@ const PG_EXPLAIN_SAMPLE_EVERY: u64 = 128;
 const SHM_BYTES_AEROSTORE_512M: usize = 512 << 20;
 const SHM_BYTES_AEROSTORE_1G: usize = 1 << 30;
 const SHM_BYTES_AEROSTORE_2G: usize = 2 << 30;
+const SHM_BYTES_AEROSTORE_3584M: usize = 3584 << 20;
 const DEFAULT_VACUUM_INTERVAL_MS: u64 = 50;
 const DEFAULT_INDEX_GC_INTERVAL_MS: u64 = 50;
+const MEMORY_SAMPLE_INTERVAL_MS: u64 = 5_000;
+const DEFAULT_ALLOC_TELEMETRY_INTERVAL_MS: u64 = 5_000;
+const DEFAULT_ALLOC_TELEMETRY_DEPTH_SCAN_LIMIT: usize = 65_536;
 
 const MIX_RATIO_TOLERANCE: f64 = 0.02;
 const HOT_RATIO_TOLERANCE: f64 = 0.01;
 const REQUIRED_TPS_RATIO: f64 = 2.0;
 const REQUIRED_P99_RATIO: f64 = 0.6;
 
-const PROFILES: [CrucibleProfile; 3] = [
+const PROFILES: [CrucibleProfile; 4] = [
     CrucibleProfile {
         label: "profile_512m",
         aerostore_shm_bytes: SHM_BYTES_AEROSTORE_512M,
@@ -58,6 +63,10 @@ const PROFILES: [CrucibleProfile; 3] = [
     CrucibleProfile {
         label: "profile_2g",
         aerostore_shm_bytes: SHM_BYTES_AEROSTORE_2G,
+    },
+    CrucibleProfile {
+        label: "profile_3584m",
+        aerostore_shm_bytes: SHM_BYTES_AEROSTORE_3584M,
     },
 ];
 
@@ -195,6 +204,7 @@ struct EngineRunResult {
     scan_server_exec_latency: Option<LatencySummary>,
     reclaim_telemetry: Option<ReclaimTelemetry>,
     index_retry_telemetry: Option<IndexRetryTelemetry>,
+    memory_telemetry: Option<MemoryTelemetry>,
 }
 
 #[derive(Debug)]
@@ -236,6 +246,29 @@ struct IndexRetryTelemetry {
     max_remove_attempts: u64,
 }
 
+#[derive(Clone, Copy, Debug, Default)]
+struct MemoryTelemetry {
+    source: &'static str,
+    peak_kb: u64,
+    end_kb: u64,
+    samples: u64,
+}
+
+#[derive(Debug)]
+struct AllocTelemetryConfig {
+    path: PathBuf,
+    sample_interval: Duration,
+    depth_scan_limit: usize,
+}
+
+struct AllocTelemetryRecorder {
+    writer: BufWriter<fs::File>,
+    sample_interval: Duration,
+    depth_scan_limit: usize,
+    next_sample_at: Instant,
+    head_peak: u32,
+}
+
 #[derive(Clone, Copy)]
 enum QueryKind {
     Upsert,
@@ -270,8 +303,9 @@ fn bench_hyperfeed_crucible(c: &mut Criterion) {
 }
 
 fn run_crucible(duration: Duration) -> Vec<ProfileRunResult> {
-    let mut out = Vec::with_capacity(PROFILES.len());
-    for profile in PROFILES {
+    let profiles = selected_profiles();
+    let mut out = Vec::with_capacity(profiles.len());
+    for profile in profiles {
         let aerostore = run_aerostore_crucible(duration, profile).unwrap_or_else(|err| {
             panic!("aerostore crucible run failed ({}): {err}", profile.label)
         });
@@ -287,10 +321,174 @@ fn run_crucible(duration: Duration) -> Vec<ProfileRunResult> {
     out
 }
 
+fn selected_profiles() -> Vec<CrucibleProfile> {
+    let Some(raw) = std::env::var("AEROSTORE_CRUCIBLE_PROFILE_FILTER").ok() else {
+        return PROFILES.to_vec();
+    };
+    let wanted: Vec<String> = raw
+        .split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect();
+    if wanted.is_empty() {
+        return PROFILES.to_vec();
+    }
+
+    let mut selected = Vec::new();
+    for profile in PROFILES {
+        if wanted.iter().any(|w| w == profile.label) {
+            selected.push(profile);
+        }
+    }
+
+    assert!(
+        !selected.is_empty(),
+        "AEROSTORE_CRUCIBLE_PROFILE_FILTER={raw} selected no known profiles"
+    );
+    selected
+}
+
+impl AllocTelemetryRecorder {
+    fn start(
+        config: AllocTelemetryConfig,
+        started: Instant,
+        shm: &ShmArena,
+    ) -> Result<Self, String> {
+        if let Some(parent) = config.path.parent() {
+            if !parent.as_os_str().is_empty() {
+                fs::create_dir_all(parent).map_err(|err| {
+                    format!(
+                        "failed to create alloc telemetry directory {}: {}",
+                        parent.display(),
+                        err
+                    )
+                })?;
+            }
+        }
+        let file = fs::File::create(&config.path).map_err(|err| {
+            format!(
+                "failed to create alloc telemetry file {}: {}",
+                config.path.display(),
+                err
+            )
+        })?;
+        let mut writer = BufWriter::new(file);
+        writeln!(
+            writer,
+            "elapsed_ms,head_offset,head_peak,free_list_head_offset,free_list_depth_est,free_list_depth_truncated,free_list_pushes,free_list_pops,free_list_net,free_list_pop_misses,retry_alloc,retry_loops,retry_structural,max_insert_attempts,max_remove_attempts"
+        )
+        .map_err(|err| {
+            format!(
+                "failed to write alloc telemetry header {}: {}",
+                config.path.display(),
+                err
+            )
+        })?;
+
+        Ok(Self {
+            writer,
+            sample_interval: config.sample_interval,
+            depth_scan_limit: config.depth_scan_limit,
+            next_sample_at: started,
+            head_peak: shm.chunked_arena().head_offset(),
+        })
+    }
+
+    fn maybe_sample(
+        &mut self,
+        now: Instant,
+        started: Instant,
+        shm: &ShmArena,
+        time_index: &SecondaryIndex<usize>,
+    ) -> Result<(), String> {
+        if now < self.next_sample_at {
+            return Ok(());
+        }
+        self.sample(now, started, shm, time_index)?;
+        self.next_sample_at = now + self.sample_interval;
+        Ok(())
+    }
+
+    fn finalize(
+        mut self,
+        now: Instant,
+        started: Instant,
+        shm: &ShmArena,
+        time_index: &SecondaryIndex<usize>,
+    ) -> Result<(), String> {
+        self.sample(now, started, shm, time_index)?;
+        self.writer
+            .flush()
+            .map_err(|err| format!("failed to flush alloc telemetry writer: {}", err))
+    }
+
+    fn sample(
+        &mut self,
+        now: Instant,
+        started: Instant,
+        shm: &ShmArena,
+        time_index: &SecondaryIndex<usize>,
+    ) -> Result<(), String> {
+        let head_offset = shm.chunked_arena().head_offset();
+        self.head_peak = self.head_peak.max(head_offset);
+        let free_list_head_offset = shm.free_list_head_offset();
+        let (free_list_depth_est, depth_truncated) =
+            shm.free_list_depth_estimate(self.depth_scan_limit);
+        let free_list_pushes = shm.free_list_pushes();
+        let free_list_pops = shm.free_list_pops();
+        let free_list_net = free_list_pushes.saturating_sub(free_list_pops);
+        let free_list_pop_misses = shm.free_list_pop_misses();
+        let retry = time_index.mutation_telemetry();
+        let elapsed_ms = now.saturating_duration_since(started).as_millis();
+
+        writeln!(
+            self.writer,
+            "{elapsed_ms},{head_offset},{head_peak},{free_list_head_offset},{free_list_depth_est},{depth_truncated},{free_list_pushes},{free_list_pops},{free_list_net},{free_list_pop_misses},{retry_alloc},{retry_loops},{retry_structural},{max_insert_attempts},{max_remove_attempts}",
+            head_peak = self.head_peak,
+            retry_alloc = retry.retry_alloc,
+            retry_loops = retry.retry_loops,
+            retry_structural = retry.retry_structural,
+            max_insert_attempts = retry.max_insert_attempts,
+            max_remove_attempts = retry.max_remove_attempts,
+        )
+        .map_err(|err| format!("failed to write alloc telemetry sample: {}", err))
+    }
+}
+
+fn alloc_telemetry_config(profile_label: &str) -> Option<AllocTelemetryConfig> {
+    let raw_path = std::env::var("AEROSTORE_CRUCIBLE_ALLOC_TELEMETRY_PATH").ok()?;
+    let path_text = if raw_path.contains("{profile}") {
+        raw_path.replace("{profile}", profile_label)
+    } else {
+        raw_path
+    };
+
+    let sample_interval = Duration::from_millis(
+        std::env::var("AEROSTORE_CRUCIBLE_ALLOC_TELEMETRY_INTERVAL_MS")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or(DEFAULT_ALLOC_TELEMETRY_INTERVAL_MS),
+    );
+    let depth_scan_limit = std::env::var("AEROSTORE_CRUCIBLE_ALLOC_TELEMETRY_DEPTH_SCAN_LIMIT")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .filter(|v| *v > 0)
+        .unwrap_or(DEFAULT_ALLOC_TELEMETRY_DEPTH_SCAN_LIMIT);
+
+    Some(AllocTelemetryConfig {
+        path: PathBuf::from(path_text),
+        sample_interval,
+        depth_scan_limit,
+    })
+}
+
 fn run_aerostore_crucible(
     duration: Duration,
     profile: CrucibleProfile,
 ) -> Result<EngineRunResult, String> {
+    let alloc_telemetry_cfg = alloc_telemetry_config(profile.label);
     let shm = Arc::new(ShmArena::new(profile.aerostore_shm_bytes).map_err(|err| {
         format!(
             "failed to create Aerostore arena for {}: {}",
@@ -410,9 +608,36 @@ fn run_aerostore_crucible(
         return Err(err);
     }
 
+    let tracked_pid = std::process::id() as libc::pid_t;
+    let mut mem_peak_kb = 0_u64;
+    let mut mem_end_kb = 0_u64;
+    let mut mem_samples = 0_u64;
+    if let Some(sample_kb) = read_process_pss_kb(tracked_pid) {
+        mem_peak_kb = sample_kb;
+        mem_end_kb = sample_kb;
+        mem_samples = 1;
+    }
+
     let started = Instant::now();
     state.go.store(1, Ordering::Release);
+    let mut alloc_telemetry = if let Some(cfg) = alloc_telemetry_cfg {
+        Some(
+            AllocTelemetryRecorder::start(cfg, started, shm.as_ref())
+                .map_err(|err| format!("failed to start alloc telemetry: {}", err))?,
+        )
+    } else {
+        None
+    };
+    let mut alloc_telemetry_error: Option<String> = None;
+    if let Some(recorder) = alloc_telemetry.as_mut() {
+        if let Err(err) = recorder.maybe_sample(started, started, shm.as_ref(), &time_index) {
+            alloc_telemetry_error = Some(err);
+            alloc_telemetry = None;
+        }
+    }
+
     let deadline = started + duration;
+    let mut next_mem_sample = started;
     let mut epoch_lag_peak = reclaim_start.epoch.lag();
     while Instant::now() < deadline {
         let now = Instant::now();
@@ -424,6 +649,20 @@ fn run_aerostore_crucible(
         std::thread::sleep(sleep_for);
         let snapshot = read_epoch_lag_snapshot(shm.as_ref());
         epoch_lag_peak = epoch_lag_peak.max(snapshot.lag());
+        if now >= next_mem_sample {
+            if let Some(sample_kb) = read_process_pss_kb(tracked_pid) {
+                mem_peak_kb = mem_peak_kb.max(sample_kb);
+                mem_end_kb = sample_kb;
+                mem_samples = mem_samples.saturating_add(1);
+            }
+            next_mem_sample = now + Duration::from_millis(MEMORY_SAMPLE_INTERVAL_MS);
+        }
+        if let Some(recorder) = alloc_telemetry.as_mut() {
+            if let Err(err) = recorder.maybe_sample(now, started, shm.as_ref(), &time_index) {
+                alloc_telemetry_error = Some(err);
+                alloc_telemetry = None;
+            }
+        }
     }
     state.stop.store(1, Ordering::Release);
 
@@ -437,6 +676,14 @@ fn run_aerostore_crucible(
         .join()
         .map_err(|err| format!("Aerostore WAL daemon failed to exit cleanly: {err}"))?;
     stop_background_daemons(&vacuum_daemon, &index_gc_daemon);
+    if let Some(recorder) = alloc_telemetry {
+        if let Err(err) = recorder.finalize(Instant::now(), started, shm.as_ref(), &time_index) {
+            alloc_telemetry_error = Some(err);
+        }
+    }
+    if let Some(err) = alloc_telemetry_error {
+        eprintln!("alloc telemetry warning ({}): {}", profile.label, err);
+    }
 
     let reclaim_end = ReclaimSnapshot {
         index_retired_nodes: time_index.retired_nodes(),
@@ -476,6 +723,16 @@ fn run_aerostore_crucible(
         max_insert_attempts: index_retry.max_insert_attempts,
         max_remove_attempts: index_retry.max_remove_attempts,
     };
+    let memory_telemetry = if mem_samples > 0 {
+        Some(MemoryTelemetry {
+            source: "proc_pss_kb(parent)",
+            peak_kb: mem_peak_kb,
+            end_kb: mem_end_kb,
+            samples: mem_samples,
+        })
+    } else {
+        None
+    };
 
     if timed_out_workers > 0 {
         remove_if_exists(&wal_path);
@@ -492,6 +749,7 @@ fn run_aerostore_crucible(
         false,
         Some(reclaim_telemetry),
         Some(index_retry_telemetry),
+        memory_telemetry,
     );
     remove_if_exists(&wal_path);
     Ok(result)
@@ -720,6 +978,7 @@ fn run_postgres_crucible(
             reason
         )
     })?;
+    let container_id = container.id().to_string();
     let pg_port = container.get_host_port_ipv4(5432);
     let conn_str = format!(
         "host=127.0.0.1 port={} user=postgres password=postgres dbname=hyperfeed connect_timeout=5",
@@ -776,9 +1035,36 @@ fn run_postgres_crucible(
         err
     })?;
 
+    let mut mem_peak_kb = 0_u64;
+    let mut mem_end_kb = 0_u64;
+    let mut mem_samples = 0_u64;
+    if let Some(sample_kb) = sample_docker_container_mem_kb(container_id.as_str()) {
+        mem_peak_kb = sample_kb;
+        mem_end_kb = sample_kb;
+        mem_samples = 1;
+    }
+
     let started = Instant::now();
     state.go.store(1, Ordering::Release);
-    std::thread::sleep(duration);
+    let deadline = started + duration;
+    let mut next_mem_sample = started;
+    while Instant::now() < deadline {
+        let now = Instant::now();
+        if now >= deadline {
+            break;
+        }
+        if now >= next_mem_sample {
+            if let Some(sample_kb) = sample_docker_container_mem_kb(container_id.as_str()) {
+                mem_peak_kb = mem_peak_kb.max(sample_kb);
+                mem_end_kb = sample_kb;
+                mem_samples = mem_samples.saturating_add(1);
+            }
+            next_mem_sample = now + Duration::from_millis(MEMORY_SAMPLE_INTERVAL_MS);
+        }
+        let remaining = deadline.saturating_duration_since(now);
+        let sleep_for = remaining.min(Duration::from_millis(25));
+        std::thread::sleep(sleep_for);
+    }
     state.stop.store(1, Ordering::Release);
 
     let timed_out_workers =
@@ -792,8 +1078,25 @@ fn run_postgres_crucible(
         ));
     }
 
+    let memory_telemetry = if mem_samples > 0 {
+        Some(MemoryTelemetry {
+            source: "docker_stats_mem_usage_kb",
+            peak_kb: mem_peak_kb,
+            end_kb: mem_end_kb,
+            samples: mem_samples,
+        })
+    } else {
+        None
+    };
+
     Ok(aggregate_result(
-        "postgres", state, elapsed, true, None, None,
+        "postgres",
+        state,
+        elapsed,
+        true,
+        None,
+        None,
+        memory_telemetry,
     ))
 }
 
@@ -1151,6 +1454,7 @@ fn aggregate_result(
     include_server_exec: bool,
     reclaim_telemetry: Option<ReclaimTelemetry>,
     index_retry_telemetry: Option<IndexRetryTelemetry>,
+    memory_telemetry: Option<MemoryTelemetry>,
 ) -> EngineRunResult {
     let mut total_ops = 0_u64;
     let mut upsert_ops = 0_u64;
@@ -1223,6 +1527,7 @@ fn aggregate_result(
         scan_server_exec_latency,
         reclaim_telemetry,
         index_retry_telemetry,
+        memory_telemetry,
     }
 }
 
@@ -1299,6 +1604,35 @@ fn print_results(result: &ProfileRunResult, duration: Duration) {
         postgres.index_remove_failures,
         postgres.index_insert_failures,
     );
+
+    if aerostore.memory_telemetry.is_some() || postgres.memory_telemetry.is_some() {
+        println!(
+            "| Engine Memory Telemetry | Source | Peak (MiB) | End (MiB) | Samples | Notes |"
+        );
+        println!("|---|---|---:|---:|---:|---|");
+
+        if let Some(mem) = aerostore.memory_telemetry {
+            println!(
+                "| aerostore | {} | {:.2} | {:.2} | {} | profile_shm_bytes={} ({:.2} MiB) |",
+                mem.source,
+                kb_to_mib(mem.peak_kb),
+                kb_to_mib(mem.end_kb),
+                mem.samples,
+                result.profile.aerostore_shm_bytes,
+                result.profile.aerostore_shm_bytes as f64 / (1024.0 * 1024.0),
+            );
+        }
+
+        if let Some(mem) = postgres.memory_telemetry {
+            println!(
+                "| postgres | {} | {:.2} | {:.2} | {} | container_runtime_memory |",
+                mem.source,
+                kb_to_mib(mem.peak_kb),
+                kb_to_mib(mem.end_kb),
+                mem.samples,
+            );
+        }
+    }
 
     if let Some(reclaim) = aerostore.reclaim_telemetry {
         println!(
@@ -1527,6 +1861,80 @@ fn nanos_u64(duration: Duration) -> u64 {
 #[inline]
 fn ns_to_us(ns: u64) -> f64 {
     ns as f64 / 1_000.0
+}
+
+#[inline]
+fn kb_to_mib(kb: u64) -> f64 {
+    kb as f64 / 1024.0
+}
+
+fn read_process_pss_kb(pid: libc::pid_t) -> Option<u64> {
+    let path = format!("/proc/{pid}/smaps_rollup");
+    let contents = fs::read_to_string(path).ok()?;
+    for line in contents.lines() {
+        if let Some(rest) = line.strip_prefix("Pss:") {
+            let value = rest
+                .split_whitespace()
+                .next()
+                .and_then(|n| n.parse::<u64>().ok())?;
+            return Some(value);
+        }
+    }
+    None
+}
+
+fn sample_docker_container_mem_kb(container_id: &str) -> Option<u64> {
+    let output = Command::new("docker")
+        .arg("stats")
+        .arg("--no-stream")
+        .arg("--format")
+        .arg("{{.MemUsage}}")
+        .arg(container_id)
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8(output.stdout).ok()?;
+    parse_docker_mem_usage_kb(text.trim())
+}
+
+fn parse_docker_mem_usage_kb(text: &str) -> Option<u64> {
+    let used = text.split('/').next()?.trim();
+    parse_size_to_kb(used)
+}
+
+fn parse_size_to_kb(text: &str) -> Option<u64> {
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let split_idx = trimmed
+        .find(|c: char| !(c.is_ascii_digit() || c == '.'))
+        .unwrap_or(trimmed.len());
+    if split_idx == 0 {
+        return None;
+    }
+
+    let value = trimmed[..split_idx].trim().parse::<f64>().ok()?;
+    let unit = trimmed[split_idx..].trim().to_ascii_lowercase();
+    let kb = match unit.as_str() {
+        "b" => value / 1024.0,
+        "kb" => value,
+        "kib" => value,
+        "mb" => value * 1_000.0,
+        "mib" => value * 1_024.0,
+        "gb" => value * 1_000_000.0,
+        "gib" => value * 1_048_576.0,
+        "tb" => value * 1_000_000_000.0,
+        "tib" => value * 1_073_741_824.0,
+        _ => return None,
+    };
+    if !kb.is_finite() || kb < 0.0 {
+        return None;
+    }
+    Some(kb.round() as u64)
 }
 
 fn pick_row_id(worker_idx: usize, is_hot: bool, rng_state: &mut u64) -> usize {
