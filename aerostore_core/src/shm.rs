@@ -505,6 +505,38 @@ impl ShmArena {
             .unwrap_or(0)
     }
 
+    /// Best-effort lock-free depth estimate of the shared free-list.
+    ///
+    /// The estimate is bounded by `max_nodes` to keep sampling predictable.
+    /// Returns `(depth, truncated)` where `truncated=true` means traversal hit
+    /// `max_nodes` before reaching the end of the list.
+    #[inline]
+    pub fn free_list_depth_estimate(&self, max_nodes: usize) -> (u64, bool) {
+        let Some(header) = self.header_ref() else {
+            return (0, false);
+        };
+        if max_nodes == 0 {
+            return (0, header.free_list_head.load(Ordering::Acquire) != 0);
+        }
+
+        let mut depth = 0_u64;
+        let mut current = header.free_list_head.load(Ordering::Acquire);
+        let limit = max_nodes as u64;
+
+        while current != 0 && depth < limit {
+            let Some(node) = self.free_list_node_ref(current) else {
+                break;
+            };
+            if node.magic.load(Ordering::Acquire) != FREE_LIST_NODE_MAGIC {
+                break;
+            }
+            current = node.next.load(Ordering::Acquire);
+            depth = depth.saturating_add(1);
+        }
+
+        (depth, current != 0 && depth >= limit)
+    }
+
     #[inline]
     pub fn vacuum_daemon_pid(&self) -> i32 {
         self.header_ref()
@@ -527,6 +559,21 @@ impl ShmArena {
         if let Some(header) = self.header_ref() {
             header.vacuum_daemon_pid.store(pid, Ordering::Release);
         }
+    }
+
+    fn free_list_node_ref(&self, offset: u32) -> Option<&SharedFreeListNode> {
+        let start = offset as usize;
+        let end = start.checked_add(size_of::<SharedFreeListNode>())?;
+        if end > self.len {
+            return None;
+        }
+        let addr = (self.base.as_ptr() as usize).checked_add(start)?;
+        if addr % align_of::<SharedFreeListNode>() != 0 {
+            return None;
+        }
+        // SAFETY:
+        // Bounds and alignment are validated above against this mapped region.
+        Some(unsafe { &*(addr as *const SharedFreeListNode) })
     }
 }
 
