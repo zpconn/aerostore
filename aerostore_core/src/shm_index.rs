@@ -20,7 +20,7 @@ use crate::shm_skiplist::{
 const KEY_INLINE_BYTES: usize = 128;
 const ROWID_INLINE_BYTES: usize = MAX_PAYLOAD_BYTES;
 const DEFAULT_INDEX_ARENA_BYTES: usize = 64 << 20;
-const INDEX_INSERT_RETRY_LIMIT: usize = 1024;
+const INDEX_INSERT_RETRY_LIMIT: usize = 4096;
 const INDEX_REMOVE_RETRY_LIMIT: usize = 1;
 const INDEX_RECLAIM_BATCH: usize = 131_072;
 
@@ -688,7 +688,7 @@ where
                         );
                         return Err(err.into());
                     }
-                    retry_pause(attempt);
+                    retry_pause_with_kind(attempt, kind);
                 }
             }
         }
@@ -751,7 +751,7 @@ where
                         );
                         return Ok(());
                     }
-                    retry_pause(attempt);
+                    retry_pause_with_kind(attempt, kind);
                 }
             }
         }
@@ -781,11 +781,35 @@ fn classify_transient_skiplist_error(err: &ShmSkipListError) -> Option<RetryKind
 }
 
 #[inline]
-fn retry_pause(attempt: usize) {
-    if attempt < 16 {
-        std::hint::spin_loop();
-    } else {
-        thread::yield_now();
+fn retry_pause_with_kind(attempt: usize, kind: RetryKind) {
+    match kind {
+        RetryKind::Alloc => {
+            if attempt < 8 {
+                std::hint::spin_loop();
+                return;
+            }
+            if attempt < 32 {
+                thread::yield_now();
+                return;
+            }
+
+            // Allow GC/vacuum daemons to run and replenish recyclable index nodes.
+            let shift = ((attempt - 32) / 8).min(5);
+            let sleep_us = 50_u64 << shift;
+            thread::sleep(Duration::from_micros(sleep_us));
+        }
+        RetryKind::Structural | RetryKind::Epoch => {
+            if attempt < 16 {
+                std::hint::spin_loop();
+            } else if attempt < 128 {
+                thread::yield_now();
+            } else {
+                // Heavy structural churn benefits from short sleeps to break CAS herd effects.
+                let shift = ((attempt - 128) / 64).min(4);
+                let sleep_us = 25_u64 << shift;
+                thread::sleep(Duration::from_micros(sleep_us));
+            }
+        }
     }
 }
 

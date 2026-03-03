@@ -1006,7 +1006,31 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                     let curr = self
                         .node_ref(curr_offset)
                         .ok_or(ShmSkipListError::InvalidNode(curr_offset))?;
-                    let curr_lane = self.lane_ref(curr_offset, curr, level)?;
+                    let curr_lane = match self.lane_ref(curr_offset, curr, level) {
+                        Ok(lane) => lane,
+                        Err(ShmSkipListError::InvalidLane { .. }) => {
+                            // Heal stale upper-lane links (for example, when a node offset is
+                            // recycled with a lower height) by skipping this entry at `level`.
+                            let fallback_next =
+                                self.node_next_offset(curr_offset, 0).unwrap_or(NULL_OFFSET);
+                            let pred_lane = self.lane_ref_by_offset(pred_offset, level)?;
+                            if pred_lane
+                                .next
+                                .compare_exchange(
+                                    curr_offset,
+                                    fallback_next,
+                                    AtomicOrdering::AcqRel,
+                                    AtomicOrdering::Acquire,
+                                )
+                                .is_err()
+                            {
+                                continue 'retry;
+                            }
+                            curr_offset = fallback_next;
+                            continue;
+                        }
+                        Err(err) => return Err(err),
+                    };
                     let curr_next = curr_lane.next.load(AtomicOrdering::Acquire);
 
                     let node_marked =

@@ -571,13 +571,13 @@ fn run_aerostore_worker(
 
                     match committer.commit(table, &mut tx) {
                         Ok(_) => {
-                            if time_index
-                                .try_move_payload(
-                                    &IndexValue::I64(old_ts),
-                                    IndexValue::I64(new_ts),
-                                    &row_id,
-                                )
-                                .is_err()
+                            if !move_index_payload_with_retry(
+                                time_index,
+                                old_ts,
+                                new_ts,
+                                row_id,
+                                &state.stop,
+                            ) && state.stop.load(Ordering::Acquire) == 0
                             {
                                 stats.index_remove_failures.fetch_add(1, Ordering::AcqRel);
                                 stats.index_insert_failures.fetch_add(1, Ordering::AcqRel);
@@ -1487,6 +1487,42 @@ fn pick_row_id(worker_idx: usize, is_hot: bool, rng_state: &mut u64) -> usize {
     };
 
     base + ((next_u64(rng_state) as usize) % span)
+}
+
+fn move_index_payload_with_retry(
+    time_index: &SecondaryIndex<usize>,
+    old_ts: i64,
+    new_ts: i64,
+    row_id: usize,
+    stop: &AtomicU32,
+) -> bool {
+    const MOVE_RETRY_LIMIT: usize = 16;
+    for attempt in 0..=MOVE_RETRY_LIMIT {
+        if stop.load(Ordering::Acquire) != 0 {
+            return false;
+        }
+        if time_index
+            .try_move_payload(&IndexValue::I64(old_ts), IndexValue::I64(new_ts), &row_id)
+            .is_ok()
+        {
+            return true;
+        }
+
+        if attempt == MOVE_RETRY_LIMIT {
+            return false;
+        }
+
+        if attempt < 8 {
+            std::hint::spin_loop();
+        } else if attempt < 12 {
+            std::thread::yield_now();
+        } else {
+            let shift = ((attempt - 12) / 4).min(4);
+            let sleep_us = 50_u64 << shift;
+            std::thread::sleep(Duration::from_micros(sleep_us));
+        }
+    }
+    false
 }
 
 #[inline]
