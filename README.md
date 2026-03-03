@@ -327,6 +327,12 @@ Engine timing details for the same run:
 | `profile_512m` | `67.639` | `60.002` | Aerostore workers drained past the nominal 60s window before final shutdown/aggregation. |
 | `profile_1g` | `67.623` | `60.002` | Same drain behavior; comparison still uses total completed ops over measured elapsed window. |
 
+Additional exploratory 60s run with a larger Aerostore memory profile (`profile_2g`):
+
+| Profile | Aerostore TPS | Postgres TPS | TPS Ratio | Aerostore p99 (us) | Postgres p99 (us) | Index Remove Failures | Index Insert Failures | Aerostore elapsed (s) | Notes |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `profile_2g` | `958751.38` | `83671.27` | `11.46x` | `32.77` | `262.14` | `0` | `0` | `60.143` | Sustained run exceeded 10x while keeping index failures at zero. |
+
 First 60s attempt in this rerun sequence (before the passing run) failed one gate:
 - `profile_1g` observed `Aerostore p99 = 262.14us` vs `Postgres p99 = 262.14us` (ratio `1.000`, required `<= 0.600`).
 - A second immediate rerun passed both TPS and p99 gates for both profiles.

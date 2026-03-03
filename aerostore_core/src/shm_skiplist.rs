@@ -356,103 +356,53 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         payload: &[u8],
     ) -> Result<(), ShmSkipListError> {
         let _epoch_guard = ProcArrayEpochGuard::acquire(self.shm.as_ref())?;
+        self.insert_payload_inner(key, payload_len, payload)
+    }
+
+    pub fn move_payload_relink(
+        &self,
+        old_key: &K,
+        new_key: K,
+        payload_len: u16,
+        payload: &[u8],
+    ) -> Result<bool, ShmSkipListError> {
+        let _epoch_guard = ProcArrayEpochGuard::acquire(self.shm.as_ref())?;
         if payload_len as usize > MAX_PAYLOAD_BYTES || payload.len() < payload_len as usize {
             return Err(ShmSkipListError::PayloadTooLarge {
                 len: payload_len as usize,
                 max: MAX_PAYLOAD_BYTES,
             });
         }
-
-        let mut preds = [NULL_OFFSET; MAX_HEIGHT];
-        let mut succs = [NULL_OFFSET; MAX_HEIGHT];
-        loop {
-            let found = self.find(&key, &mut preds, &mut succs)?;
-            if let Some(found_offset) = found {
-                let node = self
-                    .node_ref(found_offset)
-                    .ok_or(ShmSkipListError::InvalidNode(found_offset))?;
-                let flags = node.flags.load(AtomicOrdering::Acquire);
-                if flags & NODE_FLAG_MARKED != 0 || flags & NODE_FLAG_FULLY_LINKED == 0 {
-                    continue;
-                }
-                self.prepend_posting(node, payload_len, payload)?;
-                return Ok(());
-            }
-
-            let posting_offset = self.alloc_posting_entry(payload_len, payload)?;
-
-            let header = self
-                .header_ref()
-                .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
-            let node_height = self.random_height(header) as usize;
-            let head_offset = header.head.load(AtomicOrdering::Acquire);
-            let observed_height = header
-                .current_height
-                .load(AtomicOrdering::Acquire)
-                .clamp(1, MAX_HEIGHT as u32) as usize;
-            for level in observed_height..node_height {
-                preds[level] = head_offset;
-                succs[level] = NULL_OFFSET;
-            }
-
-            let tower_offset = self.alloc_tower(node_height, &succs)?;
-            let node_offset =
-                self.alloc_node(key, node_height as u8, tower_offset, posting_offset)?;
-
-            let pred_lane_0 = self.lane_ref_by_offset(preds[0], 0)?;
-            if pred_lane_0
-                .next
-                .compare_exchange(
-                    succs[0],
-                    node_offset,
-                    AtomicOrdering::AcqRel,
-                    AtomicOrdering::Acquire,
-                )
-                .is_err()
-            {
-                self.recycle_unlinked_insert_allocations(
-                    node_offset,
-                    tower_offset,
-                    posting_offset,
-                    node_height,
-                )?;
-                continue;
-            }
-            header
-                .distinct_key_count
-                .fetch_add(1, AtomicOrdering::AcqRel);
-
-            for level in 1..node_height {
-                loop {
-                    let pred_lane = self.lane_ref_by_offset(preds[level], level)?;
-                    if pred_lane
-                        .next
-                        .compare_exchange(
-                            succs[level],
-                            node_offset,
-                            AtomicOrdering::AcqRel,
-                            AtomicOrdering::Acquire,
-                        )
-                        .is_ok()
-                    {
-                        break;
-                    }
-
-                    let _ = self.find(&key, &mut preds, &mut succs)?;
-                    if succs[level] == node_offset {
-                        break;
-                    }
-                }
-            }
-
-            let node = self
-                .node_ref(node_offset)
-                .ok_or(ShmSkipListError::InvalidNode(node_offset))?;
-            node.flags
-                .fetch_or(NODE_FLAG_FULLY_LINKED, AtomicOrdering::Release);
-            self.maybe_raise_height(header, node_height as u32);
-            return Ok(());
+        if old_key.cmp_key(&new_key) == Ordering::Equal {
+            return Ok(true);
         }
+
+        let Some(target_offset) = self.find_live_node_offset(&new_key)? else {
+            return Ok(false);
+        };
+
+        if let Some((posting_offset, old_node_offset, old_empty)) =
+            self.detach_matching_posting(old_key, payload_len, payload)?
+        {
+            if let Err(err) = self.attach_posting_to_existing_node(
+                target_offset,
+                posting_offset,
+                payload_len,
+                payload,
+            ) {
+                let _ = self.attach_posting_to_key(*old_key, posting_offset, payload_len, payload);
+                return Err(err);
+            }
+            if old_empty {
+                let _ = self.unlink_node(old_key, old_node_offset);
+            }
+            return Ok(true);
+        }
+
+        let target = self
+            .node_ref(target_offset)
+            .ok_or(ShmSkipListError::InvalidNode(target_offset))?;
+        self.node_contains_live_payload(target, payload_len, payload)
     }
 
     pub fn remove_payload(
@@ -504,6 +454,23 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         }
 
         Ok(())
+    }
+
+    fn insert_payload_inner(
+        &self,
+        key: K,
+        payload_len: u16,
+        payload: &[u8],
+    ) -> Result<(), ShmSkipListError> {
+        if payload_len as usize > MAX_PAYLOAD_BYTES || payload.len() < payload_len as usize {
+            return Err(ShmSkipListError::PayloadTooLarge {
+                len: payload_len as usize,
+                max: MAX_PAYLOAD_BYTES,
+            });
+        }
+
+        let posting_offset = self.alloc_posting_entry(payload_len, payload)?;
+        self.attach_posting_to_key(key, posting_offset, payload_len, payload)
     }
 
     pub fn lookup_payloads<F>(&self, key: &K, mut visit: F) -> Result<(), ShmSkipListError>
@@ -1323,13 +1290,11 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         }
     }
 
-    fn prepend_posting(
+    fn prepend_existing_posting(
         &self,
         node: &ShmSkipNode<K>,
-        payload_len: u16,
-        payload: &[u8],
+        posting_offset: u32,
     ) -> Result<(), ShmSkipListError> {
-        let posting_offset = self.alloc_posting_entry(payload_len, payload)?;
         let posting = self
             .posting_ref(posting_offset)
             .ok_or(ShmSkipListError::InvalidPosting(posting_offset))?;
@@ -1337,6 +1302,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         loop {
             let old = node.postings_head.load(AtomicOrdering::Acquire);
             posting.next.store(old, AtomicOrdering::Release);
+            posting.deleted.store(0, AtomicOrdering::Release);
             if node
                 .postings_head
                 .compare_exchange(
@@ -1351,6 +1317,242 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 return Ok(());
             }
         }
+    }
+
+    fn find_live_node_offset(&self, key: &K) -> Result<Option<u32>, ShmSkipListError> {
+        let mut preds = [NULL_OFFSET; MAX_HEIGHT];
+        let mut succs = [NULL_OFFSET; MAX_HEIGHT];
+        let Some(node_offset) = self.find(key, &mut preds, &mut succs)? else {
+            return Ok(None);
+        };
+        let node = self
+            .node_ref(node_offset)
+            .ok_or(ShmSkipListError::InvalidNode(node_offset))?;
+        let flags = node.flags.load(AtomicOrdering::Acquire);
+        if flags & NODE_FLAG_MARKED != 0 || flags & NODE_FLAG_FULLY_LINKED == 0 {
+            return Ok(None);
+        }
+        Ok(Some(node_offset))
+    }
+
+    fn node_contains_live_payload(
+        &self,
+        node: &ShmSkipNode<K>,
+        payload_len: u16,
+        payload: &[u8],
+    ) -> Result<bool, ShmSkipListError> {
+        let mut post_offset = node.postings_head.load(AtomicOrdering::Acquire);
+        while post_offset != NULL_OFFSET {
+            let post = self
+                .posting_ref(post_offset)
+                .ok_or(ShmSkipListError::InvalidPosting(post_offset))?;
+            if post.deleted.load(AtomicOrdering::Acquire) == 0
+                && post.len == payload_len
+                && post.payload[..payload_len as usize] == payload[..payload_len as usize]
+            {
+                return Ok(true);
+            }
+            post_offset = post.next.load(AtomicOrdering::Acquire);
+        }
+        Ok(false)
+    }
+
+    fn detach_matching_posting(
+        &self,
+        key: &K,
+        payload_len: u16,
+        payload: &[u8],
+    ) -> Result<Option<(u32, u32, bool)>, ShmSkipListError> {
+        let mut preds = [NULL_OFFSET; MAX_HEIGHT];
+        let mut succs = [NULL_OFFSET; MAX_HEIGHT];
+        let Some(node_offset) = self.find(key, &mut preds, &mut succs)? else {
+            return Ok(None);
+        };
+
+        'retry: loop {
+            let node = self
+                .node_ref(node_offset)
+                .ok_or(ShmSkipListError::InvalidNode(node_offset))?;
+            let flags = node.flags.load(AtomicOrdering::Acquire);
+            if flags & NODE_FLAG_MARKED != 0 || flags & NODE_FLAG_FULLY_LINKED == 0 {
+                return Ok(None);
+            }
+
+            let mut prev_offset = NULL_OFFSET;
+            let mut post_offset = node.postings_head.load(AtomicOrdering::Acquire);
+            while post_offset != NULL_OFFSET {
+                let post = self
+                    .posting_ref(post_offset)
+                    .ok_or(ShmSkipListError::InvalidPosting(post_offset))?;
+                let next = post.next.load(AtomicOrdering::Acquire);
+                let is_match = post.deleted.load(AtomicOrdering::Acquire) == 0
+                    && post.len == payload_len
+                    && post.payload[..payload_len as usize] == payload[..payload_len as usize];
+                if is_match {
+                    let detached = if prev_offset == NULL_OFFSET {
+                        node.postings_head
+                            .compare_exchange(
+                                post_offset,
+                                next,
+                                AtomicOrdering::AcqRel,
+                                AtomicOrdering::Acquire,
+                            )
+                            .is_ok()
+                    } else {
+                        let prev = self
+                            .posting_ref(prev_offset)
+                            .ok_or(ShmSkipListError::InvalidPosting(prev_offset))?;
+                        prev.next
+                            .compare_exchange(
+                                post_offset,
+                                next,
+                                AtomicOrdering::AcqRel,
+                                AtomicOrdering::Acquire,
+                            )
+                            .is_ok()
+                    };
+                    if !detached {
+                        continue 'retry;
+                    }
+
+                    let detached_post = self
+                        .posting_ref(post_offset)
+                        .ok_or(ShmSkipListError::InvalidPosting(post_offset))?;
+                    detached_post
+                        .next
+                        .store(NULL_OFFSET, AtomicOrdering::Release);
+                    detached_post.deleted.store(0, AtomicOrdering::Release);
+                    let old_empty = self.decrement_live_postings(node) == 0;
+                    return Ok(Some((post_offset, node_offset, old_empty)));
+                }
+
+                prev_offset = post_offset;
+                post_offset = next;
+            }
+
+            return Ok(None);
+        }
+    }
+
+    fn attach_posting_to_key(
+        &self,
+        key: K,
+        posting_offset: u32,
+        payload_len: u16,
+        payload: &[u8],
+    ) -> Result<(), ShmSkipListError> {
+        let mut preds = [NULL_OFFSET; MAX_HEIGHT];
+        let mut succs = [NULL_OFFSET; MAX_HEIGHT];
+        loop {
+            let found = self.find(&key, &mut preds, &mut succs)?;
+            if let Some(found_offset) = found {
+                let node = self
+                    .node_ref(found_offset)
+                    .ok_or(ShmSkipListError::InvalidNode(found_offset))?;
+                let flags = node.flags.load(AtomicOrdering::Acquire);
+                if flags & NODE_FLAG_MARKED != 0 || flags & NODE_FLAG_FULLY_LINKED == 0 {
+                    continue;
+                }
+                if self.node_contains_live_payload(node, payload_len, payload)? {
+                    self.push_recycled_posting(posting_offset)?;
+                    return Ok(());
+                }
+                self.prepend_existing_posting(node, posting_offset)?;
+                return Ok(());
+            }
+
+            let header = self
+                .header_ref()
+                .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
+            let node_height = self.random_height(header) as usize;
+            let head_offset = header.head.load(AtomicOrdering::Acquire);
+            let observed_height = header
+                .current_height
+                .load(AtomicOrdering::Acquire)
+                .clamp(1, MAX_HEIGHT as u32) as usize;
+            for level in observed_height..node_height {
+                preds[level] = head_offset;
+                succs[level] = NULL_OFFSET;
+            }
+
+            let tower_offset = self.alloc_tower(node_height, &succs)?;
+            let node_offset =
+                self.alloc_node(key, node_height as u8, tower_offset, posting_offset)?;
+
+            let pred_lane_0 = self.lane_ref_by_offset(preds[0], 0)?;
+            if pred_lane_0
+                .next
+                .compare_exchange(
+                    succs[0],
+                    node_offset,
+                    AtomicOrdering::AcqRel,
+                    AtomicOrdering::Acquire,
+                )
+                .is_err()
+            {
+                self.recycle_unlinked_insert_node_and_tower(
+                    node_offset,
+                    tower_offset,
+                    node_height,
+                )?;
+                continue;
+            }
+            header
+                .distinct_key_count
+                .fetch_add(1, AtomicOrdering::AcqRel);
+
+            for level in 1..node_height {
+                loop {
+                    let pred_lane = self.lane_ref_by_offset(preds[level], level)?;
+                    if pred_lane
+                        .next
+                        .compare_exchange(
+                            succs[level],
+                            node_offset,
+                            AtomicOrdering::AcqRel,
+                            AtomicOrdering::Acquire,
+                        )
+                        .is_ok()
+                    {
+                        break;
+                    }
+
+                    let _ = self.find(&key, &mut preds, &mut succs)?;
+                    if succs[level] == node_offset {
+                        break;
+                    }
+                }
+            }
+
+            let node = self
+                .node_ref(node_offset)
+                .ok_or(ShmSkipListError::InvalidNode(node_offset))?;
+            node.flags
+                .fetch_or(NODE_FLAG_FULLY_LINKED, AtomicOrdering::Release);
+            self.maybe_raise_height(header, node_height as u32);
+            return Ok(());
+        }
+    }
+
+    fn attach_posting_to_existing_node(
+        &self,
+        node_offset: u32,
+        posting_offset: u32,
+        payload_len: u16,
+        payload: &[u8],
+    ) -> Result<(), ShmSkipListError> {
+        let node = self
+            .node_ref(node_offset)
+            .ok_or(ShmSkipListError::InvalidNode(node_offset))?;
+        let flags = node.flags.load(AtomicOrdering::Acquire);
+        if flags & NODE_FLAG_MARKED != 0 || flags & NODE_FLAG_FULLY_LINKED == 0 {
+            return Err(ShmSkipListError::InvalidNode(node_offset));
+        }
+        if self.node_contains_live_payload(node, payload_len, payload)? {
+            self.push_recycled_posting(posting_offset)?;
+            return Ok(());
+        }
+        self.prepend_existing_posting(node, posting_offset)
     }
 
     #[inline]
@@ -1645,14 +1847,12 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         Ok(ptr)
     }
 
-    fn recycle_unlinked_insert_allocations(
+    fn recycle_unlinked_insert_node_and_tower(
         &self,
         node_offset: u32,
         tower_offset: u32,
-        posting_offset: u32,
         node_height: usize,
     ) -> Result<(), ShmSkipListError> {
-        self.push_recycled_posting(posting_offset)?;
         self.push_recycled_tower(tower_offset, node_height)?;
         self.push_recycled_node(node_offset)?;
         Ok(())
