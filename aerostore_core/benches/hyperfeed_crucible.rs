@@ -189,6 +189,7 @@ struct EngineRunResult {
     scan_latency: LatencySummary,
     scan_server_exec_latency: Option<LatencySummary>,
     reclaim_telemetry: Option<ReclaimTelemetry>,
+    index_retry_telemetry: Option<IndexRetryTelemetry>,
 }
 
 #[derive(Debug)]
@@ -211,6 +212,18 @@ struct ReclaimTelemetry {
     index_reclaimed_nodes_delta: u64,
     free_list_pushes_delta: u64,
     free_list_pops_delta: u64,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct IndexRetryTelemetry {
+    insert_ops: u64,
+    remove_ops: u64,
+    retry_loops: u64,
+    retry_alloc: u64,
+    retry_structural: u64,
+    retry_epoch: u64,
+    max_insert_attempts: u64,
+    max_remove_attempts: u64,
 }
 
 #[derive(Clone, Copy)]
@@ -423,6 +436,17 @@ fn run_aerostore_crucible(
             .free_list_pops
             .saturating_sub(reclaim_start.free_list_pops),
     };
+    let index_retry = time_index.mutation_telemetry();
+    let index_retry_telemetry = IndexRetryTelemetry {
+        insert_ops: index_retry.insert_ops,
+        remove_ops: index_retry.remove_ops,
+        retry_loops: index_retry.retry_loops,
+        retry_alloc: index_retry.retry_alloc,
+        retry_structural: index_retry.retry_structural,
+        retry_epoch: index_retry.retry_epoch,
+        max_insert_attempts: index_retry.max_insert_attempts,
+        max_remove_attempts: index_retry.max_remove_attempts,
+    };
 
     if timed_out_workers > 0 {
         remove_if_exists(&wal_path);
@@ -432,7 +456,14 @@ fn run_aerostore_crucible(
         ));
     }
 
-    let result = aggregate_result("aerostore", state, elapsed, false, Some(reclaim_telemetry));
+    let result = aggregate_result(
+        "aerostore",
+        state,
+        elapsed,
+        false,
+        Some(reclaim_telemetry),
+        Some(index_retry_telemetry),
+    );
     remove_if_exists(&wal_path);
     Ok(result)
 }
@@ -541,15 +572,14 @@ fn run_aerostore_worker(
                     match committer.commit(table, &mut tx) {
                         Ok(_) => {
                             if time_index
-                                .try_remove(&IndexValue::I64(old_ts), &row_id)
+                                .try_move_payload(
+                                    &IndexValue::I64(old_ts),
+                                    IndexValue::I64(new_ts),
+                                    &row_id,
+                                )
                                 .is_err()
                             {
                                 stats.index_remove_failures.fetch_add(1, Ordering::AcqRel);
-                            }
-                            if time_index
-                                .try_insert(IndexValue::I64(new_ts), row_id)
-                                .is_err()
-                            {
                                 stats.index_insert_failures.fetch_add(1, Ordering::AcqRel);
                             }
                             break;
@@ -587,8 +617,11 @@ fn run_aerostore_worker(
             QueryKind::Scan => {
                 let head_ts = state.global_event_ts.load(Ordering::Acquire);
                 let bound = head_ts.saturating_sub(SCAN_TAIL_WINDOW);
-                let hits = time_index.lookup(&IndexCompare::Gt(IndexValue::I64(bound)));
-                black_box(hits.len());
+                let hits = time_index.lookup_count_with_limit(
+                    &IndexCompare::Gt(IndexValue::I64(bound)),
+                    SCAN_LIMIT as usize,
+                );
+                black_box(hits);
 
                 let elapsed_ns = nanos_u64(started.elapsed());
                 stats.total_ops.fetch_add(1, Ordering::AcqRel);
@@ -715,7 +748,9 @@ fn run_postgres_crucible(
         ));
     }
 
-    Ok(aggregate_result("postgres", state, elapsed, true, None))
+    Ok(aggregate_result(
+        "postgres", state, elapsed, true, None, None,
+    ))
 }
 
 fn ensure_docker_ready() -> Result<(), String> {
@@ -1071,6 +1106,7 @@ fn aggregate_result(
     elapsed: Duration,
     include_server_exec: bool,
     reclaim_telemetry: Option<ReclaimTelemetry>,
+    index_retry_telemetry: Option<IndexRetryTelemetry>,
 ) -> EngineRunResult {
     let mut total_ops = 0_u64;
     let mut upsert_ops = 0_u64;
@@ -1142,6 +1178,7 @@ fn aggregate_result(
         scan_latency,
         scan_server_exec_latency,
         reclaim_telemetry,
+        index_retry_telemetry,
     }
 }
 
@@ -1232,6 +1269,25 @@ fn print_results(result: &ProfileRunResult, duration: Duration) {
             reclaim.index_reclaimed_nodes_delta,
             reclaim.free_list_pushes_delta,
             reclaim.free_list_pops_delta,
+        );
+    }
+
+    if let Some(retry) = aerostore.index_retry_telemetry {
+        println!(
+            "| Aerostore Index Retry Telemetry | insert_ops | remove_ops | retry_loops | retry_alloc | retry_structural | retry_epoch | max_insert_attempts | max_remove_attempts |"
+        );
+        println!("|---|---:|---:|---:|---:|---:|---:|---:|---:|");
+        println!(
+            "| {} | {} | {} | {} | {} | {} | {} | {} | {} |",
+            result.profile.label,
+            retry.insert_ops,
+            retry.remove_ops,
+            retry.retry_loops,
+            retry.retry_alloc,
+            retry.retry_structural,
+            retry.retry_epoch,
+            retry.max_insert_attempts,
+            retry.max_remove_attempts,
         );
     }
 

@@ -120,6 +120,14 @@ struct ShmSkipHeader<K: ShmSkipKey> {
     retired_head: RelPtr<ShmSkipNode<K>>,
     retired_nodes: AtomicU64,
     reclaimed_nodes: AtomicU64,
+    retry_insert_ops: AtomicU64,
+    retry_remove_ops: AtomicU64,
+    retry_loops: AtomicU64,
+    retry_alloc: AtomicU64,
+    retry_structural: AtomicU64,
+    retry_epoch: AtomicU64,
+    retry_max_insert_attempts: AtomicU64,
+    retry_max_remove_attempts: AtomicU64,
     gc_daemon_pid: AtomicI32,
 }
 
@@ -138,6 +146,14 @@ impl<K: ShmSkipKey> ShmSkipHeader<K> {
             retired_head: RelPtr::null(),
             retired_nodes: AtomicU64::new(0),
             reclaimed_nodes: AtomicU64::new(0),
+            retry_insert_ops: AtomicU64::new(0),
+            retry_remove_ops: AtomicU64::new(0),
+            retry_loops: AtomicU64::new(0),
+            retry_alloc: AtomicU64::new(0),
+            retry_structural: AtomicU64::new(0),
+            retry_epoch: AtomicU64::new(0),
+            retry_max_insert_attempts: AtomicU64::new(0),
+            retry_max_remove_attempts: AtomicU64::new(0),
             gc_daemon_pid: AtomicI32::new(0),
         }
     }
@@ -225,6 +241,18 @@ pub struct ShmSkipList<K: ShmSkipKey> {
     shm: Arc<ShmArena>,
     header_offset: u32,
     _marker: PhantomData<K>,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ShmSkipMutationTelemetry {
+    pub insert_ops: u64,
+    pub remove_ops: u64,
+    pub retry_loops: u64,
+    pub retry_alloc: u64,
+    pub retry_structural: u64,
+    pub retry_epoch: u64,
+    pub max_insert_attempts: u64,
+    pub max_remove_attempts: u64,
 }
 
 struct ProcArrayEpochGuard<'a> {
@@ -560,7 +588,26 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
     where
         F: FnMut(&K, u16, &[u8]),
     {
+        self.scan_payloads_bounded_with_limit(lower, upper, usize::MAX, |key, len, payload| {
+            visit(key, len, payload);
+        })
+    }
+
+    pub fn scan_payloads_bounded_with_limit<F>(
+        &self,
+        lower: Option<(&K, ScanBound)>,
+        upper: Option<(&K, ScanBound)>,
+        limit: usize,
+        mut visit: F,
+    ) -> Result<(), ShmSkipListError>
+    where
+        F: FnMut(&K, u16, &[u8]),
+    {
+        if limit == 0 {
+            return Ok(());
+        }
         let _epoch_guard = ProcArrayEpochGuard::acquire(self.shm.as_ref())?;
+        let mut emitted = 0_usize;
         let mut curr_offset = match lower {
             Some((bound, mode)) => {
                 let mut start = self.seek_ge(bound)?.load(AtomicOrdering::Acquire);
@@ -623,6 +670,10 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                             return Err(ShmSkipListError::InvalidPosting(post_offset));
                         }
                         visit(&node.key, post.len, &post.payload[..len]);
+                        emitted = emitted.saturating_add(1);
+                        if emitted >= limit {
+                            return Ok(());
+                        }
                     }
                     post_offset = post.next.load(AtomicOrdering::Acquire);
                 }
@@ -862,6 +913,68 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             .unwrap_or(0)
     }
 
+    #[inline]
+    pub fn mutation_telemetry(&self) -> ShmSkipMutationTelemetry {
+        let Some(header) = self.header_ref() else {
+            return ShmSkipMutationTelemetry::default();
+        };
+        ShmSkipMutationTelemetry {
+            insert_ops: header.retry_insert_ops.load(AtomicOrdering::Acquire),
+            remove_ops: header.retry_remove_ops.load(AtomicOrdering::Acquire),
+            retry_loops: header.retry_loops.load(AtomicOrdering::Acquire),
+            retry_alloc: header.retry_alloc.load(AtomicOrdering::Acquire),
+            retry_structural: header.retry_structural.load(AtomicOrdering::Acquire),
+            retry_epoch: header.retry_epoch.load(AtomicOrdering::Acquire),
+            max_insert_attempts: header
+                .retry_max_insert_attempts
+                .load(AtomicOrdering::Acquire),
+            max_remove_attempts: header
+                .retry_max_remove_attempts
+                .load(AtomicOrdering::Acquire),
+        }
+    }
+
+    #[inline]
+    pub(crate) fn record_mutation_telemetry(
+        &self,
+        is_insert: bool,
+        attempts: u32,
+        retry_alloc: u32,
+        retry_structural: u32,
+        retry_epoch: u32,
+    ) {
+        let Some(header) = self.header_ref() else {
+            return;
+        };
+        if is_insert {
+            header.retry_insert_ops.fetch_add(1, AtomicOrdering::AcqRel);
+            atomic_max_u64(&header.retry_max_insert_attempts, attempts as u64);
+        } else {
+            header.retry_remove_ops.fetch_add(1, AtomicOrdering::AcqRel);
+            atomic_max_u64(&header.retry_max_remove_attempts, attempts as u64);
+        }
+
+        let loops = attempts.saturating_sub(1) as u64;
+        if loops > 0 {
+            header.retry_loops.fetch_add(loops, AtomicOrdering::AcqRel);
+        }
+        if retry_alloc != 0 {
+            header
+                .retry_alloc
+                .fetch_add(retry_alloc as u64, AtomicOrdering::AcqRel);
+        }
+        if retry_structural != 0 {
+            header
+                .retry_structural
+                .fetch_add(retry_structural as u64, AtomicOrdering::AcqRel);
+        }
+        if retry_epoch != 0 {
+            header
+                .retry_epoch
+                .fetch_add(retry_epoch as u64, AtomicOrdering::AcqRel);
+        }
+    }
+
     fn find(
         &self,
         key: &K,
@@ -1086,14 +1199,19 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 .store(1, AtomicOrdering::Release);
         }
 
+        // Ensure the node is detached from every lane before retiring its offsets.
+        // If we retire after only level-0 is unlinked, stale upper-lane pointers can
+        // survive long enough to hit recycled offsets and trigger structural retries.
         let mut preds = [NULL_OFFSET; MAX_HEIGHT];
         let mut succs = [NULL_OFFSET; MAX_HEIGHT];
         loop {
             let _ = self.find(key, &mut preds, &mut succs)?;
-            if succs[0] != node_offset {
-                break;
-            }
+            let mut detached_all = true;
             for level in (0..height).rev() {
+                if succs[level] != node_offset {
+                    continue;
+                }
+                detached_all = false;
                 let pred_lane = self.lane_ref_by_offset(preds[level], level)?;
                 let next = self.node_next_offset(node_offset, level)?;
                 let _ = pred_lane.next.compare_exchange(
@@ -1102,6 +1220,9 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                     AtomicOrdering::AcqRel,
                     AtomicOrdering::Acquire,
                 );
+            }
+            if detached_all {
+                break;
             }
         }
 
@@ -1455,6 +1576,19 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         }
     }
 
+    fn pop_recycled_tower_at_least(&self, min_height: usize) -> Option<u32> {
+        if min_height > MAX_HEIGHT {
+            return None;
+        }
+
+        for tower_height in min_height..=MAX_HEIGHT {
+            if let Some(offset) = self.pop_recycled_tower(tower_height) {
+                return Some(offset);
+            }
+        }
+        None
+    }
+
     fn node_ptr(&self, offset: u32) -> Result<*mut ShmSkipNode<K>, ShmSkipListError> {
         let start = offset as usize;
         let end = start
@@ -1529,6 +1663,8 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             .checked_mul(height)
             .ok_or(ShmAllocError::SizeOverflow)?;
         let tower_offset = if let Some(offset) = self.pop_recycled_tower(height) {
+            offset
+        } else if let Some(offset) = self.pop_recycled_tower_at_least(height + 1) {
             offset
         } else {
             self.shm
@@ -1773,6 +1909,22 @@ fn lane_from_node<K: ShmSkipKey>(
     // SAFETY:
     // `tower_ptr` validates pointer bounds and alignment against the mapped segment.
     Some(unsafe { &*ptr.cast_const() })
+}
+
+#[inline]
+fn atomic_max_u64(slot: &AtomicU64, candidate: u64) {
+    let mut current = slot.load(AtomicOrdering::Acquire);
+    while candidate > current {
+        match slot.compare_exchange_weak(
+            current,
+            candidate,
+            AtomicOrdering::AcqRel,
+            AtomicOrdering::Acquire,
+        ) {
+            Ok(_) => return,
+            Err(observed) => current = observed,
+        }
+    }
 }
 
 #[inline]
