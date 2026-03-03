@@ -295,13 +295,13 @@ Run scope:
 - Benchmark-style functions executed: 30
 - Total benchmark entrypoints executed: 36
 - Crucible runs executed: 2 sustained 60-second runs (first run failed one gate; second run passed all gates)
-- Overall status: benchmark coverage completed; one reproducible `wal_crash_recovery` test failure remains.
+- Overall status: benchmark coverage completed; post-fix workspace rerun is passing.
 
 ### Full Test Sweep Status (2026-03-03)
 | Check Group | Result | Notes |
 | --- | --- | --- |
-| `cargo test --workspace -- --nocapture` | fail | One failing test: `async_wal_daemon_crash_then_restart_replays_tcl_like_upserts_and_indexes` (`missing recovered row for key AAL456`); all other workspace tests passed. |
-| `cargo test -p aerostore_core --test wal_crash_recovery -- --nocapture --test-threads=1` | fail | Same failure reproduced (`10/11` passed). |
+| `cargo test --workspace -- --nocapture` | pass | Post-fix rerun completed with all workspace tests passing (including `wal_crash_recovery`). |
+| `cargo test -p aerostore_core --test wal_crash_recovery -- --nocapture --test-threads=1` | pass | `11/11` passed after fixing WAL writer epoch restart race. |
 | tmpfs warm-restart tests and benchmarks | pass (with host `/dev/shm`) | Requires host-level mmap permissions; reruns succeeded once executed with `/dev/shm` access. |
 | vacuum and reclaim suites | pass | Stress, leader-handoff, and free-list invariants suites passed in workspace run. |
 | hot-row OCC contention suites | pass | `timed_out_workers=0` in release benchmark runs. |
@@ -410,7 +410,7 @@ For parallel integration jobs:
 - Many strongest tests are Unix/Linux specific (`fork`, `/dev/shm`, signals).
 - Throughput thresholds are host-sensitive.
 - Tcl bridge uses process-global initialization (`OnceLock`), so one DB instance per process.
-- `wal_crash_recovery` currently has a reproducible failing case on this branch: `async_wal_daemon_crash_then_restart_replays_tcl_like_upserts_and_indexes` (`missing recovered row for key AAL456` in latest reruns).
+- WAL crash-recovery behavior is timing-sensitive around daemon kill/restart paths; latest branch reruns pass after the writer-epoch restart race fix.
 
 ## License
 No license file is currently present.
