@@ -13,6 +13,8 @@ The project is optimized around:
 - tmpfs warm restarts to avoid routine cold-start replay,
 - Tcl FFI ingestion/search integration.
 
+Under benchmark conditions ("The Crucible" benchmark here), aerostore has achieved an order-of-magnitude performance improvement over PostgreSQL.
+
 ## Table of Contents
 - [Current Scope](#current-scope)
 - [Repository Layout](#repository-layout)
