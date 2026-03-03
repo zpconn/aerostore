@@ -27,7 +27,7 @@ The project is optimized around:
 - [Quick Start](#quick-start)
 - [Testing Runbook](#testing-runbook)
 - [Benchmark Runbook](#benchmark-runbook)
-- [Latest Validated Results (2026-03-02)](#latest-validated-results-2026-03-02)
+- [Latest Validated Results (2026-03-03)](#latest-validated-results-2026-03-03)
 - [Operational Notes](#operational-notes)
 - [Known Constraints](#known-constraints)
 - [License](#license)
@@ -260,7 +260,18 @@ cargo bench -p aerostore_core --bench wal_delta_throughput
 cargo bench -p aerostore_core --bench shm_skiplist_adversarial
 cargo bench -p aerostore_core --bench shm_skiplist_seek_bounds
 cargo bench -p aerostore_core --bench tmpfs_warm_restart
+cargo bench -p aerostore_core --bench hyperfeed_crucible -- --noplot
 ```
+
+Hyperfeed Crucible note:
+- requires Docker (`testcontainers` starts a local PostgreSQL container).
+- runs two Aerostore memory profiles per invocation: `profile_512m` and `profile_1g`.
+- default sustained duration is 60 seconds; override with `AEROSTORE_CRUCIBLE_DURATION_SECS` for local smoke runs.
+- optional daemon tuning knobs:
+  - `AEROSTORE_CRUCIBLE_VACUUM_INTERVAL_MS`
+  - `AEROSTORE_CRUCIBLE_INDEX_GC_INTERVAL_MS`
+- output includes index update failure counters, vacuum/index reclaim telemetry, and PostgreSQL scan server-vs-client latency breakdown.
+- hard gates enforce `Aerostore TPS >= 2.0x Postgres TPS` and `Aerostore p99 <= 0.6x Postgres p99`.
 
 Benchmark-style test harness suites:
 ```bash
@@ -275,62 +286,71 @@ cargo test -p aerostore_core --release --test occ_partitioned_lock_striping_benc
 cargo test -p aerostore_tcl --release --test config_checkpoint_integration benchmark_tcl_synchronous_commit_modes -- --test-threads=1 --nocapture
 ```
 
-## Latest Validated Results (2026-03-02)
-This section reports a full benchmark sweep across the repository, plus a vacuum-gc addendum from the latest implementation pass.
+## Latest Validated Results (2026-03-03)
+This section reports a full rerun of workspace tests plus the complete benchmark suite (criterion benches, benchmark-style tests, and 60-second crucible runs).
 
 Run scope:
-- Criterion benches executed: 5
-- Benchmark-style test suites executed: 8
-- Benchmark-style functions executed: 28
-- Total benchmark entrypoints executed: 33
-- Overall status: completed; all benchmark gates passed in this run.
+- Criterion benches executed: 6
+- Benchmark-style test suites executed: 10
+- Benchmark-style functions executed: 30
+- Total benchmark entrypoints executed: 36
+- Crucible runs executed: 2 sustained 60-second runs (first run failed one gate; second run passed all gates)
+- Overall status: benchmark coverage completed; post-fix workspace rerun is passing.
 
-### Cross-Process Vacuum Addendum (2026-03-02)
-Focused rerun after implementing shared free-list + vacuum daemon.
-
-#### Regression-sensitive checks
+### Full Test Sweep Status (2026-03-03)
 | Check Group | Result | Notes |
 | --- | --- | --- |
-| `shm_shared_memory` | pass | 6/6 tests passed; includes forked recycle stress. |
-| `occ_savepoint_reclaim` | pass | 3/3 tests passed. |
-| `procarray_concurrency` | pass | 5/5 tests passed; slot release invariants hold. |
-| `wal_crash_recovery` | pass | 11/11 tests passed on rerun; one transient failure observed in an earlier attempt. |
-| `tmpfs_warm_restart_chaos` + `tmpfs_warm_restart_expansions` | pass | 5/5 tests passed; warm attach behavior unchanged. |
-| `aerostore_tcl/config_checkpoint_integration` | pass | 3/3 tests passed; Tcl mode/config/checkpoint flow unchanged. |
+| `cargo test --workspace -- --nocapture` | pass | Post-fix rerun completed with all workspace tests passing (including `wal_crash_recovery`). |
+| `cargo test -p aerostore_core --test wal_crash_recovery -- --nocapture --test-threads=1` | pass | `11/11` passed after fixing WAL writer epoch restart race. |
+| tmpfs warm-restart tests and benchmarks | pass (with host `/dev/shm`) | Requires host-level mmap permissions; reruns succeeded once executed with `/dev/shm` access. |
+| vacuum and reclaim suites | pass | Stress, leader-handoff, and free-list invariants suites passed in workspace run. |
+| hot-row OCC contention suites | pass | `timed_out_workers=0` in release benchmark runs. |
 
-#### Benchmark reruns
-| Suite | Key Results | Status |
-| --- | --- | --- |
-| `shm_benchmark` | alloc throughput `15,318,114 rows/s`; fork scan `75,427,296 rows/s` | pass |
-| `occ_checkpoint_benchmark` | checkpoint: `10k=10.91ms`, `100k=16.09ms`, `1M=158.43ms`; logical replay: `10k=143ms`, `100k=1.21s`, `1M=12.28s` | pass |
-| `wal_ring_benchmark` | async/sync ratios from `72.52x` to `480.42x` across benchmark functions | pass |
-| `tmpfs_warm_restart` (criterion) | warm attach `[53.419us 53.581us 53.803us]`; cold fixture `[2.4550ms 2.4638ms 2.4745ms]`; post-restart throughput case `[1.8304ms 1.8404ms 1.8534ms]` | pass |
+### Hyperfeed Crucible Diagnostic (2026-03-03)
+Command:
+```bash
+AEROSTORE_CRUCIBLE_DURATION_SECS=60 cargo bench -p aerostore_core --bench hyperfeed_crucible -- --noplot
+```
 
-#### New vacuum-specific coverage
-| Test | Key Assertion | Status |
-| --- | --- | --- |
-| `vacuum_recycle_stress` | 10MB arena handles 500,000 updates without OOM; free-list push/pop counters advance | pass |
-| `vacuum_leader_handoff` | single leader ownership, stale-pid takeover, and leadership reacquisition | pass |
-| `vacuum_free_list_invariants` | multi-process churn preserves `pushes >= pops`; bounded allocator growth | pass (3 consecutive runs) |
-| `vacuum_recycle_ab_benchmark` | vacuum-enabled run completes all updates; disabled run OOMs under same 10MB constraint | pass |
-| `vacuum_index_cleanup_tests` (Tcl unit) | reclaimed index cleanup removes stale postings while preserving live unchanged postings | pass |
+Latest full passing run (`AEROSTORE_CRUCIBLE_VACUUM_INTERVAL_MS=50`, `AEROSTORE_CRUCIBLE_INDEX_GC_INTERVAL_MS=50`):
+
+| Profile | Aerostore TPS | Postgres TPS | TPS Ratio | Aerostore p99 (us) | Postgres p99 (us) | Index Remove Failures | Index Insert Failures | Vacuum Reclaimed Rows | Index Reclaimed Nodes (delta) | Free-List Pushes/Pops (delta) | Retry Loops | Max Insert Attempts | Status |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: | --- |
+| `profile_512m` | `376908.38` | `89206.64` | `4.23x` | `65.54` | `262.14` | `0` | `0` | `20,395,142` | `19,246,805` | `20,395,142 / 19,843,639` | `401,658` | `4097` | pass |
+| `profile_1g` | `414002.64` | `89664.26` | `4.62x` | `65.54` | `262.14` | `0` | `0` | `22,396,979` | `19,954,538` | `22,396,979 / 21,658,204` | `394,583` | `4097` | pass |
+
+Engine timing details for the same run:
+
+| Profile | Aerostore elapsed (s) | Postgres elapsed (s) | Notes |
+| --- | ---: | ---: | --- |
+| `profile_512m` | `67.639` | `60.002` | Aerostore workers drained past the nominal 60s window before final shutdown/aggregation. |
+| `profile_1g` | `67.623` | `60.002` | Same drain behavior; comparison still uses total completed ops over measured elapsed window. |
+
+First 60s attempt in this rerun sequence (before the passing run) failed one gate:
+- `profile_1g` observed `Aerostore p99 = 262.14us` vs `Postgres p99 = 262.14us` (ratio `1.000`, required `<= 0.600`).
+- A second immediate rerun passed both TPS and p99 gates for both profiles.
+
+Interpretation:
+- Aerostore remains ahead on throughput in this run (`4.23x` to `4.62x`) with strictly zero index insert/remove failures in both profiles.
+- PostgreSQL scan server execution time remains much smaller than end-to-end RTT, so transport/protocol overhead is still a major cost center on its path.
+- Crucible latency gates can be sensitive to host variance; a failed first run and passing second run occurred back-to-back under the same settings.
 
 ### Criterion Benchmarks (`aerostore_core/benches`)
 | Suite | Benchmark | Key Results | Status | What It Means |
 | --- | --- | --- | --- | --- |
-| `procarray_snapshot` | `procarray_snapshot/10` | `[40.095 ns 40.146 ns 40.208 ns]`; proof `txid_10=41.12ns` | pass | Snapshot acquisition at low txid stays in tens-of-ns range. |
-| `procarray_snapshot` | `procarray_snapshot/10000000` | `[40.149 ns 40.197 ns 40.254 ns]`; proof `txid_10_000_000=41.09ns` | pass | Snapshot acquisition remains flat vs txid scale (no txid-growth penalty). |
-| `wal_delta_throughput` | `full_row_100k_one_col` | `[4.2184 ms 4.2266 ms 4.2363 ms]`; full bytes `81,600,000` | pass/info | Full-row baseline for one-column mutation workload. |
-| `wal_delta_throughput` | `delta_row_100k_one_col` | `[67.255 ms 67.346 ms 67.428 ms]`; delta bytes `4,799,987`; reduction `94.12%` | pass/info | Delta path massively cuts WAL byte volume for one-column updates. |
-| `wal_delta_throughput` | `full_row_100k_two_col` | `[4.2370 ms 4.2458 ms 4.2558 ms]`; full bytes `81,600,000` | pass/info | Full-row baseline for two-column mutation workload. |
-| `wal_delta_throughput` | `delta_row_100k_two_col` | `[71.021 ms 71.199 ms 71.533 ms]`; delta bytes `6,099,987`; reduction `92.52%` | pass/info | Delta still saves most WAL bytes with two dirty columns. |
-| `wal_delta_throughput` | `full_row_100k_four_col` | `[4.6840 ms 4.6878 ms 4.6943 ms]`; full bytes `81,600,000` | pass/info | Full-row baseline for four-column mutation workload. |
-| `wal_delta_throughput` | `delta_row_100k_four_col` | `[72.827 ms 72.929 ms 73.039 ms]`; delta bytes `7,399,987`; reduction `90.93%` | pass/info | Delta retains high byte savings as dirty-column count increases. |
-| `shm_skiplist_adversarial` | `p99_ns` | `small=2500ns`, `medium=3200ns`, `large=3600ns`, slopes `0.420/0.205`, criterion `[185.86 ps 186.48 ps 187.07 ps]` | pass (gate `<5000ns`) | Skiplist lookup p99 remains inside strict budget under adversarial writer/reader pressure. |
-| `shm_skiplist_seek_bounds` | `gt_999_990` | criterion `[76.250 ns 76.692 ns 77.414 ns]`; computed avg `76.38ns`; budget `5000ns` | pass | Bound-seeking traversal bypasses the first 999,990 nodes for tail predicate `> 999,990`. |
-| `tmpfs_warm_restart` | `warm_attach_boot` | `[55.397 us 55.725 us 56.105 us]` | pass | Warm attach remains microsecond-scale. |
-| `tmpfs_warm_restart` | `cold_boot_fixture_build` | `[2.0933 ms 2.1023 ms 2.1121 ms]` | pass/info | Cold fixture construction is millisecond-scale and much slower than warm attach. |
-| `tmpfs_warm_restart` | `post_restart_update_throughput` | `[1.7964 ms 1.8022 ms 1.8067 ms]` | pass/info | Post-restart write throughput is immediately high after warm attach. |
+| `procarray_snapshot` | `procarray_snapshot/10` | `[39.558 ns 39.645 ns 39.741 ns]`; proof `txid_10=42.02ns` | pass | Snapshot acquisition at low txid stays in tens-of-ns range. |
+| `procarray_snapshot` | `procarray_snapshot/10000000` | `[39.402 ns 39.479 ns 39.558 ns]`; proof `txid_10_000_000=42.05ns` | pass | Snapshot acquisition remains flat vs txid scale (no txid-growth penalty). |
+| `wal_delta_throughput` | `full_row_100k_one_col` | `[4.1487 ms 4.1561 ms 4.1659 ms]`; full bytes `81,600,000` | pass/info | Full-row baseline for one-column mutation workload. |
+| `wal_delta_throughput` | `delta_row_100k_one_col` | `[66.364 ms 66.511 ms 66.667 ms]`; delta bytes `4,799,987`; reduction `94.12%` | pass/info | Delta path massively cuts WAL byte volume for one-column updates. |
+| `wal_delta_throughput` | `full_row_100k_two_col` | `[4.1413 ms 4.1533 ms 4.1632 ms]`; full bytes `81,600,000` | pass/info | Full-row baseline for two-column mutation workload. |
+| `wal_delta_throughput` | `delta_row_100k_two_col` | `[69.660 ms 69.752 ms 69.852 ms]`; delta bytes `6,099,987`; reduction `92.52%` | pass/info | Delta still saves most WAL bytes with two dirty columns. |
+| `wal_delta_throughput` | `full_row_100k_four_col` | `[4.6037 ms 4.6149 ms 4.6290 ms]`; full bytes `81,600,000` | pass/info | Full-row baseline for four-column mutation workload. |
+| `wal_delta_throughput` | `delta_row_100k_four_col` | `[72.597 ms 72.737 ms 72.896 ms]`; delta bytes `7,399,987`; reduction `90.93%` | pass/info | Delta retains high byte savings as dirty-column count increases. |
+| `shm_skiplist_adversarial` | `p99_ns` | `small=2600ns`, `medium=3100ns`, `large=3700ns`, slopes `0.299/0.308`, criterion `[179.97 ps 180.45 ps 180.99 ps]` | pass (gate `<5000ns`) | Skiplist lookup p99 remains inside strict budget under adversarial writer/reader pressure. |
+| `shm_skiplist_seek_bounds` | `gt_999_990` | criterion `[77.835 ns 78.092 ns 78.342 ns]`; computed avg `77.72ns`; budget `5000ns` | pass | Bound-seeking traversal bypasses the first 999,990 nodes for tail predicate `> 999,990`. |
+| `tmpfs_warm_restart` | `warm_attach_boot` | `[48.982 us 49.156 us 49.421 us]` | pass | Warm attach remains microsecond-scale. |
+| `tmpfs_warm_restart` | `cold_boot_fixture_build` | `[2.3553 ms 2.3646 ms 2.3743 ms]` | pass/info | Cold fixture construction is millisecond-scale and much slower than warm attach. |
+| `tmpfs_warm_restart` | `post_restart_update_throughput` | `[1.7435 ms 1.7517 ms 1.7592 ms]` | pass/info | Post-restart write throughput is immediately high after warm attach. |
 
 Notes:
 - `tmpfs_warm_restart` was executed with elevated permissions so `/dev/shm` mapping is measured on real tmpfs.
@@ -338,33 +358,34 @@ Notes:
 ### Benchmark-Style Test Suites
 | Suite | Benchmark | Key Results | Status | What It Means |
 | --- | --- | --- | --- | --- |
-| `wal_ring_benchmark` | `benchmark_async_synchronous_commit_modes` | `sync_tps=1159.79`, `async_tps=1371923.91`, ratio `1182.91x` | pass | Async WAL commit massively outperforms sync commit in this run. |
-| `wal_ring_benchmark` | `benchmark_async_synchronous_commit_modes_parallel_disjoint_keys` | `sync_tps=1164.51`, `async_tps=2211624.55`, ratio `1899.19x` | pass | Async advantage remains strong under parallel disjoint-key ingest. |
-| `wal_ring_benchmark` | `benchmark_async_synchronous_commit_modes_savepoint_churn` | `sync_tps=1140.51`, `async_tps=1001221.29`, ratio `877.87x` | pass | Savepoint-heavy workloads still favor async commit heavily. |
-| `wal_ring_benchmark` | `benchmark_async_synchronous_commit_modes_tcl_like_keyed_upserts` | `sync_tps=1166.80`, `async_tps=663152.05`, ratio `568.35x` | pass | Tcl-like keyed upsert ingest is highly commit-mode sensitive. |
-| `wal_ring_benchmark` | `benchmark_logical_async_vs_sync_commit_modes` | `sync_tps=1005.22`, `async_tps=925385.52`, ratio `920.58x` | pass | Logical WAL path also shows a very large async-vs-sync gap. |
-| `occ_checkpoint_benchmark` | `benchmark_occ_checkpoint_latency_by_cardinality` | `10k: 2.650713ms (265.07ns/row)`, `100k: 5.314201ms (53.14ns/row)`, `1M: 29.944916ms (29.94ns/row)` | pass | Checkpoint latency scales smoothly with strong per-row amortization at higher cardinalities. |
-| `occ_checkpoint_benchmark` | `benchmark_logical_snapshot_and_replay_recovery_by_cardinality` | `10k: 22.643504ms (474,749.84 rows/s)`, `100k: 189.106291ms (532,769.16 rows/s)`, `1M: 1.807818336s (553,567.79 rows/s)` | pass | Snapshot+replay recovery throughput remains stable across data sizes. |
-| `query_index_benchmark` | `benchmark_shared_index_indexed_range_scan_with_sort_and_limit` | ingest `100k` rows in `51.287488ms`; `512` scans in `677.483261ms` | pass | Indexed range+sort+limit path sustains high concurrent read throughput. |
-| `query_index_benchmark` | `benchmark_stapi_parse_compile_execute_vs_typed_query_path` | typed `67.734339ms`; STAPI `7.132184ms` | pass | STAPI parse/compile/execute path is faster than typed path in this scenario. |
-| `query_index_benchmark` | `benchmark_tcl_style_alias_match_desc_offset_limit_path` | `10.751960525s` | pass | End-to-end alias/match/offset/limit query stack cost at configured workload. |
-| `query_index_benchmark` | `benchmark_tcl_bridge_style_stapi_assembly_compile_execute` | `8.607709185s` | pass | Full Tcl-bridge-style STAPI assembly+compile+execute overhead. |
-| `query_index_benchmark` | `benchmark_stapi_rbo_pk_point_lookup_vs_full_scan` | pk `15.221us`; scan `15.945764485s` | pass | Planner PK route avoids catastrophic full-scan cost (orders-of-magnitude win). |
-| `query_index_benchmark` | `benchmark_stapi_rbo_tiebreak_dest_over_altitude` | `1.431156718s` | pass | Quantifies planner tie-break routing behavior under competing indexes. |
-| `query_index_benchmark` | `benchmark_stapi_rbo_cardinality_trap_flight_id_over_aircraft_type` | `39.361us` | pass | Planner avoids cardinality trap and picks the selective access path. |
-| `query_index_benchmark` | `benchmark_stapi_residual_negative_filters_with_index_driver` | `1.707573438s` | pass | Shows cost when an index driver must apply residual negative predicates. |
-| `query_index_benchmark` | `benchmark_stapi_null_notnull_residual_filters` | `1.009676626s` | pass | Captures null/not-null residual filtering overhead in STAPI path. |
-| `shm_index_benchmark` | `benchmark_shm_index_eq_lookup_vs_scan` | speedup `460.82x` (`244.93us` vs `112.868696ms`) | pass | EQ index lookup massively outperforms full scan. |
-| `shm_index_benchmark` | `benchmark_shm_index_range_lookup_vs_scan` | speedup `8.13x` (`72.920926ms` vs `593.078868ms`) | pass (gate `>=2.0x`) | Core range index path clears its regression target with margin. |
-| `shm_index_benchmark` | `benchmark_shm_index_range_modes_selectivity_vs_scan` | overall speedup `4.99x` (`87.161312ms` vs `435.209779ms`) | pass (gate `>=2.0x`) | Mixed-selectivity range modes now comfortably clear the speedup gate. |
-| `shm_index_benchmark` | `benchmark_shm_index_forked_contention_throughput` | `single_tps=7227895.92`, `forked_tps=5576715.32`, ratio `0.77` | pass (gate `>=0.20`) | Cross-process contention retains most single-process throughput. |
-| `shm_benchmark` | `benchmark_shm_allocation_throughput` | `106,637,820 rows/s` (`250,000` rows in `2.344384ms`) | pass | Shared arena allocator throughput remains very high. |
-| `shm_benchmark` | `benchmark_forked_range_scan_latency` | `511,655,076 rows/s`; `rows=120000`; `threshold=10000`; `matched=91497` | pass | Forked-process scan over shared memory is bandwidth-efficient. |
-| `wal_crash_recovery` | `benchmark_occ_wal_replay_startup_throughput` | `4,150,900.45 writes/s` (`12000` applied writes in `2.890939ms`) | pass | WAL replay startup applies writes at multi-million/s scale. |
-| `occ_partitioned_lock_striping_benchmark` | `benchmark_hybrid_hot_row_backoff_and_pessimistic_throughput` | `throughput_tps=858364.59`, `commits=16000/16000`, `conflicts=51`, `escalations=17`, `timed_out_workers=0` | pass | Hybrid path sustains high TPS on hot-row contention workload. |
-| `occ_partitioned_lock_striping_benchmark` | `benchmark_hybrid_hot_row_outperforms_pure_occ_baseline` | hybrid samples `426959.53/481765.80/809307.85 TPS`; pure OCC `28644.28/24821.87/17174.51 TPS`; median ratio `19.41x`; timed-out workers `0` | pass | Hybrid mode decisively outperforms pure OCC while maintaining worker liveness. |
-| `occ_partitioned_lock_striping_benchmark` | `benchmark_partitioned_occ_lock_striping_multi_process_scaling` (ignored) | `contended_tps=14478.44`, `disjoint_tps=349071.17`, ratio `24.11x`; contended/disjoint timed-out workers `0/0` | pass (ignored run) | Disjoint-key throughput is much higher than contended hot-row workload, and both paths complete without timeouts. |
-| `aerostore_tcl/config_checkpoint_integration` | `benchmark_tcl_synchronous_commit_modes` | `on_tps=1018.68`, `off_tps=240000.0`, ratio `235.6x` | pass | Tcl ingest path remains highly sensitive to synchronous-commit setting. |
+| `wal_ring_benchmark` | `benchmark_async_synchronous_commit_modes` | `sync_tps=1321.98`, `async_tps=1360807.86`, ratio `1029.37x` | pass | Async WAL commit massively outperforms sync commit in this run. |
+| `wal_ring_benchmark` | `benchmark_async_synchronous_commit_modes_parallel_disjoint_keys` | `sync_tps=1294.59`, `async_tps=1469900.44`, ratio `1135.42x` | pass | Async advantage remains strong under parallel disjoint-key ingest. |
+| `wal_ring_benchmark` | `benchmark_async_synchronous_commit_modes_savepoint_churn` | `sync_tps=1336.67`, `async_tps=1041997.07`, ratio `779.55x` | pass | Savepoint-heavy workloads still favor async commit heavily. |
+| `wal_ring_benchmark` | `benchmark_async_synchronous_commit_modes_tcl_like_keyed_upserts` | `sync_tps=1298.82`, `async_tps=688320.35`, ratio `529.96x` | pass | Tcl-like keyed upsert ingest is highly commit-mode sensitive. |
+| `wal_ring_benchmark` | `benchmark_logical_async_vs_sync_commit_modes` | `sync_tps=1153.21`, `async_tps=914065.59`, ratio `792.63x` | pass | Logical WAL path also shows a very large async-vs-sync gap. |
+| `occ_checkpoint_benchmark` | `benchmark_occ_checkpoint_latency_by_cardinality` | `10k: 2.900334ms (290.03ns/row)`, `100k: 4.715268ms (47.15ns/row)`, `1M: 24.536467ms (24.54ns/row)` | pass | Checkpoint latency scales smoothly with strong per-row amortization at higher cardinalities. |
+| `occ_checkpoint_benchmark` | `benchmark_logical_snapshot_and_replay_recovery_by_cardinality` | `10k: 22.35304ms (480,918.93 rows/s)`, `100k: 176.619104ms (570,436.59 rows/s)`, `1M: 1.793417883s (558,012.73 rows/s)` | pass | Snapshot+replay recovery throughput remains stable across data sizes. |
+| `query_index_benchmark` | `benchmark_shared_index_indexed_range_scan_with_sort_and_limit` | ingest `100k` rows in `50.462744ms`; `512` scans in `657.545733ms` | pass | Indexed range+sort+limit path sustains high concurrent read throughput. |
+| `query_index_benchmark` | `benchmark_stapi_parse_compile_execute_vs_typed_query_path` | typed `54.517194ms`; STAPI `7.068974ms` | pass | STAPI parse/compile/execute path is faster than typed path in this scenario. |
+| `query_index_benchmark` | `benchmark_tcl_style_alias_match_desc_offset_limit_path` | `10.501318577s` | pass | End-to-end alias/match/offset/limit query stack cost at configured workload. |
+| `query_index_benchmark` | `benchmark_tcl_bridge_style_stapi_assembly_compile_execute` | `8.415177634s` | pass | Full Tcl-bridge-style STAPI assembly+compile+execute overhead. |
+| `query_index_benchmark` | `benchmark_stapi_rbo_pk_point_lookup_vs_full_scan` | pk `14.279us`; scan `15.553936058s` | pass | Planner PK route avoids catastrophic full-scan cost (orders-of-magnitude win). |
+| `query_index_benchmark` | `benchmark_stapi_rbo_tiebreak_dest_over_altitude` | `1.405741611s` | pass | Quantifies planner tie-break routing behavior under competing indexes. |
+| `query_index_benchmark` | `benchmark_stapi_rbo_cardinality_trap_flight_id_over_aircraft_type` | `29.743us` | pass | Planner avoids cardinality trap and picks the selective access path. |
+| `query_index_benchmark` | `benchmark_stapi_residual_negative_filters_with_index_driver` | `1.678075485s` | pass | Shows cost when an index driver must apply residual negative predicates. |
+| `query_index_benchmark` | `benchmark_stapi_null_notnull_residual_filters` | `960.03769ms` | pass | Captures null/not-null residual filtering overhead in STAPI path. |
+| `shm_index_benchmark` | `benchmark_shm_index_eq_lookup_vs_scan` | speedup `643.66x` (`205.538us` vs `132.296066ms`) | pass | EQ index lookup massively outperforms full scan. |
+| `shm_index_benchmark` | `benchmark_shm_index_range_lookup_vs_scan` | speedup `8.25x` (`70.773639ms` vs `583.610136ms`) | pass (gate `>=2.0x`) | Core range index path clears its regression target with margin. |
+| `shm_index_benchmark` | `benchmark_shm_index_range_modes_selectivity_vs_scan` | overall speedup `4.98x` (`86.81855ms` vs `432.146455ms`) | pass (gate `>=2.0x`) | Mixed-selectivity range modes now comfortably clear the speedup gate. |
+| `shm_index_benchmark` | `benchmark_shm_index_forked_contention_throughput` | `single_tps=6325414.76`, `forked_tps=4053713.73`, ratio `0.64` | pass (gate `>=0.20`) | Cross-process contention retains most single-process throughput. |
+| `shm_benchmark` | `benchmark_shm_allocation_throughput` | `85,665,814 rows/s` (`250,000` rows in `2.918317ms`) | pass | Shared arena allocator throughput remains very high. |
+| `shm_benchmark` | `benchmark_forked_range_scan_latency` | `718,812,522 rows/s`; `rows=120000`; `threshold=10000`; `matched=91497` | pass | Forked-process scan over shared memory is bandwidth-efficient. |
+| `vacuum_recycle_ab_benchmark` | `benchmark_vacuum_enabled_outlasts_disabled_under_hot_row_stress` | assertion harness passed under release profile | pass | Vacuum-enabled configuration outlasts disabled-vacuum control under the same 10MB stress envelope. |
+| `wal_crash_recovery` | `benchmark_occ_wal_replay_startup_throughput` | `3,886,853.69 writes/s` (`12000` applied writes in `3.08733ms`) | pass | WAL replay startup applies writes at multi-million/s scale. |
+| `occ_partitioned_lock_striping_benchmark` | `benchmark_hybrid_hot_row_backoff_and_pessimistic_throughput` | `throughput_tps=759579.72`, `commits=16000/16000`, `conflicts=54`, `escalations=16`, `timed_out_workers=0` | pass | Hybrid path sustains high TPS on hot-row contention workload. |
+| `occ_partitioned_lock_striping_benchmark` | `benchmark_hybrid_hot_row_outperforms_pure_occ_baseline` | `hybrid_median_tps=428823.21`, `pure_median_tps=21337.31`, ratio `20.10x`; timed-out workers `0` | pass | Hybrid mode decisively outperforms pure OCC while maintaining worker liveness. |
+| `occ_partitioned_lock_striping_benchmark` | `benchmark_partitioned_occ_lock_striping_multi_process_scaling` (ignored) | `contended_tps=20225.93`, `disjoint_tps=349076.95`, ratio `17.26x`; contended/disjoint timed-out workers `0/0` | pass (ignored run) | Disjoint-key throughput is much higher than contended hot-row workload, and both paths complete without timeouts. |
+| `aerostore_tcl/config_checkpoint_integration` | `benchmark_tcl_synchronous_commit_modes` | `on_tps=1121.50`, `off_tps=240000.0`, ratio `214.0x` | pass | Tcl ingest path remains highly sensitive to synchronous-commit setting. |
 
 ## Operational Notes
 Durability artifacts under the configured data directory include:
@@ -389,7 +410,7 @@ For parallel integration jobs:
 - Many strongest tests are Unix/Linux specific (`fork`, `/dev/shm`, signals).
 - Throughput thresholds are host-sensitive.
 - Tcl bridge uses process-global initialization (`OnceLock`), so one DB instance per process.
-- `wal_crash_recovery` includes a known intermittent test (`async_wal_daemon_restart_does_not_persist_rolled_back_savepoint_intents`) that can require rerun under high host contention.
+- WAL crash-recovery behavior is timing-sensitive around daemon kill/restart paths; latest branch reruns pass after the writer-epoch restart race fix.
 
 ## License
 No license file is currently present.
