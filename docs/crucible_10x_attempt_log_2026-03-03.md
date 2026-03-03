@@ -156,10 +156,10 @@ Reliability restored, but sustained latency tail still failed benchmark criteria
 
 ---
 
-## Final Outcome
-- No patch set reached the 60s objective of a robust 10x advantage while keeping all gates healthy.
-- All experimental changes were rolled back.
-- Experimental code state before this write-up: **clean**.
+## Final Outcome (Pre-Relink Phase: Experiments A-E)
+- No patch set in this pre-relink phase reached the 60s objective of a robust 10x advantage while keeping all gates healthy.
+- The A-E experimental tuning changes were rolled back at the end of this phase.
+- Code state at that checkpoint was clean before the subsequent relink/telemetry implementation work.
 
 ## Addendum: 60s Run With `profile_2g`
 Command used:
@@ -186,6 +186,13 @@ Interpretation:
 - `2g` hit and exceeded the sustained 10x objective (`11.46x`) while keeping index failure counts at zero.
 - `512m` and `1g` improved versus prior 4.23x/4.62x snapshots in this run, but still remained below 10x.
 
+## Correction: Relink Was Implemented For These Later Results
+The addendum above is from the later implementation phase, not from the pre-relink A-E phase.
+
+- The later `profile_2g` results were produced with the direct index move/relink fast path implemented in `shm_index`/`shm_skiplist`.
+- Epoch-lag telemetry was also implemented in crucible output during that same phase.
+- So those results are not "next-direction projections"; they are measured outcomes from the relink-enabled code path.
+
 ## What This Cycle Demonstrated
 1. 10s wins are not predictive; 60s exposes allocator/epoch/retry feedback loops.
 2. The dominant sustained failure mode is not base scan/index speed (those remain fast), but long-tail behavior under prolonged churn.
@@ -194,9 +201,10 @@ Interpretation:
    - too light => index mutation failures;
    - hybrid fallback => still p99 tail spikes.
 
-## Recommended Next Technical Direction
-The next credible path is larger-than-tuning changes:
-1. Add direct **in-place index move/relink** fast path for monotonic timestamp updates (reduce remove+insert churn).
-2. Add explicit epoch-lag/reclaimer starvation telemetry in crucible output.
-3. Separate allocator domains for long-lived index structure nodes vs high-churn posting nodes.
-4. Consider bounded per-worker retry budget + queueing fallback for hot alloc contention to cap p99 tails.
+## Recommended Next Technical Direction (After Relink + Epoch Telemetry)
+Status update:
+1. Done: direct **in-place index move/relink** fast path was implemented and benchmarked.
+2. Done: epoch-lag telemetry was added and is emitted in crucible output.
+3. Remaining: separate allocator domains for long-lived index structure nodes vs high-churn posting nodes.
+4. Remaining: consider bounded per-worker retry budget + queueing fallback for hot alloc contention to cap p99 tails.
+5. Remaining: add allocator saturation telemetry (head/high-water, free-list reuse efficacy) to standard benchmark reporting and gate analysis.
