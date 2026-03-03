@@ -263,7 +263,8 @@ cargo bench -p aerostore_core --bench tmpfs_warm_restart
 cargo bench -p aerostore_core --bench hyperfeed_crucible -- --noplot
 ```
 
-Hyperfeed Crucible note:
+"The Crucible" note:
+- runs Aerostore against Postgres on a simulated workload, both with async commit, with 16 concurrent workers. 80% of operations are keyed upserts, mixing disjoint keys and 5% heavily contended hot-keys. 20% of operations are time-based range scans utilizing indexes.
 - requires Docker (`testcontainers` starts a local PostgreSQL container).
 - runs two Aerostore memory profiles per invocation: `profile_512m` and `profile_1g`.
 - default sustained duration is 60 seconds; override with `AEROSTORE_CRUCIBLE_DURATION_SECS` for local smoke runs.
@@ -306,7 +307,7 @@ Run scope:
 | vacuum and reclaim suites | pass | Stress, leader-handoff, and free-list invariants suites passed in workspace run. |
 | hot-row OCC contention suites | pass | `timed_out_workers=0` in release benchmark runs. |
 
-### Hyperfeed Crucible Diagnostic (2026-03-03)
+### "The Crucible" Diagnostic (2026-03-03)
 Command:
 ```bash
 AEROSTORE_CRUCIBLE_DURATION_SECS=60 cargo bench -p aerostore_core --bench hyperfeed_crucible -- --noplot
