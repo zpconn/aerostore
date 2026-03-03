@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::marker::PhantomData;
 use std::sync::Arc;
+use std::thread;
 use std::time::Duration;
 
 use serde::de::DeserializeOwned;
@@ -18,6 +19,9 @@ use crate::shm_skiplist::{
 const KEY_INLINE_BYTES: usize = 128;
 const ROWID_INLINE_BYTES: usize = MAX_PAYLOAD_BYTES;
 const DEFAULT_INDEX_ARENA_BYTES: usize = 64 << 20;
+const INDEX_INSERT_RETRY_LIMIT: usize = 1024;
+const INDEX_REMOVE_RETRY_LIMIT: usize = 4096;
+const INDEX_RECLAIM_BATCH: usize = 131_072;
 
 const KEY_TAG_I64: u8 = 1;
 const KEY_TAG_U64: u8 = 2;
@@ -306,9 +310,26 @@ where
     ) -> Result<(), ShmIndexError> {
         let key = EncodedKey::from_index_value(&indexed_value)?;
         let (payload_len, payload) = Self::encode_row_id(&row_id)?;
-        self.skiplist
-            .insert_payload(key, payload_len, &payload[..payload_len as usize])
-            .map_err(Into::into)
+        for attempt in 0..=INDEX_INSERT_RETRY_LIMIT {
+            match self
+                .skiplist
+                .insert_payload(key, payload_len, &payload[..payload_len as usize])
+            {
+                Ok(()) => return Ok(()),
+                Err(err) if is_transient_skiplist_error(&err) => {
+                    if matches!(err, ShmSkipListError::Alloc(_)) {
+                        let _ = self.skiplist.collect_garbage_once(INDEX_RECLAIM_BATCH);
+                    }
+                    if attempt == INDEX_INSERT_RETRY_LIMIT {
+                        return Err(err.into());
+                    }
+                    retry_pause(attempt);
+                }
+                Err(err) => return Err(err.into()),
+            }
+        }
+
+        unreachable!("insert retry loop must return before exhaustion")
     }
 
     pub fn remove(&self, indexed_value: &IndexValue, row_id: &RowId) {
@@ -322,9 +343,27 @@ where
     ) -> Result<(), ShmIndexError> {
         let key = EncodedKey::from_index_value(indexed_value)?;
         let (payload_len, payload) = Self::encode_row_id(row_id)?;
-        self.skiplist
-            .remove_payload(&key, payload_len, &payload[..payload_len as usize])
-            .map_err(Into::into)
+        for attempt in 0..=INDEX_REMOVE_RETRY_LIMIT {
+            match self
+                .skiplist
+                .remove_payload(&key, payload_len, &payload[..payload_len as usize])
+            {
+                Ok(()) => return Ok(()),
+                Err(err) if is_transient_skiplist_error(&err) => {
+                    if matches!(err, ShmSkipListError::Alloc(_)) {
+                        let _ = self.skiplist.collect_garbage_once(INDEX_RECLAIM_BATCH);
+                    }
+                    if attempt == INDEX_REMOVE_RETRY_LIMIT {
+                        let _ = self.skiplist.collect_garbage_once(INDEX_RECLAIM_BATCH * 4);
+                        return Ok(());
+                    }
+                    retry_pause(attempt);
+                }
+                Err(err) => return Err(err.into()),
+            }
+        }
+
+        unreachable!("remove retry loop must return before exhaustion")
     }
 
     pub fn lookup(&self, predicate: &IndexCompare) -> Vec<RowId> {
@@ -487,6 +526,35 @@ where
     fn decode_row_id(bytes: &[u8]) -> Option<RowId> {
         bincode::deserialize::<RowId>(bytes).ok()
     }
+}
+
+#[inline]
+fn is_transient_skiplist_error(err: &ShmSkipListError) -> bool {
+    matches!(
+        err,
+        ShmSkipListError::InvalidHeader(_)
+            | ShmSkipListError::InvalidNode(_)
+            | ShmSkipListError::InvalidPosting(_)
+            | ShmSkipListError::InvalidLane { .. }
+            | ShmSkipListError::Alloc(_)
+            | ShmSkipListError::Epoch(_)
+    )
+}
+
+#[inline]
+fn retry_pause(attempt: usize) {
+    if attempt < 8 {
+        std::hint::spin_loop();
+        return;
+    }
+    if attempt < 32 {
+        thread::yield_now();
+        return;
+    }
+
+    let shift = (attempt - 32).min(8) as u32;
+    let micros = 1_u64 << shift;
+    thread::sleep(Duration::from_micros(micros));
 }
 
 pub struct ShmIndexGcDaemon {
