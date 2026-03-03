@@ -63,7 +63,7 @@ pub use retry::{RetryBackoff, RetryPolicy};
 pub use shm::{
     ChunkedArena as ShmChunkedArena, MmapBase, RelPtr, ShmAllocError, ShmArena, ShmError,
 };
-pub use shm_index::{ShmIndexError, ShmIndexGcDaemon};
+pub use shm_index::{IndexMutationTelemetry, ShmIndexError, ShmIndexGcDaemon};
 pub use shm_tmpfs::{map_tmpfs_shared, TmpfsAttachMode, TmpfsMappedArena, DEFAULT_TMPFS_PATH};
 pub use stapi_parser::{
     parse_stapi_query, Filter as StapiFilter, ParseError as StapiParseError, Query as StapiQuery,

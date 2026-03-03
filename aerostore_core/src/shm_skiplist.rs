@@ -6,14 +6,34 @@ use std::sync::atomic::{AtomicI32, AtomicU32, AtomicU64, AtomicUsize, Ordering a
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::procarray::{ProcArrayError, ProcArrayRegistration};
 use crate::shm::{RelPtr, ShmAllocError, ShmArena};
 
 const NULL_OFFSET: u32 = 0;
 pub const MAX_HEIGHT: usize = 32;
 pub const MAX_PAYLOAD_BYTES: usize = 192;
+const GC_MIN_BATCH: usize = 1_024;
+const GC_MAX_BATCH: usize = 65_536;
+const GC_MAX_PASSES_PER_WAKE: usize = 8;
 
 const NODE_FLAG_MARKED: u32 = 1 << 0;
 const NODE_FLAG_FULLY_LINKED: u32 = 1 << 1;
+const NODE_FLAG_RETIRED: u32 = 1 << 2;
+
+#[inline]
+fn stack_head_offset(packed: u64) -> u32 {
+    packed as u32
+}
+
+#[inline]
+fn stack_head_tag(packed: u64) -> u32 {
+    (packed >> 32) as u32
+}
+
+#[inline]
+fn pack_stack_head(offset: u32, tag: u32) -> u64 {
+    ((tag as u64) << 32) | (offset as u64)
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ScanBound {
@@ -34,6 +54,7 @@ pub enum ShmSkipListError {
     InvalidLane { node_offset: u32, level: usize },
     PayloadTooLarge { len: usize, max: usize },
     Alloc(ShmAllocError),
+    Epoch(ProcArrayError),
     Fork(std::io::Error),
     Wait(std::io::Error),
     Signal(std::io::Error),
@@ -62,6 +83,9 @@ impl fmt::Display for ShmSkipListError {
                 write!(f, "posting payload length {} exceeds max {}", len, max)
             }
             ShmSkipListError::Alloc(err) => write!(f, "shared skiplist allocation failed: {}", err),
+            ShmSkipListError::Epoch(err) => {
+                write!(f, "skiplist ProcArray registration failed: {}", err)
+            }
             ShmSkipListError::Fork(err) => write!(f, "fork failed: {}", err),
             ShmSkipListError::Wait(err) => write!(f, "wait failed: {}", err),
             ShmSkipListError::Signal(err) => write!(f, "signal failed: {}", err),
@@ -77,6 +101,12 @@ impl From<ShmAllocError> for ShmSkipListError {
     }
 }
 
+impl From<ProcArrayError> for ShmSkipListError {
+    fn from(value: ProcArrayError) -> Self {
+        ShmSkipListError::Epoch(value)
+    }
+}
+
 #[repr(C, align(64))]
 struct ShmSkipHeader<K: ShmSkipKey> {
     head: RelPtr<ShmSkipNode<K>>,
@@ -84,9 +114,20 @@ struct ShmSkipHeader<K: ShmSkipKey> {
     rng_state: AtomicU64,
     distinct_key_count: AtomicUsize,
     has_tombstones: AtomicU32,
+    recycled_towers: [AtomicU64; MAX_HEIGHT],
+    recycled_nodes: AtomicU64,
+    recycled_postings: AtomicU64,
     retired_head: RelPtr<ShmSkipNode<K>>,
     retired_nodes: AtomicU64,
     reclaimed_nodes: AtomicU64,
+    retry_insert_ops: AtomicU64,
+    retry_remove_ops: AtomicU64,
+    retry_loops: AtomicU64,
+    retry_alloc: AtomicU64,
+    retry_structural: AtomicU64,
+    retry_epoch: AtomicU64,
+    retry_max_insert_attempts: AtomicU64,
+    retry_max_remove_attempts: AtomicU64,
     gc_daemon_pid: AtomicI32,
 }
 
@@ -99,9 +140,20 @@ impl<K: ShmSkipKey> ShmSkipHeader<K> {
             rng_state: AtomicU64::new(seed.max(1)),
             distinct_key_count: AtomicUsize::new(0),
             has_tombstones: AtomicU32::new(0),
+            recycled_towers: std::array::from_fn(|_| AtomicU64::new(0)),
+            recycled_nodes: AtomicU64::new(0),
+            recycled_postings: AtomicU64::new(0),
             retired_head: RelPtr::null(),
             retired_nodes: AtomicU64::new(0),
             reclaimed_nodes: AtomicU64::new(0),
+            retry_insert_ops: AtomicU64::new(0),
+            retry_remove_ops: AtomicU64::new(0),
+            retry_loops: AtomicU64::new(0),
+            retry_alloc: AtomicU64::new(0),
+            retry_structural: AtomicU64::new(0),
+            retry_epoch: AtomicU64::new(0),
+            retry_max_insert_attempts: AtomicU64::new(0),
+            retry_max_remove_attempts: AtomicU64::new(0),
             gc_daemon_pid: AtomicI32::new(0),
         }
     }
@@ -191,6 +243,42 @@ pub struct ShmSkipList<K: ShmSkipKey> {
     _marker: PhantomData<K>,
 }
 
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ShmSkipMutationTelemetry {
+    pub insert_ops: u64,
+    pub remove_ops: u64,
+    pub retry_loops: u64,
+    pub retry_alloc: u64,
+    pub retry_structural: u64,
+    pub retry_epoch: u64,
+    pub max_insert_attempts: u64,
+    pub max_remove_attempts: u64,
+}
+
+struct ProcArrayEpochGuard<'a> {
+    shm: &'a ShmArena,
+    registration: Option<ProcArrayRegistration>,
+}
+
+impl<'a> ProcArrayEpochGuard<'a> {
+    #[inline]
+    fn acquire(shm: &'a ShmArena) -> Result<Self, ShmSkipListError> {
+        let registration = shm.begin_transaction().map_err(ShmSkipListError::Epoch)?;
+        Ok(Self {
+            shm,
+            registration: Some(registration),
+        })
+    }
+}
+
+impl Drop for ProcArrayEpochGuard<'_> {
+    fn drop(&mut self) {
+        if let Some(registration) = self.registration.take() {
+            let _ = self.shm.end_transaction(registration);
+        }
+    }
+}
+
 impl<K: ShmSkipKey> ShmSkipList<K> {
     pub fn new_in_shared(shm: Arc<ShmArena>) -> Result<Self, ShmSkipListError> {
         let lane_bytes = size_of::<SkipLane<K>>()
@@ -267,6 +355,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         payload_len: u16,
         payload: &[u8],
     ) -> Result<(), ShmSkipListError> {
+        let _epoch_guard = ProcArrayEpochGuard::acquire(self.shm.as_ref())?;
         if payload_len as usize > MAX_PAYLOAD_BYTES || payload.len() < payload_len as usize {
             return Err(ShmSkipListError::PayloadTooLarge {
                 len: payload_len as usize,
@@ -290,11 +379,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 return Ok(());
             }
 
-            let posting_offset = self
-                .shm
-                .chunked_arena()
-                .alloc(PostingEntry::new(payload_len, payload, NULL_OFFSET))?
-                .load(AtomicOrdering::Acquire);
+            let posting_offset = self.alloc_posting_entry(payload_len, payload)?;
 
             let header = self
                 .header_ref()
@@ -311,17 +396,8 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             }
 
             let tower_offset = self.alloc_tower(node_height, &succs)?;
-            let node_offset = self
-                .shm
-                .chunked_arena()
-                .alloc(ShmSkipNode::new(
-                    key,
-                    node_height as u8,
-                    tower_offset,
-                    posting_offset,
-                    1,
-                ))?
-                .load(AtomicOrdering::Acquire);
+            let node_offset =
+                self.alloc_node(key, node_height as u8, tower_offset, posting_offset)?;
 
             let pred_lane_0 = self.lane_ref_by_offset(preds[0], 0)?;
             if pred_lane_0
@@ -334,6 +410,12 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 )
                 .is_err()
             {
+                self.recycle_unlinked_insert_allocations(
+                    node_offset,
+                    tower_offset,
+                    posting_offset,
+                    node_height,
+                )?;
                 continue;
             }
             header
@@ -379,6 +461,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         payload_len: u16,
         payload: &[u8],
     ) -> Result<(), ShmSkipListError> {
+        let _epoch_guard = ProcArrayEpochGuard::acquire(self.shm.as_ref())?;
         if payload_len as usize > MAX_PAYLOAD_BYTES || payload.len() < payload_len as usize {
             return Ok(());
         }
@@ -427,6 +510,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
     where
         F: FnMut(u16, &[u8]),
     {
+        let _epoch_guard = ProcArrayEpochGuard::acquire(self.shm.as_ref())?;
         let mut preds = [NULL_OFFSET; MAX_HEIGHT];
         let mut succs = [NULL_OFFSET; MAX_HEIGHT];
         let found = self.find(key, &mut preds, &mut succs)?;
@@ -454,6 +538,9 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 .ok_or(ShmSkipListError::InvalidPosting(post_offset))?;
             if post.deleted.load(AtomicOrdering::Acquire) == 0 {
                 let len = post.len as usize;
+                if len > MAX_PAYLOAD_BYTES {
+                    return Err(ShmSkipListError::InvalidPosting(post_offset));
+                }
                 visit(post.len, &post.payload[..len]);
             }
             post_offset = post.next.load(AtomicOrdering::Acquire);
@@ -463,6 +550,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
     }
 
     pub fn count_payloads(&self, key: &K) -> Result<usize, ShmSkipListError> {
+        let _epoch_guard = ProcArrayEpochGuard::acquire(self.shm.as_ref())?;
         let Some(node_offset) = self.find_readonly_exact(key)? else {
             return Ok(0);
         };
@@ -500,6 +588,26 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
     where
         F: FnMut(&K, u16, &[u8]),
     {
+        self.scan_payloads_bounded_with_limit(lower, upper, usize::MAX, |key, len, payload| {
+            visit(key, len, payload);
+        })
+    }
+
+    pub fn scan_payloads_bounded_with_limit<F>(
+        &self,
+        lower: Option<(&K, ScanBound)>,
+        upper: Option<(&K, ScanBound)>,
+        limit: usize,
+        mut visit: F,
+    ) -> Result<(), ShmSkipListError>
+    where
+        F: FnMut(&K, u16, &[u8]),
+    {
+        if limit == 0 {
+            return Ok(());
+        }
+        let _epoch_guard = ProcArrayEpochGuard::acquire(self.shm.as_ref())?;
+        let mut emitted = 0_usize;
         let mut curr_offset = match lower {
             Some((bound, mode)) => {
                 let mut start = self.seek_ge(bound)?.load(AtomicOrdering::Acquire);
@@ -558,7 +666,14 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                         .ok_or(ShmSkipListError::InvalidPosting(post_offset))?;
                     if post.deleted.load(AtomicOrdering::Acquire) == 0 {
                         let len = post.len as usize;
+                        if len > MAX_PAYLOAD_BYTES {
+                            return Err(ShmSkipListError::InvalidPosting(post_offset));
+                        }
                         visit(&node.key, post.len, &post.payload[..len]);
+                        emitted = emitted.saturating_add(1);
+                        if emitted >= limit {
+                            return Ok(());
+                        }
                     }
                     post_offset = post.next.load(AtomicOrdering::Acquire);
                 }
@@ -706,6 +821,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 reclaimed += 1;
                 header.reclaimed_nodes.fetch_add(1, AtomicOrdering::AcqRel);
                 header.retired_nodes.fetch_sub(1, AtomicOrdering::AcqRel);
+                let _ = self.recycle_retired_node(curr);
             } else {
                 loop {
                     let old = header.retired_head.load(AtomicOrdering::Acquire);
@@ -746,8 +862,24 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             rustix::runtime::Fork::Child(_) => {
                 let _ = arm_parent_death_signal(parent_pid);
                 loop {
-                    let _ = list.collect_garbage_once(1024);
-                    std::thread::sleep(interval);
+                    let backlog = list.retired_nodes() as usize;
+                    let batch = backlog.clamp(GC_MIN_BATCH, GC_MAX_BATCH);
+                    let mut reclaimed_any = false;
+                    for _ in 0..GC_MAX_PASSES_PER_WAKE {
+                        let reclaimed = list.collect_garbage_once(batch);
+                        if reclaimed == 0 {
+                            break;
+                        }
+                        reclaimed_any = true;
+                        if reclaimed < batch {
+                            break;
+                        }
+                    }
+                    if reclaimed_any {
+                        std::thread::yield_now();
+                    } else {
+                        std::thread::sleep(interval);
+                    }
                 }
             }
             rustix::runtime::Fork::Parent(pid) => {
@@ -781,6 +913,68 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             .unwrap_or(0)
     }
 
+    #[inline]
+    pub fn mutation_telemetry(&self) -> ShmSkipMutationTelemetry {
+        let Some(header) = self.header_ref() else {
+            return ShmSkipMutationTelemetry::default();
+        };
+        ShmSkipMutationTelemetry {
+            insert_ops: header.retry_insert_ops.load(AtomicOrdering::Acquire),
+            remove_ops: header.retry_remove_ops.load(AtomicOrdering::Acquire),
+            retry_loops: header.retry_loops.load(AtomicOrdering::Acquire),
+            retry_alloc: header.retry_alloc.load(AtomicOrdering::Acquire),
+            retry_structural: header.retry_structural.load(AtomicOrdering::Acquire),
+            retry_epoch: header.retry_epoch.load(AtomicOrdering::Acquire),
+            max_insert_attempts: header
+                .retry_max_insert_attempts
+                .load(AtomicOrdering::Acquire),
+            max_remove_attempts: header
+                .retry_max_remove_attempts
+                .load(AtomicOrdering::Acquire),
+        }
+    }
+
+    #[inline]
+    pub(crate) fn record_mutation_telemetry(
+        &self,
+        is_insert: bool,
+        attempts: u32,
+        retry_alloc: u32,
+        retry_structural: u32,
+        retry_epoch: u32,
+    ) {
+        let Some(header) = self.header_ref() else {
+            return;
+        };
+        if is_insert {
+            header.retry_insert_ops.fetch_add(1, AtomicOrdering::AcqRel);
+            atomic_max_u64(&header.retry_max_insert_attempts, attempts as u64);
+        } else {
+            header.retry_remove_ops.fetch_add(1, AtomicOrdering::AcqRel);
+            atomic_max_u64(&header.retry_max_remove_attempts, attempts as u64);
+        }
+
+        let loops = attempts.saturating_sub(1) as u64;
+        if loops > 0 {
+            header.retry_loops.fetch_add(loops, AtomicOrdering::AcqRel);
+        }
+        if retry_alloc != 0 {
+            header
+                .retry_alloc
+                .fetch_add(retry_alloc as u64, AtomicOrdering::AcqRel);
+        }
+        if retry_structural != 0 {
+            header
+                .retry_structural
+                .fetch_add(retry_structural as u64, AtomicOrdering::AcqRel);
+        }
+        if retry_epoch != 0 {
+            header
+                .retry_epoch
+                .fetch_add(retry_epoch as u64, AtomicOrdering::AcqRel);
+        }
+    }
+
     fn find(
         &self,
         key: &K,
@@ -812,7 +1006,31 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                     let curr = self
                         .node_ref(curr_offset)
                         .ok_or(ShmSkipListError::InvalidNode(curr_offset))?;
-                    let curr_lane = self.lane_ref(curr_offset, curr, level)?;
+                    let curr_lane = match self.lane_ref(curr_offset, curr, level) {
+                        Ok(lane) => lane,
+                        Err(ShmSkipListError::InvalidLane { .. }) => {
+                            // Heal stale upper-lane links (for example, when a node offset is
+                            // recycled with a lower height) by skipping this entry at `level`.
+                            let fallback_next =
+                                self.node_next_offset(curr_offset, 0).unwrap_or(NULL_OFFSET);
+                            let pred_lane = self.lane_ref_by_offset(pred_offset, level)?;
+                            if pred_lane
+                                .next
+                                .compare_exchange(
+                                    curr_offset,
+                                    fallback_next,
+                                    AtomicOrdering::AcqRel,
+                                    AtomicOrdering::Acquire,
+                                )
+                                .is_err()
+                            {
+                                continue 'retry;
+                            }
+                            curr_offset = fallback_next;
+                            continue;
+                        }
+                        Err(err) => return Err(err),
+                    };
                     let curr_next = curr_lane.next.load(AtomicOrdering::Acquire);
 
                     let node_marked =
@@ -1005,14 +1223,19 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 .store(1, AtomicOrdering::Release);
         }
 
+        // Ensure the node is detached from every lane before retiring its offsets.
+        // If we retire after only level-0 is unlinked, stale upper-lane pointers can
+        // survive long enough to hit recycled offsets and trigger structural retries.
         let mut preds = [NULL_OFFSET; MAX_HEIGHT];
         let mut succs = [NULL_OFFSET; MAX_HEIGHT];
         loop {
             let _ = self.find(key, &mut preds, &mut succs)?;
-            if succs[0] != node_offset {
-                break;
-            }
+            let mut detached_all = true;
             for level in (0..height).rev() {
+                if succs[level] != node_offset {
+                    continue;
+                }
+                detached_all = false;
                 let pred_lane = self.lane_ref_by_offset(preds[level], level)?;
                 let next = self.node_next_offset(node_offset, level)?;
                 let _ = pred_lane.next.compare_exchange(
@@ -1021,6 +1244,9 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                     AtomicOrdering::AcqRel,
                     AtomicOrdering::Acquire,
                 );
+            }
+            if detached_all {
+                break;
             }
         }
 
@@ -1057,6 +1283,21 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         let Some(node) = self.node_ref(node_offset) else {
             return;
         };
+        let mut flags = node.flags.load(AtomicOrdering::Acquire);
+        loop {
+            if flags & NODE_FLAG_RETIRED != 0 {
+                return;
+            }
+            match node.flags.compare_exchange(
+                flags,
+                flags | NODE_FLAG_RETIRED,
+                AtomicOrdering::AcqRel,
+                AtomicOrdering::Acquire,
+            ) {
+                Ok(_) => break,
+                Err(observed) => flags = observed,
+            }
+        }
         let retire_txid = self.shm.global_txid().fetch_add(1, AtomicOrdering::AcqRel);
         node.retire_txid.store(retire_txid, AtomicOrdering::Release);
 
@@ -1088,11 +1329,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         payload_len: u16,
         payload: &[u8],
     ) -> Result<(), ShmSkipListError> {
-        let posting_offset = self
-            .shm
-            .chunked_arena()
-            .alloc(PostingEntry::new(payload_len, payload, NULL_OFFSET))?
-            .load(AtomicOrdering::Acquire);
+        let posting_offset = self.alloc_posting_entry(payload_len, payload)?;
         let posting = self
             .posting_ref(posting_offset)
             .ok_or(ShmSkipListError::InvalidPosting(posting_offset))?;
@@ -1146,6 +1383,301 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         }
     }
 
+    fn alloc_posting_entry(
+        &self,
+        payload_len: u16,
+        payload: &[u8],
+    ) -> Result<u32, ShmSkipListError> {
+        if let Some(offset) = self.pop_recycled_posting() {
+            let ptr = self.posting_ptr(offset)?;
+            // SAFETY:
+            // `offset` was previously allocated as `PostingEntry` and was popped from the
+            // skiplist-local recycled-posting stack, so this write reinitializes owned memory.
+            unsafe { ptr.write(PostingEntry::new(payload_len, payload, NULL_OFFSET)) };
+            return Ok(offset);
+        }
+
+        Ok(self
+            .shm
+            .chunked_arena()
+            .alloc(PostingEntry::new(payload_len, payload, NULL_OFFSET))?
+            .load(AtomicOrdering::Acquire))
+    }
+
+    fn alloc_node(
+        &self,
+        key: K,
+        height: u8,
+        tower_offset: u32,
+        posting_offset: u32,
+    ) -> Result<u32, ShmSkipListError> {
+        if let Some(offset) = self.pop_recycled_node() {
+            let ptr = self.node_ptr(offset)?;
+            // SAFETY:
+            // `offset` was previously allocated as `ShmSkipNode<K>` and was popped from the
+            // skiplist-local recycled-node stack, so this write reinitializes owned memory.
+            unsafe {
+                ptr.write(ShmSkipNode::new(
+                    key,
+                    height,
+                    tower_offset,
+                    posting_offset,
+                    1,
+                ))
+            };
+            return Ok(offset);
+        }
+
+        Ok(self
+            .shm
+            .chunked_arena()
+            .alloc(ShmSkipNode::new(
+                key,
+                height,
+                tower_offset,
+                posting_offset,
+                1,
+            ))?
+            .load(AtomicOrdering::Acquire))
+    }
+
+    fn push_recycled_posting(&self, posting_offset: u32) -> Result<(), ShmSkipListError> {
+        let header = self
+            .header_ref()
+            .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
+        let posting = self
+            .posting_ref(posting_offset)
+            .ok_or(ShmSkipListError::InvalidPosting(posting_offset))?;
+
+        loop {
+            let old = header.recycled_postings.load(AtomicOrdering::Acquire);
+            let old_head = stack_head_offset(old);
+            posting.next.store(old_head, AtomicOrdering::Release);
+            let new = pack_stack_head(posting_offset, stack_head_tag(old).wrapping_add(1));
+            if header
+                .recycled_postings
+                .compare_exchange(old, new, AtomicOrdering::AcqRel, AtomicOrdering::Acquire)
+                .is_ok()
+            {
+                return Ok(());
+            }
+        }
+    }
+
+    fn pop_recycled_posting(&self) -> Option<u32> {
+        let header = self.header_ref()?;
+        loop {
+            let old = header.recycled_postings.load(AtomicOrdering::Acquire);
+            let head = stack_head_offset(old);
+            if head == NULL_OFFSET {
+                return None;
+            }
+            let posting = self.posting_ref(head)?;
+            let next = posting.next.load(AtomicOrdering::Acquire);
+            let new = pack_stack_head(next, stack_head_tag(old).wrapping_add(1));
+            if header
+                .recycled_postings
+                .compare_exchange(old, new, AtomicOrdering::AcqRel, AtomicOrdering::Acquire)
+                .is_ok()
+            {
+                return Some(head);
+            }
+            std::hint::spin_loop();
+        }
+    }
+
+    fn push_recycled_node(&self, node_offset: u32) -> Result<(), ShmSkipListError> {
+        let header = self
+            .header_ref()
+            .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
+        let node = self
+            .node_ref(node_offset)
+            .ok_or(ShmSkipListError::InvalidNode(node_offset))?;
+
+        loop {
+            let old = header.recycled_nodes.load(AtomicOrdering::Acquire);
+            let old_head = stack_head_offset(old);
+            node.retire_next.store(old_head, AtomicOrdering::Release);
+            let new = pack_stack_head(node_offset, stack_head_tag(old).wrapping_add(1));
+            if header
+                .recycled_nodes
+                .compare_exchange(old, new, AtomicOrdering::AcqRel, AtomicOrdering::Acquire)
+                .is_ok()
+            {
+                return Ok(());
+            }
+        }
+    }
+
+    fn pop_recycled_node(&self) -> Option<u32> {
+        let header = self.header_ref()?;
+        loop {
+            let old = header.recycled_nodes.load(AtomicOrdering::Acquire);
+            let head = stack_head_offset(old);
+            if head == NULL_OFFSET {
+                return None;
+            }
+            let node = self.node_ref(head)?;
+            let next = node.retire_next.load(AtomicOrdering::Acquire);
+            let new = pack_stack_head(next, stack_head_tag(old).wrapping_add(1));
+            if header
+                .recycled_nodes
+                .compare_exchange(old, new, AtomicOrdering::AcqRel, AtomicOrdering::Acquire)
+                .is_ok()
+            {
+                return Some(head);
+            }
+            std::hint::spin_loop();
+        }
+    }
+
+    fn push_recycled_tower(
+        &self,
+        tower_offset: u32,
+        tower_height: usize,
+    ) -> Result<(), ShmSkipListError> {
+        if !(1..=MAX_HEIGHT).contains(&tower_height) {
+            return Err(ShmSkipListError::InvalidLane {
+                node_offset: NULL_OFFSET,
+                level: tower_height,
+            });
+        }
+        let header = self
+            .header_ref()
+            .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
+        let lane0_ptr = tower_ptr::<K>(self.shm.mmap_base(), tower_offset, 0, tower_height).ok_or(
+            ShmSkipListError::InvalidLane {
+                node_offset: NULL_OFFSET,
+                level: 0,
+            },
+        )?;
+        // SAFETY:
+        // `tower_ptr` validated the pointer bounds and alignment for lane-0.
+        let lane0 = unsafe { &*lane0_ptr };
+
+        let head = &header.recycled_towers[tower_height - 1];
+        loop {
+            let old = head.load(AtomicOrdering::Acquire);
+            let old_head = stack_head_offset(old);
+            lane0.next.store(old_head, AtomicOrdering::Release);
+            lane0.marked.store(0, AtomicOrdering::Release);
+            let new = pack_stack_head(tower_offset, stack_head_tag(old).wrapping_add(1));
+            if head
+                .compare_exchange(old, new, AtomicOrdering::AcqRel, AtomicOrdering::Acquire)
+                .is_ok()
+            {
+                return Ok(());
+            }
+            std::hint::spin_loop();
+        }
+    }
+
+    fn pop_recycled_tower(&self, tower_height: usize) -> Option<u32> {
+        if !(1..=MAX_HEIGHT).contains(&tower_height) {
+            return None;
+        }
+        let header = self.header_ref()?;
+        let head = &header.recycled_towers[tower_height - 1];
+        loop {
+            let old = head.load(AtomicOrdering::Acquire);
+            let tower_offset = stack_head_offset(old);
+            if tower_offset == NULL_OFFSET {
+                return None;
+            }
+            let lane0_ptr = tower_ptr::<K>(self.shm.mmap_base(), tower_offset, 0, tower_height)?;
+            // SAFETY:
+            // `tower_ptr` validated the pointer bounds and alignment for lane-0.
+            let lane0 = unsafe { &*lane0_ptr };
+            let next = lane0.next.load(AtomicOrdering::Acquire);
+            let new = pack_stack_head(next, stack_head_tag(old).wrapping_add(1));
+            if head
+                .compare_exchange(old, new, AtomicOrdering::AcqRel, AtomicOrdering::Acquire)
+                .is_ok()
+            {
+                return Some(tower_offset);
+            }
+            std::hint::spin_loop();
+        }
+    }
+
+    fn pop_recycled_tower_at_least(&self, min_height: usize) -> Option<u32> {
+        if min_height > MAX_HEIGHT {
+            return None;
+        }
+
+        for tower_height in min_height..=MAX_HEIGHT {
+            if let Some(offset) = self.pop_recycled_tower(tower_height) {
+                return Some(offset);
+            }
+        }
+        None
+    }
+
+    fn node_ptr(&self, offset: u32) -> Result<*mut ShmSkipNode<K>, ShmSkipListError> {
+        let start = offset as usize;
+        let end = start
+            .checked_add(size_of::<ShmSkipNode<K>>())
+            .ok_or(ShmSkipListError::InvalidNode(offset))?;
+        let base = self.shm.mmap_base();
+        if end > base.len() {
+            return Err(ShmSkipListError::InvalidNode(offset));
+        }
+        let ptr = unsafe { base.as_ptr().add(start).cast::<ShmSkipNode<K>>() };
+        if (ptr as usize) % align_of::<ShmSkipNode<K>>() != 0 {
+            return Err(ShmSkipListError::InvalidNode(offset));
+        }
+        Ok(ptr)
+    }
+
+    fn posting_ptr(&self, offset: u32) -> Result<*mut PostingEntry, ShmSkipListError> {
+        let start = offset as usize;
+        let end = start
+            .checked_add(size_of::<PostingEntry>())
+            .ok_or(ShmSkipListError::InvalidPosting(offset))?;
+        let base = self.shm.mmap_base();
+        if end > base.len() {
+            return Err(ShmSkipListError::InvalidPosting(offset));
+        }
+        let ptr = unsafe { base.as_ptr().add(start).cast::<PostingEntry>() };
+        if (ptr as usize) % align_of::<PostingEntry>() != 0 {
+            return Err(ShmSkipListError::InvalidPosting(offset));
+        }
+        Ok(ptr)
+    }
+
+    fn recycle_unlinked_insert_allocations(
+        &self,
+        node_offset: u32,
+        tower_offset: u32,
+        posting_offset: u32,
+        node_height: usize,
+    ) -> Result<(), ShmSkipListError> {
+        self.push_recycled_posting(posting_offset)?;
+        self.push_recycled_tower(tower_offset, node_height)?;
+        self.push_recycled_node(node_offset)?;
+        Ok(())
+    }
+
+    fn recycle_retired_node(&self, node_offset: u32) -> Result<(), ShmSkipListError> {
+        let node = self
+            .node_ref(node_offset)
+            .ok_or(ShmSkipListError::InvalidNode(node_offset))?;
+
+        let mut posting_offset = node.postings_head.load(AtomicOrdering::Acquire);
+        while posting_offset != NULL_OFFSET {
+            let posting = self
+                .posting_ref(posting_offset)
+                .ok_or(ShmSkipListError::InvalidPosting(posting_offset))?;
+            let next = posting.next.load(AtomicOrdering::Acquire);
+            self.push_recycled_posting(posting_offset)?;
+            posting_offset = next;
+        }
+
+        self.push_recycled_tower(node.tower_offset, node.height as usize)?;
+        self.push_recycled_node(node_offset)?;
+        Ok(())
+    }
+
     fn alloc_tower(
         &self,
         height: usize,
@@ -1154,10 +1686,15 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         let bytes = size_of::<SkipLane<K>>()
             .checked_mul(height)
             .ok_or(ShmAllocError::SizeOverflow)?;
-        let tower_offset = self
-            .shm
-            .chunked_arena()
-            .alloc_raw(bytes, align_of::<SkipLane<K>>())?;
+        let tower_offset = if let Some(offset) = self.pop_recycled_tower(height) {
+            offset
+        } else if let Some(offset) = self.pop_recycled_tower_at_least(height + 1) {
+            offset
+        } else {
+            self.shm
+                .chunked_arena()
+                .alloc_raw(bytes, align_of::<SkipLane<K>>())?
+        };
         let base = self.shm.mmap_base();
         for level in 0..height {
             let ptr = tower_ptr::<K>(base, tower_offset, level, height).ok_or(
@@ -1396,6 +1933,22 @@ fn lane_from_node<K: ShmSkipKey>(
     // SAFETY:
     // `tower_ptr` validates pointer bounds and alignment against the mapped segment.
     Some(unsafe { &*ptr.cast_const() })
+}
+
+#[inline]
+fn atomic_max_u64(slot: &AtomicU64, candidate: u64) {
+    let mut current = slot.load(AtomicOrdering::Acquire);
+    while candidate > current {
+        match slot.compare_exchange_weak(
+            current,
+            candidate,
+            AtomicOrdering::AcqRel,
+            AtomicOrdering::Acquire,
+        ) {
+            Ok(_) => return,
+            Err(observed) => current = observed,
+        }
+    }
 }
 
 #[inline]
