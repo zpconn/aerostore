@@ -35,14 +35,15 @@ pub use bootloader::{
     persist_boot_layout, read_u32_array, BootContext, BootLayout, BootMode, BootloaderError,
     BOOT_LAYOUT_MAX_INDEXES,
 };
-pub use execution::{ExecutionEngine, PrimaryKeyMapError, ShmPrimaryKeyMap};
+pub use execution::{ExecutionEngine, PrimaryKeyMapError, ShmPrimaryKeyMap, SnapshotExecutionMode};
 pub use index::{IndexCompare, IndexValue, IntoIndexValue, SecondaryIndex};
 pub use ingest::{
     bulk_upsert_tsv, IngestError, IngestStats, TsvColumns, TsvDecodeError, TsvDecoder,
 };
 pub use mvcc::{is_visible, MvccError, MvccTable, RowVersion};
 pub use occ::{
-    Error as OccError, OccRow, OccTable, OccTransaction, RowLockGuard, VacuumReclaimedRow,
+    Error as OccError, OccRecycleTelemetry, OccRow, OccTable, OccTransaction, RowLockGuard,
+    VacuumReclaimedRow,
 };
 pub use procarray::{
     ProcArray, ProcArrayError, ProcArrayRegistration, ProcSlot, ProcSnapshot, PROCARRAY_SLOTS,
@@ -61,7 +62,8 @@ pub use recovery_delta::{
 };
 pub use retry::{RetryBackoff, RetryPolicy};
 pub use shm::{
-    ChunkedArena as ShmChunkedArena, MmapBase, RelPtr, ShmAllocError, ShmArena, ShmError,
+    ArenaClass, ChunkedArena as ShmChunkedArena, MmapBase, RelPtr, ShmAllocError, ShmArena,
+    ShmError,
 };
 pub use shm_index::{IndexMutationTelemetry, ShmIndexError, ShmIndexGcDaemon};
 pub use shm_tmpfs::{map_tmpfs_shared, TmpfsAttachMode, TmpfsMappedArena, DEFAULT_TMPFS_PATH};

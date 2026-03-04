@@ -6,12 +6,13 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::procarray::{ProcArrayError, ProcArrayRegistration};
-use crate::shm::{RelPtr, ShmAllocError, ShmArena, OCC_PARTITION_LOCKS};
+use crate::shm::{ArenaClass, RelPtr, ShmAllocError, ShmArena, OCC_PARTITION_LOCKS};
 use crate::TxId;
 
 const EMPTY_PTR: u32 = 0;
 const COMMIT_LOCK_SPIN_LIMIT: u32 = 512;
 const RECYCLE_STARVATION_SPIN_LIMIT: u32 = 32 * 1024;
+const RECYCLE_SHARD_PROBE_LIMIT: usize = 4;
 const MAX_VISIBLE_CHAIN_STEPS: u32 = 262_144;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -19,6 +20,7 @@ struct StarvedRecycleKey {
     mmap_base: usize,
     mmap_len: usize,
     shared_header_offset: u32,
+    recycle_shard: usize,
     row_size: usize,
     row_align: usize,
 }
@@ -35,14 +37,32 @@ thread_local! {
 
 #[repr(C, align(64))]
 struct OccSharedHeader {
-    recycled_head: AtomicU32,
+    recycled_heads: [AtomicU32; OCC_PARTITION_LOCKS],
+    recycle_alloc_from_starved: AtomicU64,
+    recycle_alloc_from_primary: AtomicU64,
+    recycle_alloc_from_probe: AtomicU64,
+    recycle_alloc_fresh: AtomicU64,
+    recycle_pop_empty: AtomicU64,
+    recycle_pop_cas_fail: AtomicU64,
+    recycle_push_success: AtomicU64,
+    recycle_push_cas_fail: AtomicU64,
+    recycle_stash_starved: AtomicU64,
 }
 
 impl OccSharedHeader {
     #[inline]
     fn new() -> Self {
         Self {
-            recycled_head: AtomicU32::new(EMPTY_PTR),
+            recycled_heads: std::array::from_fn(|_| AtomicU32::new(EMPTY_PTR)),
+            recycle_alloc_from_starved: AtomicU64::new(0),
+            recycle_alloc_from_primary: AtomicU64::new(0),
+            recycle_alloc_from_probe: AtomicU64::new(0),
+            recycle_alloc_fresh: AtomicU64::new(0),
+            recycle_pop_empty: AtomicU64::new(0),
+            recycle_pop_cas_fail: AtomicU64::new(0),
+            recycle_push_success: AtomicU64::new(0),
+            recycle_push_cas_fail: AtomicU64::new(0),
+            recycle_stash_starved: AtomicU64::new(0),
         }
     }
 }
@@ -151,6 +171,19 @@ pub struct VacuumReclaimedRow<T: Copy> {
     pub row_id: usize,
     pub reclaimed_value: T,
     pub live_head_value: Option<T>,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct OccRecycleTelemetry {
+    pub alloc_from_starved: u64,
+    pub alloc_from_primary: u64,
+    pub alloc_from_probe: u64,
+    pub alloc_fresh: u64,
+    pub pop_empty: u64,
+    pub pop_cas_fail: u64,
+    pub push_success: u64,
+    pub push_cas_fail: u64,
+    pub stash_starved: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -280,7 +313,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
     pub fn seed_row(&self, row_id: usize, value: T) -> Result<(), Error> {
         let slot = self.slot_ref(row_id)?;
         let seed_txid = self.shm.global_txid().fetch_add(1, Ordering::AcqRel);
-        let row_ptr = self.allocate_row(value, seed_txid, EMPTY_PTR)?;
+        let row_ptr = self.allocate_row(row_id, value, seed_txid, EMPTY_PTR)?;
         let row_offset = row_ptr.load(Ordering::Acquire);
 
         if slot
@@ -458,7 +491,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             crate::wal_delta::coarse_dirty_mask_for_copy(&base_row.value, &value);
 
         let base_offset = base_ptr.load(Ordering::Acquire);
-        let new_ptr = self.allocate_row(value, tx.txid, base_offset)?;
+        let new_ptr = self.allocate_row(row_id, value, tx.txid, base_offset)?;
 
         tx.write_set.push(PendingWrite {
             row_id,
@@ -504,7 +537,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         };
 
         let base_offset = base_ptr.load(Ordering::Acquire);
-        let new_ptr = self.allocate_row(value, tx.txid, base_offset)?;
+        let new_ptr = self.allocate_row(row_id, value, tx.txid, base_offset)?;
 
         tx.write_set.push(PendingWrite {
             row_id,
@@ -517,6 +550,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
 
     pub fn abort(&self, tx: &mut OccTransaction<T>) -> Result<(), Error> {
         self.clear_local_sets(tx)?;
+        let _ = self.shm.flush_local_recycle_caches();
         self.finish_transaction(tx)
     }
 
@@ -580,6 +614,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         tx.read_set.clear();
         tx.write_set.clear();
         tx.savepoints.clear();
+        let _ = self.shm.flush_local_recycle_caches();
         self.finish_transaction(tx)?;
         Ok(commit_record)
     }
@@ -730,7 +765,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             if keep[idx] {
                 continue;
             }
-            self.recycle_row_ptr(&write.new_ptr)?;
+            self.recycle_row_ptr(write.row_id, &write.new_ptr)?;
         }
 
         Ok(())
@@ -742,7 +777,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         }
 
         for write in tx.write_set[start..].iter() {
-            self.recycle_row_ptr(&write.new_ptr)?;
+            self.recycle_row_ptr(write.row_id, &write.new_ptr)?;
         }
 
         Ok(())
@@ -962,21 +997,62 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             .ok_or(Error::InvalidPointer { offset })
     }
 
-    fn allocate_row(&self, value: T, xmin: TxId, next: u32) -> Result<RelPtr<OccRow<T>>, Error> {
-        if let Some(recycled_ptr) = self.try_take_starved_recycled_row() {
+    #[inline]
+    fn recycle_shard_for_row_id(row_id: usize) -> usize {
+        Self::lock_bucket_for_row_id(row_id)
+    }
+
+    #[inline]
+    fn recycle_probe_shard(primary_shard: usize, probe_idx: usize) -> usize {
+        primary_shard.wrapping_add(probe_idx.wrapping_mul(131)) % OCC_PARTITION_LOCKS
+    }
+
+    fn allocate_row(
+        &self,
+        row_id: usize,
+        value: T,
+        xmin: TxId,
+        next: u32,
+    ) -> Result<RelPtr<OccRow<T>>, Error> {
+        let header = self.shared_header_ref()?;
+        let primary_shard = Self::recycle_shard_for_row_id(row_id);
+
+        if let Some(recycled_ptr) = self.try_take_starved_recycled_row(primary_shard) {
+            header
+                .recycle_alloc_from_starved
+                .fetch_add(1, Ordering::AcqRel);
             self.initialize_row(&recycled_ptr, value, xmin, next)?;
             return Ok(recycled_ptr);
         }
 
-        if let Some(recycled_ptr) = self.try_pop_recycled_row()? {
+        if let Some(recycled_ptr) = self.try_pop_recycled_row_from_shard(header, primary_shard)? {
+            header
+                .recycle_alloc_from_primary
+                .fetch_add(1, Ordering::AcqRel);
             self.initialize_row(&recycled_ptr, value, xmin, next)?;
             return Ok(recycled_ptr);
         }
 
+        let probe_limit = RECYCLE_SHARD_PROBE_LIMIT.min(OCC_PARTITION_LOCKS.saturating_sub(1));
+        for probe_idx in 1..=probe_limit {
+            let probe_shard = Self::recycle_probe_shard(primary_shard, probe_idx);
+            if probe_shard == primary_shard {
+                continue;
+            }
+            if let Some(recycled_ptr) = self.try_pop_recycled_row_from_shard(header, probe_shard)? {
+                header
+                    .recycle_alloc_from_probe
+                    .fetch_add(1, Ordering::AcqRel);
+                self.initialize_row(&recycled_ptr, value, xmin, next)?;
+                return Ok(recycled_ptr);
+            }
+        }
+
+        header.recycle_alloc_fresh.fetch_add(1, Ordering::AcqRel);
         Ok(self
             .shm
             .chunked_arena()
-            .alloc(OccRow::new(value, xmin, next))?)
+            .alloc_in_class(OccRow::new(value, xmin, next), ArenaClass::RowVersion)?)
     }
 
     fn initialize_row(
@@ -1024,13 +1100,18 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         Ok(addr as *mut OccRow<T>)
     }
 
-    fn try_pop_recycled_row(&self) -> Result<Option<RelPtr<OccRow<T>>>, Error> {
-        let header = self.shared_header_ref()?;
+    fn try_pop_recycled_row_from_shard(
+        &self,
+        header: &OccSharedHeader,
+        recycle_shard: usize,
+    ) -> Result<Option<RelPtr<OccRow<T>>>, Error> {
+        let head_slot = &header.recycled_heads[recycle_shard];
         let mut spins = 0_u32;
 
         loop {
-            let head = header.recycled_head.load(Ordering::Acquire);
+            let head = head_slot.load(Ordering::Acquire);
             if head == EMPTY_PTR {
+                header.recycle_pop_empty.fetch_add(1, Ordering::AcqRel);
                 return Ok(None);
             }
 
@@ -1038,13 +1119,13 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             let row = self.resolve_row_ptr(&head_ptr)?;
             let next = row.recycle_next.load(Ordering::Acquire);
 
-            if header
-                .recycled_head
+            if head_slot
                 .compare_exchange(head, next, Ordering::AcqRel, Ordering::Acquire)
                 .is_ok()
             {
                 return Ok(Some(head_ptr));
             }
+            header.recycle_pop_cas_fail.fetch_add(1, Ordering::AcqRel);
 
             spins = spins.wrapping_add(1);
             if spins & 0x3f == 0 {
@@ -1059,27 +1140,30 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         }
     }
 
-    fn recycle_row_ptr(&self, row_ptr: &RelPtr<OccRow<T>>) -> Result<(), Error> {
+    fn recycle_row_ptr(&self, row_id: usize, row_ptr: &RelPtr<OccRow<T>>) -> Result<(), Error> {
         let offset = row_ptr.load(Ordering::Acquire);
         if offset == EMPTY_PTR {
             return Ok(());
         }
 
         let header = self.shared_header_ref()?;
+        let recycle_shard = Self::recycle_shard_for_row_id(row_id);
+        let head_slot = &header.recycled_heads[recycle_shard];
         let row = self.resolve_row_ptr(row_ptr)?;
         let mut spins = 0_u32;
 
         loop {
-            let old_head = header.recycled_head.load(Ordering::Acquire);
+            let old_head = head_slot.load(Ordering::Acquire);
             row.recycle_next.store(old_head, Ordering::Release);
 
-            if header
-                .recycled_head
+            if head_slot
                 .compare_exchange(old_head, offset, Ordering::AcqRel, Ordering::Acquire)
                 .is_ok()
             {
+                header.recycle_push_success.fetch_add(1, Ordering::AcqRel);
                 return Ok(());
             }
+            header.recycle_push_cas_fail.fetch_add(1, Ordering::AcqRel);
 
             spins = spins.wrapping_add(1);
             if spins & 0x3f == 0 {
@@ -1088,15 +1172,18 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             if spins & 0x3ff == 0 {
                 std::thread::sleep(Duration::from_micros(25));
             }
-            if spins >= RECYCLE_STARVATION_SPIN_LIMIT && self.stash_starved_recycled_row(offset) {
+            if spins >= RECYCLE_STARVATION_SPIN_LIMIT
+                && self.stash_starved_recycled_row(recycle_shard, offset)
+            {
+                header.recycle_stash_starved.fetch_add(1, Ordering::AcqRel);
                 return Ok(());
             }
             std::hint::spin_loop();
         }
     }
 
-    fn try_take_starved_recycled_row(&self) -> Option<RelPtr<OccRow<T>>> {
-        let key = self.starved_recycle_key();
+    fn try_take_starved_recycled_row(&self, recycle_shard: usize) -> Option<RelPtr<OccRow<T>>> {
+        let key = self.starved_recycle_key(recycle_shard);
         STARVED_RECYCLE_SLOT.with(|slot| {
             let Some(entry) = slot.get() else {
                 return None;
@@ -1110,24 +1197,25 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         })
     }
 
-    fn stash_starved_recycled_row(&self, offset: u32) -> bool {
+    fn stash_starved_recycled_row(&self, recycle_shard: usize, offset: u32) -> bool {
         if offset == EMPTY_PTR {
             return true;
         }
 
-        let key = self.starved_recycle_key();
+        let key = self.starved_recycle_key(recycle_shard);
         STARVED_RECYCLE_SLOT.with(|slot| {
             slot.set(Some(StarvedRecycleEntry { key, offset }));
             true
         })
     }
 
-    fn starved_recycle_key(&self) -> StarvedRecycleKey {
+    fn starved_recycle_key(&self, recycle_shard: usize) -> StarvedRecycleKey {
         let mmap = self.shm.mmap_base();
         StarvedRecycleKey {
             mmap_base: mmap.as_ptr() as usize,
             mmap_len: mmap.len(),
             shared_header_offset: self.shared_header.load(Ordering::Acquire),
+            recycle_shard,
             row_size: std::mem::size_of::<OccRow<T>>(),
             row_align: std::mem::align_of::<OccRow<T>>(),
         }
@@ -1208,7 +1296,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         let _lock = self.acquire_row_lock(row_id);
         let slot = self.slot_ref(row_id)?;
         let base_offset = slot.head.load(Ordering::Acquire);
-        let new_ptr = self.allocate_row(value, txid, base_offset)?;
+        let new_ptr = self.allocate_row(row_id, value, txid, base_offset)?;
         let new_offset = new_ptr.load(Ordering::Acquire);
 
         if base_offset != EMPTY_PTR {
@@ -1250,7 +1338,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             return Err(Error::SerializationFailure);
         }
 
-        let new_ptr = self.allocate_row(value, txid, base_offset)?;
+        let new_ptr = self.allocate_row(row_id, value, txid, base_offset)?;
         let new_offset = new_ptr.load(Ordering::Acquire);
 
         if base_offset != EMPTY_PTR {
@@ -1296,6 +1384,21 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         &self.shm
     }
 
+    pub fn recycle_telemetry(&self) -> Result<OccRecycleTelemetry, Error> {
+        let header = self.shared_header_ref()?;
+        Ok(OccRecycleTelemetry {
+            alloc_from_starved: header.recycle_alloc_from_starved.load(Ordering::Acquire),
+            alloc_from_primary: header.recycle_alloc_from_primary.load(Ordering::Acquire),
+            alloc_from_probe: header.recycle_alloc_from_probe.load(Ordering::Acquire),
+            alloc_fresh: header.recycle_alloc_fresh.load(Ordering::Acquire),
+            pop_empty: header.recycle_pop_empty.load(Ordering::Acquire),
+            pop_cas_fail: header.recycle_pop_cas_fail.load(Ordering::Acquire),
+            push_success: header.recycle_push_success.load(Ordering::Acquire),
+            push_cas_fail: header.recycle_push_cas_fail.load(Ordering::Acquire),
+            stash_starved: header.recycle_stash_starved.load(Ordering::Acquire),
+        })
+    }
+
     pub fn snapshot_latest_rows(&self) -> Result<Vec<(usize, T)>, Error> {
         let _lock = self.acquire_all_partition_locks();
         let mut rows = Vec::with_capacity(self.capacity());
@@ -1319,8 +1422,6 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         &self,
         global_xmin: TxId,
     ) -> Result<Vec<VacuumReclaimedRow<T>>, Error> {
-        let row_size = std::mem::size_of::<OccRow<T>>();
-        let row_align = std::mem::align_of::<OccRow<T>>();
         let mut reclaimed = Vec::new();
 
         for row_id in 0..self.capacity() {
@@ -1348,9 +1449,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
                     let prev_row = self.resolve_row_ptr(&prev_ptr)?;
                     prev_row.next.store(next_offset, Ordering::Release);
                     let reclaimed_value = curr_row.value;
-                    self.shm
-                        .chunked_arena()
-                        .recycle_raw(curr_offset, row_size, row_align)?;
+                    self.recycle_row_ptr(row_id, &curr_ptr)?;
                     reclaimed.push(VacuumReclaimedRow {
                         row_id,
                         reclaimed_value,
