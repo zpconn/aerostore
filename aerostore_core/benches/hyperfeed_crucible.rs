@@ -11,8 +11,8 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use aerostore_core::{
     spawn_vacuum_daemon_with_config, spawn_wal_writer_daemon, IndexCompare, IndexValue,
-    OccCommitter, OccError, OccTable, RelPtr, RetryBackoff, RetryPolicy, SecondaryIndex,
-    SharedWalRing, ShmArena, ShmIndexGcDaemon, VacuumDaemon, VacuumDaemonConfig,
+    OccCommitter, OccError, OccRecycleTelemetry, OccTable, RelPtr, RetryBackoff, RetryPolicy,
+    SecondaryIndex, SharedWalRing, ShmArena, ShmIndexGcDaemon, VacuumDaemon, VacuumDaemonConfig,
     VacuumReclaimedRow, WalDeltaCodec, WalWriterError,
 };
 use criterion::{criterion_group, criterion_main, Criterion};
@@ -203,6 +203,7 @@ struct EngineRunResult {
     scan_latency: LatencySummary,
     scan_server_exec_latency: Option<LatencySummary>,
     reclaim_telemetry: Option<ReclaimTelemetry>,
+    occ_recycle_telemetry: Option<OccRecycleRunTelemetry>,
     index_retry_telemetry: Option<IndexRetryTelemetry>,
     memory_telemetry: Option<MemoryTelemetry>,
 }
@@ -244,6 +245,39 @@ struct IndexRetryTelemetry {
     retry_epoch: u64,
     max_insert_attempts: u64,
     max_remove_attempts: u64,
+    gc_nodes_examined: u64,
+    gc_nodes_requeued: u64,
+    gc_recycle_errors: u64,
+    gc_assist_calls: u64,
+    gc_assist_reclaimed: u64,
+    retired_backlog: u64,
+    pressure_state: u32,
+    pressure_to_normal: u64,
+    pressure_to_warm: u64,
+    pressure_to_hot: u64,
+    alloc_failure_events: u64,
+    reserve_node_pushes: u64,
+    reserve_node_hits: u64,
+    reserve_node_misses: u64,
+    reserve_posting_pushes: u64,
+    reserve_posting_hits: u64,
+    reserve_posting_misses: u64,
+    reserve_tower_pushes: u64,
+    reserve_tower_hits: u64,
+    reserve_tower_misses: u64,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct OccRecycleRunTelemetry {
+    alloc_from_starved_delta: u64,
+    alloc_from_primary_delta: u64,
+    alloc_from_probe_delta: u64,
+    alloc_fresh_delta: u64,
+    pop_empty_delta: u64,
+    pop_cas_fail_delta: u64,
+    push_success_delta: u64,
+    push_cas_fail_delta: u64,
+    stash_starved_delta: u64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -376,7 +410,7 @@ impl AllocTelemetryRecorder {
         let mut writer = BufWriter::new(file);
         writeln!(
             writer,
-            "elapsed_ms,head_offset,head_peak,free_list_head_offset,free_list_depth_est,free_list_depth_truncated,free_list_pushes,free_list_pops,free_list_net,free_list_pop_misses,retry_alloc,retry_loops,retry_structural,max_insert_attempts,max_remove_attempts"
+            "elapsed_ms,head_offset,head_peak,free_list_head_offset,free_list_depth_est,free_list_depth_truncated,free_list_pushes,free_list_pops,free_list_net,free_list_pop_misses,retry_alloc,retry_loops,retry_structural,max_insert_attempts,max_remove_attempts,gc_nodes_examined,gc_nodes_requeued,gc_recycle_errors,gc_assist_calls,gc_assist_reclaimed,retired_backlog,pressure_state,pressure_to_normal,pressure_to_warm,pressure_to_hot,alloc_failure_events,reserve_node_pushes,reserve_node_hits,reserve_node_misses,reserve_posting_pushes,reserve_posting_hits,reserve_posting_misses,reserve_tower_pushes,reserve_tower_hits,reserve_tower_misses"
         )
         .map_err(|err| {
             format!(
@@ -444,13 +478,33 @@ impl AllocTelemetryRecorder {
 
         writeln!(
             self.writer,
-            "{elapsed_ms},{head_offset},{head_peak},{free_list_head_offset},{free_list_depth_est},{depth_truncated},{free_list_pushes},{free_list_pops},{free_list_net},{free_list_pop_misses},{retry_alloc},{retry_loops},{retry_structural},{max_insert_attempts},{max_remove_attempts}",
+            "{elapsed_ms},{head_offset},{head_peak},{free_list_head_offset},{free_list_depth_est},{depth_truncated},{free_list_pushes},{free_list_pops},{free_list_net},{free_list_pop_misses},{retry_alloc},{retry_loops},{retry_structural},{max_insert_attempts},{max_remove_attempts},{gc_nodes_examined},{gc_nodes_requeued},{gc_recycle_errors},{gc_assist_calls},{gc_assist_reclaimed},{retired_backlog},{pressure_state},{pressure_to_normal},{pressure_to_warm},{pressure_to_hot},{alloc_failure_events},{reserve_node_pushes},{reserve_node_hits},{reserve_node_misses},{reserve_posting_pushes},{reserve_posting_hits},{reserve_posting_misses},{reserve_tower_pushes},{reserve_tower_hits},{reserve_tower_misses}",
             head_peak = self.head_peak,
             retry_alloc = retry.retry_alloc,
             retry_loops = retry.retry_loops,
             retry_structural = retry.retry_structural,
             max_insert_attempts = retry.max_insert_attempts,
             max_remove_attempts = retry.max_remove_attempts,
+            gc_nodes_examined = retry.gc_nodes_examined,
+            gc_nodes_requeued = retry.gc_nodes_requeued,
+            gc_recycle_errors = retry.gc_recycle_errors,
+            gc_assist_calls = retry.gc_assist_calls,
+            gc_assist_reclaimed = retry.gc_assist_reclaimed,
+            retired_backlog = retry.retired_backlog,
+            pressure_state = retry.pressure_state,
+            pressure_to_normal = retry.pressure_to_normal,
+            pressure_to_warm = retry.pressure_to_warm,
+            pressure_to_hot = retry.pressure_to_hot,
+            alloc_failure_events = retry.alloc_failure_events,
+            reserve_node_pushes = retry.reserve_node_pushes,
+            reserve_node_hits = retry.reserve_node_hits,
+            reserve_node_misses = retry.reserve_node_misses,
+            reserve_posting_pushes = retry.reserve_posting_pushes,
+            reserve_posting_hits = retry.reserve_posting_hits,
+            reserve_posting_misses = retry.reserve_posting_misses,
+            reserve_tower_pushes = retry.reserve_tower_pushes,
+            reserve_tower_hits = retry.reserve_tower_hits,
+            reserve_tower_misses = retry.reserve_tower_misses,
         )
         .map_err(|err| format!("failed to write alloc telemetry sample: {}", err))
     }
@@ -520,6 +574,9 @@ fn run_aerostore_crucible(
         free_list_pops: shm.free_list_pops(),
         epoch: read_epoch_lag_snapshot(shm.as_ref()),
     };
+    let recycle_start = table
+        .recycle_telemetry()
+        .map_err(|err| format!("failed to read recycle telemetry start: {}", err))?;
     let vacuum_reclaimed_rows = Arc::new(AtomicU64::new(0));
     let reclaim_counter = Arc::clone(&vacuum_reclaimed_rows);
     let reclaim_callback: Arc<dyn Fn(&[VacuumReclaimedRow<CrucibleRow>]) + Send + Sync + 'static> =
@@ -712,6 +769,10 @@ fn run_aerostore_crucible(
         active_slots_start: reclaim_start.epoch.active_slots,
         active_slots_end: reclaim_end.epoch.active_slots,
     };
+    let recycle_end = table
+        .recycle_telemetry()
+        .map_err(|err| format!("failed to read recycle telemetry end: {}", err))?;
+    let occ_recycle_telemetry = fold_recycle_telemetry(recycle_start, recycle_end);
     let index_retry = time_index.mutation_telemetry();
     let index_retry_telemetry = IndexRetryTelemetry {
         insert_ops: index_retry.insert_ops,
@@ -722,6 +783,26 @@ fn run_aerostore_crucible(
         retry_epoch: index_retry.retry_epoch,
         max_insert_attempts: index_retry.max_insert_attempts,
         max_remove_attempts: index_retry.max_remove_attempts,
+        gc_nodes_examined: index_retry.gc_nodes_examined,
+        gc_nodes_requeued: index_retry.gc_nodes_requeued,
+        gc_recycle_errors: index_retry.gc_recycle_errors,
+        gc_assist_calls: index_retry.gc_assist_calls,
+        gc_assist_reclaimed: index_retry.gc_assist_reclaimed,
+        retired_backlog: index_retry.retired_backlog,
+        pressure_state: index_retry.pressure_state,
+        pressure_to_normal: index_retry.pressure_to_normal,
+        pressure_to_warm: index_retry.pressure_to_warm,
+        pressure_to_hot: index_retry.pressure_to_hot,
+        alloc_failure_events: index_retry.alloc_failure_events,
+        reserve_node_pushes: index_retry.reserve_node_pushes,
+        reserve_node_hits: index_retry.reserve_node_hits,
+        reserve_node_misses: index_retry.reserve_node_misses,
+        reserve_posting_pushes: index_retry.reserve_posting_pushes,
+        reserve_posting_hits: index_retry.reserve_posting_hits,
+        reserve_posting_misses: index_retry.reserve_posting_misses,
+        reserve_tower_pushes: index_retry.reserve_tower_pushes,
+        reserve_tower_hits: index_retry.reserve_tower_hits,
+        reserve_tower_misses: index_retry.reserve_tower_misses,
     };
     let memory_telemetry = if mem_samples > 0 {
         Some(MemoryTelemetry {
@@ -748,6 +829,7 @@ fn run_aerostore_crucible(
         elapsed,
         false,
         Some(reclaim_telemetry),
+        Some(occ_recycle_telemetry),
         Some(index_retry_telemetry),
         memory_telemetry,
     );
@@ -775,6 +857,27 @@ impl EpochLagSnapshot {
     #[inline]
     fn lag(self) -> u64 {
         self.global_txid.saturating_sub(self.global_xmin)
+    }
+}
+
+fn fold_recycle_telemetry(
+    start: OccRecycleTelemetry,
+    end: OccRecycleTelemetry,
+) -> OccRecycleRunTelemetry {
+    OccRecycleRunTelemetry {
+        alloc_from_starved_delta: end
+            .alloc_from_starved
+            .saturating_sub(start.alloc_from_starved),
+        alloc_from_primary_delta: end
+            .alloc_from_primary
+            .saturating_sub(start.alloc_from_primary),
+        alloc_from_probe_delta: end.alloc_from_probe.saturating_sub(start.alloc_from_probe),
+        alloc_fresh_delta: end.alloc_fresh.saturating_sub(start.alloc_fresh),
+        pop_empty_delta: end.pop_empty.saturating_sub(start.pop_empty),
+        pop_cas_fail_delta: end.pop_cas_fail.saturating_sub(start.pop_cas_fail),
+        push_success_delta: end.push_success.saturating_sub(start.push_success),
+        push_cas_fail_delta: end.push_cas_fail.saturating_sub(start.push_cas_fail),
+        stash_starved_delta: end.stash_starved.saturating_sub(start.stash_starved),
     }
 }
 
@@ -1094,6 +1197,7 @@ fn run_postgres_crucible(
         state,
         elapsed,
         true,
+        None,
         None,
         None,
         memory_telemetry,
@@ -1453,6 +1557,7 @@ fn aggregate_result(
     elapsed: Duration,
     include_server_exec: bool,
     reclaim_telemetry: Option<ReclaimTelemetry>,
+    occ_recycle_telemetry: Option<OccRecycleRunTelemetry>,
     index_retry_telemetry: Option<IndexRetryTelemetry>,
     memory_telemetry: Option<MemoryTelemetry>,
 ) -> EngineRunResult {
@@ -1526,6 +1631,7 @@ fn aggregate_result(
         scan_latency,
         scan_server_exec_latency,
         reclaim_telemetry,
+        occ_recycle_telemetry,
         index_retry_telemetry,
         memory_telemetry,
     }
@@ -1606,9 +1712,7 @@ fn print_results(result: &ProfileRunResult, duration: Duration) {
     );
 
     if aerostore.memory_telemetry.is_some() || postgres.memory_telemetry.is_some() {
-        println!(
-            "| Engine Memory Telemetry | Source | Peak (MiB) | End (MiB) | Samples | Notes |"
-        );
+        println!("| Engine Memory Telemetry | Source | Peak (MiB) | End (MiB) | Samples | Notes |");
         println!("|---|---|---:|---:|---:|---|");
 
         if let Some(mem) = aerostore.memory_telemetry {
@@ -1663,13 +1767,33 @@ fn print_results(result: &ProfileRunResult, duration: Duration) {
         );
     }
 
+    if let Some(recycle) = aerostore.occ_recycle_telemetry {
+        println!(
+            "| Aerostore OCC Recycle Telemetry | alloc_from_starved | alloc_from_primary | alloc_from_probe | alloc_fresh | pop_empty | pop_cas_fail | push_success | push_cas_fail | stash_starved |"
+        );
+        println!("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+        println!(
+            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |",
+            result.profile.label,
+            recycle.alloc_from_starved_delta,
+            recycle.alloc_from_primary_delta,
+            recycle.alloc_from_probe_delta,
+            recycle.alloc_fresh_delta,
+            recycle.pop_empty_delta,
+            recycle.pop_cas_fail_delta,
+            recycle.push_success_delta,
+            recycle.push_cas_fail_delta,
+            recycle.stash_starved_delta,
+        );
+    }
+
     if let Some(retry) = aerostore.index_retry_telemetry {
         println!(
-            "| Aerostore Index Retry Telemetry | insert_ops | remove_ops | retry_loops | retry_alloc | retry_structural | retry_epoch | max_insert_attempts | max_remove_attempts |"
+            "| Aerostore Index Retry Telemetry | insert_ops | remove_ops | retry_loops | retry_alloc | retry_structural | retry_epoch | max_insert_attempts | max_remove_attempts | gc_nodes_examined | gc_nodes_requeued | gc_recycle_errors | gc_assist_calls | gc_assist_reclaimed | retired_backlog | pressure_state | pressure_to_normal | pressure_to_warm | pressure_to_hot | alloc_failure_events | reserve_node_pushes | reserve_node_hits | reserve_node_misses | reserve_posting_pushes | reserve_posting_hits | reserve_posting_misses | reserve_tower_pushes | reserve_tower_hits | reserve_tower_misses |"
         );
-        println!("|---|---:|---:|---:|---:|---:|---:|---:|---:|");
+        println!("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
         println!(
-            "| {} | {} | {} | {} | {} | {} | {} | {} | {} |",
+            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |",
             result.profile.label,
             retry.insert_ops,
             retry.remove_ops,
@@ -1679,6 +1803,26 @@ fn print_results(result: &ProfileRunResult, duration: Duration) {
             retry.retry_epoch,
             retry.max_insert_attempts,
             retry.max_remove_attempts,
+            retry.gc_nodes_examined,
+            retry.gc_nodes_requeued,
+            retry.gc_recycle_errors,
+            retry.gc_assist_calls,
+            retry.gc_assist_reclaimed,
+            retry.retired_backlog,
+            retry.pressure_state,
+            retry.pressure_to_normal,
+            retry.pressure_to_warm,
+            retry.pressure_to_hot,
+            retry.alloc_failure_events,
+            retry.reserve_node_pushes,
+            retry.reserve_node_hits,
+            retry.reserve_node_misses,
+            retry.reserve_posting_pushes,
+            retry.reserve_posting_hits,
+            retry.reserve_posting_misses,
+            retry.reserve_tower_pushes,
+            retry.reserve_tower_hits,
+            retry.reserve_tower_misses,
         );
     }
 

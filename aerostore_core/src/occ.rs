@@ -1,4 +1,4 @@
 pub use crate::occ_partitioned::{
-    Error, OccCommitRecord, OccCommittedWrite, OccRow, OccTable, OccTransaction, RowLockGuard,
-    VacuumReclaimedRow,
+    Error, OccCommitRecord, OccCommittedWrite, OccRecycleTelemetry, OccRow, OccTable,
+    OccTransaction, RowLockGuard, VacuumReclaimedRow,
 };

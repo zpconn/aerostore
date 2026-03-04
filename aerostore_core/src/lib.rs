@@ -42,7 +42,8 @@ pub use ingest::{
 };
 pub use mvcc::{is_visible, MvccError, MvccTable, RowVersion};
 pub use occ::{
-    Error as OccError, OccRow, OccTable, OccTransaction, RowLockGuard, VacuumReclaimedRow,
+    Error as OccError, OccRecycleTelemetry, OccRow, OccTable, OccTransaction, RowLockGuard,
+    VacuumReclaimedRow,
 };
 pub use procarray::{
     ProcArray, ProcArrayError, ProcArrayRegistration, ProcSlot, ProcSnapshot, PROCARRAY_SLOTS,
