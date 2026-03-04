@@ -2,7 +2,7 @@
 
 <img width="600" height="600" alt="Aerostore Logo" src="https://github.com/user-attachments/assets/7d64557f-9733-40b7-8f40-d251a48a5205" />
 
-Aerostore is a prototype Rust-first shared-memory database prototype focused on high-ingest, update-heavy workloads and clean durability / restart support.
+Aerostore is a prototype Rust-first shared-memory database prototype focused on high-ingest, update-heavy workloads and clean durability / restart support (roughly the same durability class as PostgreSQL with async commit).
 
 The project is optimized around:
 - process-shared memory structures (`RelPtr<T>`, arena allocation),
