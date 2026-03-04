@@ -27,7 +27,12 @@ fn vacuum_recycles_dead_versions_and_prevents_oom_in_10mb_arena() {
     apply_increments(table.as_ref(), WARMUP_UPDATES);
     wait_until(
         Duration::from_secs(5),
-        || shm.free_list_pushes() > 0,
+        || {
+            table
+                .recycle_telemetry()
+                .map(|stats| stats.push_success > 0)
+                .unwrap_or(false)
+        },
         "vacuum did not reclaim any row versions during warm-up window",
     );
     apply_increments(table.as_ref(), TOTAL_UPDATES - WARMUP_UPDATES);
@@ -43,23 +48,36 @@ fn vacuum_recycles_dead_versions_and_prevents_oom_in_10mb_arena() {
 
     wait_until(
         Duration::from_secs(5),
-        || shm.free_list_pushes() > 0 && shm.free_list_pops() > 0,
-        "shared free list counters never advanced; recycle path appears inactive",
+        || {
+            table
+                .recycle_telemetry()
+                .map(|stats| {
+                    stats.push_success > 0
+                        && (stats.alloc_from_primary > 0
+                            || stats.alloc_from_probe > 0
+                            || stats.alloc_from_starved > 0)
+                })
+                .unwrap_or(false)
+        },
+        "OCC recycle telemetry never showed reclaimed-row reuse",
     );
 
-    let pushes = shm.free_list_pushes();
-    let pops = shm.free_list_pops();
+    let recycle = table
+        .recycle_telemetry()
+        .expect("failed to read OCC recycle telemetry");
+    let pops = recycle
+        .alloc_from_primary
+        .saturating_add(recycle.alloc_from_probe)
+        .saturating_add(recycle.alloc_from_starved);
     assert!(
-        pushes > 0,
-        "vacuum never pushed reclaimed rows into free list"
+        recycle.push_success > 0,
+        "vacuum never recycled reclaimed rows into OCC recycler"
     );
+    assert!(pops > 0, "allocator never reused recycled OCC rows");
     assert!(
-        pops > 0,
-        "allocator never popped recycled rows from shared free list"
-    );
-    assert!(
-        pops <= pushes,
-        "free-list pops ({pops}) cannot exceed pushes ({pushes})"
+        pops <= recycle.push_success,
+        "recycler allocs ({pops}) cannot exceed pushes ({})",
+        recycle.push_success
     );
 
     let end_head = shm.chunked_arena().head_offset();

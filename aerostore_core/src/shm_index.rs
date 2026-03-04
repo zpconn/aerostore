@@ -23,6 +23,9 @@ const DEFAULT_INDEX_ARENA_BYTES: usize = 64 << 20;
 const INDEX_INSERT_RETRY_LIMIT: usize = 4096;
 const INDEX_REMOVE_RETRY_LIMIT: usize = 1;
 const INDEX_RECLAIM_BATCH: usize = 131_072;
+const INDEX_RECLAIM_BATCH_ALLOC_MID: usize = 16_384;
+const INDEX_RECLAIM_BATCH_ALLOC_HIGH: usize = 65_536;
+const INDEX_RECLAIM_BATCH_STRUCTURAL: usize = INDEX_RECLAIM_BATCH / 4;
 
 const KEY_TAG_I64: u8 = 1;
 const KEY_TAG_U64: u8 = 2;
@@ -39,6 +42,26 @@ pub struct IndexMutationTelemetry {
     pub retry_epoch: u64,
     pub max_insert_attempts: u64,
     pub max_remove_attempts: u64,
+    pub gc_nodes_examined: u64,
+    pub gc_nodes_requeued: u64,
+    pub gc_recycle_errors: u64,
+    pub gc_assist_calls: u64,
+    pub gc_assist_reclaimed: u64,
+    pub retired_backlog: u64,
+    pub pressure_state: u32,
+    pub pressure_to_normal: u64,
+    pub pressure_to_warm: u64,
+    pub pressure_to_hot: u64,
+    pub alloc_failure_events: u64,
+    pub reserve_node_pushes: u64,
+    pub reserve_node_hits: u64,
+    pub reserve_node_misses: u64,
+    pub reserve_posting_pushes: u64,
+    pub reserve_posting_hits: u64,
+    pub reserve_posting_misses: u64,
+    pub reserve_tower_pushes: u64,
+    pub reserve_tower_hits: u64,
+    pub reserve_tower_misses: u64,
 }
 
 impl From<ShmSkipMutationTelemetry> for IndexMutationTelemetry {
@@ -52,6 +75,26 @@ impl From<ShmSkipMutationTelemetry> for IndexMutationTelemetry {
             retry_epoch: value.retry_epoch,
             max_insert_attempts: value.max_insert_attempts,
             max_remove_attempts: value.max_remove_attempts,
+            gc_nodes_examined: value.gc_nodes_examined,
+            gc_nodes_requeued: value.gc_nodes_requeued,
+            gc_recycle_errors: value.gc_recycle_errors,
+            gc_assist_calls: value.gc_assist_calls,
+            gc_assist_reclaimed: value.gc_assist_reclaimed,
+            retired_backlog: value.retired_backlog,
+            pressure_state: value.pressure_state,
+            pressure_to_normal: value.pressure_to_normal,
+            pressure_to_warm: value.pressure_to_warm,
+            pressure_to_hot: value.pressure_to_hot,
+            alloc_failure_events: value.alloc_failure_events,
+            reserve_node_pushes: value.reserve_node_pushes,
+            reserve_node_hits: value.reserve_node_hits,
+            reserve_node_misses: value.reserve_node_misses,
+            reserve_posting_pushes: value.reserve_posting_pushes,
+            reserve_posting_hits: value.reserve_posting_hits,
+            reserve_posting_misses: value.reserve_posting_misses,
+            reserve_tower_pushes: value.reserve_tower_pushes,
+            reserve_tower_hits: value.reserve_tower_hits,
+            reserve_tower_misses: value.reserve_tower_misses,
         }
     }
 }
@@ -672,11 +715,11 @@ where
                     match kind {
                         RetryKind::Alloc => {
                             retry_alloc = retry_alloc.saturating_add(1);
-                            let _ = self.skiplist.collect_garbage_once(INDEX_RECLAIM_BATCH);
+                            maybe_collect_alloc_retry(self, attempt);
                         }
                         RetryKind::Structural => {
                             retry_structural = retry_structural.saturating_add(1);
-                            let _ = self.skiplist.collect_garbage_once(INDEX_RECLAIM_BATCH / 4);
+                            maybe_collect_structural_retry(self, attempt);
                         }
                         RetryKind::Epoch => {
                             retry_epoch = retry_epoch.saturating_add(1);
@@ -736,10 +779,11 @@ where
                     match kind {
                         RetryKind::Alloc => {
                             retry_alloc = retry_alloc.saturating_add(1);
-                            let _ = self.skiplist.collect_garbage_once(INDEX_RECLAIM_BATCH);
+                            maybe_collect_alloc_retry(self, attempt);
                         }
                         RetryKind::Structural => {
                             retry_structural = retry_structural.saturating_add(1);
+                            maybe_collect_structural_retry(self, attempt);
                         }
                         RetryKind::Epoch => {
                             retry_epoch = retry_epoch.saturating_add(1);
@@ -782,10 +826,10 @@ where
                     };
                     match kind {
                         RetryKind::Alloc => {
-                            let _ = self.skiplist.collect_garbage_once(INDEX_RECLAIM_BATCH);
+                            maybe_collect_alloc_retry(self, attempt);
                         }
                         RetryKind::Structural => {
-                            let _ = self.skiplist.collect_garbage_once(INDEX_RECLAIM_BATCH / 4);
+                            maybe_collect_structural_retry(self, attempt);
                         }
                         RetryKind::Epoch => {}
                     }
@@ -797,6 +841,41 @@ where
             }
         }
         unreachable!("fast move retry loop must return before exhaustion")
+    }
+}
+
+#[inline]
+fn maybe_collect_alloc_retry<RowId>(index: &SecondaryIndex<RowId>, attempt: usize)
+where
+    RowId: Ord + Clone + Send + Sync + Serialize + DeserializeOwned + 'static,
+{
+    if attempt < 64 {
+        return;
+    }
+    if attempt < 512 {
+        if attempt & 0x7 == 0 {
+            let _ = index
+                .skiplist
+                .collect_garbage_once(INDEX_RECLAIM_BATCH_ALLOC_MID);
+        }
+        return;
+    }
+    if attempt & 0x3 == 0 {
+        let _ = index
+            .skiplist
+            .collect_garbage_once(INDEX_RECLAIM_BATCH_ALLOC_HIGH);
+    }
+}
+
+#[inline]
+fn maybe_collect_structural_retry<RowId>(index: &SecondaryIndex<RowId>, attempt: usize)
+where
+    RowId: Ord + Clone + Send + Sync + Serialize + DeserializeOwned + 'static,
+{
+    if attempt >= 32 && attempt & 0x7 == 0 {
+        let _ = index
+            .skiplist
+            .collect_garbage_once(INDEX_RECLAIM_BATCH_STRUCTURAL);
     }
 }
 
