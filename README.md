@@ -304,6 +304,29 @@ cargo test -p aerostore_core --test vacuum_recycle_ab_benchmark -- --nocapture
 cargo test -p aerostore_tcl --lib vacuum_index_cleanup_tests -- --nocapture
 ```
 
+### Recycle, allocator, and index-delta invariant expansions
+```bash
+cargo test -p aerostore_core flush_local_recycle_cache_exports_offsets_cross_thread -- --nocapture
+cargo test -p aerostore_core free_list_depth_estimate_reports_truncation_when_scan_limit_hit -- --nocapture
+cargo test -p aerostore_core recycle_raw_in_class_invalid_block_does_not_mutate_free_list_counters -- --nocapture
+cargo test -p aerostore_core general_class_path_bypasses_local_cache_behavior -- --nocapture
+cargo test -p aerostore_core starved_slot_roundtrip_isolated_by_recycle_key -- --nocapture
+cargo test -p aerostore_core allocate_row_prefers_starved_before_other_sources -- --nocapture
+cargo test -p aerostore_core allocate_row_uses_primary_recycle_head_before_probe -- --nocapture
+cargo test -p aerostore_core allocate_row_uses_probe_when_primary_empty -- --nocapture
+cargo test -p aerostore_core recycle_telemetry_invariant_holds_in_single_recycle_cycle -- --nocapture
+cargo test -p aerostore_core alloc_node_prefers_reserve_node_offsets_under_pressure -- --nocapture
+cargo test -p aerostore_core alloc_tower_prefers_reserve_tower_and_can_reuse_taller_tower -- --nocapture
+cargo test -p aerostore_core pressure_state_forces_hot_when_reclaim_efficiency_collapses -- --nocapture
+cargo test -p aerostore_core maybe_collect_garbage_on_alloc_failure_updates_failure_and_gc_counters -- --nocapture
+cargo test -p aerostore_core --test shm_recycle_visibility -- --nocapture
+cargo test -p aerostore_core --test index_relink_gc_consistency -- --nocapture
+cargo test -p aerostore_core --test occ_recycle_invariants_single_thread -- --nocapture
+cargo test -p aerostore_tcl resolve_scan_mode_invalid_chunk_rows_falls_back_to_defaults -- --nocapture
+cargo test -p aerostore_tcl apply_row_delta_updates_only_changed_indexes -- --nocapture
+cargo test -p aerostore_tcl apply_row_delta_delete_then_reinsert_restores_full_index_state -- --nocapture
+```
+
 ## Benchmark Runbook
 Criterion benches:
 ```bash
@@ -345,6 +368,7 @@ This section reports a full rerun of workspace tests plus the full benchmark sui
 
 Run scope:
 - Workspace test sweep executed: `cargo test --workspace -- --nocapture` (pass).
+- Added correctness-expansion suites executed for recycle visibility, recycle ordering invariants, skiplist reserve/pressure behavior, and Tcl index-delta application paths.
 - Criterion bench suites executed: 6 (`procarray_snapshot`, `wal_delta_throughput`, `shm_skiplist_adversarial`, `shm_skiplist_seek_bounds`, `tmpfs_warm_restart`, `hyperfeed_crucible`).
 - Criterion benchmark entrypoints executed: 21.
 - Release benchmark-style suites executed: 10 suites / 30 benchmark functions.
@@ -358,6 +382,7 @@ Run scope:
 | tmpfs warm-restart tests and benches | pass | `/dev/shm` mapping paths passed under host permissions (`warm_restart_chaos`, `warm_restart_expansions`, `tmpfs_warm_restart`). |
 | WAL crash recovery suites | pass | `11/11` in `wal_crash_recovery`; startup replay throughput benchmark passed. |
 | vacuum and recycle suites | pass | stress, leader handoff, free-list invariants, and A/B benchmark all passed. |
+| recycle/index-delta expansion suites | pass | new allocator/recycle invariants, OCC recycle-order tests, skiplist pressure/reserve checks, and Tcl index-delta tests all passed. |
 | hot-row OCC contention suites | pass | release benchmark runs reported `timed_out_workers=0` across hybrid, pure, and scaling checks. |
 
 ### "The Crucible" Diagnostic (2026-03-04)

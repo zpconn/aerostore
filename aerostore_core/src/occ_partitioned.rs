@@ -1489,3 +1489,194 @@ impl<T: Copy + Send + Sync + 'static> Drop for RowLockGuard<'_, T> {
         let _ = self.table.release_row_lock(&self.row_ptr);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    fn make_table() -> OccTable<u64> {
+        let shm = Arc::new(ShmArena::new(8 << 20).expect("create shm"));
+        let table = OccTable::<u64>::new(shm, 4).expect("create table");
+        for row_id in 0..4 {
+            table.seed_row(row_id, row_id as u64).expect("seed row");
+        }
+        table
+    }
+
+    fn alloc_detached_row(table: &OccTable<u64>, value: u64) -> RelPtr<OccRow<u64>> {
+        table
+            .shm
+            .chunked_arena()
+            .alloc_in_class(OccRow::new(value, 1, EMPTY_PTR), ArenaClass::RowVersion)
+            .expect("alloc detached row")
+    }
+
+    fn clear_starved_slot() {
+        STARVED_RECYCLE_SLOT.with(|slot| slot.set(None));
+    }
+
+    #[test]
+    fn starved_slot_roundtrip_isolated_by_recycle_key() {
+        clear_starved_slot();
+        let table = make_table();
+        let row_id = 0;
+        let shard = OccTable::<u64>::recycle_shard_for_row_id(row_id);
+        let wrong_shard = (shard + 1) % OCC_PARTITION_LOCKS;
+        let ptr = alloc_detached_row(&table, 777);
+        let offset = ptr.load(Ordering::Acquire);
+
+        assert!(table.stash_starved_recycled_row(shard, offset));
+        assert!(
+            table.try_take_starved_recycled_row(wrong_shard).is_none(),
+            "wrong shard must not consume starved slot"
+        );
+        let taken = table
+            .try_take_starved_recycled_row(shard)
+            .expect("expected starved slot for matching shard");
+        assert_eq!(taken.load(Ordering::Acquire), offset);
+        assert!(
+            table.try_take_starved_recycled_row(shard).is_none(),
+            "starved slot should be empty after consume"
+        );
+    }
+
+    #[test]
+    fn allocate_row_prefers_starved_before_other_sources() {
+        clear_starved_slot();
+        let table = make_table();
+        let row_id = 1;
+        let shard = OccTable::<u64>::recycle_shard_for_row_id(row_id);
+        let ptr = alloc_detached_row(&table, 900);
+        let offset = ptr.load(Ordering::Acquire);
+        let before = table.recycle_telemetry().expect("recycle telemetry before");
+
+        assert!(table.stash_starved_recycled_row(shard, offset));
+        let allocated = table
+            .allocate_row(row_id, 1234, 42, EMPTY_PTR)
+            .expect("allocate row from starved slot");
+        assert_eq!(allocated.load(Ordering::Acquire), offset);
+
+        let row = table
+            .resolve_row_ptr(&allocated)
+            .expect("resolve allocated recycled row");
+        assert_eq!(row.value, 1234);
+        assert_eq!(row.xmin, 42);
+
+        let after = table.recycle_telemetry().expect("recycle telemetry after");
+        assert_eq!(after.alloc_from_starved, before.alloc_from_starved + 1);
+        assert_eq!(after.alloc_from_primary, before.alloc_from_primary);
+        assert_eq!(after.alloc_from_probe, before.alloc_from_probe);
+    }
+
+    #[test]
+    fn allocate_row_uses_primary_recycle_head_before_probe() {
+        clear_starved_slot();
+        let table = make_table();
+        let row_id = 2;
+        let primary = OccTable::<u64>::recycle_shard_for_row_id(row_id);
+        let probe = OccTable::<u64>::recycle_probe_shard(primary, 1);
+        assert_ne!(probe, primary);
+
+        let primary_ptr = alloc_detached_row(&table, 111);
+        let probe_ptr = alloc_detached_row(&table, 222);
+        let primary_offset = primary_ptr.load(Ordering::Acquire);
+        let probe_offset = probe_ptr.load(Ordering::Acquire);
+
+        let header = table.shared_header_ref().expect("shared header");
+        let primary_row = table
+            .resolve_row_ptr(&primary_ptr)
+            .expect("resolve primary recycled row");
+        primary_row.recycle_next.store(EMPTY_PTR, Ordering::Release);
+        let probe_row = table
+            .resolve_row_ptr(&probe_ptr)
+            .expect("resolve probe recycled row");
+        probe_row.recycle_next.store(EMPTY_PTR, Ordering::Release);
+
+        header.recycled_heads[probe].store(probe_offset, Ordering::Release);
+        header.recycled_heads[primary].store(primary_offset, Ordering::Release);
+        let before = table.recycle_telemetry().expect("recycle telemetry before");
+
+        let allocated = table
+            .allocate_row(row_id, 700, 7, EMPTY_PTR)
+            .expect("allocate row");
+        assert_eq!(
+            allocated.load(Ordering::Acquire),
+            primary_offset,
+            "primary shard recycled row should be consumed before probe shard rows"
+        );
+        assert_eq!(
+            header.recycled_heads[probe].load(Ordering::Acquire),
+            probe_offset,
+            "probe shard head should remain untouched when primary has an entry"
+        );
+
+        let after = table.recycle_telemetry().expect("recycle telemetry after");
+        assert_eq!(after.alloc_from_primary, before.alloc_from_primary + 1);
+        assert_eq!(after.alloc_from_probe, before.alloc_from_probe);
+    }
+
+    #[test]
+    fn allocate_row_uses_probe_when_primary_empty() {
+        clear_starved_slot();
+        let table = make_table();
+        let row_id = 3;
+        let primary = OccTable::<u64>::recycle_shard_for_row_id(row_id);
+        let probe = OccTable::<u64>::recycle_probe_shard(primary, 1);
+        assert_ne!(probe, primary);
+
+        let probe_ptr = alloc_detached_row(&table, 333);
+        let probe_offset = probe_ptr.load(Ordering::Acquire);
+        let probe_row = table
+            .resolve_row_ptr(&probe_ptr)
+            .expect("resolve probe recycled row");
+        probe_row.recycle_next.store(EMPTY_PTR, Ordering::Release);
+
+        let header = table.shared_header_ref().expect("shared header");
+        header.recycled_heads[primary].store(EMPTY_PTR, Ordering::Release);
+        header.recycled_heads[probe].store(probe_offset, Ordering::Release);
+        let before = table.recycle_telemetry().expect("recycle telemetry before");
+
+        let allocated = table
+            .allocate_row(row_id, 444, 9, EMPTY_PTR)
+            .expect("allocate row");
+        assert_eq!(
+            allocated.load(Ordering::Acquire),
+            probe_offset,
+            "probe shard recycled row should be consumed when primary is empty"
+        );
+
+        let after = table.recycle_telemetry().expect("recycle telemetry after");
+        assert_eq!(after.alloc_from_probe, before.alloc_from_probe + 1);
+        assert_eq!(after.alloc_from_primary, before.alloc_from_primary);
+    }
+
+    #[test]
+    fn recycle_telemetry_invariant_holds_in_single_recycle_cycle() {
+        clear_starved_slot();
+        let table = make_table();
+        let row_id = 0;
+        let recycled_ptr = alloc_detached_row(&table, 999);
+
+        table
+            .recycle_row_ptr(row_id, &recycled_ptr)
+            .expect("recycle row ptr");
+        let _ = table
+            .allocate_row(row_id, 1000, 12, EMPTY_PTR)
+            .expect("allocate from recycled row");
+
+        let telemetry = table.recycle_telemetry().expect("recycle telemetry");
+        let pops = telemetry
+            .alloc_from_primary
+            .saturating_add(telemetry.alloc_from_probe)
+            .saturating_add(telemetry.alloc_from_starved);
+        assert!(telemetry.push_success > 0, "expected recycle push");
+        assert!(pops > 0, "expected recycled allocation pop");
+        assert!(
+            pops <= telemetry.push_success,
+            "recycler invariant violated: pops={} pushes={}",
+            pops,
+            telemetry.push_success
+        );
+    }
+}
