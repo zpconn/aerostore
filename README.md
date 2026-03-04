@@ -24,6 +24,7 @@ Under benchmark conditions ("The Crucible" benchmark here), aerostore has achiev
 - [Delta-Encoded WAL](#delta-encoded-wal)
 - [Tmpfs Warm Restart](#tmpfs-warm-restart)
 - [Cross-Process Vacuum GC](#cross-process-vacuum-gc)
+- [Memory and Sustained-Performance Evolution](#memory-and-sustained-performance-evolution)
 - [Tcl Bridge](#tcl-bridge)
 - [Build and Prerequisites](#build-and-prerequisites)
 - [Quick Start](#quick-start)
@@ -152,6 +153,55 @@ Primary files:
 - `aerostore_core/src/occ_partitioned.rs`
 - `aerostore_core/src/vacuum.rs`
 - `aerostore_tcl/src/lib.rs`
+
+## Memory and Sustained-Performance Evolution
+This section summarizes the major memory/performance changes made after the prior qualitative phase (see [docs/crucible_10x_attempt_log_2026-03-03.md](/home/zpconn/code/aerostore/docs/crucible_10x_attempt_log_2026-03-03.md) and [docs/crucible_allocator_telemetry_2026-03-03.md](/home/zpconn/code/aerostore/docs/crucible_allocator_telemetry_2026-03-03.md)).
+
+### What the old bottleneck looked like
+In sustained churn runs, Aerostore previously showed:
+- large worker drain beyond the nominal 60s window,
+- allocator retry storms (`retry_alloc` spikes, `max_insert_attempts` pinned at `4097`),
+- and throughput collapse at smaller memory profiles.
+
+The allocator telemetry study showed this was mainly a reuse/pressure problem (high pop misses and poor reuse fit under churn), not just "live bytes only go up forever."
+
+### Engine changes made since that phase
+1. Class-segregated recycle lists + local recycle cache in `aerostore_core/src/shm.rs`.
+   - Added class-keyed free-list heads and counters (`free_list_class_heads`, class push/pop/miss telemetry).
+   - Added per-class local recycle caches to reduce cross-process CAS pressure.
+   - `alloc_raw_in_class` now prefers same-class recycled blocks before bumping high-water.
+2. OCC row-version recycle locality improvements in `aerostore_core/src/occ_partitioned.rs`.
+   - Added primary-shard + bounded probe-shard recycle pop strategy.
+   - Added "starved stash" fallback path and telemetry (`alloc_from_starved/primary/probe`, `stash_starved`) to avoid pathological misses.
+3. Direct index move/relink fast path in `aerostore_core/src/shm_index.rs` and `aerostore_core/src/shm_skiplist.rs`.
+   - `try_move_payload` now attempts `try_move_relink_fast` / `move_payload_relink` before falling back to remove+insert.
+   - This reduces node/posting churn for key updates and lowers allocator pressure in update-heavy workloads.
+4. Pressure-aware skiplist allocator behavior in `aerostore_core/src/shm_skiplist.rs`.
+   - Added pressure state machine (`normal/warm/hot`) with hysteresis.
+   - Added reserve pools for nodes/postings/towers and pressure-aware pop/push behavior.
+   - Added retry/GC telemetry (`retry_loops`, `gc_assist_calls`, `gc_assist_reclaimed`, `pressure_to_*`, reserve hit/miss counters).
+5. Retired-node reclaim and GC assist hardening in `aerostore_core/src/shm_skiplist.rs`.
+   - FIFO retired queue accounting and reclaim counters are surfaced (`retired_backlog`, reclaimed deltas).
+   - GC assist now reacts during pressure/retry loops to keep churn bounded.
+6. Crucible observability expansion in `aerostore_core/benches/hyperfeed_crucible.rs`.
+   - Profile matrix now includes `profile_2g` and `profile_3584m` in the standard run.
+   - Output now includes richer allocator/index/epoch telemetry so bottlenecks are diagnosable from benchmark output directly.
+
+### Measured impact (sustained 60s crucible)
+Baseline values below are from the prior qualitative phase log; current values are from the latest validated run in this README.
+
+| Profile | Prior Phase TPS Ratio (Aerostore/Postgres) | Latest TPS Ratio | Prior Aerostore Elapsed | Latest Aerostore Elapsed | Index Failures (Latest) | What Changed Qualitatively |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| `profile_512m` | `2.52x` | `5.20x` | `69.206s` | `61.224s` | `0/0` | Major improvement, but still the highest-pressure regime (`retry_loops` and pressure transitions remain non-zero). |
+| `profile_1g` | `6.30x` | `10.57x` | `73.073s` | `60.118s` | `0/0` | Moved from sub-10x to sustained 10x+ with drain largely eliminated. |
+| `profile_2g` | `11.46x` (later addendum run) | `11.90x` | `60.143s` | `60.124s` | `0/0` | Sustained >10x remains stable with low retry pressure. |
+| `profile_3584m` | n/a in prior qualitative baseline | `12.44x` | n/a | `60.102s` | `0/0` | Highest throughput in current matrix, with clean allocator/index telemetry. |
+
+### Current state
+- The previous sustained-churn collapse mode is materially reduced.
+- Index insert/remove failures are `0` across the latest 60s matrix.
+- `1g+` profiles are operating in a much healthier retry/pressure envelope than before.
+- `512m` still shows pressure transitions and higher retry activity, so this is improved but not "no-pressure" at the smallest memory tier.
 
 ## Tcl Bridge
 Tcl package: `aerostore`.
