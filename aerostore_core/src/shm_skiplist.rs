@@ -3707,6 +3707,133 @@ mod tests {
     }
 
     #[test]
+    fn alloc_node_prefers_reserve_node_offsets_under_pressure() {
+        let list = make_list();
+        let header = list.header_ref().expect("missing skiplist header");
+        let payload_a = 111_u32.to_le_bytes();
+        let payload_b = 222_u32.to_le_bytes();
+        let succs = [NULL_OFFSET; MAX_HEIGHT];
+
+        let posting_a = list
+            .alloc_posting_entry(payload_a.len() as u16, &payload_a)
+            .expect("alloc posting a failed");
+        let tower_a = list.alloc_tower(1, &succs).expect("alloc tower a failed");
+        let node_a = list
+            .alloc_node(TestKey(10), 1, tower_a, posting_a)
+            .expect("alloc node a failed");
+        list.push_reserve_node(header, node_a)
+            .expect("reserve node push failed");
+
+        let (_, _, hot_enter, _) = ShmSkipList::<TestKey>::pressure_thresholds(list.shm.len());
+        while list.shm.chunked_arena().remaining_bytes() > hot_enter {
+            let _ = list
+                .shm
+                .chunked_arena()
+                .alloc_raw(4096, align_of::<u64>())
+                .expect("failed to force pressure state into HOT");
+        }
+
+        let posting_b = list
+            .alloc_posting_entry(payload_b.len() as u16, &payload_b)
+            .expect("alloc posting b failed");
+        let tower_b = list.alloc_tower(1, &succs).expect("alloc tower b failed");
+        let node_b = list
+            .alloc_node(TestKey(20), 1, tower_b, posting_b)
+            .expect("alloc node b failed");
+        assert_eq!(node_b, node_a, "reserve node offset should be reused first");
+
+        let telemetry = list.mutation_telemetry();
+        assert!(telemetry.reserve_node_pushes >= 1);
+        assert!(telemetry.reserve_node_hits >= 1);
+    }
+
+    #[test]
+    fn alloc_tower_prefers_reserve_tower_and_can_reuse_taller_tower() {
+        let list = make_list();
+        let header = list.header_ref().expect("missing skiplist header");
+        let succs = [NULL_OFFSET; MAX_HEIGHT];
+
+        let reserved_height = 3_usize;
+        let reused_for_height = 2_usize;
+        let tower = list
+            .alloc_tower(reserved_height, &succs)
+            .expect("alloc reserve tower failed");
+        list.push_reserve_tower(header, tower, reserved_height)
+            .expect("reserve tower push failed");
+
+        let (_, _, hot_enter, _) = ShmSkipList::<TestKey>::pressure_thresholds(list.shm.len());
+        while list.shm.chunked_arena().remaining_bytes() > hot_enter {
+            let _ = list
+                .shm
+                .chunked_arena()
+                .alloc_raw(4096, align_of::<u64>())
+                .expect("failed to force pressure state into HOT");
+        }
+
+        let reused = list
+            .alloc_tower(reused_for_height, &succs)
+            .expect("alloc tower under pressure failed");
+        assert_eq!(
+            reused, tower,
+            "tower allocator should reuse taller reserve tower when exact height missing"
+        );
+
+        let telemetry = list.mutation_telemetry();
+        assert!(telemetry.reserve_tower_pushes >= 1);
+        assert!(telemetry.reserve_tower_hits >= 1);
+    }
+
+    #[test]
+    fn pressure_state_forces_hot_when_reclaim_efficiency_collapses() {
+        let list = make_list();
+        let header = list.header_ref().expect("missing skiplist header");
+        let (_, warm_exit, _, _) = ShmSkipList::<TestKey>::pressure_thresholds(list.shm.len());
+
+        header
+            .pressure_state
+            .store(PRESSURE_STATE_NORMAL, AtomicOrdering::Release);
+        header
+            .alloc_failure_events
+            .store(128, AtomicOrdering::Release);
+        header.gc_assist_reclaimed.store(0, AtomicOrdering::Release);
+
+        let state = list.update_pressure_state(header, warm_exit.saturating_add(1024));
+        assert_eq!(
+            state, PRESSURE_STATE_HOT,
+            "efficiency collapse should force HOT even with generous remaining bytes"
+        );
+
+        let telemetry = list.mutation_telemetry();
+        assert!(telemetry.pressure_to_hot >= 1);
+    }
+
+    #[test]
+    fn maybe_collect_garbage_on_alloc_failure_updates_failure_and_gc_counters() {
+        let list = make_list();
+        let header = list.header_ref().expect("missing skiplist header");
+        let before = list.mutation_telemetry();
+
+        for _ in 0..GC_ASSIST_FAILURE_CADENCE_NORMAL {
+            list.maybe_collect_garbage_on_alloc_failure(header);
+        }
+
+        let after = list.mutation_telemetry();
+        assert!(
+            after.alloc_failure_events
+                >= before.alloc_failure_events + GC_ASSIST_FAILURE_CADENCE_NORMAL,
+            "alloc failure counter should increase with failure handling invocations"
+        );
+        assert!(
+            after.gc_assist_calls >= before.gc_assist_calls + 1,
+            "gc assist should be triggered at least once at normal cadence"
+        );
+        assert!(
+            after.gc_assist_reclaimed >= before.gc_assist_reclaimed,
+            "reclaimed counter must remain monotonic"
+        );
+    }
+
+    #[test]
     fn distinct_key_count_tracks_live_keys_with_duplicate_postings() {
         let list = make_list();
         let payload_a = 11_u32.to_le_bytes();

@@ -1921,7 +1921,7 @@ unsafe fn set_wide_result(interp: *mut clib::Tcl_Interp, value: i64) -> c_int {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Mutex, OnceLock};
+    use std::sync::{Arc, Mutex, OnceLock};
 
     fn env_lock() -> &'static Mutex<()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -1986,6 +1986,34 @@ mod tests {
     }
 
     #[test]
+    fn resolve_scan_mode_invalid_chunk_rows_falls_back_to_defaults() {
+        let _guard = env_lock().lock().expect("env lock poisoned");
+        std::env::set_var(SCAN_MODE_ENV_KEY, "chunked");
+        std::env::set_var(SCAN_CHUNK_ROWS_ENV_KEY, "0");
+        match resolve_scan_mode() {
+            ScanMode::ChunkedEventual { chunk_rows } => {
+                assert_eq!(chunk_rows, DEFAULT_SCAN_CHUNK_ROWS);
+            }
+            ScanMode::StrictSnapshot => panic!("expected chunked mode for chunked env value"),
+        }
+
+        std::env::set_var(SCAN_CHUNK_ROWS_ENV_KEY, "not-a-number");
+        match resolve_scan_mode() {
+            ScanMode::ChunkedEventual { chunk_rows } => {
+                assert_eq!(chunk_rows, DEFAULT_SCAN_CHUNK_ROWS);
+            }
+            ScanMode::StrictSnapshot => panic!("expected chunked mode for chunked env value"),
+        }
+
+        std::env::set_var(SCAN_MODE_ENV_KEY, "bogus");
+        std::env::set_var(SCAN_CHUNK_ROWS_ENV_KEY, "8192");
+        assert!(matches!(resolve_scan_mode(), ScanMode::StrictSnapshot));
+
+        std::env::remove_var(SCAN_MODE_ENV_KEY);
+        std::env::remove_var(SCAN_CHUNK_ROWS_ENV_KEY);
+    }
+
+    #[test]
     fn format_decode_error_includes_line_column_and_message() {
         let err = TsvDecodeError::new(4, "missing column");
         assert_eq!(
@@ -2042,5 +2070,170 @@ mod tests {
                 to: IndexValue::I64(11)
             }
         ));
+    }
+
+    fn make_state(
+        flight_id: &str,
+        lat: f64,
+        lon: f64,
+        altitude: i32,
+        gs: u16,
+        updated_at: u64,
+    ) -> FlightState {
+        FlightState::from_decoded(flight_id, lat, lon, altitude, gs, updated_at)
+            .expect("make test flight state")
+    }
+
+    #[test]
+    fn apply_row_delta_updates_only_changed_indexes() {
+        let shm = Arc::new(ShmArena::new(16 << 20).expect("create test shm"));
+        let indexes = FlightIndexes::new(Arc::clone(&shm));
+        let row_id = 17_usize;
+        let before = make_state("UAL123", 37.6189, -122.3750, 32000, 450, 1000);
+        let mut after = before;
+        after.gs = 455;
+        after.updated_at = 1010;
+
+        indexes.insert_row(row_id, &before);
+        indexes.apply_row_delta(row_id, &before, &after);
+
+        assert_eq!(
+            indexes
+                .flight_id
+                .lookup_posting_count(&IndexValue::String(after.flight_id_string())),
+            1
+        );
+        assert_eq!(
+            indexes
+                .altitude
+                .lookup_posting_count(&IndexValue::I64(after.altitude as i64)),
+            1
+        );
+        assert_eq!(
+            indexes
+                .lat
+                .lookup_posting_count(&IndexValue::I64(after.lat_scaled)),
+            1
+        );
+        assert_eq!(
+            indexes
+                .lon
+                .lookup_posting_count(&IndexValue::I64(after.lon_scaled)),
+            1
+        );
+
+        assert_eq!(
+            indexes
+                .gs
+                .lookup_posting_count(&IndexValue::I64(before.gs as i64)),
+            0
+        );
+        assert_eq!(
+            indexes
+                .updated_at
+                .lookup_posting_count(&IndexValue::I64(before.updated_at as i64)),
+            0
+        );
+        assert_eq!(
+            indexes
+                .gs
+                .lookup_posting_count(&IndexValue::I64(after.gs as i64)),
+            1
+        );
+        assert_eq!(
+            indexes
+                .updated_at
+                .lookup_posting_count(&IndexValue::I64(after.updated_at as i64)),
+            1
+        );
+    }
+
+    #[test]
+    fn apply_row_delta_delete_then_reinsert_restores_full_index_state() {
+        let shm = Arc::new(ShmArena::new(16 << 20).expect("create test shm"));
+        let indexes = FlightIndexes::new(Arc::clone(&shm));
+        let row_id = 21_usize;
+        let before = make_state("DAL789", 35.0000, -120.1000, 28000, 402, 2000);
+        let mut deleted = before;
+        deleted.exists = 0;
+        let reinserted = make_state("DAL789", 35.0050, -120.1050, 28500, 410, 2100);
+
+        indexes.insert_row(row_id, &before);
+        indexes.apply_row_delta(row_id, &before, &deleted);
+
+        assert_eq!(
+            indexes
+                .flight_id
+                .lookup_posting_count(&IndexValue::String(before.flight_id_string())),
+            0
+        );
+        assert_eq!(
+            indexes
+                .altitude
+                .lookup_posting_count(&IndexValue::I64(before.altitude as i64)),
+            0
+        );
+        assert_eq!(
+            indexes
+                .gs
+                .lookup_posting_count(&IndexValue::I64(before.gs as i64)),
+            0
+        );
+        assert_eq!(
+            indexes
+                .lat
+                .lookup_posting_count(&IndexValue::I64(before.lat_scaled)),
+            0
+        );
+        assert_eq!(
+            indexes
+                .lon
+                .lookup_posting_count(&IndexValue::I64(before.lon_scaled)),
+            0
+        );
+        assert_eq!(
+            indexes
+                .updated_at
+                .lookup_posting_count(&IndexValue::I64(before.updated_at as i64)),
+            0
+        );
+
+        indexes.apply_row_delta(row_id, &deleted, &reinserted);
+        assert_eq!(
+            indexes
+                .flight_id
+                .lookup_posting_count(&IndexValue::String(reinserted.flight_id_string())),
+            1
+        );
+        assert_eq!(
+            indexes
+                .altitude
+                .lookup_posting_count(&IndexValue::I64(reinserted.altitude as i64)),
+            1
+        );
+        assert_eq!(
+            indexes
+                .gs
+                .lookup_posting_count(&IndexValue::I64(reinserted.gs as i64)),
+            1
+        );
+        assert_eq!(
+            indexes
+                .lat
+                .lookup_posting_count(&IndexValue::I64(reinserted.lat_scaled)),
+            1
+        );
+        assert_eq!(
+            indexes
+                .lon
+                .lookup_posting_count(&IndexValue::I64(reinserted.lon_scaled)),
+            1
+        );
+        assert_eq!(
+            indexes
+                .updated_at
+                .lookup_posting_count(&IndexValue::I64(reinserted.updated_at as i64)),
+            1
+        );
     }
 }

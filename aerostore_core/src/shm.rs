@@ -1143,6 +1143,9 @@ fn align_up(value: u32, align: u32) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     use super::{ArenaClass, ShmArena};
+    use std::sync::atomic::Ordering;
+    use std::sync::Arc;
+    use std::thread;
 
     #[test]
     fn class_segregated_reuse_does_not_cross_allocate_between_bins() {
@@ -1192,5 +1195,151 @@ mod tests {
 
         shm.flush_local_recycle_caches()
             .expect("flush local recycle caches");
+    }
+
+    #[test]
+    fn flush_local_recycle_cache_exports_offsets_cross_thread() {
+        let shm = Arc::new(ShmArena::new(8 << 20).expect("shm"));
+        let arena = shm.chunked_arena();
+
+        let recycled = arena
+            .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+            .expect("alloc spill32");
+        arena
+            .recycle_raw_in_class(recycled, 32, 8, ArenaClass::Spill32)
+            .expect("recycle spill32");
+
+        let shm_for_thread = Arc::clone(&shm);
+        let pre_flush = thread::spawn(move || {
+            shm_for_thread
+                .chunked_arena()
+                .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+                .expect("pre-flush alloc in sibling thread")
+        })
+        .join()
+        .expect("pre-flush thread join failed");
+        assert_ne!(
+            pre_flush, recycled,
+            "thread-local recycle entry must not be visible cross-thread before flush"
+        );
+
+        shm.flush_local_recycle_caches()
+            .expect("flush local recycle caches");
+
+        let shm_for_thread = Arc::clone(&shm);
+        let post_flush = thread::spawn(move || {
+            shm_for_thread
+                .chunked_arena()
+                .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+                .expect("post-flush alloc in sibling thread")
+        })
+        .join()
+        .expect("post-flush thread join failed");
+        assert_eq!(
+            post_flush, recycled,
+            "shared class freelist should expose flushed recycled offset cross-thread"
+        );
+    }
+
+    #[test]
+    fn free_list_depth_estimate_reports_truncation_when_scan_limit_hit() {
+        let shm = ShmArena::new(8 << 20).expect("shm");
+        let arena = shm.chunked_arena();
+
+        let mut offsets = Vec::new();
+        for _ in 0..8 {
+            let offset = arena.alloc_raw(64, 8).expect("alloc general block (setup)");
+            offsets.push(offset);
+        }
+        for offset in offsets {
+            arena
+                .recycle_raw(offset, 64, 8)
+                .expect("recycle general block");
+        }
+
+        let (depth, truncated) = shm.free_list_depth_estimate(3);
+        assert_eq!(depth, 3);
+        assert!(
+            truncated,
+            "depth estimate should report truncation at scan limit"
+        );
+    }
+
+    #[test]
+    fn recycle_raw_in_class_invalid_block_does_not_mutate_free_list_counters() {
+        let shm = ShmArena::new(8 << 20).expect("shm");
+        let arena = shm.chunked_arena();
+        let header = shm.header_ref().expect("missing shm header");
+        let tiny = arena
+            .alloc_raw_in_class(8, 8, ArenaClass::Spill32)
+            .expect("alloc tiny spill block");
+
+        let before_pushes = shm.free_list_pushes();
+        let before_pops = shm.free_list_pops();
+        let before_misses = shm.free_list_pop_misses();
+        let before_head = shm.free_list_head_offset();
+        let before_spill32_pushes = header.free_list_class_pushes
+            [ArenaClass::Spill32.extended_index().unwrap()]
+        .load(Ordering::Acquire);
+        arena
+            .recycle_raw_in_class(tiny, 8, 8, ArenaClass::Spill32)
+            .expect("recycle tiny spill block should be ignored");
+        let bad_align = arena.recycle_raw_in_class(tiny, 8, 3, ArenaClass::Spill32);
+        assert!(
+            bad_align.is_err(),
+            "non-power-of-two alignment should error"
+        );
+
+        assert_eq!(shm.free_list_pushes(), before_pushes);
+        assert_eq!(shm.free_list_pops(), before_pops);
+        assert_eq!(shm.free_list_pop_misses(), before_misses);
+        assert_eq!(shm.free_list_head_offset(), before_head);
+        assert_eq!(
+            header.free_list_class_pushes[ArenaClass::Spill32.extended_index().unwrap()]
+                .load(Ordering::Acquire),
+            before_spill32_pushes
+        );
+    }
+
+    #[test]
+    fn general_class_path_bypasses_local_cache_behavior() {
+        let shm = ShmArena::new(8 << 20).expect("shm");
+        let arena = shm.chunked_arena();
+        let header = shm.header_ref().expect("missing shm header");
+        let general_idx = ArenaClass::General.as_index();
+        let before_hits = header.local_cache_hits[general_idx].load(Ordering::Acquire);
+        let before_misses = header.local_cache_misses[general_idx].load(Ordering::Acquire);
+        let before_flushes = header.local_cache_flushes[general_idx].load(Ordering::Acquire);
+
+        let offset = arena
+            .alloc_raw_in_class(64, 8, ArenaClass::General)
+            .expect("alloc general block");
+        arena
+            .recycle_raw_in_class(offset, 64, 8, ArenaClass::General)
+            .expect("recycle general block");
+
+        let reused = arena
+            .alloc_raw_in_class(64, 8, ArenaClass::General)
+            .expect("realloc general block");
+        assert_eq!(
+            reused, offset,
+            "general class should reuse shared freelist entry"
+        );
+
+        let after_hits = header.local_cache_hits[general_idx].load(Ordering::Acquire);
+        let after_misses = header.local_cache_misses[general_idx].load(Ordering::Acquire);
+        let after_flushes = header.local_cache_flushes[general_idx].load(Ordering::Acquire);
+        assert_eq!(
+            after_hits, before_hits,
+            "general class should not hit local cache"
+        );
+        assert_eq!(
+            after_misses, before_misses,
+            "general class should not record local-cache misses"
+        );
+        assert_eq!(
+            after_flushes, before_flushes,
+            "general class should not flush local cache bins"
+        );
     }
 }
