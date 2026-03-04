@@ -2,7 +2,7 @@
 
 <img width="600" height="600" alt="Aerostore Logo" src="https://github.com/user-attachments/assets/7d64557f-9733-40b7-8f40-d251a48a5205" />
 
-Aerostore is a Rust-first shared-memory database prototype focused on high-ingest, update-heavy workloads.
+Aerostore is a prototype Rust-first shared-memory database prototype focused on high-ingest, update-heavy workloads.
 
 The project is optimized around:
 - process-shared memory structures (`RelPtr<T>`, arena allocation),
@@ -13,7 +13,7 @@ The project is optimized around:
 - tmpfs warm restarts to avoid routine cold-start replay,
 - Tcl FFI ingestion/search integration.
 
-Under benchmark conditions ("The Crucible" benchmark here), aerostore has achieved an order-of-magnitude performance improvement over PostgreSQL.
+Under benchmark conditions ("The Crucible" benchmark here), aerostore has achieved an order-of-magnitude performance improvement over PostgreSQL. However, performance and memory behavior over long periods of sustained pressure remains an area of active research. As of now, aerostore is not recommended yet for serious production use cases.
 
 ## Table of Contents
 - [Current Scope](#current-scope)
