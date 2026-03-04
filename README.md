@@ -512,5 +512,5 @@ For parallel integration jobs:
 - WAL crash-recovery behavior is timing-sensitive around daemon kill/restart paths; latest branch reruns pass after the writer-epoch restart race fix.
 
 ## License
-No license file is currently present.
-Treat this repository as proprietary/internal unless a license is explicitly added.
+This project is licensed under the MIT License.
+See [LICENSE](/home/zpconn/code/aerostore/LICENSE) for the full text.
