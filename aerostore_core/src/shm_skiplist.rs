@@ -7,11 +7,19 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::procarray::{ProcArrayError, ProcArrayRegistration};
-use crate::shm::{RelPtr, ShmAllocError, ShmArena};
+use crate::shm::{ArenaClass, RelPtr, ShmAllocError, ShmArena};
 
 const NULL_OFFSET: u32 = 0;
 pub const MAX_HEIGHT: usize = 32;
 pub const MAX_PAYLOAD_BYTES: usize = 192;
+const POSTING_INLINE_BYTES: usize = 24;
+const POSTING_STORAGE_INLINE: u8 = 0;
+const POSTING_STORAGE_SPILL: u8 = 1;
+const SPILL_CLASS_NONE: u8 = 0;
+const SPILL_CLASS_32: u8 = 1;
+const SPILL_CLASS_64: u8 = 2;
+const SPILL_CLASS_128: u8 = 3;
+const SPILL_CLASS_256: u8 = 4;
 const GC_MIN_BATCH: usize = 1_024;
 const GC_MAX_BATCH: usize = 65_536;
 const GC_MAX_PASSES_PER_WAKE: usize = 8;
@@ -271,25 +279,42 @@ impl<K: ShmSkipKey> ShmSkipNode<K> {
 #[repr(C)]
 struct PostingEntry {
     len: u16,
-    _pad: [u8; 2],
+    storage_kind: u8,
+    spill_class: u8,
     deleted: AtomicU32,
     next: RelPtr<PostingEntry>,
-    payload: [u8; MAX_PAYLOAD_BYTES],
+    spill_offset: u32,
+    inline_payload: [u8; POSTING_INLINE_BYTES],
 }
 
 impl PostingEntry {
     #[inline]
-    fn new(payload_len: u16, payload: &[u8], next: u32) -> Self {
-        let mut out = Self {
+    fn new_inline(payload_len: u16, payload: &[u8], next: u32) -> Self {
+        let mut inline_payload = [0_u8; POSTING_INLINE_BYTES];
+        let len = payload_len as usize;
+        inline_payload[..len].copy_from_slice(&payload[..len]);
+        Self {
             len: payload_len,
-            _pad: [0_u8; 2],
+            storage_kind: POSTING_STORAGE_INLINE,
+            spill_class: SPILL_CLASS_NONE,
             deleted: AtomicU32::new(0),
             next: RelPtr::from_offset(next),
-            payload: [0_u8; MAX_PAYLOAD_BYTES],
-        };
-        let len = payload_len as usize;
-        out.payload[..len].copy_from_slice(&payload[..len]);
-        out
+            spill_offset: NULL_OFFSET,
+            inline_payload,
+        }
+    }
+
+    #[inline]
+    fn new_spilled(payload_len: u16, spill_class: u8, spill_offset: u32, next: u32) -> Self {
+        Self {
+            len: payload_len,
+            storage_kind: POSTING_STORAGE_SPILL,
+            spill_class,
+            deleted: AtomicU32::new(0),
+            next: RelPtr::from_offset(next),
+            spill_offset,
+            inline_payload: [0_u8; POSTING_INLINE_BYTES],
+        }
     }
 }
 
@@ -371,9 +396,11 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         let lane_bytes = size_of::<SkipLane<K>>()
             .checked_mul(MAX_HEIGHT)
             .ok_or(ShmAllocError::SizeOverflow)?;
-        let tower_offset = shm
-            .chunked_arena()
-            .alloc_raw(lane_bytes, align_of::<SkipLane<K>>())?;
+        let tower_offset = shm.chunked_arena().alloc_raw_in_class(
+            lane_bytes,
+            align_of::<SkipLane<K>>(),
+            ArenaClass::SkipTower,
+        )?;
         let base = shm.mmap_base();
 
         for level in 0..MAX_HEIGHT {
@@ -388,7 +415,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             unsafe { ptr.write(SkipLane::new(NULL_OFFSET)) };
         }
 
-        let head_offset = shm.chunked_arena().alloc(
+        let head_offset = shm.chunked_arena().alloc_in_class(
             ShmSkipNode::new(
                 K::sentinel(),
                 MAX_HEIGHT as u8,
@@ -397,6 +424,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 0,
             )
             .with_flags(NODE_FLAG_FULLY_LINKED),
+            ArenaClass::SkipNode,
         )?;
         let head_offset = head_offset.load(AtomicOrdering::Acquire);
 
@@ -436,6 +464,170 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         self.header_offset
     }
 
+    #[inline]
+    fn validate_payload_args(payload_len: u16, payload: &[u8]) -> Result<usize, ShmSkipListError> {
+        let len = payload_len as usize;
+        if len > MAX_PAYLOAD_BYTES || payload.len() < len {
+            return Err(ShmSkipListError::PayloadTooLarge {
+                len,
+                max: MAX_PAYLOAD_BYTES,
+            });
+        }
+        Ok(len)
+    }
+
+    #[inline]
+    fn spill_spec_for_len(len: usize) -> Option<(ArenaClass, u8, usize)> {
+        if len <= POSTING_INLINE_BYTES {
+            return None;
+        }
+        if len <= 32 {
+            return Some((ArenaClass::Spill32, SPILL_CLASS_32, 32));
+        }
+        if len <= 64 {
+            return Some((ArenaClass::Spill64, SPILL_CLASS_64, 64));
+        }
+        if len <= 128 {
+            return Some((ArenaClass::Spill128, SPILL_CLASS_128, 128));
+        }
+        if len <= 256 {
+            return Some((ArenaClass::Spill256, SPILL_CLASS_256, 256));
+        }
+        None
+    }
+
+    #[inline]
+    fn spill_spec_from_tag(spill_class: u8) -> Option<(ArenaClass, usize)> {
+        match spill_class {
+            SPILL_CLASS_32 => Some((ArenaClass::Spill32, 32)),
+            SPILL_CLASS_64 => Some((ArenaClass::Spill64, 64)),
+            SPILL_CLASS_128 => Some((ArenaClass::Spill128, 128)),
+            SPILL_CLASS_256 => Some((ArenaClass::Spill256, 256)),
+            _ => None,
+        }
+    }
+
+    fn build_posting_entry(
+        &self,
+        payload_len: u16,
+        payload: &[u8],
+        next: u32,
+    ) -> Result<PostingEntry, ShmSkipListError> {
+        let len = Self::validate_payload_args(payload_len, payload)?;
+        if let Some((class, spill_tag, spill_size)) = Self::spill_spec_for_len(len) {
+            let spill_offset = self.shm.chunked_arena().alloc_raw_in_class(
+                spill_size,
+                align_of::<u64>(),
+                class,
+            )?;
+            let spill_ptr = self.spill_ptr(spill_offset, spill_size)?;
+            // SAFETY:
+            // `alloc_raw_in_class` reserved `spill_size` bytes starting at `spill_offset`.
+            unsafe {
+                std::ptr::write_bytes(spill_ptr, 0, spill_size);
+                std::ptr::copy_nonoverlapping(payload.as_ptr(), spill_ptr, len);
+            }
+            Ok(PostingEntry::new_spilled(
+                payload_len,
+                spill_tag,
+                spill_offset,
+                next,
+            ))
+        } else {
+            Ok(PostingEntry::new_inline(payload_len, payload, next))
+        }
+    }
+
+    fn recycle_posting_payload_storage(
+        &self,
+        posting: &PostingEntry,
+    ) -> Result<(), ShmSkipListError> {
+        if posting.storage_kind != POSTING_STORAGE_SPILL {
+            return Ok(());
+        }
+        let Some((class, spill_size)) = Self::spill_spec_from_tag(posting.spill_class) else {
+            return Err(ShmSkipListError::InvalidPosting(posting.spill_offset));
+        };
+        if posting.spill_offset == NULL_OFFSET {
+            return Ok(());
+        }
+        self.shm.chunked_arena().recycle_raw_in_class(
+            posting.spill_offset,
+            spill_size,
+            align_of::<u64>(),
+            class,
+        )?;
+        Ok(())
+    }
+
+    fn spill_ptr(&self, offset: u32, size: usize) -> Result<*mut u8, ShmSkipListError> {
+        let start = offset as usize;
+        let end = start
+            .checked_add(size)
+            .ok_or(ShmSkipListError::InvalidPosting(offset))?;
+        let base = self.shm.mmap_base();
+        if end > base.len() {
+            return Err(ShmSkipListError::InvalidPosting(offset));
+        }
+        Ok(unsafe { base.as_ptr().add(start) })
+    }
+
+    fn posting_payload_equals(
+        &self,
+        post: &PostingEntry,
+        payload_len: u16,
+        payload: &[u8],
+    ) -> Result<bool, ShmSkipListError> {
+        if post.len != payload_len {
+            return Ok(false);
+        }
+        let len = payload_len as usize;
+        if post.storage_kind == POSTING_STORAGE_INLINE {
+            return Ok(post.inline_payload[..len] == payload[..len]);
+        }
+        let Some((_class, spill_size)) = Self::spill_spec_from_tag(post.spill_class) else {
+            return Err(ShmSkipListError::InvalidPosting(post.spill_offset));
+        };
+        if post.spill_offset == NULL_OFFSET || len > spill_size {
+            return Err(ShmSkipListError::InvalidPosting(post.spill_offset));
+        }
+        let spill_ptr = self.spill_ptr(post.spill_offset, spill_size)?;
+        // SAFETY:
+        // `spill_ptr` points to at least `len` readable bytes in shared memory.
+        let spill = unsafe { std::slice::from_raw_parts(spill_ptr, len) };
+        Ok(spill == &payload[..len])
+    }
+
+    fn with_posting_payload<F>(
+        &self,
+        post: &PostingEntry,
+        mut visit: F,
+    ) -> Result<(), ShmSkipListError>
+    where
+        F: FnMut(u16, &[u8]),
+    {
+        let len = post.len as usize;
+        if len > MAX_PAYLOAD_BYTES {
+            return Err(ShmSkipListError::InvalidPosting(post.spill_offset));
+        }
+        if post.storage_kind == POSTING_STORAGE_INLINE {
+            visit(post.len, &post.inline_payload[..len]);
+            return Ok(());
+        }
+        let Some((_class, spill_size)) = Self::spill_spec_from_tag(post.spill_class) else {
+            return Err(ShmSkipListError::InvalidPosting(post.spill_offset));
+        };
+        if post.spill_offset == NULL_OFFSET || len > spill_size {
+            return Err(ShmSkipListError::InvalidPosting(post.spill_offset));
+        }
+        let spill_ptr = self.spill_ptr(post.spill_offset, spill_size)?;
+        // SAFETY:
+        // `spill_ptr` points to at least `len` readable bytes in shared memory.
+        let spill = unsafe { std::slice::from_raw_parts(spill_ptr, len) };
+        visit(post.len, spill);
+        Ok(())
+    }
+
     pub fn insert_payload(
         &self,
         key: K,
@@ -454,12 +646,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         payload: &[u8],
     ) -> Result<bool, ShmSkipListError> {
         let _epoch_guard = ProcArrayEpochGuard::acquire(self.shm.as_ref())?;
-        if payload_len as usize > MAX_PAYLOAD_BYTES || payload.len() < payload_len as usize {
-            return Err(ShmSkipListError::PayloadTooLarge {
-                len: payload_len as usize,
-                max: MAX_PAYLOAD_BYTES,
-            });
-        }
+        let _ = Self::validate_payload_args(payload_len, payload)?;
         if old_key.cmp_key(&new_key) == Ordering::Equal {
             return Ok(true);
         }
@@ -499,7 +686,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         payload: &[u8],
     ) -> Result<(), ShmSkipListError> {
         let _epoch_guard = ProcArrayEpochGuard::acquire(self.shm.as_ref())?;
-        if payload_len as usize > MAX_PAYLOAD_BYTES || payload.len() < payload_len as usize {
+        if Self::validate_payload_args(payload_len, payload).is_err() {
             return Ok(());
         }
 
@@ -522,8 +709,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 .posting_ref(post_offset)
                 .ok_or(ShmSkipListError::InvalidPosting(post_offset))?;
             if post.deleted.load(AtomicOrdering::Acquire) == 0
-                && post.len == payload_len
-                && post.payload[..payload_len as usize] == payload[..payload_len as usize]
+                && self.posting_payload_equals(post, payload_len, payload)?
             {
                 if post
                     .deleted
@@ -549,12 +735,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         payload_len: u16,
         payload: &[u8],
     ) -> Result<(), ShmSkipListError> {
-        if payload_len as usize > MAX_PAYLOAD_BYTES || payload.len() < payload_len as usize {
-            return Err(ShmSkipListError::PayloadTooLarge {
-                len: payload_len as usize,
-                max: MAX_PAYLOAD_BYTES,
-            });
-        }
+        let _ = Self::validate_payload_args(payload_len, payload)?;
 
         let posting_offset = self.alloc_posting_entry(payload_len, payload)?;
         self.attach_posting_to_key(key, posting_offset, payload_len, payload)
@@ -591,11 +772,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 .posting_ref(post_offset)
                 .ok_or(ShmSkipListError::InvalidPosting(post_offset))?;
             if post.deleted.load(AtomicOrdering::Acquire) == 0 {
-                let len = post.len as usize;
-                if len > MAX_PAYLOAD_BYTES {
-                    return Err(ShmSkipListError::InvalidPosting(post_offset));
-                }
-                visit(post.len, &post.payload[..len]);
+                self.with_posting_payload(post, |len, payload| visit(len, payload))?;
             }
             post_offset = post.next.load(AtomicOrdering::Acquire);
         }
@@ -719,11 +896,9 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                         .posting_ref(post_offset)
                         .ok_or(ShmSkipListError::InvalidPosting(post_offset))?;
                     if post.deleted.load(AtomicOrdering::Acquire) == 0 {
-                        let len = post.len as usize;
-                        if len > MAX_PAYLOAD_BYTES {
-                            return Err(ShmSkipListError::InvalidPosting(post_offset));
-                        }
-                        visit(&node.key, post.len, &post.payload[..len]);
+                        self.with_posting_payload(post, |len, payload| {
+                            visit(&node.key, len, payload)
+                        })?;
                         emitted = emitted.saturating_add(1);
                         if emitted >= limit {
                             return Ok(());
@@ -1032,9 +1207,34 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 let _ = arm_parent_death_signal(parent_pid);
                 loop {
                     let backlog = list.retired_nodes() as usize;
-                    let batch = backlog.clamp(GC_MIN_BATCH, GC_MAX_BATCH);
+                    let Some(header) = list.header_ref() else {
+                        std::thread::sleep(interval);
+                        continue;
+                    };
+                    let pressure = header.pressure_state.load(AtomicOrdering::Acquire);
+                    let failures = header.alloc_failure_events.load(AtomicOrdering::Acquire);
+                    let reclaimed = header.gc_assist_reclaimed.load(AtomicOrdering::Acquire);
+                    let reclaim_efficiency = if failures == 0 {
+                        1.0
+                    } else {
+                        reclaimed as f64 / failures as f64
+                    };
+                    let pressure_batch_boost = match pressure {
+                        PRESSURE_STATE_HOT => 4,
+                        PRESSURE_STATE_WARM => 2,
+                        _ => 1,
+                    };
+                    let batch = backlog
+                        .clamp(GC_MIN_BATCH, GC_MAX_BATCH)
+                        .saturating_mul(pressure_batch_boost)
+                        .min(GC_MAX_BATCH);
+                    let max_passes = match pressure {
+                        PRESSURE_STATE_HOT => GC_MAX_PASSES_PER_WAKE * 4,
+                        PRESSURE_STATE_WARM => GC_MAX_PASSES_PER_WAKE * 2,
+                        _ => GC_MAX_PASSES_PER_WAKE,
+                    };
                     let mut reclaimed_any = false;
-                    for _ in 0..GC_MAX_PASSES_PER_WAKE {
+                    for _ in 0..max_passes {
                         let reclaimed = list.collect_garbage_once(batch);
                         if reclaimed == 0 {
                             break;
@@ -1047,7 +1247,18 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                     if reclaimed_any {
                         std::thread::yield_now();
                     } else {
-                        std::thread::sleep(interval);
+                        let sleep_for = match pressure {
+                            PRESSURE_STATE_HOT => Duration::from_millis(2),
+                            PRESSURE_STATE_WARM => Duration::from_millis(10),
+                            _ => interval,
+                        };
+                        let sleep_for =
+                            if reclaim_efficiency < 0.25 && pressure != PRESSURE_STATE_NORMAL {
+                                sleep_for.min(Duration::from_millis(2))
+                            } else {
+                                sleep_for
+                            };
+                        std::thread::sleep(sleep_for);
                     }
                 }
             }
@@ -1553,8 +1764,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 .posting_ref(post_offset)
                 .ok_or(ShmSkipListError::InvalidPosting(post_offset))?;
             if post.deleted.load(AtomicOrdering::Acquire) == 0
-                && post.len == payload_len
-                && post.payload[..payload_len as usize] == payload[..payload_len as usize]
+                && self.posting_payload_equals(post, payload_len, payload)?
             {
                 return Ok(true);
             }
@@ -1592,8 +1802,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                     .ok_or(ShmSkipListError::InvalidPosting(post_offset))?;
                 let next = post.next.load(AtomicOrdering::Acquire);
                 let is_match = post.deleted.load(AtomicOrdering::Acquire) == 0
-                    && post.len == payload_len
-                    && post.payload[..payload_len as usize] == payload[..payload_len as usize];
+                    && self.posting_payload_equals(post, payload_len, payload)?;
                 if is_match {
                     let detached = if prev_offset == NULL_OFFSET {
                         node.postings_head
@@ -1776,30 +1985,40 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
     fn update_pressure_state(&self, header: &ShmSkipHeader<K>, remaining_bytes: usize) -> u32 {
         let (warm_enter, warm_exit, hot_enter, hot_exit) =
             Self::pressure_thresholds(self.shm.len());
+        let failure_events = header.alloc_failure_events.load(AtomicOrdering::Acquire);
+        let reclaimed = header.gc_assist_reclaimed.load(AtomicOrdering::Acquire);
+        let reclaim_efficiency = if failure_events == 0 {
+            1.0
+        } else {
+            reclaimed as f64 / failure_events as f64
+        };
+        let force_hot_efficiency = failure_events >= 32 && reclaim_efficiency <= 0.10;
+        let force_warm_efficiency = failure_events >= 16 && reclaim_efficiency <= 0.25;
+        let healthy_efficiency = reclaim_efficiency >= 0.60;
         loop {
             let current = header.pressure_state.load(AtomicOrdering::Acquire);
             let next = match current {
                 PRESSURE_STATE_NORMAL => {
-                    if remaining_bytes <= hot_enter {
+                    if remaining_bytes <= hot_enter || force_hot_efficiency {
                         PRESSURE_STATE_HOT
-                    } else if remaining_bytes <= warm_enter {
+                    } else if remaining_bytes <= warm_enter || force_warm_efficiency {
                         PRESSURE_STATE_WARM
                     } else {
                         PRESSURE_STATE_NORMAL
                     }
                 }
                 PRESSURE_STATE_WARM => {
-                    if remaining_bytes <= hot_enter {
+                    if remaining_bytes <= hot_enter || force_hot_efficiency {
                         PRESSURE_STATE_HOT
-                    } else if remaining_bytes >= warm_exit {
+                    } else if remaining_bytes >= warm_exit && healthy_efficiency {
                         PRESSURE_STATE_NORMAL
                     } else {
                         PRESSURE_STATE_WARM
                     }
                 }
                 PRESSURE_STATE_HOT => {
-                    if remaining_bytes >= hot_exit {
-                        if remaining_bytes >= warm_exit {
+                    if remaining_bytes >= hot_exit && !force_hot_efficiency {
+                        if remaining_bytes >= warm_exit && healthy_efficiency {
                             PRESSURE_STATE_NORMAL
                         } else {
                             PRESSURE_STATE_WARM
@@ -1809,9 +2028,9 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                     }
                 }
                 _ => {
-                    if remaining_bytes <= hot_enter {
+                    if remaining_bytes <= hot_enter || force_hot_efficiency {
                         PRESSURE_STATE_HOT
-                    } else if remaining_bytes <= warm_enter {
+                    } else if remaining_bytes <= warm_enter || force_warm_efficiency {
                         PRESSURE_STATE_WARM
                     } else {
                         PRESSURE_STATE_NORMAL
@@ -1913,6 +2132,20 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         }
     }
 
+    fn initialize_recycled_posting(
+        &self,
+        offset: u32,
+        payload_len: u16,
+        payload: &[u8],
+    ) -> Result<u32, ShmSkipListError> {
+        let ptr = self.posting_ptr(offset)?;
+        let entry = self.build_posting_entry(payload_len, payload, NULL_OFFSET)?;
+        // SAFETY:
+        // `offset` is a previously allocated posting slot popped from recycle/reserve stacks.
+        unsafe { ptr.write(entry) };
+        Ok(offset)
+    }
+
     fn alloc_posting_entry(
         &self,
         payload_len: u16,
@@ -1926,55 +2159,36 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
 
         if pressure_state != PRESSURE_STATE_NORMAL {
             if let Some(offset) = self.pop_reserve_posting() {
-                let ptr = self.posting_ptr(offset)?;
-                // SAFETY:
-                // `offset` was previously allocated as `PostingEntry` and was popped from the
-                // reserve posting stack, so this write reinitializes owned memory.
-                unsafe { ptr.write(PostingEntry::new(payload_len, payload, NULL_OFFSET)) };
-                return Ok(offset);
+                return self.initialize_recycled_posting(offset, payload_len, payload);
             }
         }
         if let Some(offset) = self.pop_recycled_posting() {
-            let ptr = self.posting_ptr(offset)?;
-            // SAFETY:
-            // `offset` was previously allocated as `PostingEntry` and was popped from the
-            // skiplist-local recycled-posting stack, so this write reinitializes owned memory.
-            unsafe { ptr.write(PostingEntry::new(payload_len, payload, NULL_OFFSET)) };
-            return Ok(offset);
+            return self.initialize_recycled_posting(offset, payload_len, payload);
         }
 
+        let fresh = self.build_posting_entry(payload_len, payload, NULL_OFFSET)?;
         match self
             .shm
             .chunked_arena()
-            .alloc(PostingEntry::new(payload_len, payload, NULL_OFFSET))
+            .alloc_in_class(fresh, ArenaClass::SkipPosting)
         {
             Ok(ptr) => Ok(ptr.load(AtomicOrdering::Acquire)),
             Err(err) => {
                 self.maybe_collect_garbage_on_alloc_failure(header);
                 if header.pressure_state.load(AtomicOrdering::Acquire) != PRESSURE_STATE_NORMAL {
                     if let Some(offset) = self.pop_reserve_posting() {
-                        let ptr = self.posting_ptr(offset)?;
-                        // SAFETY:
-                        // `offset` was previously allocated as `PostingEntry` and was popped
-                        // from a posting reserve stack, so this write reinitializes owned
-                        // memory.
-                        unsafe { ptr.write(PostingEntry::new(payload_len, payload, NULL_OFFSET)) };
-                        return Ok(offset);
+                        return self.initialize_recycled_posting(offset, payload_len, payload);
                     }
                 }
                 if let Some(offset) = self.pop_recycled_posting() {
-                    let ptr = self.posting_ptr(offset)?;
-                    // SAFETY:
-                    // `offset` was previously allocated as `PostingEntry` and was popped from
-                    // the recycled posting stack, so this write reinitializes owned memory.
-                    unsafe { ptr.write(PostingEntry::new(payload_len, payload, NULL_OFFSET)) };
-                    return Ok(offset);
+                    return self.initialize_recycled_posting(offset, payload_len, payload);
                 }
                 let _ = err;
+                let retry_fresh = self.build_posting_entry(payload_len, payload, NULL_OFFSET)?;
                 Ok(self
                     .shm
                     .chunked_arena()
-                    .alloc(PostingEntry::new(payload_len, payload, NULL_OFFSET))?
+                    .alloc_in_class(retry_fresh, ArenaClass::SkipPosting)?
                     .load(AtomicOrdering::Acquire))
             }
         }
@@ -2028,13 +2242,10 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             return Ok(offset);
         }
 
-        match self.shm.chunked_arena().alloc(ShmSkipNode::new(
-            key,
-            height,
-            tower_offset,
-            posting_offset,
-            1,
-        )) {
+        match self.shm.chunked_arena().alloc_in_class(
+            ShmSkipNode::new(key, height, tower_offset, posting_offset, 1),
+            ArenaClass::SkipNode,
+        ) {
             Ok(ptr) => Ok(ptr.load(AtomicOrdering::Acquire)),
             Err(err) => {
                 self.maybe_collect_garbage_on_alloc_failure(header);
@@ -2076,19 +2287,20 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 Ok(self
                     .shm
                     .chunked_arena()
-                    .alloc(ShmSkipNode::new(
-                        key,
-                        height,
-                        tower_offset,
-                        posting_offset,
-                        1,
-                    ))?
+                    .alloc_in_class(
+                        ShmSkipNode::new(key, height, tower_offset, posting_offset, 1),
+                        ArenaClass::SkipNode,
+                    )?
                     .load(AtomicOrdering::Acquire))
             }
         }
     }
 
     fn push_recycled_posting(&self, posting_offset: u32) -> Result<(), ShmSkipListError> {
+        let posting = self
+            .posting_ref(posting_offset)
+            .ok_or(ShmSkipListError::InvalidPosting(posting_offset))?;
+        self.recycle_posting_payload_storage(posting)?;
         let header = self
             .header_ref()
             .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
@@ -2503,11 +2715,11 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             } else if let Some(offset) = self.pop_recycled_tower_at_least(height + 1) {
                 offset
             } else {
-                match self
-                    .shm
-                    .chunked_arena()
-                    .alloc_raw(bytes, align_of::<SkipLane<K>>())
-                {
+                match self.shm.chunked_arena().alloc_raw_in_class(
+                    bytes,
+                    align_of::<SkipLane<K>>(),
+                    ArenaClass::SkipTower,
+                ) {
                     Ok(offset) => offset,
                     Err(err) => {
                         self.maybe_collect_garbage_on_alloc_failure(header);
@@ -2521,9 +2733,11 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                             offset
                         } else {
                             let _ = err;
-                            self.shm
-                                .chunked_arena()
-                                .alloc_raw(bytes, align_of::<SkipLane<K>>())?
+                            self.shm.chunked_arena().alloc_raw_in_class(
+                                bytes,
+                                align_of::<SkipLane<K>>(),
+                                ArenaClass::SkipTower,
+                            )?
                         }
                     }
                 }
@@ -2533,11 +2747,11 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         } else if let Some(offset) = self.pop_recycled_tower_at_least(height + 1) {
             offset
         } else {
-            match self
-                .shm
-                .chunked_arena()
-                .alloc_raw(bytes, align_of::<SkipLane<K>>())
-            {
+            match self.shm.chunked_arena().alloc_raw_in_class(
+                bytes,
+                align_of::<SkipLane<K>>(),
+                ArenaClass::SkipTower,
+            ) {
                 Ok(offset) => offset,
                 Err(err) => {
                     self.maybe_collect_garbage_on_alloc_failure(header);
@@ -2553,9 +2767,11 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                             offset
                         } else {
                             let _ = err;
-                            self.shm
-                                .chunked_arena()
-                                .alloc_raw(bytes, align_of::<SkipLane<K>>())?
+                            self.shm.chunked_arena().alloc_raw_in_class(
+                                bytes,
+                                align_of::<SkipLane<K>>(),
+                                ArenaClass::SkipTower,
+                            )?
                         }
                     } else if let Some(offset) = self.pop_recycled_tower(height) {
                         offset
@@ -2563,9 +2779,11 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                         offset
                     } else {
                         let _ = err;
-                        self.shm
-                            .chunked_arena()
-                            .alloc_raw(bytes, align_of::<SkipLane<K>>())?
+                        self.shm.chunked_arena().alloc_raw_in_class(
+                            bytes,
+                            align_of::<SkipLane<K>>(),
+                            ArenaClass::SkipTower,
+                        )?
                     }
                 }
             }
@@ -3611,6 +3829,33 @@ mod tests {
             .count_payloads(&TestKey(999))
             .expect("count on missing key failed");
         assert_eq!(missing, 0);
+    }
+
+    #[test]
+    fn spill_payloads_round_trip_and_remove_cleanly() {
+        let list = make_list();
+        let key = TestKey(77);
+        let payload = vec![0xAB_u8; 96];
+
+        list.insert_payload(key, payload.len() as u16, payload.as_slice())
+            .expect("spill insert failed");
+
+        let mut observed = Vec::new();
+        list.lookup_payloads(&key, |len, bytes| {
+            observed.push((len, bytes.to_vec()));
+        })
+        .expect("spill lookup failed");
+        assert_eq!(observed.len(), 1);
+        assert_eq!(observed[0].0 as usize, payload.len());
+        assert_eq!(observed[0].1, payload);
+
+        list.remove_payload(&key, payload.len() as u16, payload.as_slice())
+            .expect("spill remove failed");
+        assert_eq!(
+            list.count_payloads(&key)
+                .expect("count after remove failed"),
+            0
+        );
     }
 
     proptest! {

@@ -35,7 +35,7 @@ pub use bootloader::{
     persist_boot_layout, read_u32_array, BootContext, BootLayout, BootMode, BootloaderError,
     BOOT_LAYOUT_MAX_INDEXES,
 };
-pub use execution::{ExecutionEngine, PrimaryKeyMapError, ShmPrimaryKeyMap};
+pub use execution::{ExecutionEngine, PrimaryKeyMapError, ShmPrimaryKeyMap, SnapshotExecutionMode};
 pub use index::{IndexCompare, IndexValue, IntoIndexValue, SecondaryIndex};
 pub use ingest::{
     bulk_upsert_tsv, IngestError, IngestStats, TsvColumns, TsvDecodeError, TsvDecoder,
@@ -62,7 +62,8 @@ pub use recovery_delta::{
 };
 pub use retry::{RetryBackoff, RetryPolicy};
 pub use shm::{
-    ChunkedArena as ShmChunkedArena, MmapBase, RelPtr, ShmAllocError, ShmArena, ShmError,
+    ArenaClass, ChunkedArena as ShmChunkedArena, MmapBase, RelPtr, ShmAllocError, ShmArena,
+    ShmError,
 };
 pub use shm_index::{IndexMutationTelemetry, ShmIndexError, ShmIndexGcDaemon};
 pub use shm_tmpfs::{map_tmpfs_shared, TmpfsAttachMode, TmpfsMappedArena, DEFAULT_TMPFS_PATH};

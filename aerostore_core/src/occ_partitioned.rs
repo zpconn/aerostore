@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::procarray::{ProcArrayError, ProcArrayRegistration};
-use crate::shm::{RelPtr, ShmAllocError, ShmArena, OCC_PARTITION_LOCKS};
+use crate::shm::{ArenaClass, RelPtr, ShmAllocError, ShmArena, OCC_PARTITION_LOCKS};
 use crate::TxId;
 
 const EMPTY_PTR: u32 = 0;
@@ -550,6 +550,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
 
     pub fn abort(&self, tx: &mut OccTransaction<T>) -> Result<(), Error> {
         self.clear_local_sets(tx)?;
+        let _ = self.shm.flush_local_recycle_caches();
         self.finish_transaction(tx)
     }
 
@@ -613,6 +614,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         tx.read_set.clear();
         tx.write_set.clear();
         tx.savepoints.clear();
+        let _ = self.shm.flush_local_recycle_caches();
         self.finish_transaction(tx)?;
         Ok(commit_record)
     }
@@ -1050,7 +1052,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         Ok(self
             .shm
             .chunked_arena()
-            .alloc(OccRow::new(value, xmin, next))?)
+            .alloc_in_class(OccRow::new(value, xmin, next), ArenaClass::RowVersion)?)
     }
 
     fn initialize_row(

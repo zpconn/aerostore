@@ -14,9 +14,9 @@ use aerostore_core::{
     spawn_wal_writer_daemon, write_occ_checkpoint_and_truncate_wal, BootLayout, BootMode,
     IndexValue, IngestStats, OccError, OccTable, OccTransaction, PlannerError, RelPtr,
     RetryBackoff, RetryPolicy, RuleBasedOptimizer, SchemaCatalog, SecondaryIndex, SharedWalRing,
-    ShmArena, ShmPrimaryKeyMap, StapiRow, StapiValue, SynchronousCommit, TsvColumns,
-    TsvDecodeError, VacuumDaemon, VacuumReclaimedRow, WalDeltaCodec, WalDeltaError, WalRing,
-    WalWriterError, BOOT_LAYOUT_MAX_INDEXES, DEFAULT_TMPFS_PATH, SYNCHRONOUS_COMMIT_KEY,
+    ShmArena, ShmPrimaryKeyMap, SnapshotExecutionMode, StapiRow, StapiValue, SynchronousCommit,
+    TsvColumns, TsvDecodeError, VacuumDaemon, VacuumReclaimedRow, WalDeltaCodec, WalDeltaError,
+    WalRing, WalWriterError, BOOT_LAYOUT_MAX_INDEXES, DEFAULT_TMPFS_PATH, SYNCHRONOUS_COMMIT_KEY,
 };
 use serde::{Deserialize, Serialize};
 use tcl::Interp;
@@ -39,6 +39,9 @@ const CHECKPOINT_FILE_NAME: &str = "occ_checkpoint.dat";
 const CHECKPOINT_INTERVAL_SECS_KEY: &str = "aerostore.checkpoint_interval_secs";
 const DEFAULT_CHECKPOINT_INTERVAL_SECS: u64 = 300;
 const SHM_PATH_ENV_KEY: &str = "AEROSTORE_SHM_PATH";
+const SCAN_MODE_ENV_KEY: &str = "AEROSTORE_SCAN_MODE";
+const SCAN_CHUNK_ROWS_ENV_KEY: &str = "AEROSTORE_SCAN_CHUNK_ROWS";
+const DEFAULT_SCAN_CHUNK_ROWS: usize = 2048;
 const MAX_BATCH_RETRY_ATTEMPTS: u32 = RetryPolicy::MAX_RETRIES_PER_UNIT;
 
 const INDEX_SLOT_FLIGHT_ID: usize = 0;
@@ -289,6 +292,12 @@ struct SearchRequest {
     has_sort: bool,
 }
 
+#[derive(Clone, Copy)]
+enum ScanMode {
+    StrictSnapshot,
+    ChunkedEventual { chunk_rows: usize },
+}
+
 struct FlightTsvDecoder;
 
 impl FlightTsvDecoder {
@@ -310,6 +319,13 @@ impl FlightTsvDecoder {
 struct PendingIndexUpdate {
     before: FlightState,
     after: FlightState,
+}
+
+enum IndexDeltaOp {
+    NoOp,
+    Insert(IndexValue),
+    Remove(IndexValue),
+    Move { from: IndexValue, to: IndexValue },
 }
 
 #[derive(Clone)]
@@ -468,6 +484,7 @@ impl FlightIndexes {
         catalog
     }
 
+    #[allow(dead_code)]
     fn remove_row(&self, row_id: usize, row: &FlightState) {
         if row.exists == 0 {
             return;
@@ -502,6 +519,99 @@ impl FlightIndexes {
         self.lon.insert(IndexValue::I64(row.lon_scaled), row_id);
         if let Ok(updated_at) = i64::try_from(row.updated_at) {
             self.updated_at.insert(IndexValue::I64(updated_at), row_id);
+        }
+    }
+
+    fn apply_row_delta(&self, row_id: usize, before: &FlightState, after: &FlightState) {
+        let before_live = before.exists != 0;
+        let after_live = after.exists != 0;
+
+        Self::apply_index_delta(
+            &self.flight_id,
+            row_id,
+            Self::plan_delta_op(
+                before_live.then(|| IndexValue::String(before.flight_id_string())),
+                after_live.then(|| IndexValue::String(after.flight_id_string())),
+            ),
+        );
+        Self::apply_index_delta(
+            &self.altitude,
+            row_id,
+            Self::plan_delta_op(
+                before_live.then(|| IndexValue::I64(before.altitude as i64)),
+                after_live.then(|| IndexValue::I64(after.altitude as i64)),
+            ),
+        );
+        Self::apply_index_delta(
+            &self.gs,
+            row_id,
+            Self::plan_delta_op(
+                before_live.then(|| IndexValue::I64(before.gs as i64)),
+                after_live.then(|| IndexValue::I64(after.gs as i64)),
+            ),
+        );
+        Self::apply_index_delta(
+            &self.lat,
+            row_id,
+            Self::plan_delta_op(
+                before_live.then(|| IndexValue::I64(before.lat_scaled)),
+                after_live.then(|| IndexValue::I64(after.lat_scaled)),
+            ),
+        );
+        Self::apply_index_delta(
+            &self.lon,
+            row_id,
+            Self::plan_delta_op(
+                before_live.then(|| IndexValue::I64(before.lon_scaled)),
+                after_live.then(|| IndexValue::I64(after.lon_scaled)),
+            ),
+        );
+        Self::apply_index_delta(
+            &self.updated_at,
+            row_id,
+            Self::plan_delta_op(
+                before_live
+                    .then(|| i64::try_from(before.updated_at).ok().map(IndexValue::I64))
+                    .flatten(),
+                after_live
+                    .then(|| i64::try_from(after.updated_at).ok().map(IndexValue::I64))
+                    .flatten(),
+            ),
+        );
+    }
+
+    #[inline]
+    fn plan_delta_op(before: Option<IndexValue>, after: Option<IndexValue>) -> IndexDeltaOp {
+        match (before, after) {
+            (None, None) => IndexDeltaOp::NoOp,
+            (None, Some(to)) => IndexDeltaOp::Insert(to),
+            (Some(from), None) => IndexDeltaOp::Remove(from),
+            (Some(from), Some(to)) => {
+                if from == to {
+                    IndexDeltaOp::NoOp
+                } else {
+                    IndexDeltaOp::Move { from, to }
+                }
+            }
+        }
+    }
+
+    #[inline]
+    fn apply_index_delta(index: &SecondaryIndex<usize>, row_id: usize, op: IndexDeltaOp) {
+        match op {
+            IndexDeltaOp::NoOp => {}
+            IndexDeltaOp::Insert(value) => {
+                index.insert(value, row_id);
+            }
+            IndexDeltaOp::Remove(value) => {
+                index.remove(&value, &row_id);
+            }
+            IndexDeltaOp::Move { from, to } => {
+                if index.try_move_payload(&from, to.clone(), &row_id).is_err() {
+                    index.remove(&from, &row_id);
+                    index.insert(to, row_id);
+                }
+            }
         }
     }
 }
@@ -586,6 +696,7 @@ struct SharedFlightDb {
     checkpointer_started: AtomicBool,
     boot_mode: BootMode,
     orphaned_proc_slots_cleared: usize,
+    scan_mode: ScanMode,
     _data_dir: PathBuf,
 }
 
@@ -662,6 +773,7 @@ impl SharedFlightDb {
             _wal_daemon: wal_daemon,
         };
         let vacuum_daemon = Self::spawn_vacuum_daemon(Arc::clone(&table), indexes.clone())?;
+        let scan_mode = resolve_scan_mode();
 
         Ok(Self {
             _shm: shm,
@@ -678,6 +790,7 @@ impl SharedFlightDb {
             checkpointer_started: AtomicBool::new(false),
             boot_mode,
             orphaned_proc_slots_cleared,
+            scan_mode,
             _data_dir: data_dir.to_path_buf(),
         })
     }
@@ -968,18 +1081,16 @@ impl SharedFlightDb {
             .compile_from_stapi(request.stapi.as_str())
             .map_err(|err| format_planner_error(err))?;
 
-        let mut tx = self
-            .table
-            .begin_transaction()
-            .map_err(|err| format!("begin_transaction failed: {}", err))?;
+        let mode = match self.scan_mode {
+            ScanMode::StrictSnapshot => SnapshotExecutionMode::StrictSnapshot,
+            ScanMode::ChunkedEventual { chunk_rows } => {
+                SnapshotExecutionMode::ChunkedEventual { chunk_rows }
+            }
+        };
 
         let mut rows = plan
-            .execute(&self.table, &mut tx)
+            .execute_with_snapshot_mode(&self.table, mode)
             .map_err(|err| err.tcl_error_message())?;
-
-        self.table
-            .abort(&mut tx)
-            .map_err(|err| format!("abort failed: {}", err))?;
 
         rows.retain(|row| row.exists != 0);
 
@@ -1281,8 +1392,8 @@ impl SharedFlightDb {
         match commit_result {
             Ok(_) => {
                 for (row_id, update) in pending_index_updates.drain() {
-                    self.indexes.remove_row(row_id, &update.before);
-                    self.indexes.insert_row(row_id, &update.after);
+                    self.indexes
+                        .apply_row_delta(row_id, &update.before, &update.after);
                 }
                 Ok(())
             }
@@ -1449,6 +1560,23 @@ fn resolve_shm_path() -> PathBuf {
     std::env::var(SHM_PATH_ENV_KEY)
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from(DEFAULT_TMPFS_PATH))
+}
+
+fn resolve_scan_mode() -> ScanMode {
+    let mode = std::env::var(SCAN_MODE_ENV_KEY)
+        .unwrap_or_else(|_| "strict".to_string())
+        .to_ascii_lowercase();
+
+    if matches!(mode.as_str(), "chunked" | "eventual" | "chunked_eventual") {
+        let chunk_rows = std::env::var(SCAN_CHUNK_ROWS_ENV_KEY)
+            .ok()
+            .and_then(|raw| raw.parse::<usize>().ok())
+            .filter(|value| *value > 0)
+            .unwrap_or(DEFAULT_SCAN_CHUNK_ROWS);
+        ScanMode::ChunkedEventual { chunk_rows }
+    } else {
+        ScanMode::StrictSnapshot
+    }
 }
 
 extern "C" fn aerostore_set_config_cmd(
@@ -1841,6 +1969,23 @@ mod tests {
     }
 
     #[test]
+    fn resolve_scan_mode_honors_chunked_configuration() {
+        let _guard = env_lock().lock().expect("env lock poisoned");
+        std::env::remove_var(SCAN_MODE_ENV_KEY);
+        std::env::remove_var(SCAN_CHUNK_ROWS_ENV_KEY);
+        assert!(matches!(resolve_scan_mode(), ScanMode::StrictSnapshot));
+
+        std::env::set_var(SCAN_MODE_ENV_KEY, "chunked");
+        std::env::set_var(SCAN_CHUNK_ROWS_ENV_KEY, "4096");
+        match resolve_scan_mode() {
+            ScanMode::ChunkedEventual { chunk_rows } => assert_eq!(chunk_rows, 4096),
+            ScanMode::StrictSnapshot => panic!("expected chunked scan mode"),
+        }
+        std::env::remove_var(SCAN_MODE_ENV_KEY);
+        std::env::remove_var(SCAN_CHUNK_ROWS_ENV_KEY);
+    }
+
+    #[test]
     fn format_decode_error_includes_line_column_and_message() {
         let err = TsvDecodeError::new(4, "missing column");
         assert_eq!(
@@ -1870,5 +2015,32 @@ mod tests {
         <FlightState as WalDeltaCodec>::apply_changed_fields(&mut replayed, mask, delta.as_slice())
             .expect("apply changed fields");
         assert_eq!(replayed, updated);
+    }
+
+    #[test]
+    fn plan_delta_op_covers_noop_insert_remove_and_move() {
+        assert!(matches!(
+            FlightIndexes::plan_delta_op(None, None),
+            IndexDeltaOp::NoOp
+        ));
+        assert!(matches!(
+            FlightIndexes::plan_delta_op(None, Some(IndexValue::I64(10))),
+            IndexDeltaOp::Insert(IndexValue::I64(10))
+        ));
+        assert!(matches!(
+            FlightIndexes::plan_delta_op(Some(IndexValue::I64(10)), None),
+            IndexDeltaOp::Remove(IndexValue::I64(10))
+        ));
+        assert!(matches!(
+            FlightIndexes::plan_delta_op(Some(IndexValue::I64(10)), Some(IndexValue::I64(10))),
+            IndexDeltaOp::NoOp
+        ));
+        assert!(matches!(
+            FlightIndexes::plan_delta_op(Some(IndexValue::I64(10)), Some(IndexValue::I64(11))),
+            IndexDeltaOp::Move {
+                from: IndexValue::I64(10),
+                to: IndexValue::I64(11)
+            }
+        ));
     }
 }
