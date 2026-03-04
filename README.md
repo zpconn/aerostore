@@ -19,6 +19,7 @@ Under benchmark conditions ("The Crucible" benchmark here), aerostore has achiev
 - [Current Scope](#current-scope)
 - [Repository Layout](#repository-layout)
 - [Architecture](#architecture)
+- [Why Aerostore Can Beat Postgres in Crucible](#why-aerostore-can-beat-postgres-in-crucible)
 - [Bound-Seeking SkipList Range Scans](#bound-seeking-skiplist-range-scans)
 - [Hybrid OCC Livelock Mitigation](#hybrid-occ-livelock-mitigation)
 - [Delta-Encoded WAL](#delta-encoded-wal)
@@ -64,6 +65,25 @@ Core modules in `aerostore_core/src`:
 - WAL and recovery: `wal_ring.rs`, `wal_writer.rs`, `wal_delta.rs`, `recovery_delta.rs`, `recovery.rs`.
 - Warm restart bootstrap: `bootloader.rs`.
 - Vacuum and reclaim: `vacuum.rs`.
+
+## Why Aerostore Can Beat Postgres in Crucible
+The observed `~5x` to `~12x` TPS gains in Crucible are real for this benchmark shape, and come from systems-path differences more than any single micro-optimization:
+
+1. Lower IPC/protocol overhead:
+   Aerostore runs in-process/shared-memory; it avoids the client/server SQL protocol and much of the network round-trip + executor framing cost that appears in end-to-end Postgres client latency.
+2. Narrow, workload-specific hot path:
+   Crucible is mostly keyed upserts and bounded scans on a fixed schema (`FlightState`), which maps well to Aerostore’s direct shared-memory row/index paths.
+3. Reduced write amplification:
+   Delta-encoded WAL records persist only changed columns for updates, reducing commit-side serialization and WAL byte volume.
+4. Hot-key contention controls:
+   Hybrid OCC (backoff + pessimistic fallback) prevents collapse under concentrated key collisions.
+5. Sustained-churn reclaim work:
+   Vacuum/index-GC/recycle improvements reduce allocator retry storms and keep throughput from collapsing as churn accumulates.
+
+Important caveat:
+- This is not a universal claim that Aerostore is always faster than Postgres.
+- The measured edge is workload- and configuration-dependent.
+- In async durability modes, both systems can acknowledge writes that are later lost on hard crash; compare durability settings apples-to-apples.
 
 ## Bound-Seeking SkipList Range Scans
 Aerostore now uses true bound-seeking traversals for skiplist-backed range predicates.
