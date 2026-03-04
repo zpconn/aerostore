@@ -60,18 +60,23 @@ fn multiprocess_churn_preserves_shared_free_list_invariants() {
         }
     }
 
-    let pushes = shm.free_list_pushes();
-    let pops = shm.free_list_pops();
+    let recycle = table
+        .recycle_telemetry()
+        .expect("failed to read OCC recycle telemetry");
+    let pops = recycle
+        .alloc_from_primary
+        .saturating_add(recycle.alloc_from_probe)
+        .saturating_add(recycle.alloc_from_starved);
     assert!(
-        pushes > 0,
-        "expected reclaimed rows to be pushed to free list"
+        recycle.push_success > 0,
+        "expected reclaimed rows to be pushed into OCC recycler"
     );
-    assert!(pops > 0, "expected allocator to pop recycled rows");
+    assert!(pops > 0, "expected allocator to reuse recycled OCC rows");
     assert!(
-        pops <= pushes,
-        "free-list invariant violated after churn: pops={} pushes={}",
+        pops <= recycle.push_success,
+        "OCC recycler invariant violated after churn: pops={} pushes={}",
         pops,
-        pushes
+        recycle.push_success
     );
 
     let head_growth = shm

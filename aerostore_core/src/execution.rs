@@ -10,6 +10,12 @@ use crate::shm::{RelPtr, ShmAllocError, ShmArena};
 const EMPTY_OFFSET: u32 = 0;
 const PK_INLINE_BYTES: usize = 64;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SnapshotExecutionMode {
+    StrictSnapshot,
+    ChunkedEventual { chunk_rows: usize },
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrimaryKeyMapError {
     InvalidBucketCount(usize),
@@ -476,13 +482,23 @@ impl ExecutionEngine {
         tx: &mut OccTransaction<T>,
     ) -> Result<Vec<T>, PlannerError> {
         let candidate_row_ids = self.candidate_row_ids(plan, table)?;
+        self.collect_rows_from_candidates(plan, table, tx, candidate_row_ids.as_slice())
+    }
+
+    fn collect_rows_from_candidates<T: StapiRow>(
+        &self,
+        plan: &CompiledPlan<T>,
+        table: &OccTable<T>,
+        tx: &mut OccTransaction<T>,
+        candidate_row_ids: &[usize],
+    ) -> Result<Vec<T>, PlannerError> {
         let mut rows = Vec::new();
 
         for row_id in candidate_row_ids {
-            if row_id >= table.capacity() {
+            if *row_id >= table.capacity() {
                 continue;
             }
-            let Some(row) = table.read(tx, row_id)? else {
+            let Some(row) = table.read(tx, *row_id)? else {
                 continue;
             };
 
@@ -508,6 +524,61 @@ impl ExecutionEngine {
             rows.truncate(limit);
         }
 
+        Ok(rows)
+    }
+
+    fn execute_chunked<T: StapiRow>(
+        &self,
+        plan: &CompiledPlan<T>,
+        table: &OccTable<T>,
+        chunk_rows: usize,
+    ) -> Result<Vec<T>, PlannerError> {
+        let candidate_row_ids = self.candidate_row_ids(plan, table)?;
+        let chunk_rows = chunk_rows.max(1);
+        let early_limit = if plan.sort.is_none() {
+            plan.limit.unwrap_or(usize::MAX)
+        } else {
+            usize::MAX
+        };
+
+        let mut rows = Vec::new();
+        for chunk in candidate_row_ids.chunks(chunk_rows) {
+            let mut tx = table.begin_transaction()?;
+            for row_id in chunk {
+                if *row_id >= table.capacity() {
+                    continue;
+                }
+                let Some(row) = table.read(&mut tx, *row_id)? else {
+                    continue;
+                };
+                if plan
+                    .residual_filters
+                    .iter()
+                    .all(|compiled| (compiled.predicate)(&row))
+                {
+                    rows.push(row);
+                    if rows.len() >= early_limit {
+                        break;
+                    }
+                }
+            }
+            table.abort(&mut tx)?;
+            if rows.len() >= early_limit {
+                break;
+            }
+        }
+
+        if let Some(sort_field) = &plan.sort {
+            rows.sort_unstable_by(|left, right| {
+                compare_optional(
+                    left.field_value(sort_field.as_str()),
+                    right.field_value(sort_field.as_str()),
+                )
+            });
+        }
+        if let Some(limit) = plan.limit {
+            rows.truncate(limit);
+        }
         Ok(rows)
     }
 
@@ -542,6 +613,24 @@ impl<T: StapiRow> CompiledPlan<T> {
         tx: &mut OccTransaction<T>,
     ) -> Result<Vec<T>, PlannerError> {
         ExecutionEngine::new().execute(self, table, tx)
+    }
+
+    pub fn execute_with_snapshot_mode(
+        &self,
+        table: &OccTable<T>,
+        mode: SnapshotExecutionMode,
+    ) -> Result<Vec<T>, PlannerError> {
+        match mode {
+            SnapshotExecutionMode::StrictSnapshot => {
+                let mut tx = table.begin_transaction()?;
+                let rows = ExecutionEngine::new().execute(self, table, &mut tx)?;
+                table.abort(&mut tx)?;
+                Ok(rows)
+            }
+            SnapshotExecutionMode::ChunkedEventual { chunk_rows } => {
+                ExecutionEngine::new().execute_chunked(self, table, chunk_rows)
+            }
+        }
     }
 }
 
@@ -712,5 +801,44 @@ mod tests {
 
         let values: Vec<i64> = rows.into_iter().map(|row| row.value).collect();
         assert_eq!(values, vec![20, 30, 40]);
+    }
+
+    #[test]
+    fn chunked_eventual_scan_matches_strict_snapshot_on_stable_input() {
+        let shm = Arc::new(ShmArena::new(16 << 20).expect("shm"));
+        let table = OccTable::<TestRow>::new(Arc::clone(&shm), 8).expect("table");
+        for row_id in 0..8 {
+            table
+                .seed_row(row_id, TestRow::new("", 0))
+                .expect("seed row");
+        }
+
+        write_row(&table, 0, TestRow::new("A", 40));
+        write_row(&table, 1, TestRow::new("B", 10));
+        write_row(&table, 2, TestRow::new("C", 30));
+        write_row(&table, 3, TestRow::new("D", 20));
+        write_row(&table, 4, TestRow::new("E", 50));
+
+        let optimizer = RuleBasedOptimizer::<TestRow>::new(SchemaCatalog::new("pk"));
+        let plan = optimizer
+            .compile_from_stapi("-compare {{> value 15}} -sort value -limit 4")
+            .expect("compile");
+
+        let mut strict_tx = table.begin_transaction().expect("begin strict");
+        let strict = plan
+            .execute(&table, &mut strict_tx)
+            .expect("execute strict");
+        table.abort(&mut strict_tx).expect("abort strict");
+
+        let chunked = plan
+            .execute_with_snapshot_mode(
+                &table,
+                super::SnapshotExecutionMode::ChunkedEventual { chunk_rows: 2 },
+            )
+            .expect("execute chunked");
+
+        let strict_values: Vec<i64> = strict.into_iter().map(|row| row.value).collect();
+        let chunked_values: Vec<i64> = chunked.into_iter().map(|row| row.value).collect();
+        assert_eq!(chunked_values, strict_values);
     }
 }
