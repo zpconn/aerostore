@@ -1,0 +1,57 @@
+{
+  "format_version": 1,
+  "config": {
+    "engine": "aerostore",
+    "mode": "replay",
+    "families": 64,
+    "cycles": 64,
+    "workers": 8,
+    "seed": 20260922,
+    "shm_mib": 128,
+    "output": "/home/zpconn/code/aerostore/docs/bench_data/extended_crucible_2026-09-22/killed_worker_failure.json"
+  },
+  "trace_fingerprint": "fnv1a64:2a81f3d5373ce2bb",
+  "scope": [
+    "Synthetic single-host model; no proprietary HyperFeed code or measured production mix",
+    "Identical phased trace, full returned rows and per-phase state/output parity against serial reference",
+    "One process per worker, rotating assignments; distinct events ordered per family, duplicate deliveries compete",
+    "128 preallocated typed slots/family; native guards before Aerostore snapshot, PostgreSQL FOR UPDATE at transaction start",
+    "Aerostore direct shared memory vs PostgreSQL local client/server; not equal transport overhead",
+    "WAL enabled, asynchronous acknowledgement in both; clean WAL drain checked, crash durability untested",
+    "Native contract probes supply no predicate lock and determine overall compatibility status",
+    "No speedup claim: rates include process dispatch/barriers and bounded fixture coordination"
+  ],
+  "contracts": [],
+  "replays": [
+    {
+      "engine": "aerostore",
+      "passed": false,
+      "error": "worker 14 unavailable or exceeded 45s phase budget: channel is empty and sending half is closed",
+      "phases": [],
+      "messages": 0,
+      "committed_messages": 0,
+      "retries": 0,
+      "message_wall_seconds": 0.0,
+      "committed_messages_per_second": 0.0,
+      "latency_p50_us": 0.0,
+      "latency_p99_us": 0.0,
+      "metrics": {
+        "begins": 0,
+        "commits": 0,
+        "aborts": 0,
+        "reads": 0,
+        "queries": 0,
+        "returned_rows": 0,
+        "writes": 0,
+        "savepoints": 0,
+        "savepoint_rollbacks": 0,
+        "index_mutations": 0
+      },
+      "index_audit": null
+    }
+  ],
+  "completed": true,
+  "operational_errors": [],
+  "postgres_configuration": null,
+  "passed": false
+}

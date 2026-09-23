@@ -57,3 +57,7 @@ harness = false
 [[bench]]
 name = "hyperfeed_crucible"
 harness = false
+
+[[bench]]
+name = "hyperfeed_extended_crucible"
+harness = false

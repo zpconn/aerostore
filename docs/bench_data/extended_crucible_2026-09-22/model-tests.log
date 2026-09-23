@@ -1,0 +1,28 @@
+    Finished `release` profile [optimized] target(s) in 0.06s
+     Running tests/extended_crucible_model.rs (target/release/deps/extended_crucible_model-2e183b67c2753a97)
+
+running 21 tests
+test adapter_must_surface_missing_candidate_postings ... ok
+test aerostore::tests::attachment_preserves_existing_rows ... ok
+test aerostore::tests::attachment_rejects_missing_wrong_size_and_corrupt_files_without_modification ... ok
+test aerostore::tests::family_range_queries_do_not_materialize_unrelated_families ... ok
+test aerostore::tests::fully_encoded_maximum_transaction_fits_wal_slot ... ok
+test model::tests::allocation_hint_is_not_used_to_hide_a_candidate_match ... ok
+test model::tests::duplicate_delivery_group_has_one_accepted_message_and_three_duplicates ... ok
+test model::tests::duplicate_has_no_observable_mutation_or_output ... ok
+test model::tests::empty_candidate_query_cannot_match_through_allocation_hint ... ok
+test model::tests::failed_family_expiration_rolls_back_every_related_row ... ok
+test model::tests::failed_fork_rolls_back_physical_rows_and_buffered_outputs ... ok
+test model::tests::family_expiration_requires_terminal_views_and_strict_age_threshold ... ok
+test model::tests::housekeeping_retains_exact_expected_real_position_history ... ok
+test model::tests::independently_expected_coordinates_prove_fork_privacy ... ok
+test model::tests::invariant_checker_detects_provenance_leak_and_terminal_event ... ok
+test model::tests::projection_uses_expected_history_without_replacing_real_observation ... ok
+test model::tests::same_callsign_is_disambiguated_using_route_and_tail ... ok
+test model::tests::serial_trace_preserves_independent_invariants_every_phase ... ok
+test model::tests::source_one_never_changes_source_two_or_four_only_views ... ok
+test model::tests::whole_message_abort_changes_neither_state_nor_output ... ok
+test native_adapter_replays_transactions_and_retains_exact_indexes ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+

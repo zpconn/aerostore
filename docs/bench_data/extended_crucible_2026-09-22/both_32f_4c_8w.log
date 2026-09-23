@@ -1,0 +1,53 @@
+    Finished `bench` profile [optimized] target(s) in 0.07s
+     Running benches/hyperfeed_extended_crucible.rs (target/release/deps/hyperfeed_extended_crucible-f6396a1626fe6719)
+extended_crucible_start families=32 cycles=4 workers=8 phases=108 trace=fnv1a64:ad18b44b57162006
+extended_crucible_phase engine=aerostore phase=1/108 name=cycle-000-plan-or-adhoc messages=32 retries=1 outputs=32 parity=PASS
+extended_crucible_phase engine=aerostore phase=9/108 name=cycle-000-third-provenance messages=32 retries=18 outputs=128 parity=PASS
+extended_crucible_phase engine=aerostore phase=17/108 name=cycle-000-position-refresh messages=32 retries=28 outputs=128 parity=PASS
+extended_crucible_phase engine=aerostore phase=25/108 name=cycle-000-duplicate-terminal messages=32 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=33/108 name=cycle-001-position-source-2 messages=32 retries=15 outputs=64 parity=PASS
+extended_crucible_phase engine=aerostore phase=41/108 name=cycle-001-project-due messages=32 retries=26 outputs=224 parity=PASS
+extended_crucible_phase engine=aerostore phase=49/108 name=cycle-001-cancelled-projections messages=32 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=57/108 name=cycle-002-duplicate-position messages=32 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=65/108 name=cycle-002-invalid-position messages=32 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=73/108 name=cycle-002-terminal-source-1 messages=32 retries=20 outputs=128 parity=PASS
+extended_crucible_phase engine=aerostore phase=81/108 name=cycle-002-expire-family messages=32 retries=10 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=89/108 name=cycle-003-position-after-failed-fork messages=32 retries=19 outputs=64 parity=PASS
+extended_crucible_phase engine=aerostore phase=97/108 name=cycle-003-position-after-diversion messages=32 retries=20 outputs=128 parity=PASS
+extended_crucible_phase engine=aerostore phase=105/108 name=cycle-003-housekeeping messages=32 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=108/108 name=cycle-003-expire-family messages=32 retries=21 outputs=0 parity=PASS
+extended_crucible_phase engine=postgres phase=1/108 name=cycle-000-plan-or-adhoc messages=32 retries=112 outputs=32 parity=PASS
+extended_crucible_phase engine=postgres phase=9/108 name=cycle-000-third-provenance messages=32 retries=118 outputs=128 parity=PASS
+extended_crucible_phase engine=postgres phase=17/108 name=cycle-000-position-refresh messages=32 retries=133 outputs=128 parity=PASS
+extended_crucible_phase engine=postgres phase=25/108 name=cycle-000-duplicate-terminal messages=32 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=postgres phase=33/108 name=cycle-001-position-source-2 messages=32 retries=116 outputs=64 parity=PASS
+extended_crucible_phase engine=postgres phase=41/108 name=cycle-001-project-due messages=32 retries=124 outputs=224 parity=PASS
+extended_crucible_phase engine=postgres phase=49/108 name=cycle-001-cancelled-projections messages=32 retries=7 outputs=0 parity=PASS
+extended_crucible_phase engine=postgres phase=57/108 name=cycle-002-duplicate-position messages=32 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=postgres phase=65/108 name=cycle-002-invalid-position messages=32 retries=9 outputs=0 parity=PASS
+extended_crucible_phase engine=postgres phase=73/108 name=cycle-002-terminal-source-1 messages=32 retries=112 outputs=128 parity=PASS
+extended_crucible_phase engine=postgres phase=81/108 name=cycle-002-expire-family messages=32 retries=116 outputs=0 parity=PASS
+extended_crucible_phase engine=postgres phase=89/108 name=cycle-003-position-after-failed-fork messages=32 retries=115 outputs=64 parity=PASS
+extended_crucible_phase engine=postgres phase=97/108 name=cycle-003-position-after-diversion messages=32 retries=122 outputs=128 parity=PASS
+extended_crucible_phase engine=postgres phase=105/108 name=cycle-003-housekeeping messages=32 retries=119 outputs=0 parity=PASS
+extended_crucible_phase engine=postgres phase=108/108 name=cycle-003-expire-family messages=32 retries=135 outputs=0 parity=PASS
+extended_crucible_contract engine=aerostore case=serializable_absent_candidate_creation status=FAIL details=Expected one commit and one serialization rejection when two overlapping transactions both find no matching flight and activate different slots for the same key. Observed initial candidate counts=0/0, committed=2, rejected=0, matching_rows=2, matching_index_postings=2. Both writers held their own native indexed-row guard; no predicate lock was added.
+extended_crucible_contract engine=aerostore case=committed_row_and_index_visibility status=FAIL details=Expected a successfully committed reader to find a newly committed row through its new index key. Paused the writer between native row commit and index maintenance while retaining its indexed-row guard. Observed visible_row=Some(20), new_key_candidates=[], reader_committed=true; after index publication candidates=[0].
+extended_crucible_contract engine=aerostore case=index_candidates_respect_transaction_snapshot status=FAIL details=Expected the native transaction snapshot's old-key row to remain discoverable after another transaction moves that row's key, or the candidate reader to reject its transaction. An independent equally old snapshot sees row=Some(10); old_key_candidates=[], candidate_reader_committed=true. This checks fixed-snapshot candidate completeness, not just latest-state index consistency.
+extended_crucible_contract engine=aerostore case=savepoint_and_whole_message_rollback status=PASS details=Expected rollback to preserve pre-savepoint multirow writes [90,60,0], discard nested candidate writes, and leave the committed transfer unchanged after a later whole-message abort. Observed restored=[Some(90), Some(60), Some(0)], committed=true, committed_rows=[(0, 90), (1, 60), (2, 0)], after_abort=[(0, 90), (1, 60), (2, 0)]. This probe covers native table state; it makes no claim about an external index overlay.
+extended_crucible_contract engine=aerostore case=multirow_table_snapshot_visibility status=PASS details=Expected a reader spanning a two-row transfer to retain [100,50] in its snapshot, and a new reader to observe [90,60]. Observed old_reader=[Some(100),Some(50)], writer_committed=true, new_reader=[Some(90), Some(60)], new_reader_committed=true. Both views must conserve total=150.
+extended_crucible_contract engine=aerostore case=concrete_read_dependency_write_skew status=PASS details=Expected one serialization rejection when overlapping transactions read both active records and each deactivates a different record. Observed committed=1, rejected=1, remaining_active=1, final_rows=[(0, 0), (1, 1)]. This contrasts concrete row-read dependencies with the separate empty-candidate probe.
+extended_crucible_contract engine=postgres case=serializable_absent_candidate_creation status=PASS details=PostgreSQL SERIALIZABLE: overlapping absent-key searches returned 0/0; committed=1, rejected=1, matching_rows=1. Expected exactly one surviving flight; the other transaction must fail with SQLSTATE 40001/40P01.
+extended_crucible_contract engine=postgres case=committed_row_and_index_visibility status=PASS details=PostgreSQL publishes rows and indexes in one transaction: before COMMIT row_key=10, new-key candidates=0; after COMMIT row_key=20, new-key candidates=1. Expected 10/0 then 20/1; no externally split index maintenance exists.
+extended_crucible_contract engine=postgres case=index_candidates_respect_transaction_snapshot status=PASS details=PostgreSQL fixed snapshot started before a committed key move: visible_row_key=10, old-key candidates=1, reader_committed=true. Expected the old row to remain discoverable or transaction rejection.
+extended_crucible_contract engine=postgres case=savepoint_and_whole_message_rollback status=PASS details=PostgreSQL nested savepoint rollback restored=[90, 60, 0]; committed values after subsequent whole-message abort=[90, 60, 0]. Expected [90,60,0] in both observations.
+extended_crucible_contract engine=postgres case=multirow_table_snapshot_visibility status=PASS details=PostgreSQL old reader spanning a two-row transfer observed [100,50]; new reader observed [90, 60]. Expected [100,50] and [90,60], both conserving 150.
+extended_crucible_contract engine=postgres case=concrete_read_dependency_write_skew status=PASS details=PostgreSQL overlapping transactions read both active records then deactivate different records: committed=1, rejected=1, remaining_active=1. Expected one serialization rejection and one remaining record.
+extended_crucible_replay engine=aerostore status=PASS messages=3840 committed=3712 retries=1438 messages_per_second=22595.24 p99_us=1686.55 error=None
+extended_crucible_replay engine=postgres status=PASS messages=3840 committed=3712 retries=9990 messages_per_second=158.44 p99_us=293636.31 error=None
+extended_crucible_result mode=all status=FAIL report=/home/zpconn/code/aerostore/docs/bench_data/extended_crucible_2026-09-22/both_32f_4c_8w.json
+extended-crucible: correctness gate failed; inspect the JSON report (replay success cannot override a failed native contract)
+error: bench failed, to rerun pass `-p aerostore_core --bench hyperfeed_extended_crucible`
+
+Caused by:
+  process didn't exit successfully: `/home/zpconn/code/aerostore/target/release/deps/hyperfeed_extended_crucible-f6396a1626fe6719 --engine both --families 32 --cycles 4 --workers 8 --seed 20260922 --output /home/zpconn/code/aerostore/docs/bench_data/extended_crucible_2026-09-22/both_32f_4c_8w.json --bench` (exit status: 2)

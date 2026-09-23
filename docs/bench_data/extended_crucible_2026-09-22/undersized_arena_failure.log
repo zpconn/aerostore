@@ -1,0 +1,5 @@
+extended_crucible_start families=4096 cycles=1 workers=1 phases=27 trace=fnv1a64:da57c18802c1a8e7
+extended-crucible: shared allocation failed: shared arena out of memory (requested 208, remaining 144)
+extended_crucible_replay engine=aerostore status=FAIL messages=0 committed=0 retries=0 messages_per_second=0.00 p99_us=0.00 error=Some("Aerostore coordinator exited exit status: 2")
+extended_crucible_result mode=replay status=FAIL report=/home/zpconn/code/aerostore/docs/bench_data/extended_crucible_2026-09-22/undersized_arena_failure.json
+extended-crucible: correctness gate failed; inspect the JSON report (replay success cannot override a failed native contract)

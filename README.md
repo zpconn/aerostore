@@ -4,6 +4,8 @@
 
 A Rust database engine for high-ingest, frequently updated data shared between processes on a single host. Aerostore combines shared-memory storage, indexed queries, transactions, and write-ahead logging. It includes a Tcl extension with a flight-tracking example for batch ingestion and search.
 
+The intended application is replacing PostgreSQL's shared transactional state store in single-machine FlightAware HyperFeed workloads. The repository uses synthetic flight-tracking scenarios informed by published HyperFeed descriptions; it does not include HyperFeed's application code.
+
 **Status:** Experimental and under active development. APIs and storage formats can change. The project targets Linux, including WSL2, and is intended for development and workload evaluation.
 
 ## Features
@@ -120,6 +122,20 @@ On 2026-09-22, the 2 GiB comparison produced these results on an Intel Core Ultr
 The 128 MiB Aerostore-only runs also passed at both durations. Across all four runs, **267 million operations** completed with correct final indexes, no unaccounted structural allocations, and arena high-water usage below **21 MiB**. These results are specific to this workload and host. Aerostore's direct shared-memory access and PostgreSQL's client/server path have different overheads.
 
 The latest sustained validation covers the 2 GiB and 128 MiB configurations. Other default arena profiles were not rerun in that validation. See the [raw results and reproduction commands](docs/bench_data/crucible_fixed_2026-09-22/README.md) and [performance runbook](docs/nightly_perf.md) for the full scope.
+
+## Extended HyperFeed Crucible
+
+The extended benchmark adds complete simulated message transactions: candidate matching, provenance forks, multirow updates, savepoints, duplicate delivery, deferred projection, and family expiration/recreation. Separate local worker processes replay identical inputs through Aerostore and PostgreSQL, checking full state and emitted output against a reference model.
+
+```bash
+cargo bench -p aerostore_core --bench hyperfeed_extended_crucible -- \
+  --engine both --families 32 --cycles 2 --workers 4 \
+  --output target/extended-crucible.json
+```
+
+**The full extended gate currently fails.** Its native probes expose missing predicate conflict detection and incomplete transactional visibility through secondary indexes. A passing bounded replay does not override those failures. The original sustained-churn result remains a separate, narrower regression.
+
+See the [extended benchmark runbook](docs/extended_crucible.md) for modes, assumptions, and reproduction commands, and the [research specification](docs/extended_crucible_research.md) for the public sources behind its design.
 
 ## Project layout
 

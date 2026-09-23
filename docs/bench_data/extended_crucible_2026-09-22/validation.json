@@ -1,0 +1,109 @@
+[
+  {
+    "name": "both_32f_4c_8w",
+    "command": [
+      "cargo",
+      "bench",
+      "--offline",
+      "-p",
+      "aerostore_core",
+      "--bench",
+      "hyperfeed_extended_crucible",
+      "--",
+      "--engine",
+      "both",
+      "--families",
+      "32",
+      "--cycles",
+      "4",
+      "--workers",
+      "8",
+      "--seed",
+      "20260922",
+      "--output",
+      "/home/zpconn/code/aerostore/docs/bench_data/extended_crucible_2026-09-22/both_32f_4c_8w.json"
+    ],
+    "exit_code": 2,
+    "elapsed_seconds": 28.680621439998504,
+    "passed": false,
+    "completed": true,
+    "operational_errors": [],
+    "replays": [
+      {
+        "engine": "aerostore",
+        "passed": true,
+        "messages": 3840,
+        "committed_messages": 3712,
+        "retries": 1438,
+        "error": null
+      },
+      {
+        "engine": "postgres",
+        "passed": true,
+        "messages": 3840,
+        "committed_messages": 3712,
+        "retries": 9990,
+        "error": null
+      }
+    ],
+    "failed_contracts": [
+      {
+        "engine": "aerostore",
+        "name": "serializable_absent_candidate_creation"
+      },
+      {
+        "engine": "aerostore",
+        "name": "committed_row_and_index_visibility"
+      },
+      {
+        "engine": "aerostore",
+        "name": "index_candidates_respect_transaction_snapshot"
+      }
+    ]
+  },
+  {
+    "name": "aerostore_64f_16c_8w_128m",
+    "command": [
+      "cargo",
+      "bench",
+      "--offline",
+      "-p",
+      "aerostore_core",
+      "--bench",
+      "hyperfeed_extended_crucible",
+      "--",
+      "--engine",
+      "aerostore",
+      "--mode",
+      "replay",
+      "--families",
+      "64",
+      "--cycles",
+      "16",
+      "--workers",
+      "8",
+      "--shm-mib",
+      "128",
+      "--seed",
+      "8675309",
+      "--output",
+      "/home/zpconn/code/aerostore/docs/bench_data/extended_crucible_2026-09-22/aerostore_64f_16c_8w_128m.json"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 5.207587586002774,
+    "passed": true,
+    "completed": true,
+    "operational_errors": [],
+    "replays": [
+      {
+        "engine": "aerostore",
+        "passed": true,
+        "messages": 30720,
+        "committed_messages": 29696,
+        "retries": 8216,
+        "error": null
+      }
+    ],
+    "failed_contracts": []
+  }
+]

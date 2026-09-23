@@ -1,0 +1,4 @@
+extended_crucible_start families=64 cycles=64 workers=8 phases=1728 trace=fnv1a64:2a81f3d5373ce2bb
+extended_crucible_replay engine=aerostore status=FAIL messages=0 committed=0 retries=0 messages_per_second=0.00 p99_us=0.00 error=Some("worker 14 unavailable or exceeded 45s phase budget: channel is empty and sending half is closed")
+extended_crucible_result mode=replay status=FAIL report=/home/zpconn/code/aerostore/docs/bench_data/extended_crucible_2026-09-22/killed_worker_failure.json
+extended-crucible: correctness gate failed; inspect the JSON report (replay success cannot override a failed native contract)
