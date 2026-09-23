@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -578,7 +578,7 @@
+         // index latches; later mutations are checked again at commit. In
+         // particular, a broad range query need not exclude writers while it
+         // filters rows or grows its concrete row-read set.
+-        drop(guards);
++        let _delayed_guards = guards;
+         #[cfg(test)]
+         INDEX_CANDIDATES_CAPTURED_HOOK.with(|hook| {
+             if let Some(hook) = hook.borrow_mut().take() {

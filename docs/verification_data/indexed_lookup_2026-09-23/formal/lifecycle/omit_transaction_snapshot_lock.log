@@ -1,0 +1,42 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/lifecycle/omit_transaction_snapshot_lock.rs:419:1
+    |
+419 | / pub fn create_transaction_snapshot<D: LifecyclePrimitives>(driver: &mut D, registration: ProcArrayRegistration)
+420 | |     -> (result: Result<ProcSnapshot, ProcArrayError>)
+    | |____________________________________________________^
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/lifecycle/omit_transaction_snapshot_lock.rs:422:49
+    |
+422 |       ensures well_formed(final(driver).state()), final(driver).state().lifecycle_held,
+    |                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+440 | /     return Err ( ProcArrayError :: SlotOwnershipMismatch {
+441 | |         slot_idx : registration . slot_idx , expected_txid : registration . txid , observed_txid : observed ,
+442 | |     }
+443 | |     ) ;
+    | |_____- at this exit
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/lifecycle/omit_transaction_snapshot_lock.rs:422:49
+    |
+422 |     ensures well_formed(final(driver).state()), final(driver).state().lifecycle_held,
+    |                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+437 |     let ghost initial = driver.state(); let slot = checked_slot ( registration . slot_idx ) ? ;
+    |                                                                                             - at this exit
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/lifecycle/omit_transaction_snapshot_lock.rs:438:16
+    |
+133 |         requires self.state().lifecycle_held, slot < self.state().slots.len(),
+    |                  --------------------------- failed precondition
+...
+438 | let observed = driver . slot_txid ( slot ) ;
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 3 previous errors
+

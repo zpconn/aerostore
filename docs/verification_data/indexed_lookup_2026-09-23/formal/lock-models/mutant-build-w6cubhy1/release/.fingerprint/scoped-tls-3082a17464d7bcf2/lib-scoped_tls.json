@@ -1,0 +1,1 @@
+{"rustc":1100337564441796057,"features":"[]","declared_features":"[]","target":17698849193518812729,"profile":2040997289075261528,"path":304040560510826783,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"release/.fingerprint/scoped-tls-3082a17464d7bcf2/dep-lib-scoped_tls","checksum":false}}],"rustflags":["--cfg","aerostore_loom"],"config":2069994364910194474,"compile_kind":0}

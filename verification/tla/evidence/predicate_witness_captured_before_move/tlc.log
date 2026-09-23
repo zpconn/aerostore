@@ -1,19 +1,19 @@
 TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
-Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 2085] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
-Parsing file /tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla
-Parsing file /tmp/tlc-8555046899030565375/Integers.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
-Parsing file /tmp/tlc-8555046899030565375/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
-Parsing file /tmp/tlc-8555046899030565375/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
-Parsing file /tmp/tlc-8555046899030565375/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 2076] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla
+Parsing file /tmp/tlc-11928828364943497189/Integers.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /tmp/tlc-11928828364943497189/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-11928828364943497189/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-11928828364943497189/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
 Semantic processing of module Naturals
 Semantic processing of module Integers
 Semantic processing of module Sequences
 Semantic processing of module FiniteSets
 Semantic processing of module PredicatePublication
 Linting of module PredicatePublication
-Starting... (2026-09-23 16:34:19)
+Starting... (2026-09-23 17:46:23)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-09-23 16:34:19.
+Finished computing initial states: 1 distinct state generated at 2026-09-23 17:46:23.
 Error: Invariant WitnessNotReached is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -103,4 +103,4 @@ State 10: <WriterDeregister line 161, col 5 to line 167, col 78 of module Predic
 
 55 states generated, 44 distinct states found, 7 states left on queue.
 The depth of the complete state graph search is 10.
-Finished in 00s at (2026-09-23 16:34:19)
+Finished in 00s at (2026-09-23 17:46:23)

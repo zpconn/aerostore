@@ -93,6 +93,15 @@ def render(source, publication=None, shm=None):
     if source.count(hook) != 1:
         raise ValueError("native registration test-hook changed")
     source = source.replace(hook, "", 1)
+    acquisition_hook = '''#[cfg(test)]
+        SNAPSHOT_ACQUIRING_HOOK.with(|hook| {
+            if let Some(hook) = hook.borrow_mut().take() {
+                hook();
+            }
+        });'''
+    if source.count(acquisition_hook) != 1:
+        raise ValueError("native snapshot acquisition test-hook changed")
+    source = source.replace(acquisition_hook, "", 1)
     bodies = {name: method(source, name) for name in SIGNATURES}
     for name, body in bodies.items():
         body = optional(body, "let _lifecycle = self.lifecycle.lock();", "driver.lock_lifecycle();")

@@ -86,6 +86,40 @@ def validate_receipt(path: Path, name: str, root: Path = ROOT) -> dict:
                 require(check.get("exit_code") == 0 and errors == 0
                         and verified >= (1 if expected_root else len(campaign["roots"])),
                         "required proof did not pass: " + check_name)
+        # Affine ownership misuse is intentionally rejected by the frontend.
+        # Keep it separate from semantic mutants, which must reach the solver.
+        type_mutations = campaign.get("type_mutations", {})
+        require(receipt.get("required_type_mutations", {}) == type_mutations,
+                "missing or changed ownership type controls")
+        type_checks = receipt.get("type_checks", [])
+        require([c.get("name") for c in type_checks] == list(type_mutations),
+                "missing, duplicate, or reordered ownership type checks")
+        for check in type_checks:
+            check_name = check["name"]
+            diagnostic = type_mutations[check_name]
+            require(check.get("classification") == "ownership_type_rejection"
+                    and check.get("expected_diagnostic") == diagnostic,
+                    "incorrect ownership type obligation")
+            require(type(check.get("exit_code")) is int and check["exit_code"] != 0,
+                    "ownership misuse did not fail")
+            artifact = path.parent / (check_name + ".rs")
+            expected_command = [str(root / pin["distribution"] / "verus"),
+                "--crate-name", campaign["crate_name"], "--crate-type=lib", "--edition=2021",
+                "--target", pin["platform"], "--no-cheating", "--triggers-mode", "silent",
+                "--rlimit", str(campaign["rlimit"]), str(artifact)]
+            require(check.get("command") == expected_command, "unsupported ownership type command")
+            require(digest(artifact) == check["source_sha256"], "stale ownership type artifact")
+            log_path = root / check["log"]
+            require(log_path.resolve().is_relative_to(path.parent), "ownership type log escaped campaign directory")
+            require(digest(log_path) == check["log_sha256"], "stale ownership type log")
+            if re.fullmatch(r"E\d{4}", diagnostic):
+                diagnostic_pattern = r"error\[" + diagnostic + r"\]"
+            else:
+                require(diagnostic == "disallowed: constructor for an opaque datatype",
+                        "unsupported ownership frontend diagnostic")
+                diagnostic_pattern = r"error: " + re.escape(diagnostic)
+            require(re.search(diagnostic_pattern, log_path.read_text()),
+                    "ownership misuse failed for wrong reason")
         return receipt
     except (OSError, ValueError, KeyError, TypeError, IndexError, StopIteration) as error:
         raise RuntimeError(f"{name} refinement evidence: missing or malformed artifact: {error}") from error

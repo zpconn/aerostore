@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-lookup/final/lifecycle-scenario/skip_native_snapshot.rs:1304:9
+     |
+ 223 |     requires well_formed(s), coherent_snapshot(s, snapshot),
+     |                              ------------------------------ failed precondition
+...
+1304 |         lifecycle::snapshot_covers_active_writer(driver.lifecycle.state(), snapshot, writer.slot_idx as int);
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

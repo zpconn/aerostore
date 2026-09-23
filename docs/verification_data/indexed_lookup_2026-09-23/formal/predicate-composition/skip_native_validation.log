@@ -1,0 +1,11 @@
+note: verifying root module (selected functions)
+
+error: assertion failed
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/predicate-composition/skip_native_validation.rs:683:20
+    |
+683 |             assert(false);
+    |                    ^^^^^ assertion failed
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

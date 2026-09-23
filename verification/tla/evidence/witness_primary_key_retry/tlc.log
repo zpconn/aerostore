@@ -1,17 +1,17 @@
 TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
-Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 1345] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
-Parsing file /tmp/aerostore-tlc-models-_ilxz69t/PrimaryKeyInsert.tla
-Parsing file /tmp/tlc-2615794488627992636/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
-Parsing file /tmp/tlc-2615794488627992636/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
-Parsing file /tmp/tlc-2615794488627992636/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 1344] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-u3vja32j/PrimaryKeyInsert.tla
+Parsing file /tmp/tlc-9559306531633077144/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-9559306531633077144/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-9559306531633077144/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
 Semantic processing of module Naturals
 Semantic processing of module Sequences
 Semantic processing of module FiniteSets
 Semantic processing of module PrimaryKeyInsert
 Linting of module PrimaryKeyInsert
-Starting... (2026-09-23 16:34:10)
+Starting... (2026-09-23 17:46:15)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-09-23 16:34:10.
+Finished computing initial states: 1 distinct state generated at 2026-09-23 17:46:15.
 Error: Invariant WitnessNotReached is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -88,4 +88,4 @@ State 12: <Search(2) line 39, col 5 to line 50, col 49 of module PrimaryKeyInser
 
 78 states generated, 52 distinct states found, 3 states left on queue.
 The depth of the complete state graph search is 12.
-Finished in 00s at (2026-09-23 16:34:10)
+Finished in 00s at (2026-09-23 17:46:15)

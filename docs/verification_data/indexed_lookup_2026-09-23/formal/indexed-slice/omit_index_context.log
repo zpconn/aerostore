@@ -1,0 +1,33 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-lookup/final/indexed-slice/omit_index_context.rs:2319:1
+     |
+2319 | / pub fn indexed_read_then_validate<D: SlicePrimitives<P>, V: lookup::Storage, P: KeyPredicate, C: lookup::CandidateSet>(
+2320 | |     driver: &D, validation_driver: &V, tx: &mut lookup::Transaction, query: &P,
+2321 | |     binding: usize, binding_count: usize, offset: usize, bucket: usize,
+2322 | |     Tracked(authority): Tracked<&mut ownership::Authority>) -> (result: Result<Outcome, SliceError>)
+     | |___________________________________________________________________________________________________^
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-lookup/final/indexed-slice/omit_index_context.rs:2362:13
+     |
+2206 |             ownership::lease_key(lease).1 == self.operation_index_offset(),
+     |             -------------------------------------------------------------- failed precondition
+...
+2362 |             driver.guarded_correspondence(*tx, *query, &guards[0], &*authority);
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-lookup/final/indexed-slice/omit_index_context.rs:2365:27
+     |
+1711 | /         forall|i: int| 0 <= i < buckets.len() ==>
+1712 | |             index.held().contains(buckets[i]) && index.stamps().contains_key(buckets[i]),
+     | |________________________________________________________________________________________- failed precondition
+...
+2365 |           captured_result = capture::capture_dependencies(&index, &mut captured, &buckets);
+     |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

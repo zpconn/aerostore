@@ -64,3 +64,18 @@ statement = "The caller supplies valid bindings, held key permissions derived fr
 id = "PLATFORM"
 scope = "Integration evidence"
 statement = "Current target is x86_64 Linux/WSL2 with process-shared mappings. Integration tests are bounded evidence and do not prove OS, filesystem, crash, or mmap guarantees."
+
+[[assumptions]]
+id = "LIFECYCLE-WAIT-OWNERSHIP"
+scope = "Interference-aware native lifecycle campaign"
+statement = "A finite legal acquisition trace may register/end/reuse other slots, change retention horizons and advance the shared clock. Only the borrowed registration owner is protected. The native acquired suffix uses the resulting state, not API-entry metadata. Native registration is copyable; caller ownership discipline, unique arena authority, coherent abstract metadata cuts, mutex/atomic correspondence and a no-wrap policy covering every intervening reservation remain unproved. This campaign removes acquired-input framing from its modeled wait, without retroactively strengthening the older controlled scenario."
+
+[[assumptions]]
+id = "GUARD-AUTHORITY-INTERFERENCE"
+scope = "Opaque lease and indexed-read composition"
+statement = "One initial authority represents the valid physical arena/header/bucket domain. Actual CAS and Release-store bodies refine logical lease events under atomic primitive contracts; opaque affine leases cannot be forged or duplicated by clients. Scheduler cuts admit legal foreign transitions while preserving borrowed local leases; released keys may immediately be reacquired. Native authority construction, pointer/registry domain correspondence, Vec/RAII Drop elaboration, Acquire/Release visibility, weak memory and process-shared mappings remain trusted native boundaries."
+
+[[assumptions]]
+id = "LOOKUP-RETAINED-IMAGE-HISTORY"
+scope = "Native MVCC materialization and indexed validation slice"
+statement = "Storage operations expose a valid retained version-chain image and exact extracted index-key values for the operation. Indexed correspondence is restricted to the driver's fixed snapshot, selected index header and physical key-to-bucket projection. The raw current-posting lookup enumerates its guarded logical postings; the retained image maps to snapshot-visible replay of a coherent publication history. Native concurrent loads, partial multirow publication, pointers, allocator reuse, epoch/vacuum retention and payload/key extraction still require implementation refinement. Historical candidate completeness, private-write union, filtering and recorded-read provenance are derived within this boundary. The indexed slice selects its guarded history projection after acquisition and consumes guards before materialization; it does not assert a globally frozen physical heap."

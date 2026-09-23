@@ -6,3 +6,4 @@ import AerostoreProofs.Sort
 import AerostoreProofs.Equivalence
 import AerostoreProofs.Predicate
 import AerostoreProofs.Lifecycle
+import AerostoreProofs.QueryCompleteness

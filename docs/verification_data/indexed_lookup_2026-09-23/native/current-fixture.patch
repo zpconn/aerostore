@@ -1,0 +1,307 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -3841,4 +3841,193 @@
+             exercise_predicate_finish_cut(Some(10), after_deregistration);
+         }
+     }
++
++    #[test]
++    fn captured_lookup_retains_history_through_delete_aba_and_own_write_overlay() {
++        use std::sync::Mutex;
++
++        for writer_was_active in [true, false] {
++            let (table, index) = fixture(&[Some(42), Some(42), None]);
++            let original_offset = table.row_head_offset(0).unwrap();
++            let older = writer_was_active.then(|| table.begin_transaction().unwrap());
++            let mut reader = table.begin_transaction().unwrap();
++            let reader_xmax = reader.snapshot_xmax;
++            let reader_active = reader.snapshot_active.clone();
++            table
++                .write(
++                    &mut reader,
++                    1,
++                    PredicateRow {
++                        key: None,
++                        payload: 10,
++                    },
++                )
++                .unwrap();
++            table
++                .write(
++                    &mut reader,
++                    2,
++                    PredicateRow {
++                        key: Some(42),
++                        payload: 900,
++                    },
++                )
++                .unwrap();
++            table
++                .write(
++                    &mut reader,
++                    2,
++                    PredicateRow {
++                        key: Some(42),
++                        payload: 901,
++                    },
++                )
++                .unwrap();
++            let first_lookup = table.index_lookup(&mut reader, &index, &eq(42)).unwrap();
++            let dependencies = reader.index_reads.len();
++
++            // The hook runs after raw IDs and dependencies are captured and
++            // every query bucket guard has been dropped. The second lookup
++            // reuses the same dependency before this actual intervening work.
++            let observations = Arc::new(Mutex::new((Vec::new(), Vec::new(), Vec::new(), 0)));
++            let observed = Arc::clone(&observations);
++            let writer_table = Arc::clone(&table);
++            INDEX_CANDIDATES_CAPTURED_HOOK.with(|hook| {
++                *hook.borrow_mut() = Some(Box::new(move || {
++                    let mut deleting =
++                        older.unwrap_or_else(|| writer_table.begin_transaction().unwrap());
++                    observed.lock().unwrap().3 = deleting.txid;
++                    writer_table
++                        .write(
++                            &mut deleting,
++                            0,
++                            PredicateRow {
++                                key: None,
++                                payload: 100,
++                            },
++                        )
++                        .unwrap();
++                    let committed = writer_table.commit(&mut deleting);
++                    observed.lock().unwrap().0.push(committed.is_ok());
++                    if committed.is_err() {
++                        let _ = writer_table.abort(&mut deleting);
++                        return;
++                    }
++                    observed
++                        .lock()
++                        .unwrap()
++                        .1
++                        .push(crate::run_vacuum_pass(&writer_table).unwrap().len());
++                    // Delete the posting, move it twice, then restore the same
++                    // key/row pair with a different value: predicate ABA.
++                    for (n, key) in [Some(77), Some(42), None, Some(42)].into_iter().enumerate() {
++                        let mut changing = writer_table.begin_transaction().unwrap();
++                        writer_table
++                            .write(
++                                &mut changing,
++                                0,
++                                PredicateRow {
++                                    key,
++                                    payload: 200 + n as u64,
++                                },
++                            )
++                            .unwrap();
++                        let committed = writer_table.commit(&mut changing);
++                        observed.lock().unwrap().0.push(committed.is_ok());
++                        if committed.is_err() {
++                            let _ = writer_table.abort(&mut changing);
++                            return;
++                        }
++                        observed
++                            .lock()
++                            .unwrap()
++                            .2
++                            .push(writer_table.row_head_offset(0).unwrap());
++                        observed
++                            .lock()
++                            .unwrap()
++                            .1
++                            .push(crate::run_vacuum_pass(&writer_table).unwrap().len());
++                    }
++                }));
++            });
++            let captured_lookup = table.index_lookup(&mut reader, &index, &eq(42));
++            let historical = table.read(&mut reader, 0);
++            let own_final = table.read(&mut reader, 2);
++            let predicate_conflict = table.index_read_conflict(&reader);
++            let repeated_lookup = table.index_lookup(&mut reader, &index, &eq(42));
++            let dependencies_after = reader.index_reads.len();
++            let reader_commit = table.commit(&mut reader);
++            let reclaimed = crate::run_vacuum_pass(&table).unwrap();
++            let (commits, vacuum_counts, head_offsets, deleting_txid) =
++                observations.lock().unwrap().clone();
++
++            assert_eq!(
++                commits,
++                vec![true; 5],
++                "captured candidate materialization must not retain predicate guards"
++            );
++            assert_eq!(reader_active.contains(&deleting_txid), writer_was_active);
++            assert_eq!(deleting_txid < reader_xmax, writer_was_active);
++            assert_eq!(
++                first_lookup,
++                vec![0, 2],
++                "final own writes must remove and add raw candidates"
++            );
++            assert_eq!(
++                captured_lookup,
++                Ok(vec![0, 2]),
++                "captured candidates must materialize the pinned historical predicate"
++            );
++            assert_eq!(
++                historical,
++                Ok(Some(PredicateRow {
++                    key: Some(42),
++                    payload: 0
++                })),
++                "older-active and newer versions must both remain invisible"
++            );
++            assert_eq!(
++                own_final,
++                Ok(Some(PredicateRow {
++                    key: Some(42),
++                    payload: 901
++                }))
++            );
++            assert!(
++                vacuum_counts.iter().all(|count| *count == 0),
++                "reader must retain history while vacuum attempts reclamation"
++            );
++            assert!(head_offsets.iter().all(|offset| *offset != original_offset));
++            assert_eq!(predicate_conflict, Ok(true));
++            assert_eq!(
++                repeated_lookup,
++                Err(Error::SerializationFailure),
++                "restoring the same posting must not erase its publication dependency"
++            );
++            assert_eq!(dependencies_after, dependencies);
++            assert_eq!(reader_commit, Err(Error::SerializationFailure));
++            assert_eq!(reclaimed.len(), 5);
++            assert_eq!(table.latest_value(1).unwrap().unwrap().key, Some(42));
++            assert_eq!(table.latest_value(2).unwrap().unwrap().key, None);
++            let mut reuse = table.begin_transaction().unwrap();
++            table
++                .write(
++                    &mut reuse,
++                    0,
++                    PredicateRow {
++                        key: Some(99),
++                        payload: 999,
++                    },
++                )
++                .unwrap();
++            table.commit(&mut reuse).unwrap();
++            assert_eq!(
++                table.row_head_offset(0).unwrap(),
++                original_offset,
++                "the protected version becomes reusable after its reader finishes"
++            );
++            no_live_transactions(&table);
++        }
++    }
+ }
+--- a/aerostore_core/src/procarray.rs
++++ b/aerostore_core/src/procarray.rs
+@@ -10,6 +10,8 @@
+ #[cfg(test)]
+ thread_local! {
+     static REGISTRATION_RESERVED_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
++        std::cell::RefCell::new(None);
++    static SNAPSHOT_ACQUIRING_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+         std::cell::RefCell::new(None);
+ }
+ 
+@@ -121,6 +123,12 @@
+         registration: ProcArrayRegistration,
+         global_txid: &AtomicU64,
+     ) -> Result<ProcSnapshot, ProcArrayError> {
++        #[cfg(test)]
++        SNAPSHOT_ACQUIRING_HOOK.with(|hook| {
++            if let Some(hook) = hook.borrow_mut().take() {
++                hook();
++            }
++        });
+         let _lifecycle = self.lifecycle.lock();
+         let slot =
+             self.slots
+@@ -305,6 +313,86 @@
+ mod tests {
+     use super::{ProcArray, ProcArrayError, PROCARRAY_SLOTS};
+     use std::sync::atomic::AtomicU64;
++
++    #[test]
++    fn lifecycle_acquisition_reobserves_reused_slots_and_preserves_owned_registration() {
++        use std::sync::atomic::Ordering;
++        use std::sync::{mpsc, Arc};
++        use std::time::Duration;
++
++        let procarray = Arc::new(ProcArray::new());
++        let global = Arc::new(AtomicU64::new(100));
++        let older = procarray.begin_transaction(&global).unwrap();
++        let owner = procarray.begin_transaction(&global).unwrap();
++        let initial = procarray
++            .create_transaction_snapshot(owner, &global)
++            .unwrap();
++        let original_horizon = procarray.slots[owner.slot_idx as usize]
++            .snapshot_xmin
++            .load(Ordering::Acquire);
++        let (entered_send, entered_receive) = mpsc::channel();
++        let (resume_send, resume_receive) = mpsc::channel();
++        let worker_array = Arc::clone(&procarray);
++        let worker_global = Arc::clone(&global);
++        let worker = std::thread::spawn(move || {
++            super::SNAPSHOT_ACQUIRING_HOOK.with(|hook| {
++                *hook.borrow_mut() = Some(Box::new(move || {
++                    entered_send.send(()).unwrap();
++                    resume_receive.recv().unwrap();
++                }));
++            });
++            worker_array.create_transaction_snapshot(owner, &worker_global)
++        });
++        entered_receive
++            .recv_timeout(Duration::from_secs(5))
++            .unwrap();
++        // The snapshot API has entered, but has not acquired its lifecycle
++        // guard. Real metadata operations replace another owner's slot.
++        let older_end = procarray.end_transaction(older);
++        let replacement = procarray.begin_transaction(&global).unwrap();
++        let replacement_snapshot = procarray.create_transaction_snapshot(replacement, &global);
++        let unrelated = procarray.begin_transaction(&global).unwrap();
++        let stale_end = procarray.end_transaction(older);
++        let protected_txid = procarray.slot_txid(owner.slot_idx as usize).unwrap();
++        let protected_horizon = procarray.slots[owner.slot_idx as usize]
++            .snapshot_xmin
++            .load(Ordering::Acquire);
++        let replacement_txid = procarray.slot_txid(replacement.slot_idx as usize).unwrap();
++        resume_send.send(()).unwrap();
++        let snapshot_result = worker.join().unwrap();
++        // Every assertion is after release/join, including negative variants.
++        let snapshot = snapshot_result.unwrap();
++        let mut actual = snapshot.in_flight_txids().to_vec();
++        actual.sort_unstable();
++        let mut expected = vec![owner.txid, replacement.txid, unrelated.txid];
++        expected.sort_unstable();
++        assert_eq!(
++            actual, expected,
++            "snapshot must use metadata acquired after the wait"
++        );
++        assert_eq!(older_end, Ok(()));
++        assert_eq!(replacement.slot_idx, older.slot_idx);
++        assert!(matches!(
++            stale_end,
++            Err(ProcArrayError::SlotOwnershipMismatch { .. })
++        ));
++        assert_eq!(replacement_txid, replacement.txid);
++        assert_eq!(protected_txid, owner.txid);
++        assert_eq!(original_horizon, older.txid);
++        assert_eq!(protected_horizon, original_horizon);
++        assert!(initial.in_flight_txids().contains(&older.txid));
++        assert!(replacement_snapshot.is_ok());
++        assert_eq!(snapshot.xmin, owner.txid);
++        assert_eq!(
++            procarray.slots[owner.slot_idx as usize]
++                .snapshot_xmin
++                .load(Ordering::Acquire),
++            snapshot.xmin
++        );
++        procarray.end_transaction(owner).unwrap();
++        procarray.end_transaction(replacement).unwrap();
++        procarray.end_transaction(unrelated).unwrap();
++    }
+ 
+     #[test]
+     fn snapshot_cannot_mistake_reserved_unpublished_txid_for_a_commit() {

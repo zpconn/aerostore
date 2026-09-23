@@ -11,6 +11,8 @@ const EMPTY_SLOT: u64 = 0;
 thread_local! {
     static REGISTRATION_RESERVED_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
         std::cell::RefCell::new(None);
+    static SNAPSHOT_ACQUIRING_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+        std::cell::RefCell::new(None);
 }
 
 #[repr(align(64))]
@@ -121,6 +123,12 @@ impl ProcArray {
         registration: ProcArrayRegistration,
         global_txid: &AtomicU64,
     ) -> Result<ProcSnapshot, ProcArrayError> {
+        #[cfg(test)]
+        SNAPSHOT_ACQUIRING_HOOK.with(|hook| {
+            if let Some(hook) = hook.borrow_mut().take() {
+                hook();
+            }
+        });
         let _lifecycle = self.lifecycle.lock();
         let slot =
             self.slots
@@ -305,6 +313,86 @@ impl std::error::Error for ProcArrayError {}
 mod tests {
     use super::{ProcArray, ProcArrayError, PROCARRAY_SLOTS};
     use std::sync::atomic::AtomicU64;
+
+    #[test]
+    fn lifecycle_acquisition_reobserves_reused_slots_and_preserves_owned_registration() {
+        use std::sync::atomic::Ordering;
+        use std::sync::{mpsc, Arc};
+        use std::time::Duration;
+
+        let procarray = Arc::new(ProcArray::new());
+        let global = Arc::new(AtomicU64::new(100));
+        let older = procarray.begin_transaction(&global).unwrap();
+        let owner = procarray.begin_transaction(&global).unwrap();
+        let initial = procarray
+            .create_transaction_snapshot(owner, &global)
+            .unwrap();
+        let original_horizon = procarray.slots[owner.slot_idx as usize]
+            .snapshot_xmin
+            .load(Ordering::Acquire);
+        let (entered_send, entered_receive) = mpsc::channel();
+        let (resume_send, resume_receive) = mpsc::channel();
+        let worker_array = Arc::clone(&procarray);
+        let worker_global = Arc::clone(&global);
+        let worker = std::thread::spawn(move || {
+            super::SNAPSHOT_ACQUIRING_HOOK.with(|hook| {
+                *hook.borrow_mut() = Some(Box::new(move || {
+                    entered_send.send(()).unwrap();
+                    resume_receive.recv().unwrap();
+                }));
+            });
+            worker_array.create_transaction_snapshot(owner, &worker_global)
+        });
+        entered_receive
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap();
+        // The snapshot API has entered, but has not acquired its lifecycle
+        // guard. Real metadata operations replace another owner's slot.
+        let older_end = procarray.end_transaction(older);
+        let replacement = procarray.begin_transaction(&global).unwrap();
+        let replacement_snapshot = procarray.create_transaction_snapshot(replacement, &global);
+        let unrelated = procarray.begin_transaction(&global).unwrap();
+        let stale_end = procarray.end_transaction(older);
+        let protected_txid = procarray.slot_txid(owner.slot_idx as usize).unwrap();
+        let protected_horizon = procarray.slots[owner.slot_idx as usize]
+            .snapshot_xmin
+            .load(Ordering::Acquire);
+        let replacement_txid = procarray.slot_txid(replacement.slot_idx as usize).unwrap();
+        resume_send.send(()).unwrap();
+        let snapshot_result = worker.join().unwrap();
+        // Every assertion is after release/join, including negative variants.
+        let snapshot = snapshot_result.unwrap();
+        let mut actual = snapshot.in_flight_txids().to_vec();
+        actual.sort_unstable();
+        let mut expected = vec![owner.txid, replacement.txid, unrelated.txid];
+        expected.sort_unstable();
+        assert_eq!(
+            actual, expected,
+            "snapshot must use metadata acquired after the wait"
+        );
+        assert_eq!(older_end, Ok(()));
+        assert_eq!(replacement.slot_idx, older.slot_idx);
+        assert!(matches!(
+            stale_end,
+            Err(ProcArrayError::SlotOwnershipMismatch { .. })
+        ));
+        assert_eq!(replacement_txid, replacement.txid);
+        assert_eq!(protected_txid, owner.txid);
+        assert_eq!(original_horizon, older.txid);
+        assert_eq!(protected_horizon, original_horizon);
+        assert!(initial.in_flight_txids().contains(&older.txid));
+        assert!(replacement_snapshot.is_ok());
+        assert_eq!(snapshot.xmin, owner.txid);
+        assert_eq!(
+            procarray.slots[owner.slot_idx as usize]
+                .snapshot_xmin
+                .load(Ordering::Acquire),
+            snapshot.xmin
+        );
+        procarray.end_transaction(owner).unwrap();
+        procarray.end_transaction(replacement).unwrap();
+        procarray.end_transaction(unrelated).unwrap();
+    }
 
     #[test]
     fn snapshot_cannot_mistake_reserved_unpublished_txid_for_a_commit() {

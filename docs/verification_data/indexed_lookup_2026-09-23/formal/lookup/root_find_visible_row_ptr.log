@@ -1,0 +1,3 @@
+note: verifying root module (selected functions)
+
+verification results:: 2 verified, 0 errors (partial verification with `--verify-*`)

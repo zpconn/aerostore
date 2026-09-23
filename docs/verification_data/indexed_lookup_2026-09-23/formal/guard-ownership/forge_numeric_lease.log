@@ -1,0 +1,11 @@
+error: disallowed: constructor for an opaque datatype
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/guard-ownership/forge_numeric_lease.rs:776:9
+    |
+ 19 | pub struct ReadLease { physical: Key, token: Tracked<LeaseToken> }
+    | ------------------------------------------------------------------ Verus treats this datatype as 'opaque' outside `aerostore_guard_ownership::ownership` (note that Verus always considers the most restrictive field for determining this)
+...
+776 |         ownership::ReadLease { physical: key, token: Tracked(token) }
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this constructor is disallowed because of datatype opaqueness
+
+error: aborting due to 1 previous error
+

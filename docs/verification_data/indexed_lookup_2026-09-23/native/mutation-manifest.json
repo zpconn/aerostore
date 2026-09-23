@@ -1,0 +1,92 @@
+{
+  "current_fixture": {
+    "changes": {
+      "aerostore_core/src/occ_partitioned.rs": {
+        "after_sha256": "dba4dfe4b8f135639e13df8fd5abdf3475d5be2c8ab294e65c96b5bcfa9634a9",
+        "before_sha256": "e0a196b397f5f6979f48e77558df65ae18f3b72ccfaae31efc7d2385256b0731"
+      },
+      "aerostore_core/src/procarray.rs": {
+        "after_sha256": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364",
+        "before_sha256": "91bc87cf5df62626d8abd716f71daa784fd10b8231f17c8b580e9a80efd2f61d"
+      }
+    },
+    "patch": "current-fixture.patch",
+    "patch_sha256": "aa193506dd61713ee1111d8cd03b9a7c07d852331bcb9d2a55c5eab17091105d"
+  },
+  "mutations": [
+    {
+      "changes": {
+        "aerostore_core/src/procarray.rs": {
+          "after_sha256": "2ee498eb1e5805a8c58dcd3b0664d43db55563b379535c26545ab83a30bde8f9",
+          "before_sha256": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364"
+        }
+      },
+      "name": "use_preacquisition_snapshot",
+      "patch": "use_preacquisition_snapshot.patch",
+      "patch_sha256": "45645bc3a4574f559787b9e2b79dbf796f1d0e6ec662d4ba01e58790fd449be4",
+      "source_tree_sha256": "d5c37a9d8860162c74f33a1c70eebe19663876aa8001212194b857efeee117bc"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/procarray.rs": {
+          "after_sha256": "1608d90a08ec063d6939f0f892dc9574e4b0dbb6706ff344cb9f9580c2f0d0fa",
+          "before_sha256": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364"
+        }
+      },
+      "name": "omit_retained_snapshot_horizon",
+      "patch": "omit_retained_snapshot_horizon.patch",
+      "patch_sha256": "5c777a33d067f4c01b3465c6fdee62ebf54370f235db133af4313f0066184ca5",
+      "source_tree_sha256": "3e8d09ab4b3c5b25781b0befca873cbeeb6dde9777035342f1726f521fd70ac3"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "ebc31fc8be574b548128a0e942581e5d3d70e1771f8b92c10f2fae4357c42fc8",
+          "before_sha256": "dba4dfe4b8f135639e13df8fd5abdf3475d5be2c8ab294e65c96b5bcfa9634a9"
+        }
+      },
+      "name": "ignore_older_active_creator",
+      "patch": "ignore_older_active_creator.patch",
+      "patch_sha256": "b02c9ef048c96ff9fcbdc7af4ee2be15052118d8dc52fd3b4a2d1e8d69dad088",
+      "source_tree_sha256": "7de840e6a30f77a4d7ca6e72c863504898f76f86adfc16363e0299b833f8067b"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "1091648204d76deaaeaf5d451bd1e9f3fb571f54c645d4b57b1c81636cca4659",
+          "before_sha256": "dba4dfe4b8f135639e13df8fd5abdf3475d5be2c8ab294e65c96b5bcfa9634a9"
+        }
+      },
+      "name": "omit_own_write_candidates",
+      "patch": "omit_own_write_candidates.patch",
+      "patch_sha256": "46d4c68d540be8c8ce1ada492376ceeb033cdc288d3c7545aa91258617c480f5",
+      "source_tree_sha256": "d948df26fd44d0a494c638181f26bb49007d70e4f7cbc8b44007012e59e8cb8c"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "53b8369170a3c5ad1d54bb796894aace73a9eaad3706d2a6a58c1ebdf7e0f57b",
+          "before_sha256": "dba4dfe4b8f135639e13df8fd5abdf3475d5be2c8ab294e65c96b5bcfa9634a9"
+        }
+      },
+      "name": "retain_guards_during_materialization",
+      "patch": "retain_guards_during_materialization.patch",
+      "patch_sha256": "b0163f097e647b057ed0036529d6752c70d983c2750a24bd88a9d088ee85a1ca",
+      "source_tree_sha256": "1bbfe85d4d40a1df8419d808a33c51df91046bcef4d7e3b703dea798fd3de724"
+    }
+  ],
+  "parent_archive_command": [
+    "git",
+    "archive",
+    "1e7311a7127686a2d11b2d5a17347e82857c289d",
+    "Cargo.toml",
+    "Cargo.lock",
+    "aerostore_core",
+    "aerostore_verified",
+    "aerostore_macros",
+    "aerostore_tcl"
+  ],
+  "parent_archive_sha256": "1cc7de8dd8acdccbbb07015b9cfe80d2bfb276dc7fbb721ccb35a5eec648ba78",
+  "parent_commit": "1e7311a7127686a2d11b2d5a17347e82857c289d",
+  "scope": "Optional native diagnostic, not a formal refinement or mandatory pilot component"
+}

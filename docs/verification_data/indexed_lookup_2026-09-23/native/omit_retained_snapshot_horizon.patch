@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/procarray.rs
++++ b/aerostore_core/src/procarray.rs
+@@ -145,7 +145,7 @@
+             });
+         }
+         let snapshot = self.snapshot_locked(global_txid);
+-        slot.snapshot_xmin.store(snapshot.xmin, Ordering::Release);
++        
+         Ok(snapshot)
+     }
+ 

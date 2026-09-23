@@ -14,7 +14,42 @@ TLC runs in a fresh temporary working directory containing only checksum-matched
 
 `python3 scripts/test_tla_runner.py` exercises fail-closed evidence classification without Java or network access. It checks complete-search markers and an exactly empty queue, the pinned TLC invariant/temporal exit codes (12/13), named properties, real trace/lasso markers, timeout/signal handling, unrelated failures, and environment override rejection that clears stale success reports. It also reclassifies every retained campaign log. These are tests of the evidence runner, not proofs of TLC.
 
-The [retained campaign report](evidence/report.json) records all 94 cases: thirty-five completed finite searches (four also check conditional liveness), twenty-nine intended safety counterexamples, three intended liveness counterexamples, and twenty-seven positive reachability witnesses. Safety counterexamples and witnesses stop when the named invariant fails; they are **not completed safety searches**. Liveness failures retain a cyclic or stuttering behavior violating the exact named temporal property. Individual logs retain the actual state traces. The runner rejects syntax errors, other properties, unexpected errors, timeouts, and stale tool/source identities. It also clears a stale success report before starting. Each case has a 120-second limit, 512 MiB Java heap, one worker, fixed fingerprint index and random seed. There are no depth/state constraints or symmetry reductions. TLC's finite-state fingerprinting remains part of the model-checking evidence, not a deductive proof.
+The [retained campaign report](evidence/report.json) records all 136 cases: fifty-eight completed finite searches (four also check conditional liveness), forty intended safety counterexamples, three intended liveness counterexamples, and thirty-five positive reachability witnesses. Safety counterexamples and witnesses stop when the named invariant fails; they are **not completed safety searches**. Liveness failures retain a cyclic or stuttering behavior violating the exact named temporal property. Individual logs retain the actual state traces. The runner rejects syntax errors, other properties, unexpected errors, timeouts, and stale tool/source identities. It also clears a stale success report before starting. Each case has a 120-second limit, 512 MiB Java heap, one worker, fixed fingerprint index and random seed. There are no depth/state constraints or symmetry reductions. TLC's finite-state fingerprinting remains part of the model-checking evidence, not a deductive proof.
+
+## Candidate capture and MVCC materialization
+
+[QueryMaterialization.tla](QueryMaterialization.tla) explores one writer, one
+reader, two stable row IDs and one retained predecessor. It derives query results
+from separately executed posting insertion/removal, old-version deletion metadata,
+new row-head publication, deregistration, stamp reservation/storage and native
+`xmin`/`xmax`/active-ID visibility branches. A query copies current postings under
+all predicate guards, releases those guards, and later traverses the version
+choice and applies private writes. Empty creation, key movement and keyless
+logical deletion are covered for both equality predicates and a two-key range,
+with collisions, private insert/move/delete overlays and stale extra candidates.
+
+Reader metadata is captured at actual lifecycle acquisition. Writer completion
+while waiting may change that acquired state; the model does not freeze API-entry
+metadata. Snapshot clock loads may be stale, with the actual active-ID maximum
+compensation. A writer can also start after the reader's snapshot. Successful
+lookup must equal the snapshot row set plus private writes; successful guarded
+revalidation must exclude overlapping publication after dependency capture.
+
+The 42 new cases comprise 23 complete searches, 11 intended counterexamples and
+8 witnesses. Negative controls use cached pre-acquisition metadata, release guards
+early, lose the retained old row, use the writer's start stamp, omit old-bucket
+stamps or capture checks, ignore creator active IDs/upper bounds, omit private
+candidates, skip filtering, or skip commit revalidation. Witnesses show a retained
+old row materialized after writer completion, refreshed metadata after a wait,
+bucket-wait rejection, a successful reader starting after stamp reservation,
+private insertion without a raw candidate, stale-candidate filtering, an empty
+successful query, and successful capture followed by commit retry.
+
+Raw lookup enumerates the represented posting set; physical skiplist traversal,
+retention safety and native mutex/atomic correspondence remain assumptions. The
+old-version rule is evaluated, not replaced by a precomputed safe snapshot row.
+This finite two-version slice does not prove arbitrary native chains, failures,
+owner death, row reuse, unbounded progress or whole transaction serializability.
 
 ## Lifecycle and publication chronology
 
@@ -25,7 +60,7 @@ stores while predicate guards remain held. Twenty new cases cover empty creation
 key movement and disjoint work with one/two buckets. Six completed searches,
 six intended safety counterexamples and eight witnesses are reported separately.
 The broken protocols omit lifecycle exclusion, use the writer's old start label,
-reserve publication before ending, unlock early, omit old-key coverage, or skip
+reserve publication before ending, unlock early, omit empty-query dependencies, or skip
 predicate validation.
 
 Witnesses include a reader starting between deregistration and reservation, a

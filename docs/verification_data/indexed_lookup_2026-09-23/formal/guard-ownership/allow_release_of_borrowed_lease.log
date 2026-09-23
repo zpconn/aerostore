@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/guard-ownership/allow_release_of_borrowed_lease.rs:271:9
+    |
+247 |         forall|i: int, id: LeaseId| 0 <= i < events.len() && protected.contains(id) ==> !releases(events[i], id.0, id.1),
+    |         ---------------------------------------------------------------------------------------------------------------- failed precondition
+...
+271 |         trace_preserves_protected(states, events, protected);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

@@ -137,7 +137,10 @@ class EvidenceTests(unittest.TestCase):
                      "predicate_ignores_changed_stamp", "predicate_accepts_equal_start",
                      "predicate_drops_publication", "predicate_omits_own_candidates",
                      "lifecycle_reservation_does_not_advance", "lifecycle_uses_writer_start_stamp",
-                     "lifecycle_publishes_before_end", "lifecycle_allows_wrapping_reservation"]], "required_roots": []}))
+                     "lifecycle_publishes_before_end", "lifecycle_allows_wrapping_reservation",
+                     "query_omits_old_bucket", "query_omits_destination_posting", "query_ignores_creator_active",
+                     "query_omits_own_candidates", "query_allows_stamp_regression", "query_ignores_deleter_active",
+                     "query_filters_before_own_overlay"]], "required_roots": []}))
             with self.assertRaisesRegex(RuntimeError, "missing declared proof roots"):
                 verify_formal.collect_claim_evidence([{"id": "test", "scope": "test", "status": "partial",
                     "required_checks": ["lean"], "lean_roots": ["must_exist"]}],
@@ -276,6 +279,65 @@ class RefinementEvidenceTests(unittest.TestCase):
         log.write_text("verification results:: 0 verified, 0 errors\n")
         check.update(verified=0, log_sha256=refinement.digest(log))
         with self.assertRaisesRegex(RuntimeError, "required proof did not pass"):
+            self.validate()
+
+    def add_type_control(self):
+        manifest_path = self.root / refinement.MANIFEST
+        manifest = json.loads(manifest_path.read_text())
+        manifest["campaigns"]["predicate-capture"]["type_mutations"] = {"double_drop": "E0382"}
+        manifest_path.write_text(json.dumps(manifest))
+        self.receipt["required_type_mutations"] = {"double_drop": "E0382"}
+        artifact = self.output / "double_drop.rs"
+        artifact.write_text("synthetic affine misuse")
+        log = self.output / "double_drop.log"
+        log.write_text("error[E0382]: use of moved value\n")
+        command = self.receipt["checks"][0]["command"][:-1] + [str(artifact)]
+        self.receipt["type_checks"] = [{"name": "double_drop", "classification": "ownership_type_rejection",
+            "expected_diagnostic": "E0382", "exit_code": 1, "command": command,
+            "source_sha256": refinement.digest(artifact), "log": str(log.relative_to(self.root)),
+            "log_sha256": refinement.digest(log)}]
+        return self.receipt["type_checks"][0]
+
+    def test_affine_control_is_separate_from_semantic_mutants(self):
+        self.add_type_control()
+        self.assertTrue(self.validate()["passed"])
+
+    def test_missing_affine_control_fails(self):
+        self.add_type_control()
+        self.receipt["type_checks"] = []
+        with self.assertRaisesRegex(RuntimeError, "missing, duplicate, or reordered ownership"):
+            self.validate()
+
+    def test_unrelated_affine_compiler_error_fails(self):
+        check = self.add_type_control()
+        log = self.root / check["log"]
+        log.write_text("error[E0308]: mismatched types\n")
+        check["log_sha256"] = refinement.digest(log)
+        with self.assertRaisesRegex(RuntimeError, "ownership misuse failed for wrong reason"):
+            self.validate()
+
+    def test_affine_control_cannot_disable_verification(self):
+        check = self.add_type_control()
+        check["command"].insert(-1, "--no-verify")
+        with self.assertRaisesRegex(RuntimeError, "unsupported ownership type command"):
+            self.validate()
+
+    def test_opaque_constructor_control_uses_exact_frontend_diagnostic(self):
+        check = self.add_type_control()
+        diagnostic = "disallowed: constructor for an opaque datatype"
+        manifest_path = self.root / refinement.MANIFEST
+        manifest = json.loads(manifest_path.read_text())
+        manifest["campaigns"]["predicate-capture"]["type_mutations"]["double_drop"] = diagnostic
+        manifest_path.write_text(json.dumps(manifest))
+        self.receipt["required_type_mutations"]["double_drop"] = diagnostic
+        check["expected_diagnostic"] = diagnostic
+        log = self.root / check["log"]
+        log.write_text("error: " + diagnostic + "\n")
+        check["log_sha256"] = refinement.digest(log)
+        self.assertTrue(self.validate()["passed"])
+        log.write_text("note: " + diagnostic + "\nerror: unexpected token\n")
+        check["log_sha256"] = refinement.digest(log)
+        with self.assertRaisesRegex(RuntimeError, "ownership misuse failed for wrong reason"):
             self.validate()
 
 
@@ -487,7 +549,8 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(code, 0)
         commands = dict(calls)
         for name in ["predicate", "predicate-capture", "predicate-composition", "skiplist-detach", "postings",
-                     "guards", "lifecycle", "publication-slice", "lifecycle-scenario"]:
+                     "guards", "lifecycle", "publication-slice", "lifecycle-scenario",
+                     "lifecycle-interference", "guard-ownership", "lookup", "indexed-slice"]:
             self.assertIn(name, commands)
             self.assertIn(name + "-adapter-tests", commands)
 

@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/concurrent/omit_record_prepare_error_abort.rs:163:17
+    |
+163 |         ensures safe_release(final(self).events()),
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+175 |         return Err ( err . into ( ) ) ;
+    |         ----------------------------- at this exit
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

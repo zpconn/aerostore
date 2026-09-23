@@ -1,0 +1,35 @@
+{
+  "checks": [
+    {
+      "command": [
+        "rustfmt",
+        "--check",
+        "--edition",
+        "2021",
+        "aerostore_core/src/occ_partitioned.rs",
+        "aerostore_core/src/procarray.rs"
+      ],
+      "exit_code": 0,
+      "log": "target/verification-lookup/quality/0.log"
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "verification/lookup_native",
+        "-p",
+        "test_*.py"
+      ],
+      "exit_code": 0,
+      "log": "target/verification-lookup/quality/1.log"
+    }
+  ],
+  "passed": true,
+  "notes": [
+    "The whole-workspace cargo fmt check reports pre-existing differences in hyperfeed_crucible.rs and wal_writer.rs. Neither file was changed in this checkpoint. The changed native files pass the installed rustfmt check.",
+    "The pinned isolated Rust toolchain does not include cargo-fmt; formatting used the installed production Rust 1.93.1 toolchain."
+  ]
+}

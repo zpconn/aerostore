@@ -1,0 +1,13 @@
+note: verifying root module (selected functions)
+
+error: assertion failed
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/lookup/omit_old_posting_removal.rs:660:39
+    |
+660 |       assert forall|pair:(usize,usize)| posting_step(postings(rows),e).contains(pair)
+    |  _______________________________________^
+661 | |         == postings(rows.insert(e.row,e.after)).contains(pair) by {
+    | |______________________________________________________________^ assertion failed
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

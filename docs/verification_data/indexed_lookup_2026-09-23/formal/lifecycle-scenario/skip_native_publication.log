@@ -1,0 +1,31 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-lookup/final/lifecycle-scenario/skip_native_publication.rs:1273:1
+     |
+1273 | / pub fn registered_reader_then_writer_publication<L: ScenarioClock, I: IndexPrimitives, C: predicate::PairSet>(
+1274 | |     driver: &mut Bridge<L, I>, writer: lifecycle::ProcArrayRegistration,
+1275 | |     offset: usize, bucket: usize, changes: &Vec<predicate::IndexChange>)
+1276 | |     -> (result: Result<Outcome, ScenarioError>)
+     | |______________________________________________^
+
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-lookup/final/lifecycle-scenario/skip_native_publication.rs:1350:16
+     |
+1350 |         assert(publication_stamp > reader.txid);
+     |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-lookup/final/lifecycle-scenario/skip_native_publication.rs:1351:9
+     |
+ 692 |           stamp_relation(before.stamps, after.stamps, touched, stamp),
+     |           ----------------------------------------------------------- failed precondition
+...
+1351 | /         predicate::publication_invalidates_dependency(before_publication, driver.state(), tx.index_reads@,
+1352 | |             reader.txid, predicate::change_keys(before_publication, changes@, changes.len() as int),
+1353 | |             publication_stamp, 0);
+     | |_________________________________^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

@@ -1,0 +1,39 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-lookup/final/indexed-slice/translate_wrong_bucket.rs:2319:1
+     |
+2319 | / pub fn indexed_read_then_validate<D: SlicePrimitives<P>, V: lookup::Storage, P: KeyPredicate, C: lookup::CandidateSet>(
+2320 | |     driver: &D, validation_driver: &V, tx: &mut lookup::Transaction, query: &P,
+2321 | |     binding: usize, binding_count: usize, offset: usize, bucket: usize,
+2322 | |     Tracked(authority): Tracked<&mut ownership::Authority>) -> (result: Result<Outcome, SliceError>)
+     | |___________________________________________________________________________________________________^
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-lookup/final/indexed-slice/translate_wrong_bucket.rs:2338:9
+     |
+2338 | /         result.is_ok() ==> result.unwrap().predicate_conflict ==
+2339 | |             (result.unwrap().validation_stamp != result.unwrap().captured_stamp
+2340 | |                 || result.unwrap().validation_stamp >= old(tx).txid),
+     | |____________________________________________________________________^ failed this postcondition
+...
+2345 | / {
+2346 | |     let ghost initial_authority = *authority;
+2347 | |     let mut guards = Vec::new();
+2348 | |     let lease = match ownership::acquire_index_bucket(driver, binding, bucket, &guards, Tracked(&mut *authority)) {
+...    |
+2443 | |     Ok(Outcome { rows, conflict, predicate_conflict, row_conflict, captured_stamp, validation_stamp: stamp })
+2444 | | }
+     | |_- at the end of the function body
+
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-lookup/final/indexed-slice/translate_wrong_bucket.rs:2416:20
+     |
+2416 |               assert(predicate::read_keys(predicate::Primitives::state(&index), validation_tx.index_reads@,
+     |  ____________________^
+2417 | |                 validation_tx.index_reads.len() as int).subset_of(predicate::Primitives::state(&index).held));
+     | |____________________________________________________________________________________________________________^ assertion failed
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

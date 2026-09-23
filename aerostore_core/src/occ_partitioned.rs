@@ -3841,4 +3841,193 @@ mod predicate_completion_tests {
             exercise_predicate_finish_cut(Some(10), after_deregistration);
         }
     }
+
+    #[test]
+    fn captured_lookup_retains_history_through_delete_aba_and_own_write_overlay() {
+        use std::sync::Mutex;
+
+        for writer_was_active in [true, false] {
+            let (table, index) = fixture(&[Some(42), Some(42), None]);
+            let original_offset = table.row_head_offset(0).unwrap();
+            let older = writer_was_active.then(|| table.begin_transaction().unwrap());
+            let mut reader = table.begin_transaction().unwrap();
+            let reader_xmax = reader.snapshot_xmax;
+            let reader_active = reader.snapshot_active.clone();
+            table
+                .write(
+                    &mut reader,
+                    1,
+                    PredicateRow {
+                        key: None,
+                        payload: 10,
+                    },
+                )
+                .unwrap();
+            table
+                .write(
+                    &mut reader,
+                    2,
+                    PredicateRow {
+                        key: Some(42),
+                        payload: 900,
+                    },
+                )
+                .unwrap();
+            table
+                .write(
+                    &mut reader,
+                    2,
+                    PredicateRow {
+                        key: Some(42),
+                        payload: 901,
+                    },
+                )
+                .unwrap();
+            let first_lookup = table.index_lookup(&mut reader, &index, &eq(42)).unwrap();
+            let dependencies = reader.index_reads.len();
+
+            // The hook runs after raw IDs and dependencies are captured and
+            // every query bucket guard has been dropped. The second lookup
+            // reuses the same dependency before this actual intervening work.
+            let observations = Arc::new(Mutex::new((Vec::new(), Vec::new(), Vec::new(), 0)));
+            let observed = Arc::clone(&observations);
+            let writer_table = Arc::clone(&table);
+            INDEX_CANDIDATES_CAPTURED_HOOK.with(|hook| {
+                *hook.borrow_mut() = Some(Box::new(move || {
+                    let mut deleting =
+                        older.unwrap_or_else(|| writer_table.begin_transaction().unwrap());
+                    observed.lock().unwrap().3 = deleting.txid;
+                    writer_table
+                        .write(
+                            &mut deleting,
+                            0,
+                            PredicateRow {
+                                key: None,
+                                payload: 100,
+                            },
+                        )
+                        .unwrap();
+                    let committed = writer_table.commit(&mut deleting);
+                    observed.lock().unwrap().0.push(committed.is_ok());
+                    if committed.is_err() {
+                        let _ = writer_table.abort(&mut deleting);
+                        return;
+                    }
+                    observed
+                        .lock()
+                        .unwrap()
+                        .1
+                        .push(crate::run_vacuum_pass(&writer_table).unwrap().len());
+                    // Delete the posting, move it twice, then restore the same
+                    // key/row pair with a different value: predicate ABA.
+                    for (n, key) in [Some(77), Some(42), None, Some(42)].into_iter().enumerate() {
+                        let mut changing = writer_table.begin_transaction().unwrap();
+                        writer_table
+                            .write(
+                                &mut changing,
+                                0,
+                                PredicateRow {
+                                    key,
+                                    payload: 200 + n as u64,
+                                },
+                            )
+                            .unwrap();
+                        let committed = writer_table.commit(&mut changing);
+                        observed.lock().unwrap().0.push(committed.is_ok());
+                        if committed.is_err() {
+                            let _ = writer_table.abort(&mut changing);
+                            return;
+                        }
+                        observed
+                            .lock()
+                            .unwrap()
+                            .2
+                            .push(writer_table.row_head_offset(0).unwrap());
+                        observed
+                            .lock()
+                            .unwrap()
+                            .1
+                            .push(crate::run_vacuum_pass(&writer_table).unwrap().len());
+                    }
+                }));
+            });
+            let captured_lookup = table.index_lookup(&mut reader, &index, &eq(42));
+            let historical = table.read(&mut reader, 0);
+            let own_final = table.read(&mut reader, 2);
+            let predicate_conflict = table.index_read_conflict(&reader);
+            let repeated_lookup = table.index_lookup(&mut reader, &index, &eq(42));
+            let dependencies_after = reader.index_reads.len();
+            let reader_commit = table.commit(&mut reader);
+            let reclaimed = crate::run_vacuum_pass(&table).unwrap();
+            let (commits, vacuum_counts, head_offsets, deleting_txid) =
+                observations.lock().unwrap().clone();
+
+            assert_eq!(
+                commits,
+                vec![true; 5],
+                "captured candidate materialization must not retain predicate guards"
+            );
+            assert_eq!(reader_active.contains(&deleting_txid), writer_was_active);
+            assert_eq!(deleting_txid < reader_xmax, writer_was_active);
+            assert_eq!(
+                first_lookup,
+                vec![0, 2],
+                "final own writes must remove and add raw candidates"
+            );
+            assert_eq!(
+                captured_lookup,
+                Ok(vec![0, 2]),
+                "captured candidates must materialize the pinned historical predicate"
+            );
+            assert_eq!(
+                historical,
+                Ok(Some(PredicateRow {
+                    key: Some(42),
+                    payload: 0
+                })),
+                "older-active and newer versions must both remain invisible"
+            );
+            assert_eq!(
+                own_final,
+                Ok(Some(PredicateRow {
+                    key: Some(42),
+                    payload: 901
+                }))
+            );
+            assert!(
+                vacuum_counts.iter().all(|count| *count == 0),
+                "reader must retain history while vacuum attempts reclamation"
+            );
+            assert!(head_offsets.iter().all(|offset| *offset != original_offset));
+            assert_eq!(predicate_conflict, Ok(true));
+            assert_eq!(
+                repeated_lookup,
+                Err(Error::SerializationFailure),
+                "restoring the same posting must not erase its publication dependency"
+            );
+            assert_eq!(dependencies_after, dependencies);
+            assert_eq!(reader_commit, Err(Error::SerializationFailure));
+            assert_eq!(reclaimed.len(), 5);
+            assert_eq!(table.latest_value(1).unwrap().unwrap().key, Some(42));
+            assert_eq!(table.latest_value(2).unwrap().unwrap().key, None);
+            let mut reuse = table.begin_transaction().unwrap();
+            table
+                .write(
+                    &mut reuse,
+                    0,
+                    PredicateRow {
+                        key: Some(99),
+                        payload: 999,
+                    },
+                )
+                .unwrap();
+            table.commit(&mut reuse).unwrap();
+            assert_eq!(
+                table.row_head_offset(0).unwrap(),
+                original_offset,
+                "the protected version becomes reusable after its reader finishes"
+            );
+            no_live_transactions(&table);
+        }
+    }
 }

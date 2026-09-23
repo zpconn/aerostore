@@ -1,0 +1,26 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/lifecycle/omit_begin_lock.rs:262:1
+    |
+262 | pub fn begin_transaction<D: LifecyclePrimitives>(driver: &mut D) -> (result: Result<ProcArrayRegistration, ProcArrayError>)
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/lifecycle/omit_begin_lock.rs:285:99
+    |
+124 |         requires old(self).state().lifecycle_held, 0 < old(self).state().clock < u64::MAX,
+    |                  -------------------------------- failed precondition
+...
+285 |     let ghost initial = driver.state(); let ghost before_reservation = driver.state(); let txid = driver . reserve_registration ( ) ;
+    |                                                                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: invariant not satisfied before loop
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/lifecycle/omit_begin_lock.rs:291:50
+    |
+291 |                 reserved.slots == initial.slots, reserved.lifecycle_held,
+    |                                                  ^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

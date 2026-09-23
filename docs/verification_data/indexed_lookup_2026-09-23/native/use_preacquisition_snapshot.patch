@@ -1,0 +1,19 @@
+--- a/aerostore_core/src/procarray.rs
++++ b/aerostore_core/src/procarray.rs
+@@ -123,6 +123,7 @@
+         registration: ProcArrayRegistration,
+         global_txid: &AtomicU64,
+     ) -> Result<ProcSnapshot, ProcArrayError> {
++        let api_entry_snapshot = self.snapshot_locked(global_txid);
+         #[cfg(test)]
+         SNAPSHOT_ACQUIRING_HOOK.with(|hook| {
+             if let Some(hook) = hook.borrow_mut().take() {
+@@ -144,7 +145,7 @@
+                 observed_txid: observed,
+             });
+         }
+-        let snapshot = self.snapshot_locked(global_txid);
++        let snapshot = api_entry_snapshot;
+         slot.snapshot_xmin.store(snapshot.xmin, Ordering::Release);
+         Ok(snapshot)
+     }

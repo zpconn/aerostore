@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-lookup/final/publication-slice/ignore_native_validation.rs:1209:13
+     |
+1209 |     ensures result.is_ok() ==> result.unwrap(),
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+1216 |     Ok(false)
+     |     --------- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

@@ -131,6 +131,7 @@ def render(source: str, helper: str | None = None) -> str:
             tx.index_reads.len() <= initial_reads.len() + bucket_pos,
             tx.txid == old(tx).txid,
             old(tx).index_conflict ==> tx.index_conflict,
+            tx.index_conflict == old(tx).index_conflict,
             forall|j: int| 0 <= j < buckets.len() ==>
                 index.held().contains(buckets[j]) && index.stamps().contains_key(buckets[j]),
             forall|j: int| 0 <= j < bucket_pos ==>

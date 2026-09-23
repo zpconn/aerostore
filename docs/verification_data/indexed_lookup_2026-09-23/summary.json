@@ -1,0 +1,48 @@
+{
+  "additional_concurrent_mutations": [],
+  "checks": 45,
+  "core_regression_tests": 264,
+  "full_P1_complete": false,
+  "input_files": 414,
+  "lean_roots": 34,
+  "lean_semantic_controls": 20,
+  "native_heap_history_refinement_proved": false,
+  "native_mutants": 5,
+  "native_positive_selections": 2,
+  "new_campaigns": {
+    "guard-ownership": {
+      "mutations": 17,
+      "roots": 36
+    },
+    "indexed-slice": {
+      "mutations": 12,
+      "roots": 3
+    },
+    "lifecycle-interference": {
+      "mutations": 13,
+      "roots": 17
+    },
+    "lookup": {
+      "mutations": 21,
+      "roots": 22
+    }
+  },
+  "new_verus_roots": 78,
+  "new_verus_semantic_mutations": 63,
+  "ownership_type_controls": 5,
+  "parent_commit": "1e7311a7127686a2d11b2d5a17347e82857c289d",
+  "passed": true,
+  "performance_claim": "No new timing claim; accepted production implementation unchanged",
+  "production_inputs_checked": 118,
+  "production_runtime_changed": false,
+  "promotion_eligible": false,
+  "scope": "Conditional indexed-read/validation, wait interference and opaque ownership; native heap/history obligations open",
+  "tla_cases": 136,
+  "tla_outcomes": {
+    "completed_finite_search": 58,
+    "intended_counterexample": 40,
+    "intended_liveness_counterexample": 3,
+    "reachable_witness": 35
+  },
+  "whole_engine_verified": false
+}

@@ -1,0 +1,28 @@
+error[E0382]: use of moved value: `lease`
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/guard-ownership/double_drop.rs:779:39
+    |
+774 | pub fn misuse<D: ownership::Atomics>(driver: &D, lease: ownership::ReadLease,
+    |                                                  ----- move occurs because `lease` has type `ownership::ReadLease`, which does not implement the `Copy` trait
+...
+778 |         ownership::drop_lease(driver, lease, Tracked(&mut *authority));
+    |                                       ----- value moved here
+779 |         ownership::drop_lease(driver, lease, Tracked(&mut *authority));
+    |                                       ^^^^^ value used here after move
+    |
+note: consider changing this parameter type in function `drop_lease` to borrow instead if owning the value isn't necessary
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/guard-ownership/double_drop.rs:147:50
+    |
+147 | pub fn drop_lease<D: Atomics>(driver: &D, lease: ReadLease, Tracked(authority): Tracked<&mut Authority>)
+    |        ---------- in this function               ^^^^^^^^^ this parameter takes ownership of the value
+note: if `ownership::ReadLease` implemented `Clone`, you could clone the value
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/guard-ownership/double_drop.rs:19:1
+    |
+ 19 | pub struct ReadLease { physical: Key, token: Tracked<LeaseToken> }
+    | ^^^^^^^^^^^^^^^^^^^^ consider implementing `Clone` for this type
+...
+778 |         ownership::drop_lease(driver, lease, Tracked(&mut *authority));
+    |                                       ----- you could clone this value
+
+error: aborting due to 1 previous error
+
+For more information about this error, try `rustc --explain E0382`.

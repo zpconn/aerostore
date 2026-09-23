@@ -1,0 +1,37 @@
+note: verifying root module (selected functions)
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/concurrent/stamp_before_deregister.rs:403:20
+    |
+295 |         requires held(old(self).events()), old(self).events().rows_published, old(self).events().deregistered,
+    |                                                                               ------------------------------- failed precondition
+...
+403 | let finish = match driver . publish_index_stamps ( & index_changes ) {
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/concurrent/stamp_before_deregister.rs:404:19
+    |
+295 |         requires held(old(self).events()), old(self).events().rows_published, old(self).events().deregistered,
+    |                                                                               ------------------------------- failed precondition
+...
+404 |     Ok ( ( ) ) => driver . publish_index_stamps ( & index_changes ) , Err ( err ) => Err ( err ) ,
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: function body check: Resource limit (rlimit) exceeded; consider rerunning with --profile for more details
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/concurrent/stamp_before_deregister.rs:311:1
+    |
+311 | / pub fn commit_with_record_impl<T, D: CommitPrimitives<T>, const WRITE_AHEAD: bool, P, F>(driver: &mut D, tx: &mut OccTransaction<...
+312 | |  -> (result: Result<OccCommitRecord<T>, Error>)
+    | |______________________________________________^
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/concurrent/stamp_before_deregister.rs:311:1
+    |
+311 | / pub fn commit_with_record_impl<T, D: CommitPrimitives<T>, const WRITE_AHEAD: bool, P, F>(driver: &mut D, tx: &mut OccTransaction<...
+312 | |  -> (result: Result<OccCommitRecord<T>, Error>)
+    | |______________________________________________^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 3 previous errors
+

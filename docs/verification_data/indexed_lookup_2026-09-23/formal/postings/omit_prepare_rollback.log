@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-lookup/final/postings/omit_prepare_rollback.rs:260:9
+    |
+260 |         result.is_err() ==> final(driver).state().postings == old(driver).state().postings || final(driver).state().poisoned,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+293 |         proof { restoration_frame(initial.postings, recorded(changes@, inserted@), driver.state().postings); } return Err ( err ) ;
+    |                                                                                                                ------------------ at this exit
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

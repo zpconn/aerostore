@@ -1,0 +1,8 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running unittests src/lib.rs (/home/zpconn/code/aerostore/target/verification-lookup-native/final/current/cargo-target/debug/deps/aerostore_core-458b83ba28fefdf8)
+
+running 1 test
+test occ_partitioned::predicate_completion_tests::captured_lookup_retains_history_through_delete_aba_and_own_write_overlay ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 204 filtered out; finished in 0.00s
+

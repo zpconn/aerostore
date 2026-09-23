@@ -1,0 +1,96 @@
+TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 14553] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-sim6s1tp/LifecyclePublication.tla
+Parsing file /tmp/tlc-17908336363788970626/Integers.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /tmp/tlc-17908336363788970626/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-17908336363788970626/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-17908336363788970626/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module LifecyclePublication
+Linting of module LifecyclePublication
+Starting... (2026-09-23 18:20:11)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-09-23 18:20:11.
+Error: Invariant WitnessNotReached is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ active = {}
+/\ beganBetweenReserveAndStore = {}
+/\ snapshotActive = <<{}, {}>>
+/\ dependencies = <<(0 :> -1 @@ 1 :> -1), (0 :> -1 @@ 1 :> -1)>>
+/\ rejected = {}
+/\ snapRows = <<<<0, 0>>, <<0, 0>>>>
+/\ snapshotXmax = <<0, 0>>
+/\ willWrite = <<FALSE, FALSE>>
+/\ pc = <<"Start", "Start">>
+/\ publicationStamp = <<0, 0>>
+/\ captured = <<{}, {}>>
+/\ nextId = 1
+/\ answers = <<[rows |-> {}, afterMove |-> FALSE], [rows |-> {}, afterMove |-> FALSE]>>
+/\ snapshotEnded = <<{}, {}>>
+/\ lifecycle = 0
+/\ committed = {}
+/\ txid = <<0, 0>>
+/\ rowHeads = <<0, 0>>
+/\ postings = {}
+/\ answered = {}
+/\ snapped = {}
+/\ logicalRows = <<0, 0>>
+/\ stamps = (0 :> 0 @@ 1 :> 0)
+/\ owner = (0 :> 0 @@ 1 :> 0)
+/\ ended = {}
+
+State 2: <StartLock(2) line 59, col 5 to line 64, col 98 of module LifecyclePublication>
+/\ pc = <<"Start", "Reserve">>
+/\ lifecycle = 2
+
+State 3: <Reserve(2) line 66, col 5 to line 73, col 83 of module LifecyclePublication>
+/\ pc = <<"Start", "Register">>
+/\ nextId = 2
+/\ txid = <<0, 1>>
+
+State 4: <Register(2) line 75, col 5 to line 79, col 83 of module LifecyclePublication>
+/\ active = {2}
+/\ pc = <<"Start", "BeginUnlock">>
+
+State 5: <BeginUnlock(2) line 81, col 5 to line 85, col 83 of module LifecyclePublication>
+/\ pc = <<"Start", "SnapshotLock">>
+/\ lifecycle = 0
+
+State 6: <StartLock(1) line 59, col 5 to line 64, col 98 of module LifecyclePublication>
+/\ pc = <<"Reserve", "SnapshotLock">>
+/\ lifecycle = 1
+
+State 7: <Reserve(1) line 66, col 5 to line 73, col 83 of module LifecyclePublication>
+/\ active = {2}
+/\ beganBetweenReserveAndStore = {}
+/\ snapshotActive = <<{}, {}>>
+/\ dependencies = <<(0 :> -1 @@ 1 :> -1), (0 :> -1 @@ 1 :> -1)>>
+/\ rejected = {}
+/\ snapRows = <<<<0, 0>>, <<0, 0>>>>
+/\ snapshotXmax = <<0, 0>>
+/\ willWrite = <<FALSE, FALSE>>
+/\ pc = <<"Register", "SnapshotLock">>
+/\ publicationStamp = <<0, 0>>
+/\ captured = <<{}, {}>>
+/\ nextId = 3
+/\ answers = <<[rows |-> {}, afterMove |-> FALSE], [rows |-> {}, afterMove |-> FALSE]>>
+/\ snapshotEnded = <<{}, {}>>
+/\ lifecycle = 1
+/\ committed = {}
+/\ txid = <<2, 1>>
+/\ rowHeads = <<0, 0>>
+/\ postings = {}
+/\ answered = {}
+/\ snapped = {}
+/\ logicalRows = <<0, 0>>
+/\ stamps = (0 :> 0 @@ 1 :> 0)
+/\ owner = (0 :> 0 @@ 1 :> 0)
+/\ ended = {}
+
+19 states generated, 16 distinct states found, 3 states left on queue.
+The depth of the complete state graph search is 7.
+Finished in 00s at (2026-09-23 18:20:11)
