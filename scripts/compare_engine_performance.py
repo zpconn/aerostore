@@ -26,6 +26,7 @@ import tomllib
 ROOT = Path(__file__).resolve().parents[1]
 BENCHES = ("hyperfeed_crucible", "hyperfeed_extended_crucible")
 WAL_TEST = "benchmark_async_synchronous_commit_modes"
+CHURN_SEED_ALGORITHM = "worker_add_xorshift64_v1"
 POLICY = {
     "minimum_pairs": 3,
     "throughput_median_ratio_min": 0.95,
@@ -234,7 +235,60 @@ def finite_number(value):
     return result
 
 
-def parse_churn(text, duration):
+def parse_seed(value):
+    require(isinstance(value, str) and re.fullmatch(r"[0-9]+", value) is not None,
+            "seed must be an unsigned decimal u64")
+    seed = int(value)
+    require(seed <= (1 << 64) - 1, "seed exceeds u64")
+    return seed
+
+
+def workload_seed(workload, repetition):
+    if workload["kind"] != "churn":
+        return None
+    require(not ("seed" in workload and "seeds" in workload), "ambiguous churn seed configuration")
+    if "seeds" in workload:
+        require(isinstance(workload["seeds"], list) and 1 <= repetition <= len(workload["seeds"]),
+                "missing predeclared seed for this pair")
+        seed = workload["seeds"][repetition - 1]
+    else:
+        seed = workload.get("seed")
+    if seed is not None:
+        require(type(seed) is int and 0 <= seed <= (1 << 64) - 1, "invalid workload seed")
+    return seed
+
+
+def selected_workloads(names, pairs, churn_seeds=None, sustained_churn_seed=None):
+    require(len(names) == len(set(names)) and all(n in WORKLOADS for n in names), "invalid workload selection")
+    workloads = {name: dict(WORKLOADS[name]) for name in names}
+    if churn_seeds is not None:
+        seeds = [parse_seed(value) for value in churn_seeds.split(",")]
+        require(len(seeds) == pairs, "provide exactly one churn seed per pair")
+        selected = [w for w in workloads.values() if w["kind"] == "churn" and w["paired_timing"]]
+        require(bool(selected), "paired churn seeds provided without a paired churn workload")
+        for workload in selected:
+            workload["seeds"] = list(seeds)
+    if sustained_churn_seed is not None:
+        seed = parse_seed(sustained_churn_seed)
+        selected = [w for w in workloads.values() if w["kind"] == "churn" and not w["paired_timing"]]
+        require(bool(selected), "sustained seed provided without a sustained churn workload")
+        for workload in selected:
+            workload["seed"] = seed
+    return workloads
+
+
+def parse_churn(text, duration, expected_seed=None):
+    seed_metadata = None
+    if expected_seed is not None or re.search(r"^hyperfeed_crucible_seed:", text, re.MULTILINE):
+        require(expected_seed is None or (type(expected_seed) is int and 0 <= expected_seed <= (1 << 64) - 1),
+                "invalid expected workload seed")
+        expected = ({"mode": "fixed", "seed": str(expected_seed), "algorithm": CHURN_SEED_ALGORITHM}
+                    if expected_seed is not None else
+                    {"mode": "entropy", "seed": "none", "algorithm": "pid_time_xorshift64_v1"})
+        markers = re.findall(r"^hyperfeed_crucible_seed: (.*)$", text, re.MULTILINE)
+        require(markers == [" ".join(f"{key}={value}" for key, value in expected.items())],
+                "workload seed marker differs from the declared run")
+        seed_metadata = expected
     rows = [line.split("|")[1:-1] for line in text.splitlines() if line.startswith("| aerostore |")]
     require(len(rows) == 1 and len(rows[0]) == 12, "missing or ambiguous Aerostore result row")
     row = rows[0]
@@ -279,7 +333,8 @@ def parse_churn(text, duration):
             "arena_high_water_bytes": int(stability["arena_head_bytes"]),
             "tail_fresh_bytes": int(stability["tail_fresh_bytes"]),
             "fresh_growth_budget_bytes": int(stability["fresh_growth_budget_bytes"]),
-            "retained_tps": finite_number(stability["retained_tps"]), "measured_seconds": elapsed}
+            "retained_tps": finite_number(stability["retained_tps"]), "measured_seconds": elapsed,
+            "workload_seed": expected_seed, "seed_metadata": seed_metadata}
 
 
 def parse_extended(report, workload):
@@ -449,6 +504,7 @@ def snapshot_environment():
 
 
 def run_one(binary_manifest, variant, name, workload, repetition, output):
+    seed = workload_seed(workload, repetition)
     run_dir = output / name / f"pair-{repetition:02}-{variant}"
     run_dir.mkdir(parents=True, exist_ok=False)
     env = os.environ.copy()
@@ -465,6 +521,8 @@ def run_one(binary_manifest, variant, name, workload, repetition, output):
                    AEROSTORE_CRUCIBLE_SHM_MIB="128", AEROSTORE_CRUCIBLE_DURATION_SECS=str(workload["duration"]),
                    AEROSTORE_CRUCIBLE_ALLOC_TELEMETRY_PATH=str(run_dir / "allocation.csv"),
                    AEROSTORE_CRUCIBLE_SAMPLE_INTERVAL_MS="5000")
+        if seed is not None:
+            env["AEROSTORE_CRUCIBLE_SEED"] = str(seed)
     elif workload["kind"] == "extended":
         binary = binary_manifest["binaries"][BENCHES[1]]["resolved_path"]
         command = [binary, "--engine", "aerostore", "--mode", "all", "--shm-mib", "128",
@@ -475,6 +533,7 @@ def run_one(binary_manifest, variant, name, workload, repetition, output):
         binary = binary_manifest["binaries"]["wal_ring_benchmark"]["resolved_path"]
         command = [binary, WAL_TEST, "--exact", "--nocapture", "--test-threads=1"]
     record = {"variant": variant, "workload": name, "pair": repetition, "command": command,
+              "workload_seed": seed,
               "binary_sha256": digest(binary), "environment_before": snapshot_environment(),
               "workload_environment": {k: v for k, v in env.items() if k.startswith("AEROSTORE_") or k == "TMPDIR"},
               "completed": False, "passed": False}
@@ -494,7 +553,7 @@ def run_one(binary_manifest, variant, name, workload, repetition, output):
         require(code == 0, "benchmark exited unsuccessfully")
         text = (run_dir / "output.log").read_text()
         if workload["kind"] == "churn":
-            record["metrics"] = parse_churn(text, workload["duration"])
+            record["metrics"] = parse_churn(text, workload["duration"], expected_seed=seed)
         elif workload["kind"] == "extended":
             record["metrics"] = parse_extended(json.loads((run_dir / "extended.json").read_text()), workload)
         else:
@@ -530,9 +589,9 @@ def campaign(args):
                     "artifact build configuration mismatch: " + name + "/" + field)
     require(baseline["fixture_sha256"] == candidate["fixture_sha256"], "benchmark fixture changed")
     names = args.workloads.split(",")
-    require(len(names) == len(set(names)) and all(n in WORKLOADS for n in names), "invalid workload selection")
+    workloads = selected_workloads(names, args.pairs, args.churn_seeds, args.sustained_churn_seed)
     report = {"schema_version": 1, "completed": False, "passed": False, "speedup_claim": False,
-              "whole_engine_verified": False, "policy": POLICY, "workloads": {n: WORKLOADS[n] for n in names},
+              "whole_engine_verified": False, "policy": POLICY, "workloads": workloads,
               "quiet_window_note": args.quiet_window_note, "baseline": baseline, "candidate": candidate,
               "capture_manifest_sha256": manifest_hashes,
               "script_sha256": digest(__file__), "runs": [], "comparisons": {},
@@ -544,7 +603,7 @@ def campaign(args):
     write_json(output / "campaign.json", report)
     try:
         for name in names:
-            workload, pairs = WORKLOADS[name], []
+            workload, pairs = workloads[name], []
             count = args.pairs if workload["paired_timing"] else 1
             for repetition in range(1, count + 1):
                 pair = {}
@@ -594,6 +653,8 @@ def main():
     run.add_argument("--pairs", type=int, default=3)
     run.add_argument("--workloads", default=",".join(WORKLOADS))
     run.add_argument("--quiet-window-note", required=True)
+    run.add_argument("--churn-seeds", help="Comma-separated decimal u64 seeds, one per paired churn repetition")
+    run.add_argument("--sustained-churn-seed", help="Decimal u64 seed for the single sustained churn pair")
     args = parser.parse_args()
     if args.action == "capture":
         capture(args)

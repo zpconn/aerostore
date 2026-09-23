@@ -52,6 +52,38 @@ the resulting source is newer than the timed candidate.
 Resolving the sustained regression and measuring the final source remain required
 performance tasks, independent of a passing component proof campaign.
 
+A subsequent provisional candidate retains the searched skiplist removal window
+under the existing mutation guard, avoiding a second search when the last
+posting is removed. Maximum-height, retirement/reuse, fallback, and negative
+control tests support the native invariant argument; the skiplist implementation
+refinement remains open. Its first three-pair, 30-second diagnostic improved
+median throughput by 6.52%, but candidate p99 spread was 11.50%, above the fixed
+10% noise limit. That result is inconclusive and does not approve adoption.
+The [performance-repair archive](bench_data/performance_repair_2026-09-23/remove-window/README.md)
+preserves the original source and evidence. The subsequent fresh 19-component
+pilot passed with stable sources, as did 441 native release tests (two existing
+stress/benchmark tests remain ignored). The prospectively declared longer study
+applied an identical optional-seed fixture to the original `a382ce3` reference
+and the removal-window candidate. All three 120-second throughput ratios passed,
+with a median improvement of 1.23%; candidate p99 was lower in every matched
+pair and its conservative spread was 4.69%. However, the reference's p99 spread
+was 122.41%, so the unchanged policy classifies the full study as inconclusive.
+Both Extended workloads and WAL throughput passed; all 26 runs passed correctness
+and resource checks, including the 240-second stability pair. The candidate
+retained 97.9% of first-half throughput over that longer run. These results
+recover the measured throughput regression without granting overall performance
+acceptance or closing native refinement. The boundary remains a proposal;
+passing component proofs cannot substitute for the open obligations.
+
+On 2026-09-23, the project maintainer explicitly accepted this implementation as
+an engineering improvement and authorized committing and pushing it. This
+decision accepts the tested removal-window optimization and reproducible seed
+fixture while preserving the original automatic gate's inconclusive result.
+It does not establish the cause of the observed p99 stability improvement,
+close native refinement, or grant whole-engine verification. The
+[engineering decision](bench_data/performance_repair_2026-09-23/README.md#engineering-acceptance)
+is recorded separately from the immutable experimental and proof receipts.
+
 ## 1. Recommended architecture
 
 Use **TLA+/TLC to explore concurrent executions, Lean to prove the general transaction and reclamation mathematics, Aeneas/Charon to connect actual safe Rust functions to Lean, and Verus to verify the concurrent Rust implementation**. Start with one complete transaction slice before scaling to the whole core.
@@ -205,6 +237,16 @@ The invariant is **consistent observation or rejection**, not physical row/index
 Model a snapshot's active set and independently pinned horizon, version links, reader cursors, row guards that outlive commit, retire lists, free lists, reuse, and ownership transfer. Include a lookup that releases bucket guards before materialization while a writer moves the key and vacuum runs.
 
 For the skiplist, start with a single ordered list and posting relation, then prove a refinement for towers: upper levels are valid subsets of the bottom level, searches cannot lose reachable matching nodes, and mutations cannot attach new nodes to retired predecessors. Include node/posting allocation failure, detached nodes, reuse, and finite ABA tags.
+
+For cached removal windows, prove that the live-node search returns attached
+predecessors and the target in every published lane, and that uninterrupted
+mutation ownership preserves that window until detachment. Account for helping
+inside the initial search and exclude structural writes by read-only traversal.
+Prove every fast-path CAS removes only the target lane, and that mismatch or
+failure after partial detachment enters a fallback that establishes all-lane
+absence before retirement. Connect that result to pinned successor access and
+physical tower-capacity reuse. These are native MEM-02/ownership obligations;
+the existing commit event theorem and actual-lock Loom cases do not prove them.
 
 Include sustained insertion/removal of individual postings while their key node remains live. Reclaiming only empty key nodes misses that leak. Track postings, spill blocks, tower allocations/lanes, and row versions separately; extend beyond the current structural census where it omits payload spills, padding, or row storage.
 

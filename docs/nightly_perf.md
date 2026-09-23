@@ -38,6 +38,7 @@ sustained churn checks below.
 - comparison mode requires Docker daemon access (PostgreSQL is launched via `testcontainers`).
 - runs four profiles by default (`profile_512m`, `profile_1g`, `profile_2g`, `profile_3584m`); select profiles with `AEROSTORE_CRUCIBLE_PROFILE_FILTER`.
 - defaults to a 60-second sustained workload; set `AEROSTORE_CRUCIBLE_DURATION_SECS` for shorter smoke runs.
+- accepts an optional decimal `u64` in `AEROSTORE_CRUCIBLE_SEED`, parsed once before workers start. Invalid values fail the run. The output records the seed and generator version; without the option, PID/time seeding remains. A fixed seed repeats each worker's row-choice prefix, not the concurrent schedule, timestamps, retries, or completed operation count. Engine-specific salts remain unchanged, so this option alone does not give Aerostore and PostgreSQL identical row choices.
 - optional daemon cadence controls:
   - `AEROSTORE_CRUCIBLE_VACUUM_INTERVAL_MS`
   - `AEROSTORE_CRUCIBLE_INDEX_GC_INTERVAL_MS`

@@ -55,12 +55,24 @@ The trait declarations are assumptions, not certified implementations. No native
 | Validation | Predicate capture completeness, row/base conflict decisions and their connection to a legal serialization history |
 | Health admission | Native poison visibility and abort cleanup; synchronous WAL recheck under its file lock. The event theorem proves the guarded table recheck occurs, not global cancellation or absence of later responses from previously admitted writers |
 | Destination allocation/rollback | Failed preparation leaves no visible addition, or poisons; rollback removes exactly owned additions without losing unrelated postings |
-| Source removal and row publication | Correct postings/rows, all-or-poison failure semantics, and accurate prepared WAL record contents |
+| Source removal and row publication | Correct postings/rows, all-or-poison failure semantics, and accurate prepared WAL record contents; cached skiplist removal must preserve the guarded search window and confirm all-lane detachment before retirement |
 | Record/payload preparation | Immutable and retained row values; the same prepared transaction record determines the encoded bytes and eventual publication; preparation does not accept WAL or publish |
 | Callback invocation | The WAL callback's successful return really establishes the selected durability condition; this proof records that it returned successfully |
 | ProcArray and stamps | Correct deregistration, snapshot membership, fresh monotone publication stamps, and exhaustion handling; the event proof establishes call ordering, not atomic clock correctness |
 | Memory/runtime | Safe accesses and allocation/reclamation, absence of unmodeled panics, compiler/RAII behavior, and successful allocation where required |
 
 `prepare_index_destinations`, `rollback_index_destinations`, `remove_index_sources`, and actual row publication are still primitive obligations. Their event contracts do not assert that their algorithms or data structures are verified. The generated receipts therefore keep both `native_primitive_refinement_proved` and `transaction_history_refinement_proved` **false**. The full plan's P1 concurrent slice and P2 history theorem remain open.
+
+The provisional cached removal-window change is inside that source-removal
+primitive boundary. Its [storage contract](../contracts/transactions.md#storage-and-progress)
+requires uninterrupted mutation exclusion, attached predecessors, all-lane
+detachment or a complete fallback search, and unchanged pinned-reader lifetime.
+[Native evidence](../../docs/bench_data/performance_repair_2026-09-23/remove-window/README.md)
+covers maximum-height removal, partial postings, pinned retirement, shorter
+reuse, fallback failures, and an upper-lane omission mutant. Separate test-only
+instrumentation confirms one ordinary removal search instead of two. The
+bounded Loom campaign exercises the actual lock, not this pointer algorithm.
+Neither those tests nor rechecking the unchanged conditional driver theorem
+establish native refinement or approve the candidate's performance.
 
 The next proof expansion should discharge these named contracts against the actual native methods, then join predicate capture and validation to a parameterized history invariant. A passing orchestration campaign must not be used to authorize changes to unproved atomic, allocator, snapshot, or WAL primitives.

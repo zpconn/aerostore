@@ -102,11 +102,17 @@ The [initial verification evidence](docs/bench_data/verification_pilot_2026-09-2
 
 The [next verification phase](docs/bench_data/verified_engine_2026-09-23/README.md)
 reproduced and repaired WAL/checkpoint ordering bugs and a primary-key insertion
-race. Performance acceptance remains open: the last measured candidate met the
-extended-workload comparison margins, while sustained original Crucible
-throughput regressed by 7.0% in the median paired comparison. The subsequent
-poison-handling repair still requires fresh performance measurements. No engine
-candidate from this phase is an approved performance improvement.
+race. The [performance repair](docs/bench_data/performance_repair_2026-09-23/README.md)
+reuses the skiplist's protected removal search to recover the subsequent 7.0%
+throughput regression. Three fixed-seed, 120-second pairs measured a median
+throughput improvement of 1.23% over the original engine, with lower p99 in
+every pair. All 26 full-campaign runs passed correctness/resource checks; the
+four-minute candidate retained 97.9% of first-half throughput. The automatic
+performance gate remains **inconclusive** because the original reference's p99
+variation exceeded the fixed noise limit. On 2026-09-23, the implementation was
+explicitly accepted as an engineering improvement, with that measurement
+limitation retained. The current source passes 441 native tests and all 19
+component-verification checks; native skiplist refinement remains open.
 
 ## The Crucible benchmark
 
@@ -120,6 +126,10 @@ AEROSTORE_CRUCIBLE_SHM_MIB=128 \
 AEROSTORE_CRUCIBLE_DURATION_SECS=30 \
 cargo bench -p aerostore_core --bench hyperfeed_crucible -- --noplot
 ```
+
+Set `AEROSTORE_CRUCIBLE_SEED=2026092301` to repeat each worker's row-choice
+sequence. The run prints the seed and generator version. Scheduling, transaction
+ordering, and the number of completed operations remain nondeterministic.
 
 Run the 120- and 240-second 2 GiB comparison against PostgreSQL, with Docker running:
 
