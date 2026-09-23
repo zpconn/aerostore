@@ -530,7 +530,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         }
         for bucket in &buckets {
             let stamp = index.transactional_stamp(*bucket)?;
-            if stamp >= tx.txid {
+            if !aerostore_verified::stamp_precedes_snapshot(stamp, tx.txid) {
                 tx.index_conflict = true;
                 return Err(Error::SerializationFailure);
             }
@@ -742,7 +742,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
                 .find(|bound| bound.index.header_offset() == read.index_offset)
                 .ok_or(Error::IndexBindingsIncomplete)?;
             let stamp = bound.index.transactional_stamp(read.bucket)?;
-            if stamp != read.stamp || stamp >= tx.txid {
+            if stamp != read.stamp || !aerostore_verified::stamp_precedes_snapshot(stamp, tx.txid) {
                 return Ok(true);
             }
         }

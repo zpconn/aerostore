@@ -3,7 +3,14 @@ name = "aerostore_core"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+# Opt-in implementation experiments. The default retains the measured std-sort
+# path until a verified candidate earns promotion through the performance gate.
+verified-buckets-sort = []
+verified-buckets-bitmap = []
+
 [dependencies]
+aerostore_verified = { path = "../aerostore_verified" }
 crossbeam = { workspace = true }
 crossbeam-skiplist = { workspace = true }
 aerostore_macros = { path = "../aerostore_macros" }
@@ -60,4 +67,12 @@ harness = false
 
 [[bench]]
 name = "hyperfeed_extended_crucible"
+harness = false
+
+[[bench]]
+name = "verified_bucket_sets"
+harness = false
+
+[[bench]]
+name = "verified_bucket_allocations"
 harness = false

@@ -7,6 +7,9 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
+#[cfg(all(feature = "verified-buckets-sort", feature = "verified-buckets-bitmap"))]
+compile_error!("choose only one verified bucket-set candidate feature");
+
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -573,7 +576,7 @@ where
         &self,
         predicate: &IndexCompare,
     ) -> Result<Vec<usize>, ShmIndexError> {
-        let mut buckets = match predicate {
+        let buckets = match predicate {
             IndexCompare::Eq(value) => vec![self.transactional_key_bucket(value)?],
             IndexCompare::In(values) => values
                 .iter()
@@ -587,9 +590,23 @@ where
                 (0..INDEX_TX_BUCKETS).collect()
             }
         };
-        buckets.sort_unstable();
-        buckets.dedup();
-        Ok(buckets)
+        #[cfg(feature = "verified-buckets-sort")]
+        {
+            return aerostore_verified::canonical_buckets_sort(&buckets, INDEX_TX_BUCKETS)
+                .map_err(ShmIndexError::InvalidBucket);
+        }
+        #[cfg(feature = "verified-buckets-bitmap")]
+        {
+            return aerostore_verified::canonical_buckets_bitmap(&buckets, INDEX_TX_BUCKETS)
+                .map_err(ShmIndexError::InvalidBucket);
+        }
+        #[cfg(not(any(feature = "verified-buckets-sort", feature = "verified-buckets-bitmap")))]
+        {
+            let mut buckets = buckets;
+            buckets.sort_unstable();
+            buckets.dedup();
+            Ok(buckets)
+        }
     }
 
     pub(crate) fn transactional_try_lock_bucket(

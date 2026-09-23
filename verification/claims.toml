@@ -1,0 +1,133 @@
+format_version = 1
+baseline_revision = "aa2f2c374e221dbcdd12069b91be3ed826291d98"
+whole_engine_verified = false
+
+# Status is descriptive; successful commands and their exact source fingerprint
+# are recorded by verify_formal.py. This ledger cannot make an absent proof pass.
+[[claims]]
+id = "KERNEL-BUCKETS-VERUS"
+contract = "verification/contracts/bucket_set.md"
+implementation = ["aerostore_verified/src/lib.rs"]
+scope = "Both actual Rust bucket function bodies proved with Verus; allocation success assumed"
+status = "in_progress"
+required_checks = ["verus", "kernel-tests", "adapter-tests"]
+verus_roots = ["canonical_buckets_sort", "canonical_buckets_bitmap"]
+
+[[claims]]
+id = "KERNEL-STAMP"
+contract = "verification/contracts/bucket_set.md"
+implementation = ["aerostore_verified/src/lib.rs", "aerostore_core/src/occ_partitioned.rs"]
+scope = "Scalar stamp comparison; callers and atomic ordering excluded"
+status = "in_progress"
+required_checks = ["verus", "lean", "kernel-tests"]
+verus_roots = ["stamp_precedes_snapshot"]
+lean_roots = ["AerostoreProofs.rust_stamp_refinement"]
+
+[[claims]]
+id = "TX-PUBLICATION-MODEL"
+contract = "verification/contracts/transactions.md"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "aerostore_core/src/procarray.rs", "aerostore_core/src/shm_index.rs"]
+scope = "Finite abstract protocol exploration; no automatic Rust refinement"
+status = "in_progress"
+required_checks = ["tla"]
+
+[[claims]]
+id = "TX-HISTORY-IMPLEMENTATION"
+contract = "verification/contracts/transactions.md"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "aerostore_core/src/procarray.rs"]
+scope = "Actual concurrent implementation refines strictly serializable histories"
+status = "open"
+required_checks = []
+
+[[claims]]
+id = "MEMORY-OWNERSHIP"
+contract = "verification/contracts/transactions.md"
+implementation = ["aerostore_core/src/shm.rs", "aerostore_core/src/shm_skiplist.rs", "aerostore_core/src/vacuum.rs"]
+scope = "Typed arena validity, unique ownership, safe reclamation, guard lifetime"
+status = "open"
+required_checks = []
+
+[[claims]]
+id = "MEMORY-PROGRESS"
+contract = "verification/contracts/transactions.md"
+implementation = ["aerostore_core/src/shm_lock.rs", "aerostore_core/src/procarray.rs", "aerostore_core/src/vacuum.rs", "aerostore_core/src/shm_skiplist.rs"]
+scope = "Concrete resource accounting, collector admission, conditional memory bound"
+status = "open"
+required_checks = []
+
+[[claims]]
+id = "WEAK-MEMORY-MMAP"
+contract = "verification/contracts/transactions.md"
+implementation = ["aerostore_core/src/shm_lock.rs", "aerostore_core/src/shm.rs", "aerostore_core/src/bootloader.rs"]
+scope = "Acquire/release/relaxed semantics and one ownership authority across processes"
+status = "open"
+required_checks = []
+
+[[claims]]
+id = "DURABILITY-MODEL"
+contract = "verification/contracts/transactions.md"
+implementation = ["aerostore_core/src/wal_writer.rs", "aerostore_core/src/wal_ring.rs"]
+scope = "Modeled crash cuts and log dependencies; implementation proof remains open"
+status = "in_progress"
+required_checks = ["tla"]
+
+[[claims]]
+id = "DURABILITY-IMPLEMENTATION"
+contract = "verification/contracts/transactions.md"
+implementation = ["aerostore_core/src/wal_writer.rs", "aerostore_core/src/wal_ring.rs", "aerostore_core/src/wal_delta.rs", "aerostore_core/src/recovery_delta.rs"]
+scope = "Actual durable acknowledgement, checkpoint cut, codecs and recovery"
+status = "open"
+required_checks = []
+
+[[claims]]
+id = "QUERY-APPLICATION"
+contract = "verification/contracts/transactions.md"
+implementation = ["aerostore_core/src/execution.rs", "aerostore_core/src/rbo_planner.rs", "aerostore_tcl/src/lib.rs"]
+scope = "Query route equivalence and covered application call contracts"
+status = "open"
+required_checks = []
+
+[[claims]]
+id = "KERNEL-BITMAP-LEAN"
+contract = "verification/contracts/bucket_set.md"
+implementation = ["aerostore_verified/src/lib.rs"]
+scope = "Complete extracted bitmap semantics including first-invalid errors; fixed-4096 production corollary under the explicit allocation/model boundary"
+status = "partial"
+required_checks = ["lean"]
+lean_roots = ["AerostoreProofs.rust_bitmap_step_preserves_membership", "AerostoreProofs.rust_bitmap_refinement", "AerostoreProofs.rust_bitmap_rejects_first_invalid", "AerostoreProofs.rust_bitmap_total", "AerostoreProofs.rust_bitmap_production"]
+
+[[claims]]
+id = "KERNEL-SORT-LEAN"
+contract = "verification/contracts/bucket_set.md"
+implementation = ["aerostore_verified/src/lib.rs"]
+scope = "Complete extracted insertion-sort semantics including first-invalid errors; fixed-4096 output bound under the allocation/model boundary"
+status = "partial"
+required_checks = ["lean"]
+lean_roots = ["AerostoreProofs.rust_sort_refinement", "AerostoreProofs.rust_sort_rejects_first_invalid", "AerostoreProofs.rust_sort_total", "AerostoreProofs.rust_sort_production"]
+
+[[claims]]
+id = "ABSTRACT-LEAN-LEMMAS"
+contract = "verification/contracts/bucket_set.md"
+implementation = ["verification/lean/AerostoreProofs/Buckets.lean", "verification/lean/AerostoreProofs/Publication.lean"]
+scope = "Canonical set specification and monotonic rejection mathematics; not a transaction history theorem"
+status = "partial"
+required_checks = ["lean"]
+lean_roots = ["AerostoreProofs.bitmap_specification_correct", "AerostoreProofs.canonical_unique", "AerostoreProofs.rejection_persists"]
+
+[[claims]]
+id = "KERNEL-EQUIVALENCE"
+contract = "verification/contracts/bucket_set.md"
+implementation = ["aerostore_verified/src/lib.rs"]
+scope = "Exact equality of complete extracted sort/bitmap results, including first-invalid errors; independent Verus result-uniqueness contract"
+status = "partial"
+required_checks = ["lean", "verus"]
+lean_roots = ["AerostoreProofs.rust_bucket_implementations_equivalent"]
+verus_roots = ["canonical_sequence_unique", "first_invalid_unique", "canonical_result_unique"]
+
+[[claims]]
+id = "MEMORY-RESOURCE-MODELS"
+contract = "verification/contracts/transactions.md"
+implementation = ["verification/tla/Reclamation.tla", "verification/tla/CollectorPriority.tla", "verification/tla/LiveKeyPosting.tla"]
+scope = "Finite cyclic resource abstractions, conditional on explicit weak fairness; no Rust refinement or quantitative arena bound"
+status = "partial"
+required_checks = ["tla"]

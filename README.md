@@ -91,6 +91,10 @@ cargo test -p aerostore_core --test shm_mutation_model --release
 
 The release workspace suite and all five bounded models passed in the September 2026 validation. The models cover specific concurrency invariants; their bounds and the implementation's remaining limits are documented in the [correctness and verification report](docs/sustained_churn_correctness.md).
 
+The [verification workspace](verification/README.md) contains executable Verus proofs of production bucket kernels, a Rust-to-Lean extraction/proof bridge, and TLA+ protocol and resource models. Its experiment gate ties evidence to the current source and freezes the unproved engine boundary. This is a component pilot; Aerostore is not yet a formally verified database. The [full verification plan](docs/formal_verification_plan.md) tracks the remaining implementation, recovery, memory, and performance obligations.
+
+The [initial verification evidence](docs/bench_data/verification_pilot_2026-09-23/README.md) includes the passing composed campaign, extended Crucible results for all three bucket configurations, and component timing/allocation measurements.
+
 ## The Crucible benchmark
 
 Crucible exercises 50,000 rows with 16 workers: 80% keyed upserts and 20% indexed range probes, with 5% of upserts targeting hot keys. Writes publish rows and indexes transactionally; the range probes count raw postings to stress storage churn. Extended Crucible separately checks transactional indexed-query semantics. The original test checks exact table/index agreement, allocation ownership, reclamation, operation failures, memory growth, and sustained throughput.

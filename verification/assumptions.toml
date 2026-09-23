@@ -1,0 +1,31 @@
+format_version = 1
+
+[[assumptions]]
+id = "TOOLCHAIN"
+scope = "All implemented proof slices"
+statement = "Pinned verifier frontends, extraction, standard models, proof erasure, Rust/LLVM, and proof checkers implement their documented semantics. Exact pins and evidence accompany each run."
+
+[[assumptions]]
+id = "ALLOCATION"
+scope = "Safe kernel functions"
+statement = "Pinned vector models assume logical allocation success. Rust additionally enforces representable byte capacities and may panic/abort on capacity or allocation failure. Arbitrary-size successful allocation and real-time bounds are not claimed. The production bitmap corollary fixes bucket count to 4096; successful allocation remains an explicit assumption."
+
+[[assumptions]]
+id = "EXTRACTION"
+scope = "Rust-to-Lean functions"
+statement = "Charon/Aeneas translation and listed external library models are trusted. Handwritten protocol models are not substituted for extracted implementations."
+
+[[assumptions]]
+id = "MODEL-CORRESPONDENCE"
+scope = "Standalone TLA+ and Lean protocol models"
+statement = "Mapping to the current Rust protocol is reviewed and tested, not a whole-engine mechanically checked refinement. Model checking cannot approve unverified implementation changes."
+
+[[assumptions]]
+id = "FROZEN-PRIMITIVES"
+scope = "Initial performance experiment"
+statement = "The experiment changes only the declared safe kernel. Atomic orderings, arena authority, callers, indexing semantics, and persistence are outside the proof slice and frozen by source fingerprints. Their safety is an open engine obligation."
+
+[[assumptions]]
+id = "PLATFORM"
+scope = "Integration evidence"
+statement = "Current target is x86_64 Linux/WSL2 with process-shared mappings. Integration tests are bounded evidence and do not prove OS, filesystem, crash, or mmap guarantees."
