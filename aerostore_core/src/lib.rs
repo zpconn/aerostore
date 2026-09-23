@@ -17,6 +17,7 @@ pub mod recovery_delta;
 pub mod retry;
 pub mod shm;
 pub mod shm_index;
+mod shm_lock;
 pub mod shm_skiplist;
 pub mod shm_tmpfs;
 pub mod stapi_parser;
@@ -42,8 +43,8 @@ pub use ingest::{
 };
 pub use mvcc::{is_visible, MvccError, MvccTable, RowVersion};
 pub use occ::{
-    Error as OccError, OccRecycleTelemetry, OccRow, OccTable, OccTransaction, RowLockGuard,
-    VacuumReclaimedRow,
+    Error as OccError, IndexedUpdateGuard, OccRecycleTelemetry, OccRow, OccTable, OccTransaction,
+    RowLockGuard, VacuumReclaimedRow,
 };
 pub use procarray::{
     ProcArray, ProcArrayError, ProcArrayRegistration, ProcSlot, ProcSnapshot, PROCARRAY_SLOTS,

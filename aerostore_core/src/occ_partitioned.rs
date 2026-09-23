@@ -7,11 +7,11 @@ use std::time::Duration;
 
 use crate::procarray::{ProcArrayError, ProcArrayRegistration};
 use crate::shm::{ArenaClass, RelPtr, ShmAllocError, ShmArena, OCC_PARTITION_LOCKS};
+use crate::shm_lock::{ShmMutex, ShmMutexGuard};
 use crate::TxId;
 
 const EMPTY_PTR: u32 = 0;
 const COMMIT_LOCK_SPIN_LIMIT: u32 = 512;
-const RECYCLE_STARVATION_SPIN_LIMIT: u32 = 32 * 1024;
 const RECYCLE_SHARD_PROBE_LIMIT: usize = 4;
 const MAX_VISIBLE_CHAIN_STEPS: u32 = 262_144;
 
@@ -38,6 +38,8 @@ thread_local! {
 #[repr(C, align(64))]
 struct OccSharedHeader {
     recycled_heads: [AtomicU32; OCC_PARTITION_LOCKS],
+    recycle_locks: [ShmMutex; OCC_PARTITION_LOCKS],
+    vacuum_requested: AtomicBool,
     recycle_alloc_from_starved: AtomicU64,
     recycle_alloc_from_primary: AtomicU64,
     recycle_alloc_from_probe: AtomicU64,
@@ -54,6 +56,8 @@ impl OccSharedHeader {
     fn new() -> Self {
         Self {
             recycled_heads: std::array::from_fn(|_| AtomicU32::new(EMPTY_PTR)),
+            recycle_locks: std::array::from_fn(|_| ShmMutex::new()),
+            vacuum_requested: AtomicBool::new(false),
             recycle_alloc_from_starved: AtomicU64::new(0),
             recycle_alloc_from_primary: AtomicU64::new(0),
             recycle_alloc_from_probe: AtomicU64::new(0),
@@ -70,6 +74,7 @@ impl OccSharedHeader {
 #[repr(C)]
 struct OccIndexSlot {
     head: AtomicU32,
+    indexed_update: ShmMutex,
 }
 
 impl OccIndexSlot {
@@ -77,6 +82,7 @@ impl OccIndexSlot {
     fn new() -> Self {
         Self {
             head: AtomicU32::new(EMPTY_PTR),
+            indexed_update: ShmMutex::new(),
         }
     }
 }
@@ -111,6 +117,19 @@ pub struct RowLockGuard<'a, T: Copy + Send + Sync + 'static> {
     table: &'a OccTable<T>,
     row_ptr: RelPtr<OccRow<T>>,
     release_on_drop: bool,
+}
+
+/// Serializes participating writers from snapshot creation through secondary-index
+/// maintenance. Unlike `RowLockGuard`, these locks belong to stable row slots, so
+/// publishing a new MVCC version does not release their protection.
+///
+/// Acquire the complete set of rows before beginning the transaction, and keep
+/// this guard until both commit and all index updates finish. Acquire all rows in
+/// one call: acquiring additional rows while holding a guard can deadlock.
+/// All writers maintaining indexes for these rows must follow this protocol.
+#[must_use = "the guard must be held through commit and index maintenance"]
+pub struct IndexedUpdateGuard<'a> {
+    _locks: Vec<ShmMutexGuard<'a>>,
 }
 
 struct ReadSetEntry<T: Copy> {
@@ -310,6 +329,49 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             .collect()
     }
 
+    /// Locks stable, shared-memory row slots in a deterministic order.
+    ///
+    /// These locks are separate from OCC's partition locks, so committing while
+    /// holding the returned guard is safe. They coordinate independently
+    /// attached table handles and processes as well as threads.
+    pub fn lock_indexed_rows(&self, row_ids: &[usize]) -> Result<IndexedUpdateGuard<'_>, Error> {
+        let slots = self.indexed_update_slots(row_ids)?;
+        Ok(IndexedUpdateGuard {
+            _locks: slots
+                .iter()
+                .map(|slot| slot.indexed_update.lock())
+                .collect(),
+        })
+    }
+
+    /// Attempts the same protocol without waiting. On contention, every lock
+    /// acquired by this call is released before returning `None`.
+    pub fn try_lock_indexed_rows(
+        &self,
+        row_ids: &[usize],
+    ) -> Result<Option<IndexedUpdateGuard<'_>>, Error> {
+        let slots = self.indexed_update_slots(row_ids)?;
+        let mut locks = Vec::with_capacity(slots.len());
+        for slot in slots {
+            let Some(lock) = slot.indexed_update.try_lock() else {
+                return Ok(None);
+            };
+            locks.push(lock);
+        }
+        Ok(Some(IndexedUpdateGuard { _locks: locks }))
+    }
+
+    fn indexed_update_slots(&self, row_ids: &[usize]) -> Result<Vec<&OccIndexSlot>, Error> {
+        let mut row_ids = row_ids.to_vec();
+        row_ids.sort_unstable();
+        row_ids.dedup();
+        // Validate every ID before taking any lock.
+        row_ids
+            .into_iter()
+            .map(|row_id| self.slot_ref(row_id))
+            .collect()
+    }
+
     pub fn seed_row(&self, row_id: usize, value: T) -> Result<(), Error> {
         let slot = self.slot_ref(row_id)?;
         let seed_txid = self.shm.global_txid().fetch_add(1, Ordering::AcqRel);
@@ -491,7 +553,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             crate::wal_delta::coarse_dirty_mask_for_copy(&base_row.value, &value);
 
         let base_offset = base_ptr.load(Ordering::Acquire);
-        let new_ptr = self.allocate_row(row_id, value, tx.txid, base_offset)?;
+        let new_ptr = self.allocate_row_for_write(row_id, value, tx.txid, base_offset)?;
 
         tx.write_set.push(PendingWrite {
             row_id,
@@ -537,7 +599,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         };
 
         let base_offset = base_ptr.load(Ordering::Acquire);
-        let new_ptr = self.allocate_row(row_id, value, tx.txid, base_offset)?;
+        let new_ptr = self.allocate_row_for_write(row_id, value, tx.txid, base_offset)?;
 
         tx.write_set.push(PendingWrite {
             row_id,
@@ -1007,6 +1069,46 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         primary_shard.wrapping_add(probe_idx.wrapping_mul(131)) % OCC_PARTITION_LOCKS
     }
 
+    pub(crate) fn take_vacuum_request(&self) -> bool {
+        self.shared_header_ref()
+            .map(|header| header.vacuum_requested.swap(false, Ordering::AcqRel))
+            .unwrap_or(false)
+    }
+
+    fn allocate_row_for_write(
+        &self,
+        row_id: usize,
+        value: T,
+        xmin: TxId,
+        next: u32,
+    ) -> Result<RelPtr<OccRow<T>>, Error> {
+        match self.allocate_row(row_id, value, xmin, next) {
+            Ok(ptr) => return Ok(ptr),
+            Err(err @ Error::Allocation(_)) if self.shm.vacuum_daemon_pid() != 0 => {
+                // A fast writer can consume the arena before the periodic vacuum
+                // wakes. Request a pass and allow its recycled rows to arrive
+                // before declaring OOM. This path holds no OCC partition lock,
+                // and keeps the transaction registered to protect its snapshot.
+                self.shared_header_ref()?
+                    .vacuum_requested
+                    .store(true, Ordering::Release);
+                let deadline = std::time::Instant::now() + Duration::from_secs(1);
+                loop {
+                    std::thread::sleep(Duration::from_micros(250));
+                    match self.allocate_row(row_id, value, xmin, next) {
+                        Ok(ptr) => return Ok(ptr),
+                        Err(Error::Allocation(_)) => {}
+                        Err(other) => return Err(other),
+                    }
+                    if std::time::Instant::now() >= deadline || self.shm.vacuum_daemon_pid() == 0 {
+                        return Err(err);
+                    }
+                }
+            }
+            Err(err) => Err(err),
+        }
+    }
+
     fn allocate_row(
         &self,
         row_id: usize,
@@ -1048,11 +1150,29 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             }
         }
 
-        header.recycle_alloc_fresh.fetch_add(1, Ordering::AcqRel);
-        Ok(self
+        let ptr = match self
             .shm
             .chunked_arena()
-            .alloc_in_class(OccRow::new(value, xmin, next), ArenaClass::RowVersion)?)
+            .alloc_in_class(OccRow::new(value, xmin, next), ArenaClass::RowVersion)
+        {
+            Ok(ptr) => ptr,
+            Err(err) => {
+                // The fast path probes only a few shards. Exhaustion must not
+                // strand usable rows in any of the other shared recycle pools.
+                for shard in 0..OCC_PARTITION_LOCKS {
+                    if let Some(ptr) = self.try_pop_recycled_row_from_shard(header, shard)? {
+                        header
+                            .recycle_alloc_from_probe
+                            .fetch_add(1, Ordering::AcqRel);
+                        self.initialize_row(&ptr, value, xmin, next)?;
+                        return Ok(ptr);
+                    }
+                }
+                return Err(err.into());
+            }
+        };
+        header.recycle_alloc_fresh.fetch_add(1, Ordering::AcqRel);
+        Ok(ptr)
     }
 
     fn initialize_row(
@@ -1105,39 +1225,20 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         header: &OccSharedHeader,
         recycle_shard: usize,
     ) -> Result<Option<RelPtr<OccRow<T>>>, Error> {
+        // Protect both the head and the dereference of its next pointer. A tagged
+        // CAS alone would still permit another allocator to reinitialize a node
+        // while a losing pop reads its previous next field.
+        let _guard = header.recycle_locks[recycle_shard].lock();
         let head_slot = &header.recycled_heads[recycle_shard];
-        let mut spins = 0_u32;
-
-        loop {
-            let head = head_slot.load(Ordering::Acquire);
-            if head == EMPTY_PTR {
-                header.recycle_pop_empty.fetch_add(1, Ordering::AcqRel);
-                return Ok(None);
-            }
-
-            let head_ptr = RelPtr::<OccRow<T>>::from_offset(head);
-            let row = self.resolve_row_ptr(&head_ptr)?;
-            let next = row.recycle_next.load(Ordering::Acquire);
-
-            if head_slot
-                .compare_exchange(head, next, Ordering::AcqRel, Ordering::Acquire)
-                .is_ok()
-            {
-                return Ok(Some(head_ptr));
-            }
-            header.recycle_pop_cas_fail.fetch_add(1, Ordering::AcqRel);
-
-            spins = spins.wrapping_add(1);
-            if spins & 0x3f == 0 {
-                std::thread::yield_now();
-            }
-            if spins & 0x3ff == 0 {
-                // Avoid long stalls under extreme CAS contention; caller can
-                // fall back to allocating a fresh row from the arena.
-                return Ok(None);
-            }
-            std::hint::spin_loop();
+        let head = head_slot.load(Ordering::Acquire);
+        if head == EMPTY_PTR {
+            header.recycle_pop_empty.fetch_add(1, Ordering::AcqRel);
+            return Ok(None);
         }
+        let head_ptr = RelPtr::<OccRow<T>>::from_offset(head);
+        let row = self.resolve_row_ptr(&head_ptr)?;
+        head_slot.store(row.recycle_next.load(Ordering::Acquire), Ordering::Release);
+        Ok(Some(head_ptr))
     }
 
     fn recycle_row_ptr(&self, row_id: usize, row_ptr: &RelPtr<OccRow<T>>) -> Result<(), Error> {
@@ -1145,41 +1246,16 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         if offset == EMPTY_PTR {
             return Ok(());
         }
-
         let header = self.shared_header_ref()?;
-        let recycle_shard = Self::recycle_shard_for_row_id(row_id);
-        let head_slot = &header.recycled_heads[recycle_shard];
+        let shard = Self::recycle_shard_for_row_id(row_id);
+        let _guard = header.recycle_locks[shard].lock();
+        let head_slot = &header.recycled_heads[shard];
         let row = self.resolve_row_ptr(row_ptr)?;
-        let mut spins = 0_u32;
-
-        loop {
-            let old_head = head_slot.load(Ordering::Acquire);
-            row.recycle_next.store(old_head, Ordering::Release);
-
-            if head_slot
-                .compare_exchange(old_head, offset, Ordering::AcqRel, Ordering::Acquire)
-                .is_ok()
-            {
-                header.recycle_push_success.fetch_add(1, Ordering::AcqRel);
-                return Ok(());
-            }
-            header.recycle_push_cas_fail.fetch_add(1, Ordering::AcqRel);
-
-            spins = spins.wrapping_add(1);
-            if spins & 0x3f == 0 {
-                std::thread::yield_now();
-            }
-            if spins & 0x3ff == 0 {
-                std::thread::sleep(Duration::from_micros(25));
-            }
-            if spins >= RECYCLE_STARVATION_SPIN_LIMIT
-                && self.stash_starved_recycled_row(recycle_shard, offset)
-            {
-                header.recycle_stash_starved.fetch_add(1, Ordering::AcqRel);
-                return Ok(());
-            }
-            std::hint::spin_loop();
-        }
+        row.recycle_next
+            .store(head_slot.load(Ordering::Acquire), Ordering::Release);
+        head_slot.store(offset, Ordering::Release);
+        header.recycle_push_success.fetch_add(1, Ordering::AcqRel);
+        Ok(())
     }
 
     fn try_take_starved_recycled_row(&self, recycle_shard: usize) -> Option<RelPtr<OccRow<T>>> {
@@ -1197,6 +1273,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         })
     }
 
+    #[cfg(test)]
     fn stash_starved_recycled_row(&self, recycle_shard: usize, offset: u32) -> bool {
         if offset == EMPTY_PTR {
             return true;
@@ -1204,6 +1281,9 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
 
         let key = self.starved_recycle_key(recycle_shard);
         STARVED_RECYCLE_SLOT.with(|slot| {
+            if slot.get().is_some() {
+                return false;
+            }
             slot.set(Some(StarvedRecycleEntry { key, offset }));
             true
         })
@@ -1539,6 +1619,117 @@ mod tests {
             table.try_take_starved_recycled_row(shard).is_none(),
             "starved slot should be empty after consume"
         );
+    }
+
+    #[test]
+    fn occupied_starved_slot_does_not_abandon_previous_allocation() {
+        clear_starved_slot();
+        let table = make_table();
+        let shard = OccTable::<u64>::recycle_shard_for_row_id(0);
+        let first = alloc_detached_row(&table, 1).load(Ordering::Acquire);
+        let second = alloc_detached_row(&table, 2).load(Ordering::Acquire);
+        assert!(table.stash_starved_recycled_row(shard, first));
+        assert!(!table.stash_starved_recycled_row(shard, second));
+        assert_eq!(
+            table
+                .try_take_starved_recycled_row(shard)
+                .unwrap()
+                .load(Ordering::Acquire),
+            first
+        );
+        // The rejected caller still owns `second` and can return it normally.
+        table
+            .recycle_row_ptr(0, &RelPtr::from_offset(second))
+            .unwrap();
+    }
+
+    #[test]
+    fn failed_fresh_row_allocation_does_not_increment_success_counter() {
+        clear_starved_slot();
+        let table = make_table();
+        let arena = table.shm.chunked_arena();
+        arena.alloc_raw(arena.remaining_bytes(), 1).unwrap();
+        let before = table.recycle_telemetry().unwrap().alloc_fresh;
+        assert!(matches!(
+            table.allocate_row(0, 1, 99, EMPTY_PTR),
+            Err(Error::Allocation(_))
+        ));
+        assert_eq!(table.recycle_telemetry().unwrap().alloc_fresh, before);
+    }
+
+    #[test]
+    fn exhaustion_uses_recycled_rows_outside_fast_probe_set() {
+        clear_starved_slot();
+        let table = make_table();
+        let primary = OccTable::<u64>::recycle_shard_for_row_id(0);
+        let shard = (0..OCC_PARTITION_LOCKS)
+            .find(|shard| {
+                *shard != primary
+                    && (1..=RECYCLE_SHARD_PROBE_LIMIT)
+                        .all(|probe| OccTable::<u64>::recycle_probe_shard(primary, probe) != *shard)
+            })
+            .unwrap();
+        let recycled = alloc_detached_row(&table, 99);
+        let offset = recycled.load(Ordering::Acquire);
+        table.shared_header_ref().unwrap().recycled_heads[shard].store(offset, Ordering::Release);
+        let arena = table.shm.chunked_arena();
+        arena.alloc_raw(arena.remaining_bytes(), 1).unwrap();
+        let allocated = table.allocate_row(0, 101, 99, EMPTY_PTR).unwrap();
+        assert_eq!(allocated.load(Ordering::Acquire), offset);
+        assert_eq!(table.resolve_row_ptr(&allocated).unwrap().value, 101);
+    }
+
+    #[test]
+    fn concurrent_recycler_never_loses_or_double_owns_a_row() {
+        use std::collections::BTreeSet;
+        use std::sync::Mutex;
+
+        let table = Arc::new(make_table());
+        for value in 0..32 {
+            let ptr = alloc_detached_row(&table, value);
+            table.recycle_row_ptr(0, &ptr).unwrap();
+        }
+        let owned = Arc::new(Mutex::new(BTreeSet::new()));
+        let mut workers = Vec::new();
+        for worker in 0..8_u64 {
+            let table = Arc::clone(&table);
+            let owned = Arc::clone(&owned);
+            workers.push(std::thread::spawn(move || {
+                let shard = OccTable::<u64>::recycle_shard_for_row_id(0);
+                for sequence in 0..10_000 {
+                    let ptr = table
+                        .try_pop_recycled_row_from_shard(table.shared_header_ref().unwrap(), shard)
+                        .unwrap()
+                        .expect("pool has more rows than workers");
+                    let offset = ptr.load(Ordering::Acquire);
+                    assert!(
+                        owned.lock().unwrap().insert(offset),
+                        "two workers own one recycled row"
+                    );
+                    let value = (worker << 32) | sequence;
+                    table.initialize_row(&ptr, value, 1, EMPTY_PTR).unwrap();
+                    std::thread::yield_now();
+                    assert_eq!(table.resolve_row_ptr(&ptr).unwrap().value, value);
+                    assert!(owned.lock().unwrap().remove(&offset));
+                    table.recycle_row_ptr(0, &ptr).unwrap();
+                }
+            }));
+        }
+        for worker in workers {
+            worker.join().unwrap();
+        }
+        let shard = OccTable::<u64>::recycle_shard_for_row_id(0);
+        let mut free = BTreeSet::new();
+        while let Some(ptr) = table
+            .try_pop_recycled_row_from_shard(table.shared_header_ref().unwrap(), shard)
+            .unwrap()
+        {
+            assert!(
+                free.insert(ptr.load(Ordering::Acquire)),
+                "duplicate/cyclic free row"
+            );
+        }
+        assert_eq!(free.len(), 32, "recycler lost an allocation");
     }
 
     #[test]

@@ -20,12 +20,16 @@ use crate::shm_skiplist::{
 const KEY_INLINE_BYTES: usize = 128;
 const ROWID_INLINE_BYTES: usize = MAX_PAYLOAD_BYTES;
 const DEFAULT_INDEX_ARENA_BYTES: usize = 64 << 20;
-const INDEX_INSERT_RETRY_LIMIT: usize = 4096;
+const INDEX_INSERT_RETRY_LIMIT: usize = 128;
 const INDEX_REMOVE_RETRY_LIMIT: usize = 1;
 const INDEX_RECLAIM_BATCH: usize = 131_072;
 const INDEX_RECLAIM_BATCH_ALLOC_MID: usize = 16_384;
 const INDEX_RECLAIM_BATCH_ALLOC_HIGH: usize = 65_536;
 const INDEX_RECLAIM_BATCH_STRUCTURAL: usize = INDEX_RECLAIM_BATCH / 4;
+const INDEX_ALLOC_RETRY_PHASE_B_START: usize = 16;
+const INDEX_ALLOC_RETRY_PHASE_C_START: usize = 64;
+const INDEX_ALLOC_RETRY_FLUSH_PERIOD_B: usize = 16;
+const INDEX_ALLOC_RETRY_FLUSH_PERIOD_C: usize = 8;
 
 const KEY_TAG_I64: u8 = 1;
 const KEY_TAG_U64: u8 = 2;
@@ -47,7 +51,14 @@ pub struct IndexMutationTelemetry {
     pub gc_recycle_errors: u64,
     pub gc_assist_calls: u64,
     pub gc_assist_reclaimed: u64,
+    pub gc_daemon_cycles: u64,
+    pub gc_daemon_reclaimed: u64,
+    pub pressure_window_failures: u64,
+    pub pressure_window_reclaimed: u64,
+    pub pressure_consecutive_healthy_windows: u32,
     pub retired_backlog: u64,
+    pub retired_postings: u64,
+    pub reclaimed_postings: u64,
     pub pressure_state: u32,
     pub pressure_to_normal: u64,
     pub pressure_to_warm: u64,
@@ -62,6 +73,8 @@ pub struct IndexMutationTelemetry {
     pub reserve_tower_pushes: u64,
     pub reserve_tower_hits: u64,
     pub reserve_tower_misses: u64,
+    pub retry_phase_b_hits: u64,
+    pub retry_phase_c_hits: u64,
 }
 
 impl From<ShmSkipMutationTelemetry> for IndexMutationTelemetry {
@@ -80,7 +93,14 @@ impl From<ShmSkipMutationTelemetry> for IndexMutationTelemetry {
             gc_recycle_errors: value.gc_recycle_errors,
             gc_assist_calls: value.gc_assist_calls,
             gc_assist_reclaimed: value.gc_assist_reclaimed,
+            gc_daemon_cycles: value.gc_daemon_cycles,
+            gc_daemon_reclaimed: value.gc_daemon_reclaimed,
+            pressure_window_failures: value.pressure_window_failures,
+            pressure_window_reclaimed: value.pressure_window_reclaimed,
+            pressure_consecutive_healthy_windows: value.pressure_consecutive_healthy_windows,
             retired_backlog: value.retired_backlog,
+            retired_postings: value.retired_postings,
+            reclaimed_postings: value.reclaimed_postings,
             pressure_state: value.pressure_state,
             pressure_to_normal: value.pressure_to_normal,
             pressure_to_warm: value.pressure_to_warm,
@@ -95,15 +115,19 @@ impl From<ShmSkipMutationTelemetry> for IndexMutationTelemetry {
             reserve_tower_pushes: value.reserve_tower_pushes,
             reserve_tower_hits: value.reserve_tower_hits,
             reserve_tower_misses: value.reserve_tower_misses,
+            retry_phase_b_hits: value.retry_phase_b_hits,
+            retry_phase_c_hits: value.retry_phase_c_hits,
         }
     }
 }
 
 #[derive(Debug)]
 pub enum ShmIndexError {
+    AllocationAudit(String),
     InvalidHeader(u32),
     InvalidNode(u32),
     InvalidPosting(u32),
+    InvalidEncoding(&'static str),
     KeyTooLong { len: usize, max: usize },
     RowIdTooLarge { len: usize, max: usize },
     Alloc(crate::shm::ShmAllocError),
@@ -116,6 +140,9 @@ pub enum ShmIndexError {
 impl fmt::Display for ShmIndexError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            ShmIndexError::AllocationAudit(message) => {
+                write!(f, "shared index allocation audit failed: {}", message)
+            }
             ShmIndexError::InvalidHeader(offset) => {
                 write!(f, "invalid shared index header offset {}", offset)
             }
@@ -124,6 +151,9 @@ impl fmt::Display for ShmIndexError {
             }
             ShmIndexError::InvalidPosting(offset) => {
                 write!(f, "invalid shared posting offset {}", offset)
+            }
+            ShmIndexError::InvalidEncoding(kind) => {
+                write!(f, "invalid shared index {} encoding", kind)
             }
             ShmIndexError::KeyTooLong { len, max } => {
                 write!(f, "index key length {} exceeds max {}", len, max)
@@ -145,6 +175,7 @@ impl std::error::Error for ShmIndexError {}
 impl From<ShmSkipListError> for ShmIndexError {
     fn from(value: ShmSkipListError) -> Self {
         match value {
+            ShmSkipListError::AllocationAudit(message) => ShmIndexError::AllocationAudit(message),
             ShmSkipListError::InvalidHeader(offset) => ShmIndexError::InvalidHeader(offset),
             ShmSkipListError::InvalidNode(offset) => ShmIndexError::InvalidNode(offset),
             ShmSkipListError::InvalidPosting(offset) => ShmIndexError::InvalidPosting(offset),
@@ -406,23 +437,13 @@ where
     ) -> Result<(), ShmIndexError> {
         let old_key = EncodedKey::from_index_value(old_indexed_value)?;
         let new_key = EncodedKey::from_index_value(&new_indexed_value)?;
-        if old_key.cmp(&new_key) == Ordering::Equal {
-            return Ok(());
-        }
 
         let (payload_len, payload) = Self::encode_row_id(row_id)?;
         let payload = &payload[..payload_len as usize];
-        if self.try_move_relink_fast(&old_key, new_key, payload_len, payload)? {
-            return Ok(());
-        }
-
-        self.try_remove_encoded(&old_key, payload_len, payload)?;
-        if let Err(err) = self.try_insert_encoded(new_key, payload_len, payload) {
-            // Keep strict-sync semantics best-effort: if move fails mid-flight,
-            // attempt to restore the previous key posting before surfacing error.
-            let _ = self.try_insert_encoded(old_key, payload_len, payload);
-            return Err(err);
-        }
+        // The skiplist handles missing sources, destination publication and
+        // source removal under one mutation guard. Never split a move into two
+        // public operations: that loses both isolation and allocation rollback.
+        self.try_move_relink_fast(&old_key, new_key, payload_len, payload)?;
         Ok(())
     }
 
@@ -545,28 +566,36 @@ where
     }
 
     pub fn lookup_count_with_limit(&self, predicate: &IndexCompare, limit: usize) -> usize {
+        self.try_lookup_count_with_limit(predicate, limit)
+            .unwrap_or(0)
+    }
+
+    /// Count postings without hiding invalid bounds or structural scan errors.
+    pub fn try_lookup_count_with_limit(
+        &self,
+        predicate: &IndexCompare,
+        limit: usize,
+    ) -> Result<usize, ShmIndexError> {
         if limit == 0 {
-            return 0;
+            return Ok(0);
         }
 
         match predicate {
             IndexCompare::Eq(v) => {
-                let Ok(key) = EncodedKey::from_index_value(v) else {
-                    return 0;
-                };
-                self.skiplist.count_payloads(&key).unwrap_or(0).min(limit)
+                let key = EncodedKey::from_index_value(v)?;
+                Ok(self.skiplist.count_payloads(&key)?.min(limit))
             }
             IndexCompare::Gt(v) => {
-                self.scan_count_with_limit(Some((v, ScanBound::Exclusive)), None, limit)
+                self.try_scan_count_with_limit(Some((v, ScanBound::Exclusive)), None, limit)
             }
             IndexCompare::Gte(v) => {
-                self.scan_count_with_limit(Some((v, ScanBound::Inclusive)), None, limit)
+                self.try_scan_count_with_limit(Some((v, ScanBound::Inclusive)), None, limit)
             }
             IndexCompare::Lt(v) => {
-                self.scan_count_with_limit(None, Some((v, ScanBound::Exclusive)), limit)
+                self.try_scan_count_with_limit(None, Some((v, ScanBound::Exclusive)), limit)
             }
             IndexCompare::Lte(v) => {
-                self.scan_count_with_limit(None, Some((v, ScanBound::Inclusive)), limit)
+                self.try_scan_count_with_limit(None, Some((v, ScanBound::Inclusive)), limit)
             }
             IndexCompare::In(values) => {
                 let mut total = 0_usize;
@@ -575,11 +604,12 @@ where
                         break;
                     }
                     let remaining = limit.saturating_sub(total);
-                    total = total.saturating_add(
-                        self.lookup_count_with_limit(&IndexCompare::Eq(value.clone()), remaining),
-                    );
+                    total = total.saturating_add(self.try_lookup_count_with_limit(
+                        &IndexCompare::Eq(value.clone()),
+                        remaining,
+                    )?);
                 }
-                total.min(limit)
+                Ok(total.min(limit))
             }
         }
     }
@@ -606,6 +636,45 @@ where
         out.into_iter()
             .map(|(k, rows)| (k, rows.into_iter().collect()))
             .collect()
+    }
+
+    /// Inspect every visible posting in physical scan order, preserving duplicates.
+    ///
+    /// Unlike `traverse`, this is suitable for quiescent integrity checks: it does
+    /// not sort, deduplicate, or silently discard malformed keys and payloads.
+    /// It is not a transactionally consistent snapshot of concurrent mutations.
+    pub fn try_entries(&self) -> Result<Vec<(IndexValue, RowId)>, ShmIndexError> {
+        let mut out = Vec::new();
+        let mut invalid = None;
+        self.skiplist
+            .scan_payloads_bounded(None, None, |key, _, payload| {
+                let valid_key = match key.tag {
+                    KEY_TAG_I64 | KEY_TAG_U64 => key.len == 8,
+                    KEY_TAG_STRING => (key.len as usize) <= KEY_INLINE_BYTES,
+                    _ => false,
+                };
+                if !valid_key {
+                    invalid = Some(ShmIndexError::InvalidEncoding("key"));
+                    return;
+                }
+                match (key.as_index_value(), Self::decode_row_id(payload)) {
+                    (Some(value), Some(row_id)) => out.push((value, row_id)),
+                    _ => invalid = Some(ShmIndexError::InvalidEncoding("posting")),
+                }
+            })?;
+        match invalid {
+            Some(err) => Err(err),
+            None => Ok(out),
+        }
+    }
+
+    /// Account for every structural index allocation under the shared index lock.
+    /// Includes the sentinel and physical tower capacity; payload spill storage
+    /// and table versions are outside this audit.
+    pub fn audit_allocations(
+        &self,
+    ) -> Result<crate::shm_skiplist::ShmSkipAllocationAudit, ShmIndexError> {
+        self.skiplist.audit_allocations().map_err(Into::into)
     }
 
     pub fn collect_garbage_once(&self, max_nodes: usize) -> usize {
@@ -657,26 +726,28 @@ where
         bincode::deserialize::<RowId>(bytes).ok()
     }
 
-    fn scan_count_with_limit(
+    fn try_scan_count_with_limit(
         &self,
         lower: Option<(&IndexValue, ScanBound)>,
         upper: Option<(&IndexValue, ScanBound)>,
         limit: usize,
-    ) -> usize {
-        let lower =
-            lower.and_then(|(v, mode)| EncodedKey::from_index_value(v).ok().map(|k| (k, mode)));
-        let upper =
-            upper.and_then(|(v, mode)| EncodedKey::from_index_value(v).ok().map(|k| (k, mode)));
+    ) -> Result<usize, ShmIndexError> {
+        let lower = lower
+            .map(|(v, mode)| EncodedKey::from_index_value(v).map(|k| (k, mode)))
+            .transpose()?;
+        let upper = upper
+            .map(|(v, mode)| EncodedKey::from_index_value(v).map(|k| (k, mode)))
+            .transpose()?;
         let mut total = 0_usize;
-        let _ = self.skiplist.scan_payloads_bounded_with_limit(
+        self.skiplist.scan_payloads_bounded_with_limit(
             lower.as_ref().map(|(k, mode)| (k, *mode)),
             upper.as_ref().map(|(k, mode)| (k, *mode)),
             limit,
             |_, _, _| {
                 total = total.saturating_add(1);
             },
-        );
-        total.min(limit)
+        )?;
+        Ok(total.min(limit))
     }
 
     fn try_insert_encoded(
@@ -715,7 +786,11 @@ where
                     match kind {
                         RetryKind::Alloc => {
                             retry_alloc = retry_alloc.saturating_add(1);
-                            maybe_collect_alloc_retry(self, attempt);
+                            match maybe_collect_alloc_retry(self, attempt) {
+                                RetryAllocPhase::PhaseA => {}
+                                RetryAllocPhase::PhaseB => self.skiplist.record_retry_phase_b_hit(),
+                                RetryAllocPhase::PhaseC => self.skiplist.record_retry_phase_c_hit(),
+                            }
                         }
                         RetryKind::Structural => {
                             retry_structural = retry_structural.saturating_add(1);
@@ -779,7 +854,11 @@ where
                     match kind {
                         RetryKind::Alloc => {
                             retry_alloc = retry_alloc.saturating_add(1);
-                            maybe_collect_alloc_retry(self, attempt);
+                            match maybe_collect_alloc_retry(self, attempt) {
+                                RetryAllocPhase::PhaseA => {}
+                                RetryAllocPhase::PhaseB => self.skiplist.record_retry_phase_b_hit(),
+                                RetryAllocPhase::PhaseC => self.skiplist.record_retry_phase_c_hit(),
+                            }
                         }
                         RetryKind::Structural => {
                             retry_structural = retry_structural.saturating_add(1);
@@ -797,7 +876,7 @@ where
                             retry_structural,
                             retry_epoch,
                         );
-                        return Ok(());
+                        return Err(err.into());
                     }
                     retry_pause_with_kind(attempt, kind);
                 }
@@ -814,26 +893,53 @@ where
         payload_len: u16,
         payload: &[u8],
     ) -> Result<bool, ShmIndexError> {
+        let mut retry_alloc = 0_u32;
+        let mut retry_structural = 0_u32;
+        let mut retry_epoch = 0_u32;
+        // A move includes destination insertion. Include its attempts in the
+        // insertion counters so sustained churn cannot bypass retry telemetry.
+        let record = |attempt, alloc, structural, epoch| {
+            self.skiplist.record_mutation_telemetry(
+                true,
+                attempt as u32 + 1,
+                alloc,
+                structural,
+                epoch,
+            );
+        };
         for attempt in 0..=INDEX_INSERT_RETRY_LIMIT {
             match self
                 .skiplist
                 .move_payload_relink(old_key, new_key, payload_len, payload)
             {
-                Ok(moved) => return Ok(moved),
+                Ok(moved) => {
+                    record(attempt, retry_alloc, retry_structural, retry_epoch);
+                    return Ok(moved);
+                }
                 Err(err) => {
                     let Some(kind) = classify_transient_skiplist_error(&err) else {
+                        record(attempt, retry_alloc, retry_structural, retry_epoch);
                         return Err(err.into());
                     };
                     match kind {
                         RetryKind::Alloc => {
-                            maybe_collect_alloc_retry(self, attempt);
+                            retry_alloc = retry_alloc.saturating_add(1);
+                            match maybe_collect_alloc_retry(self, attempt) {
+                                RetryAllocPhase::PhaseA => {}
+                                RetryAllocPhase::PhaseB => self.skiplist.record_retry_phase_b_hit(),
+                                RetryAllocPhase::PhaseC => self.skiplist.record_retry_phase_c_hit(),
+                            }
                         }
                         RetryKind::Structural => {
+                            retry_structural = retry_structural.saturating_add(1);
                             maybe_collect_structural_retry(self, attempt);
                         }
-                        RetryKind::Epoch => {}
+                        RetryKind::Epoch => {
+                            retry_epoch = retry_epoch.saturating_add(1);
+                        }
                     }
                     if attempt == INDEX_INSERT_RETRY_LIMIT {
+                        record(attempt, retry_alloc, retry_structural, retry_epoch);
                         return Err(err.into());
                     }
                     retry_pause_with_kind(attempt, kind);
@@ -845,26 +951,41 @@ where
 }
 
 #[inline]
-fn maybe_collect_alloc_retry<RowId>(index: &SecondaryIndex<RowId>, attempt: usize)
+fn maybe_collect_alloc_retry<RowId>(
+    index: &SecondaryIndex<RowId>,
+    attempt: usize,
+) -> RetryAllocPhase
 where
     RowId: Ord + Clone + Send + Sync + Serialize + DeserializeOwned + 'static,
 {
-    if attempt < 64 {
-        return;
+    if attempt < INDEX_ALLOC_RETRY_PHASE_B_START {
+        if attempt >= 32 && (attempt & 0x7) == 0 {
+            let _ = index
+                .skiplist
+                .collect_garbage_once(INDEX_RECLAIM_BATCH_ALLOC_MID / 4);
+        }
+        return RetryAllocPhase::PhaseA;
     }
-    if attempt < 512 {
-        if attempt & 0x7 == 0 {
+    if attempt < INDEX_ALLOC_RETRY_PHASE_C_START {
+        if attempt & 0x3 == 0 {
             let _ = index
                 .skiplist
                 .collect_garbage_once(INDEX_RECLAIM_BATCH_ALLOC_MID);
         }
-        return;
+        if attempt % INDEX_ALLOC_RETRY_FLUSH_PERIOD_B == 0 {
+            index.skiplist.flush_local_recycle_caches();
+        }
+        return RetryAllocPhase::PhaseB;
     }
-    if attempt & 0x3 == 0 {
+    if attempt & 0x1 == 0 {
         let _ = index
             .skiplist
             .collect_garbage_once(INDEX_RECLAIM_BATCH_ALLOC_HIGH);
     }
+    if attempt % INDEX_ALLOC_RETRY_FLUSH_PERIOD_C == 0 {
+        index.skiplist.flush_local_recycle_caches();
+    }
+    RetryAllocPhase::PhaseC
 }
 
 #[inline]
@@ -886,6 +1007,13 @@ enum RetryKind {
     Epoch,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum RetryAllocPhase {
+    PhaseA,
+    PhaseB,
+    PhaseC,
+}
+
 #[inline]
 fn classify_transient_skiplist_error(err: &ShmSkipListError) -> Option<RetryKind> {
     match err {
@@ -903,29 +1031,29 @@ fn classify_transient_skiplist_error(err: &ShmSkipListError) -> Option<RetryKind
 fn retry_pause_with_kind(attempt: usize, kind: RetryKind) {
     match kind {
         RetryKind::Alloc => {
-            if attempt < 8 {
+            if attempt < 4 {
                 std::hint::spin_loop();
                 return;
             }
-            if attempt < 32 {
+            if attempt < 16 {
                 thread::yield_now();
                 return;
             }
 
             // Allow GC/vacuum daemons to run and replenish recyclable index nodes.
-            let shift = ((attempt - 32) / 8).min(5);
-            let sleep_us = 50_u64 << shift;
+            let shift = ((attempt - 16) / 8).min(4);
+            let sleep_us = 100_u64 << shift;
             thread::sleep(Duration::from_micros(sleep_us));
         }
         RetryKind::Structural | RetryKind::Epoch => {
-            if attempt < 16 {
+            if attempt < 8 {
                 std::hint::spin_loop();
-            } else if attempt < 128 {
+            } else if attempt < 64 {
                 thread::yield_now();
             } else {
                 // Heavy structural churn benefits from short sleeps to break CAS herd effects.
-                let shift = ((attempt - 128) / 64).min(4);
-                let sleep_us = 25_u64 << shift;
+                let shift = ((attempt - 64) / 32).min(5);
+                let sleep_us = 50_u64 << shift;
                 thread::sleep(Duration::from_micros(sleep_us));
             }
         }
@@ -937,6 +1065,11 @@ pub struct ShmIndexGcDaemon {
 }
 
 impl ShmIndexGcDaemon {
+    /// Stop between collection passes, releasing shared locks before exiting.
+    pub fn stop(&self) -> Result<(), ShmIndexError> {
+        self.inner.stop().map_err(Into::into)
+    }
+
     #[inline]
     pub fn pid(&self) -> i32 {
         self.inner.pid()
@@ -959,6 +1092,72 @@ mod tests {
     use proptest::prelude::*;
     use std::collections::{BTreeMap, BTreeSet};
     use std::sync::Arc;
+
+    #[test]
+    fn exhausted_epoch_slots_surface_remove_errors_and_move_retries() {
+        let shm = Arc::new(ShmArena::new(4 << 20).unwrap());
+        let index = SecondaryIndex::<u32>::new_in_shared("key", Arc::clone(&shm));
+        index.try_insert(IndexValue::I64(1), 7).unwrap();
+        let registrations: Vec<_> = (0..crate::procarray::PROCARRAY_SLOTS)
+            .map(|_| shm.begin_transaction().unwrap())
+            .collect();
+        assert!(matches!(
+            index.try_remove(&IndexValue::I64(1), &7),
+            Err(ShmIndexError::Epoch(_))
+        ));
+        let before = index.mutation_telemetry();
+        assert!(matches!(
+            index.try_move_payload(&IndexValue::I64(1), IndexValue::I64(2), &7),
+            Err(ShmIndexError::Epoch(_))
+        ));
+        let after = index.mutation_telemetry();
+        assert_eq!(after.insert_ops, before.insert_ops + 1);
+        assert_eq!(
+            after.retry_epoch - before.retry_epoch,
+            (super::INDEX_INSERT_RETRY_LIMIT + 1) as u64
+        );
+        assert_eq!(
+            after.max_insert_attempts,
+            (super::INDEX_INSERT_RETRY_LIMIT + 1) as u64
+        );
+        for registration in registrations {
+            shm.end_transaction(registration).unwrap();
+        }
+        assert_eq!(index.try_entries().unwrap(), vec![(IndexValue::I64(1), 7)]);
+        index.try_remove(&IndexValue::I64(1), &7).unwrap();
+        assert!(index.try_entries().unwrap().is_empty());
+    }
+
+    #[test]
+    fn fallible_count_rejects_invalid_bounds_instead_of_widening_the_scan() {
+        let index = SecondaryIndex::<u32>::new("key");
+        index.try_insert(IndexValue::I64(1), 7).unwrap();
+        let invalid = IndexValue::String("x".repeat(super::KEY_INLINE_BYTES + 1));
+        assert!(matches!(
+            index.try_lookup_count_with_limit(&IndexCompare::Gt(invalid), usize::MAX),
+            Err(ShmIndexError::KeyTooLong { .. })
+        ));
+    }
+
+    #[test]
+    fn integrity_scan_exposes_stale_postings_and_malformed_payloads() {
+        let index = SecondaryIndex::<u32>::new("key");
+        index.try_insert(IndexValue::I64(2), 7).unwrap();
+        index.try_insert(IndexValue::I64(1), 7).unwrap();
+        assert_eq!(
+            index.try_entries().unwrap(),
+            vec![(IndexValue::I64(1), 7), (IndexValue::I64(2), 7),]
+        );
+        // This represents a corrupt posting, not a serializable u32 row ID.
+        index
+            .skiplist
+            .insert_payload(super::EncodedKey::from_i64(3), 1, &[0])
+            .unwrap();
+        assert!(matches!(
+            index.try_entries(),
+            Err(ShmIndexError::InvalidEncoding("posting"))
+        ));
+    }
 
     fn collect_from_model(
         model: &BTreeMap<u64, BTreeSet<u32>>,
@@ -1144,6 +1343,17 @@ mod tests {
         assert_eq!(after.remove_ops.saturating_sub(before.remove_ops), 1);
         assert!(after.max_insert_attempts >= 1);
         assert!(after.max_remove_attempts >= 1);
+    }
+
+    #[test]
+    fn mutation_telemetry_exposes_retry_phase_counters() {
+        let index: SecondaryIndex<u32> = SecondaryIndex::new("event_ts");
+        index.skiplist.record_retry_phase_b_hit();
+        index.skiplist.record_retry_phase_c_hit();
+
+        let telemetry = index.mutation_telemetry();
+        assert!(telemetry.retry_phase_b_hits >= 1);
+        assert!(telemetry.retry_phase_c_hits >= 1);
     }
 
     #[test]

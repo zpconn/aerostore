@@ -20,8 +20,8 @@ cargo bench -p aerostore_core --bench hyperfeed_crucible -- --noplot
 ```
 
 `hyperfeed_crucible` notes:
-- requires Docker daemon access (PostgreSQL is launched via `testcontainers`).
-- runs two Aerostore profiles per execution (`profile_512m`, `profile_1g`).
+- comparison mode requires Docker daemon access (PostgreSQL is launched via `testcontainers`).
+- runs four profiles by default (`profile_512m`, `profile_1g`, `profile_2g`, `profile_3584m`); select profiles with `AEROSTORE_CRUCIBLE_PROFILE_FILTER`.
 - defaults to a 60-second sustained workload; set `AEROSTORE_CRUCIBLE_DURATION_SECS` for shorter smoke runs.
 - optional daemon cadence controls:
   - `AEROSTORE_CRUCIBLE_VACUUM_INTERVAL_MS`
@@ -30,7 +30,67 @@ cargo bench -p aerostore_core --bench hyperfeed_crucible -- --noplot
   - Aerostore/Postgres TPS and latency ratios,
   - PostgreSQL server-exec vs client-RTT scan breakdown,
   - Aerostore index update failure counters and reclaim telemetry deltas.
-- exits with a clear error when Docker is unavailable.
+- stops starting transactions at the deadline and completes index maintenance for every committed row before counting the operation. Worker failures, scan failures, maintenance failures, and daemon shutdown errors fail the run.
+- compares the final raw index traversal with all 50,000 committed table rows, including ordering and duplicate detection; drains retired node/posting queues and requires zero GC recycle errors. The final allocation census requires every index node, posting, tower, and physical tower lane to be reachable or reusable, with no duplicate ownership or unaccounted structural storage.
+- prints interval TPS, arena high-water growth, successful fresh allocation bytes by class, and reclamation/backlog counters every five seconds (override with `AEROSTORE_CRUCIBLE_SAMPLE_INTERVAL_MS`). `AEROSTORE_CRUCIBLE_ALLOC_TELEMETRY_PATH=/tmp/alloc_{profile}.csv` also writes cumulative allocator counters.
+- runs lasting at least 30 seconds require second-half fresh arena growth to stay within one seeded working-set footprint and second-half interval TPS to retain at least 50% of first-half TPS. The generous throughput bound catches a cliff without imposing a machine-specific minimum. These finite-run gates do not prove unlimited-duration memory stability.
+- exits with a clear error when Docker is unavailable in comparison mode.
+
+Run the identical Aerostore workload and correctness gates without PostgreSQL:
+
+```bash
+AEROSTORE_CRUCIBLE_AEROSTORE_ONLY=1 \
+AEROSTORE_CRUCIBLE_PROFILE_FILTER=profile_2g \
+AEROSTORE_CRUCIBLE_DURATION_SECS=120 \
+cargo bench -p aerostore_core --bench hyperfeed_crucible -- --noplot
+```
+
+A smaller arena exposes memory pressure sooner. Arena overrides are restricted to diagnostic mode so comparison profiles remain reproducible:
+
+```bash
+AEROSTORE_CRUCIBLE_AEROSTORE_ONLY=1 \
+AEROSTORE_CRUCIBLE_SHM_MIB=128 \
+AEROSTORE_CRUCIBLE_DURATION_SECS=240 \
+AEROSTORE_CRUCIBLE_ALLOC_TELEMETRY_PATH=/tmp/crucible_128m.csv \
+cargo bench -p aerostore_core --bench hyperfeed_crucible -- --noplot
+```
+
+Short runs (under 30 seconds) execute the correctness gates and report `status=short_run`; they do not establish sustained performance. Aerostore-only runs do not claim a PostgreSQL performance ratio.
+
+Long-run parity gate (nightly):
+```bash
+./scripts/check_crucible_2g_120_vs_240.sh
+```
+
+This gate runs `profile_2g` back-to-back at 120s and 240s and fails if:
+- 240s Aerostore TPS < 90% of 120s Aerostore TPS,
+- 240s TPS ratio (Aerostore/Postgres) < 90% of 120s ratio,
+- either run fails exact table/index agreement, clean GC drain, or exact structural allocation ownership,
+- either run has index insert/remove failures,
+- either run has `max_insert_attempts > 128` or end `pressure_state == HOT`,
+- either run fails the interval throughput or bounded fresh-growth gate,
+- or either run’s measured workload and worker drain exceeds its duration by more than one second (WAL/daemon shutdown and the final audits are outside this timing).
+
+The same 120s/240s stability gate runs without Docker when `AEROSTORE_CRUCIBLE_AEROSTORE_ONLY=1` is set. Only PostgreSQL comparison checks are omitted:
+
+```bash
+AEROSTORE_CRUCIBLE_AEROSTORE_ONLY=1 ./scripts/check_crucible_2g_120_vs_240.sh
+AEROSTORE_CRUCIBLE_AEROSTORE_ONLY=1 AEROSTORE_CRUCIBLE_SHM_MIB=128 \
+  AEROSTORE_CRUCIBLE_LOG_DIR=/tmp/crucible_128m_compare \
+  ./scripts/check_crucible_2g_120_vs_240.sh
+```
+
+## Focused Concurrency Models
+
+Use the production lock with Loom atomics in a separate target directory:
+
+```bash
+RUSTFLAGS='--cfg aerostore_loom' \
+CARGO_TARGET_DIR=/tmp/aerostore-loom-target \
+cargo test -p aerostore_core --test shm_mutation_model --release
+```
+
+The five-model suite includes negative controls for the detached predecessor race and missing row guard. It has a preemption bound of 2 and a maximum of 10,000 branches, without time/permutation cutoffs. Use the `aerostore_loom` flag exactly; generic `loom` also changes dependency configurations. See [sustained churn correctness](sustained_churn_correctness.md) for invariants, regression commands, model limits, and shared-memory compatibility.
 
 ## Benchmark-Style Test Suites (Release)
 

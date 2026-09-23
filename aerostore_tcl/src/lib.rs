@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::os::raw::{c_char, c_int};
 use std::path::{Path, PathBuf};
 use std::slice;
@@ -14,9 +14,10 @@ use aerostore_core::{
     spawn_wal_writer_daemon, write_occ_checkpoint_and_truncate_wal, BootLayout, BootMode,
     IndexValue, IngestStats, OccError, OccTable, OccTransaction, PlannerError, RelPtr,
     RetryBackoff, RetryPolicy, RuleBasedOptimizer, SchemaCatalog, SecondaryIndex, SharedWalRing,
-    ShmArena, ShmPrimaryKeyMap, SnapshotExecutionMode, StapiRow, StapiValue, SynchronousCommit,
-    TsvColumns, TsvDecodeError, VacuumDaemon, VacuumReclaimedRow, WalDeltaCodec, WalDeltaError,
-    WalRing, WalWriterError, BOOT_LAYOUT_MAX_INDEXES, DEFAULT_TMPFS_PATH, SYNCHRONOUS_COMMIT_KEY,
+    ShmArena, ShmIndexError, ShmPrimaryKeyMap, SnapshotExecutionMode, StapiRow, StapiValue,
+    SynchronousCommit, TsvColumns, TsvDecodeError, VacuumDaemon, VacuumReclaimedRow, WalDeltaCodec,
+    WalDeltaError, WalRing, WalWriterError, BOOT_LAYOUT_MAX_INDEXES, DEFAULT_TMPFS_PATH,
+    SYNCHRONOUS_COMMIT_KEY,
 };
 use serde::{Deserialize, Serialize};
 use tcl::Interp;
@@ -341,7 +342,7 @@ struct BatchStats {
 }
 
 enum BatchRetryError {
-    RetryableSerialization { row_id: Option<usize> },
+    RetryableSerialization,
     Fatal(String),
 }
 
@@ -504,25 +505,35 @@ impl FlightIndexes {
         }
     }
 
-    fn insert_row(&self, row_id: usize, row: &FlightState) {
+    fn insert_row(&self, row_id: usize, row: &FlightState) -> Result<(), ShmIndexError> {
         if row.exists == 0 {
-            return;
+            return Ok(());
         }
 
         let row_key = row.flight_id_string();
-        self.flight_id.insert(IndexValue::String(row_key), row_id);
+        self.flight_id
+            .try_insert(IndexValue::String(row_key), row_id)?;
 
         self.altitude
-            .insert(IndexValue::I64(row.altitude as i64), row_id);
-        self.gs.insert(IndexValue::I64(row.gs as i64), row_id);
-        self.lat.insert(IndexValue::I64(row.lat_scaled), row_id);
-        self.lon.insert(IndexValue::I64(row.lon_scaled), row_id);
+            .try_insert(IndexValue::I64(row.altitude as i64), row_id)?;
+        self.gs.try_insert(IndexValue::I64(row.gs as i64), row_id)?;
+        self.lat
+            .try_insert(IndexValue::I64(row.lat_scaled), row_id)?;
+        self.lon
+            .try_insert(IndexValue::I64(row.lon_scaled), row_id)?;
         if let Ok(updated_at) = i64::try_from(row.updated_at) {
-            self.updated_at.insert(IndexValue::I64(updated_at), row_id);
+            self.updated_at
+                .try_insert(IndexValue::I64(updated_at), row_id)?;
         }
+        Ok(())
     }
 
-    fn apply_row_delta(&self, row_id: usize, before: &FlightState, after: &FlightState) {
+    fn apply_row_delta(
+        &self,
+        row_id: usize,
+        before: &FlightState,
+        after: &FlightState,
+    ) -> Result<(), ShmIndexError> {
         let before_live = before.exists != 0;
         let after_live = after.exists != 0;
 
@@ -533,7 +544,7 @@ impl FlightIndexes {
                 before_live.then(|| IndexValue::String(before.flight_id_string())),
                 after_live.then(|| IndexValue::String(after.flight_id_string())),
             ),
-        );
+        )?;
         Self::apply_index_delta(
             &self.altitude,
             row_id,
@@ -541,7 +552,7 @@ impl FlightIndexes {
                 before_live.then(|| IndexValue::I64(before.altitude as i64)),
                 after_live.then(|| IndexValue::I64(after.altitude as i64)),
             ),
-        );
+        )?;
         Self::apply_index_delta(
             &self.gs,
             row_id,
@@ -549,7 +560,7 @@ impl FlightIndexes {
                 before_live.then(|| IndexValue::I64(before.gs as i64)),
                 after_live.then(|| IndexValue::I64(after.gs as i64)),
             ),
-        );
+        )?;
         Self::apply_index_delta(
             &self.lat,
             row_id,
@@ -557,7 +568,7 @@ impl FlightIndexes {
                 before_live.then(|| IndexValue::I64(before.lat_scaled)),
                 after_live.then(|| IndexValue::I64(after.lat_scaled)),
             ),
-        );
+        )?;
         Self::apply_index_delta(
             &self.lon,
             row_id,
@@ -565,7 +576,7 @@ impl FlightIndexes {
                 before_live.then(|| IndexValue::I64(before.lon_scaled)),
                 after_live.then(|| IndexValue::I64(after.lon_scaled)),
             ),
-        );
+        )?;
         Self::apply_index_delta(
             &self.updated_at,
             row_id,
@@ -577,7 +588,8 @@ impl FlightIndexes {
                     .then(|| i64::try_from(after.updated_at).ok().map(IndexValue::I64))
                     .flatten(),
             ),
-        );
+        )?;
+        Ok(())
     }
 
     #[inline]
@@ -597,26 +609,25 @@ impl FlightIndexes {
     }
 
     #[inline]
-    fn apply_index_delta(index: &SecondaryIndex<usize>, row_id: usize, op: IndexDeltaOp) {
+    fn apply_index_delta(
+        index: &SecondaryIndex<usize>,
+        row_id: usize,
+        op: IndexDeltaOp,
+    ) -> Result<(), ShmIndexError> {
         match op {
             IndexDeltaOp::NoOp => {}
-            IndexDeltaOp::Insert(value) => {
-                index.insert(value, row_id);
-            }
+            IndexDeltaOp::Insert(value) => index.try_insert(value, row_id)?,
             IndexDeltaOp::Remove(value) => {
-                index.remove(&value, &row_id);
+                index.try_remove(&value, &row_id)?;
             }
-            IndexDeltaOp::Move { from, to } => {
-                if index.try_move_payload(&from, to.clone(), &row_id).is_err() {
-                    index.remove(&from, &row_id);
-                    index.insert(to, row_id);
-                }
-            }
+            IndexDeltaOp::Move { from, to } => index.try_move_payload(&from, to, &row_id)?,
         }
+        Ok(())
     }
 }
 
 fn cleanup_reclaimed_index_entries(
+    table: &OccTable<FlightState>,
     indexes: &FlightIndexes,
     reclaimed_rows: &[VacuumReclaimedRow<FlightState>],
 ) {
@@ -627,7 +638,21 @@ fn cleanup_reclaimed_index_entries(
             continue;
         }
 
-        let live = reclaimed.live_head_value.filter(|row| row.exists != 0);
+        // Vacuum's captured head can be stale by callback time. A key may have
+        // changed back to this reclaimed value, so recheck under the same stable
+        // slot lock used by writers before removing any posting.
+        let Ok(_guard) = table.lock_indexed_rows(&[row_id]) else {
+            continue;
+        };
+        let Ok(mut tx) = table.begin_transaction() else {
+            continue;
+        };
+        let live = table.read(&mut tx, row_id);
+        let _ = table.abort(&mut tx);
+        let Ok(live) = live else {
+            continue;
+        };
+        let live = live.filter(|row| row.exists != 0);
 
         if live
             .map(|row| row.flight_id != old.flight_id)
@@ -841,7 +866,9 @@ impl SharedFlightDb {
             if row.exists == 0 {
                 continue;
             }
-            indexes.insert_row(row_id, &row);
+            indexes
+                .insert_row(row_id, &row)
+                .map_err(|err| format!("failed to rebuild indexes for row {}: {}", row_id, err))?;
             key_index
                 .insert_existing(row.flight_id_string().as_str(), row_id)
                 .map_err(|err| format!("failed to rebuild primary key map: {}", err))?;
@@ -964,8 +991,9 @@ impl SharedFlightDb {
         table: Arc<OccTable<FlightState>>,
         indexes: FlightIndexes,
     ) -> Result<VacuumDaemon<FlightState>, String> {
+        let callback_table = Arc::clone(&table);
         let callback = Arc::new(move |reclaimed: &[VacuumReclaimedRow<FlightState>]| {
-            cleanup_reclaimed_index_entries(&indexes, reclaimed);
+            cleanup_reclaimed_index_entries(&callback_table, &indexes, reclaimed);
         });
         spawn_vacuum_daemon_with_callback(table, callback)
             .map_err(|err| format!("failed to spawn vacuum daemon: {}", err))
@@ -1185,49 +1213,26 @@ impl SharedFlightDb {
             now ^ ((std::process::id() as u64) << 17),
             RetryPolicy::hot_key_default(),
         );
-        let policy = backoff.policy();
-        let mut conflict_streak_by_row = HashMap::<usize, u32>::new();
-        let mut touched_rows = Vec::<usize>::with_capacity(batch_rows.len());
+        let row_ids = batch_rows
+            .iter()
+            .map(|pending| self.resolve_or_allocate_row_id(pending.flight_key.as_str()))
+            .collect::<Result<Vec<_>, _>>()?;
 
         for attempt in 0..MAX_BATCH_RETRY_ATTEMPTS {
+            // Acquire the entire batch in stable order before taking a snapshot.
+            // Keep these locks through index maintenance, including WAL waits.
+            let indexed_update = self
+                .table
+                .lock_indexed_rows(&row_ids)
+                .map_err(|err| format!("failed to lock indexed rows: {}", err))?;
             let mut tx = self
                 .table
                 .begin_transaction()
                 .map_err(|err| format!("begin_transaction failed: {}", err))?;
             let mut pending_index_updates: HashMap<usize, PendingIndexUpdate> = HashMap::new();
             let mut batch_stats = BatchStats::default();
-            let mut touched_set = HashSet::<usize>::with_capacity(batch_rows.len());
-            let mut locked_row_ids = HashSet::<usize>::new();
-            let mut row_locks = Vec::new();
-            touched_rows.clear();
-
             let mut attempt_result = Ok(());
-            for pending in batch_rows {
-                let row_id = self.resolve_or_allocate_row_id(pending.flight_key.as_str())?;
-                if touched_set.insert(row_id) {
-                    touched_rows.push(row_id);
-                }
-
-                let streak = conflict_streak_by_row.get(&row_id).copied().unwrap_or(0);
-                if streak >= policy.escalate_after_failures && locked_row_ids.insert(row_id) {
-                    match self.table.lock_for_update(&tx, row_id) {
-                        Ok(guard) => row_locks.push(guard),
-                        Err(OccError::SerializationFailure) => {
-                            attempt_result = Err(BatchRetryError::RetryableSerialization {
-                                row_id: Some(row_id),
-                            });
-                            break;
-                        }
-                        Err(err) => {
-                            attempt_result = Err(BatchRetryError::Fatal(format!(
-                                "lock_for_update failed for row {}: {}",
-                                row_id, err
-                            )));
-                            break;
-                        }
-                    }
-                }
-
+            for (pending, &row_id) in batch_rows.iter().zip(&row_ids) {
                 attempt_result = self.upsert_one(
                     &mut tx,
                     &mut pending_index_updates,
@@ -1248,37 +1253,17 @@ impl SharedFlightDb {
                 Ok(()) => {
                     stats.rows_inserted += batch_stats.rows_inserted;
                     stats.rows_updated += batch_stats.rows_updated;
-                    for row_id in &touched_rows {
-                        conflict_streak_by_row.remove(row_id);
-                    }
                     return Ok(());
                 }
                 Err(BatchRetryError::Fatal(message)) => {
                     let _ = self.table.abort(&mut tx);
                     return Err(message);
                 }
-                Err(BatchRetryError::RetryableSerialization { row_id }) => {
+                Err(BatchRetryError::RetryableSerialization) => {
                     let _ = self.table.abort(&mut tx);
-
-                    if let Some(row_id) = row_id {
-                        let next = conflict_streak_by_row
-                            .get(&row_id)
-                            .copied()
-                            .unwrap_or(0)
-                            .saturating_add(1);
-                        conflict_streak_by_row.insert(row_id, next);
-                    } else {
-                        for touched in &touched_rows {
-                            let next = conflict_streak_by_row
-                                .get(touched)
-                                .copied()
-                                .unwrap_or(0)
-                                .saturating_add(1);
-                            conflict_streak_by_row.insert(*touched, next);
-                        }
-                    }
                 }
             }
+            drop(indexed_update);
 
             if attempt + 1 >= MAX_BATCH_RETRY_ATTEMPTS {
                 return Err(format!(
@@ -1314,9 +1299,7 @@ impl SharedFlightDb {
                 )));
             }
             Err(OccError::SerializationFailure) => {
-                return Err(BatchRetryError::RetryableSerialization {
-                    row_id: Some(row_id),
-                });
+                return Err(BatchRetryError::RetryableSerialization);
             }
             Err(err) => {
                 return Err(BatchRetryError::Fatal(format!(
@@ -1331,9 +1314,7 @@ impl SharedFlightDb {
         match self.table.write(tx, row_id, next_row) {
             Ok(()) => {}
             Err(OccError::SerializationFailure) => {
-                return Err(BatchRetryError::RetryableSerialization {
-                    row_id: Some(row_id),
-                });
+                return Err(BatchRetryError::RetryableSerialization);
             }
             Err(err) => {
                 return Err(BatchRetryError::Fatal(format!(
@@ -1389,23 +1370,51 @@ impl SharedFlightDb {
             guard.committer.commit(&self.table, tx)
         };
 
-        match commit_result {
-            Ok(_) => {
-                for (row_id, update) in pending_index_updates.drain() {
-                    self.indexes
-                        .apply_row_delta(row_id, &update.before, &update.after);
-                }
-                Ok(())
-            }
-            Err(WalWriterError::Occ(OccError::SerializationFailure)) => {
-                pending_index_updates.clear();
-                Err(BatchRetryError::RetryableSerialization { row_id: None })
-            }
-            Err(err) => {
-                pending_index_updates.clear();
-                Err(BatchRetryError::Fatal(format!("commit failed: {}", err)))
-            }
+        finish_batch_commit(&self.indexes, pending_index_updates, commit_result)
+    }
+}
+
+/// Caller holds the stable row guards until this function completes.
+fn finish_batch_commit(
+    indexes: &FlightIndexes,
+    pending_index_updates: &mut HashMap<usize, PendingIndexUpdate>,
+    commit_result: Result<usize, WalWriterError>,
+) -> Result<(), BatchRetryError> {
+    // OccCommitter publishes the table before encoding/writing WAL. Non-OCC
+    // failures therefore still need index maintenance, and must never retry the
+    // complete transaction. OCC errors do not establish successful publication.
+    let wal_error = match commit_result {
+        Ok(_) => None,
+        Err(WalWriterError::Occ(OccError::SerializationFailure)) => {
+            pending_index_updates.clear();
+            return Err(BatchRetryError::RetryableSerialization);
         }
+        Err(err @ WalWriterError::Occ(_)) => {
+            pending_index_updates.clear();
+            return Err(BatchRetryError::Fatal(format!("commit failed: {}", err)));
+        }
+        Err(err) => Some(err),
+    };
+    let mut index_error = None;
+    for (row_id, update) in pending_index_updates.drain() {
+        if let Err(err) = indexes.apply_row_delta(row_id, &update.before, &update.after) {
+            index_error.get_or_insert_with(|| format!(
+                "row {} committed, but index maintenance failed: {}; rebuild indexes before resuming writes",
+                row_id, err
+            ));
+        }
+    }
+    match (wal_error, index_error) {
+        (None, None) => Ok(()),
+        (None, Some(err)) => Err(BatchRetryError::Fatal(err)),
+        (Some(wal), None) => Err(BatchRetryError::Fatal(format!(
+            "rows committed and indexes updated, but WAL failed: {}",
+            wal
+        ))),
+        (Some(wal), Some(index)) => Err(BatchRetryError::Fatal(format!(
+            "rows committed, but WAL failed: {}; {}",
+            wal, index
+        ))),
     }
 }
 
@@ -2072,6 +2081,64 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn failed_index_move_surfaces_error_and_preserves_source_posting() {
+        let index = SecondaryIndex::<usize>::new("flight_id");
+        let from = IndexValue::String("UAL123".to_string());
+        index.try_insert(from.clone(), 0).unwrap();
+        let result = FlightIndexes::apply_index_delta(
+            &index,
+            0,
+            IndexDeltaOp::Move {
+                from: from.clone(),
+                to: IndexValue::String("X".repeat(4096)),
+            },
+        );
+        assert!(matches!(result, Err(ShmIndexError::KeyTooLong { .. })));
+        assert_eq!(index.lookup_posting_count(&from), 1);
+    }
+
+    #[test]
+    fn wal_failure_after_publication_finishes_indexes_and_is_not_retryable() {
+        let shm = Arc::new(ShmArena::new(16 << 20).unwrap());
+        let table = OccTable::new(Arc::clone(&shm), 1).unwrap();
+        let indexes = FlightIndexes::new(Arc::clone(&shm));
+        let before = make_state("UAL123", 37.6, -122.4, 32000, 450, 100);
+        let mut after = before;
+        after.gs = 455;
+        after.updated_at = 101;
+        table.seed_row(0, before).unwrap();
+        indexes.insert_row(0, &before).unwrap();
+        let ring = SharedWalRing::<8, 512>::create(Arc::clone(&shm)).unwrap();
+        ring.close().unwrap();
+        let mut committer = aerostore_core::OccCommitter::new_asynchronous(ring);
+
+        let _guard = table.lock_indexed_rows(&[0]).unwrap();
+        let mut tx = table.begin_transaction().unwrap();
+        table.write(&mut tx, 0, after).unwrap();
+        let commit_result = committer.commit(&table, &mut tx);
+        assert!(matches!(
+            &commit_result,
+            Err(WalWriterError::Ring(aerostore_core::WalRingError::Closed))
+        ));
+        assert_eq!(table.snapshot_latest_rows().unwrap(), vec![(0, after)]);
+        let mut pending = HashMap::from([(0, PendingIndexUpdate { before, after })]);
+        let error = finish_batch_commit(&indexes, &mut pending, commit_result);
+        match error {
+            Err(BatchRetryError::Fatal(message)) => {
+                assert!(message.contains("wal ring is closed"));
+                assert!(message.contains("rows committed and indexes updated"));
+            }
+            _ => panic!("a postcommit WAL failure must be fatal, never retryable"),
+        }
+        assert!(pending.is_empty());
+        assert_eq!(indexes.gs.traverse(), vec![(IndexValue::I64(455), vec![0])]);
+        assert_eq!(
+            indexes.updated_at.traverse(),
+            vec![(IndexValue::I64(101), vec![0])]
+        );
+    }
+
     fn make_state(
         flight_id: &str,
         lat: f64,
@@ -2094,8 +2161,8 @@ mod tests {
         after.gs = 455;
         after.updated_at = 1010;
 
-        indexes.insert_row(row_id, &before);
-        indexes.apply_row_delta(row_id, &before, &after);
+        indexes.insert_row(row_id, &before).unwrap();
+        indexes.apply_row_delta(row_id, &before, &after).unwrap();
 
         assert_eq!(
             indexes
@@ -2158,8 +2225,8 @@ mod tests {
         deleted.exists = 0;
         let reinserted = make_state("DAL789", 35.0050, -120.1050, 28500, 410, 2100);
 
-        indexes.insert_row(row_id, &before);
-        indexes.apply_row_delta(row_id, &before, &deleted);
+        indexes.insert_row(row_id, &before).unwrap();
+        indexes.apply_row_delta(row_id, &before, &deleted).unwrap();
 
         assert_eq!(
             indexes
@@ -2198,7 +2265,9 @@ mod tests {
             0
         );
 
-        indexes.apply_row_delta(row_id, &deleted, &reinserted);
+        indexes
+            .apply_row_delta(row_id, &deleted, &reinserted)
+            .unwrap();
         assert_eq!(
             indexes
                 .flight_id

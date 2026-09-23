@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::fmt;
 use std::marker::PhantomData;
 use std::mem::{align_of, size_of};
@@ -8,6 +9,7 @@ use std::time::Duration;
 
 use crate::procarray::{ProcArrayError, ProcArrayRegistration};
 use crate::shm::{ArenaClass, RelPtr, ShmAllocError, ShmArena};
+use crate::shm_lock::{ShmMutex, ShmMutexGuard};
 
 const NULL_OFFSET: u32 = 0;
 pub const MAX_HEIGHT: usize = 32;
@@ -20,9 +22,9 @@ const SPILL_CLASS_32: u8 = 1;
 const SPILL_CLASS_64: u8 = 2;
 const SPILL_CLASS_128: u8 = 3;
 const SPILL_CLASS_256: u8 = 4;
-const GC_MIN_BATCH: usize = 1_024;
-const GC_MAX_BATCH: usize = 65_536;
-const GC_MAX_PASSES_PER_WAKE: usize = 8;
+const GC_MIN_BATCH: usize = 8_192;
+const GC_MAX_BATCH: usize = 131_072;
+const GC_MAX_PASSES_PER_WAKE: usize = 16;
 const PRESSURE_STATE_NORMAL: u32 = 0;
 const PRESSURE_STATE_WARM: u32 = 1;
 const PRESSURE_STATE_HOT: u32 = 2;
@@ -32,6 +34,17 @@ const GC_ASSIST_BATCH_NORMAL: usize = 2_048;
 const GC_ASSIST_FAILURE_CADENCE_NORMAL: u64 = 16;
 const GC_ASSIST_FAILURE_CADENCE_WARM: u64 = 4;
 const GC_ASSIST_FAILURE_CADENCE_HOT: u64 = 1;
+const PRESSURE_WINDOW_MIN_FAILURES: u64 = 256;
+const PRESSURE_HEALTHY_WINDOWS_REQUIRED: u32 = 3;
+const PRESSURE_EFFICIENCY_HOT_FLOOR: f64 = 0.10;
+const PRESSURE_EFFICIENCY_WARM_FLOOR: f64 = 0.25;
+const PRESSURE_EFFICIENCY_HEALTHY: f64 = 0.60;
+const RESERVE_REFILL_NODE_BATCH_WARM: usize = 256;
+const RESERVE_REFILL_NODE_BATCH_HOT: usize = 1_024;
+const RESERVE_REFILL_POSTING_BATCH_WARM: usize = 512;
+const RESERVE_REFILL_POSTING_BATCH_HOT: usize = 2_048;
+const RESERVE_REFILL_TOWER_BATCH_PER_LEVEL_WARM: usize = 8;
+const RESERVE_REFILL_TOWER_BATCH_PER_LEVEL_HOT: usize = 32;
 
 const NODE_FLAG_MARKED: u32 = 1 << 0;
 const NODE_FLAG_FULLY_LINKED: u32 = 1 << 1;
@@ -65,6 +78,7 @@ pub trait ShmSkipKey: Copy + Send + Sync + 'static {
 
 #[derive(Debug)]
 pub enum ShmSkipListError {
+    AllocationAudit(String),
     InvalidHeader(u32),
     InvalidNode(u32),
     InvalidPosting(u32),
@@ -80,6 +94,9 @@ pub enum ShmSkipListError {
 impl fmt::Display for ShmSkipListError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            ShmSkipListError::AllocationAudit(message) => {
+                write!(f, "skiplist allocation audit failed: {}", message)
+            }
             ShmSkipListError::InvalidHeader(offset) => {
                 write!(f, "invalid shared skiplist header offset {}", offset)
             }
@@ -127,6 +144,12 @@ impl From<ProcArrayError> for ShmSkipListError {
 #[repr(C, align(64))]
 struct ShmSkipHeader<K: ShmSkipKey> {
     head: RelPtr<ShmSkipNode<K>>,
+    // Covers every structural writer, retire queue, and index-local recycle pool.
+    mutation_lock: ShmMutex,
+    allocated_nodes: AtomicU64,
+    allocated_postings: AtomicU64,
+    allocated_towers: AtomicU64,
+    allocated_tower_lanes: AtomicU64,
     current_height: AtomicU32,
     rng_state: AtomicU64,
     distinct_key_count: AtomicUsize,
@@ -139,9 +162,11 @@ struct ShmSkipHeader<K: ShmSkipKey> {
     recycled_towers: [AtomicU64; MAX_HEIGHT],
     recycled_nodes: AtomicU64,
     recycled_postings: AtomicU64,
+    recycled_tower_nonempty_mask: AtomicU64,
     reserve_towers: [AtomicU64; MAX_HEIGHT],
     reserve_nodes: AtomicU64,
     reserve_postings: AtomicU64,
+    reserve_tower_nonempty_mask: AtomicU64,
     reserve_node_pushes: AtomicU64,
     reserve_node_hits: AtomicU64,
     reserve_node_misses: AtomicU64,
@@ -151,6 +176,10 @@ struct ShmSkipHeader<K: ShmSkipKey> {
     reserve_tower_pushes: AtomicU64,
     reserve_tower_hits: AtomicU64,
     reserve_tower_misses: AtomicU64,
+    retired_posting_head: AtomicU32,
+    retired_posting_tail: AtomicU32,
+    retired_postings: AtomicU64,
+    reclaimed_postings: AtomicU64,
     retired_head: AtomicU32,
     retired_tail: AtomicU32,
     retired_nodes: AtomicU64,
@@ -161,15 +190,23 @@ struct ShmSkipHeader<K: ShmSkipKey> {
     gc_recycle_errors: AtomicU64,
     gc_assist_calls: AtomicU64,
     gc_assist_reclaimed: AtomicU64,
+    gc_daemon_cycles: AtomicU64,
+    gc_daemon_reclaimed: AtomicU64,
+    pressure_window_last_failures: AtomicU64,
+    pressure_window_last_reclaimed: AtomicU64,
+    pressure_window_consecutive_healthy: AtomicU32,
     retry_insert_ops: AtomicU64,
     retry_remove_ops: AtomicU64,
     retry_loops: AtomicU64,
     retry_alloc: AtomicU64,
     retry_structural: AtomicU64,
     retry_epoch: AtomicU64,
+    retry_phase_b_hits: AtomicU64,
+    retry_phase_c_hits: AtomicU64,
     retry_max_insert_attempts: AtomicU64,
     retry_max_remove_attempts: AtomicU64,
     gc_daemon_pid: AtomicI32,
+    gc_stop_requested: AtomicU32,
 }
 
 impl<K: ShmSkipKey> ShmSkipHeader<K> {
@@ -177,6 +214,11 @@ impl<K: ShmSkipKey> ShmSkipHeader<K> {
     fn new(head_offset: u32, seed: u64) -> Self {
         Self {
             head: RelPtr::from_offset(head_offset),
+            mutation_lock: ShmMutex::new(),
+            allocated_nodes: AtomicU64::new(1), // sentinel
+            allocated_postings: AtomicU64::new(0),
+            allocated_towers: AtomicU64::new(1), // sentinel tower
+            allocated_tower_lanes: AtomicU64::new(MAX_HEIGHT as u64),
             current_height: AtomicU32::new(1),
             rng_state: AtomicU64::new(seed.max(1)),
             distinct_key_count: AtomicUsize::new(0),
@@ -189,9 +231,11 @@ impl<K: ShmSkipKey> ShmSkipHeader<K> {
             recycled_towers: std::array::from_fn(|_| AtomicU64::new(0)),
             recycled_nodes: AtomicU64::new(0),
             recycled_postings: AtomicU64::new(0),
+            recycled_tower_nonempty_mask: AtomicU64::new(0),
             reserve_towers: std::array::from_fn(|_| AtomicU64::new(0)),
             reserve_nodes: AtomicU64::new(0),
             reserve_postings: AtomicU64::new(0),
+            reserve_tower_nonempty_mask: AtomicU64::new(0),
             reserve_node_pushes: AtomicU64::new(0),
             reserve_node_hits: AtomicU64::new(0),
             reserve_node_misses: AtomicU64::new(0),
@@ -201,6 +245,10 @@ impl<K: ShmSkipKey> ShmSkipHeader<K> {
             reserve_tower_pushes: AtomicU64::new(0),
             reserve_tower_hits: AtomicU64::new(0),
             reserve_tower_misses: AtomicU64::new(0),
+            retired_posting_head: AtomicU32::new(0),
+            retired_posting_tail: AtomicU32::new(0),
+            retired_postings: AtomicU64::new(0),
+            reclaimed_postings: AtomicU64::new(0),
             retired_head: AtomicU32::new(0),
             retired_tail: AtomicU32::new(0),
             retired_nodes: AtomicU64::new(0),
@@ -211,15 +259,23 @@ impl<K: ShmSkipKey> ShmSkipHeader<K> {
             gc_recycle_errors: AtomicU64::new(0),
             gc_assist_calls: AtomicU64::new(0),
             gc_assist_reclaimed: AtomicU64::new(0),
+            gc_daemon_cycles: AtomicU64::new(0),
+            gc_daemon_reclaimed: AtomicU64::new(0),
+            pressure_window_last_failures: AtomicU64::new(0),
+            pressure_window_last_reclaimed: AtomicU64::new(0),
+            pressure_window_consecutive_healthy: AtomicU32::new(0),
             retry_insert_ops: AtomicU64::new(0),
             retry_remove_ops: AtomicU64::new(0),
             retry_loops: AtomicU64::new(0),
             retry_alloc: AtomicU64::new(0),
             retry_structural: AtomicU64::new(0),
             retry_epoch: AtomicU64::new(0),
+            retry_phase_b_hits: AtomicU64::new(0),
+            retry_phase_c_hits: AtomicU64::new(0),
             retry_max_insert_attempts: AtomicU64::new(0),
             retry_max_remove_attempts: AtomicU64::new(0),
             gc_daemon_pid: AtomicI32::new(0),
+            gc_stop_requested: AtomicU32::new(0),
         }
     }
 }
@@ -244,7 +300,8 @@ impl<K: ShmSkipKey> SkipLane<K> {
 struct ShmSkipNode<K: ShmSkipKey> {
     key: K,
     height: u8,
-    _pad: [u8; 3],
+    tower_capacity: u8,
+    _pad: [u8; 2],
     flags: AtomicU32,
     tower_offset: u32,
     postings_head: RelPtr<PostingEntry>,
@@ -255,11 +312,20 @@ struct ShmSkipNode<K: ShmSkipKey> {
 
 impl<K: ShmSkipKey> ShmSkipNode<K> {
     #[inline]
-    fn new(key: K, height: u8, tower_offset: u32, postings_head: u32, live_postings: u32) -> Self {
+    fn new(
+        key: K,
+        height: u8,
+        tower_capacity: u8,
+        tower_offset: u32,
+        postings_head: u32,
+        live_postings: u32,
+    ) -> Self {
+        debug_assert!(tower_capacity >= height);
         Self {
             key,
             height,
-            _pad: [0_u8; 3],
+            tower_capacity,
+            _pad: [0_u8; 2],
             flags: AtomicU32::new(0),
             tower_offset,
             postings_head: RelPtr::from_offset(postings_head),
@@ -285,6 +351,8 @@ struct PostingEntry {
     next: RelPtr<PostingEntry>,
     spill_offset: u32,
     inline_payload: [u8; POSTING_INLINE_BYTES],
+    retire_txid: AtomicU64,
+    retire_next: RelPtr<PostingEntry>,
 }
 
 impl PostingEntry {
@@ -301,6 +369,8 @@ impl PostingEntry {
             next: RelPtr::from_offset(next),
             spill_offset: NULL_OFFSET,
             inline_payload,
+            retire_txid: AtomicU64::new(0),
+            retire_next: RelPtr::null(),
         }
     }
 
@@ -314,6 +384,8 @@ impl PostingEntry {
             next: RelPtr::from_offset(next),
             spill_offset,
             inline_payload: [0_u8; POSTING_INLINE_BYTES],
+            retire_txid: AtomicU64::new(0),
+            retire_next: RelPtr::null(),
         }
     }
 }
@@ -340,7 +412,14 @@ pub struct ShmSkipMutationTelemetry {
     pub gc_recycle_errors: u64,
     pub gc_assist_calls: u64,
     pub gc_assist_reclaimed: u64,
+    pub gc_daemon_cycles: u64,
+    pub gc_daemon_reclaimed: u64,
+    pub pressure_window_failures: u64,
+    pub pressure_window_reclaimed: u64,
+    pub pressure_consecutive_healthy_windows: u32,
     pub retired_backlog: u64,
+    pub retired_postings: u64,
+    pub reclaimed_postings: u64,
     pub pressure_state: u32,
     pub pressure_to_normal: u64,
     pub pressure_to_warm: u64,
@@ -355,6 +434,65 @@ pub struct ShmSkipMutationTelemetry {
     pub reserve_tower_pushes: u64,
     pub reserve_tower_hits: u64,
     pub reserve_tower_misses: u64,
+    pub retry_phase_b_hits: u64,
+    pub retry_phase_c_hits: u64,
+}
+
+/// Index-owned structural storage. Towers count slots; tower_lanes counts their
+/// physical capacity, including extra lanes retained when a tall tower is reused.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ShmSkipAllocationCounts {
+    pub nodes: u64,
+    pub postings: u64,
+    pub towers: u64,
+    pub tower_lanes: u64,
+}
+
+impl ShmSkipAllocationCounts {
+    fn plus(self, rhs: Self) -> Self {
+        Self {
+            nodes: self.nodes + rhs.nodes,
+            postings: self.postings + rhs.postings,
+            towers: self.towers + rhs.towers,
+            tower_lanes: self.tower_lanes + rhs.tower_lanes,
+        }
+    }
+}
+
+/// A locked ownership census of this index, including the sentinel. This covers
+/// structural slots, not payload spill blocks, arena padding, or table row versions.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ShmSkipAllocationAudit {
+    pub allocated: ShmSkipAllocationCounts,
+    pub reachable: ShmSkipAllocationCounts,
+    pub retired: ShmSkipAllocationCounts,
+    pub reusable: ShmSkipAllocationCounts,
+}
+
+#[derive(Default)]
+struct AllocationAuditSeen {
+    nodes: HashSet<u32>,
+    postings: HashSet<u32>,
+    towers: HashSet<u32>,
+}
+
+fn audit_claim_offset(
+    seen: &mut HashSet<u32>,
+    offset: u32,
+    kind: &str,
+) -> Result<(), ShmSkipListError> {
+    if offset == NULL_OFFSET || !seen.insert(offset) {
+        return Err(ShmSkipListError::AllocationAudit(format!(
+            "duplicate ownership or cycle for {kind} at {offset}"
+        )));
+    }
+    Ok(())
+}
+
+#[derive(Clone, Copy)]
+struct TowerAlloc {
+    offset: u32,
+    capacity: usize,
 }
 
 struct ProcArrayEpochGuard<'a> {
@@ -398,7 +536,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             .ok_or(ShmAllocError::SizeOverflow)?;
         let tower_offset = shm.chunked_arena().alloc_raw_in_class(
             lane_bytes,
-            align_of::<SkipLane<K>>(),
+            align_of::<SkipLane<K>>().max(align_of::<u64>()),
             ArenaClass::SkipTower,
         )?;
         let base = shm.mmap_base();
@@ -415,9 +553,10 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             unsafe { ptr.write(SkipLane::new(NULL_OFFSET)) };
         }
 
-        let head_offset = shm.chunked_arena().alloc_in_class(
+        let head_offset = match shm.chunked_arena().alloc_in_class(
             ShmSkipNode::new(
                 K::sentinel(),
+                MAX_HEIGHT as u8,
                 MAX_HEIGHT as u8,
                 tower_offset,
                 NULL_OFFSET,
@@ -425,15 +564,43 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             )
             .with_flags(NODE_FLAG_FULLY_LINKED),
             ArenaClass::SkipNode,
-        )?;
-        let head_offset = head_offset.load(AtomicOrdering::Acquire);
+        ) {
+            Ok(ptr) => ptr.load(AtomicOrdering::Acquire),
+            Err(err) => {
+                shm.chunked_arena().recycle_raw_in_class(
+                    tower_offset,
+                    lane_bytes,
+                    align_of::<SkipLane<K>>().max(align_of::<u64>()),
+                    ArenaClass::SkipTower,
+                )?;
+                return Err(err.into());
+            }
+        };
 
         let seed = shm.global_txid().load(AtomicOrdering::Acquire)
             ^ ((head_offset as u64) << 32)
             ^ 0x9E37_79B9_7F4A_7C15;
-        let header_offset = shm
+        let header_offset = match shm
             .chunked_arena()
-            .alloc(ShmSkipHeader::<K>::new(head_offset, seed))?;
+            .alloc(ShmSkipHeader::<K>::new(head_offset, seed))
+        {
+            Ok(ptr) => ptr,
+            Err(err) => {
+                shm.chunked_arena().recycle_raw_in_class(
+                    tower_offset,
+                    lane_bytes,
+                    align_of::<SkipLane<K>>().max(align_of::<u64>()),
+                    ArenaClass::SkipTower,
+                )?;
+                shm.chunked_arena().recycle_raw_in_class(
+                    head_offset,
+                    size_of::<ShmSkipNode<K>>(),
+                    align_of::<ShmSkipNode<K>>(),
+                    ArenaClass::SkipNode,
+                )?;
+                return Err(err.into());
+            }
+        };
 
         Ok(Self {
             shm,
@@ -628,16 +795,27 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         Ok(())
     }
 
+    fn lock_mutation(&self) -> Result<ShmMutexGuard<'_>, ShmSkipListError> {
+        let header = self
+            .header_ref()
+            .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
+        Ok(header.mutation_lock.lock())
+    }
+
     pub fn insert_payload(
         &self,
         key: K,
         payload_len: u16,
         payload: &[u8],
     ) -> Result<(), ShmSkipListError> {
+        let _mutation_guard = self.lock_mutation()?;
         let _epoch_guard = ProcArrayEpochGuard::acquire(self.shm.as_ref())?;
         self.insert_payload_inner(key, payload_len, payload)
     }
 
+    /// Moves a payload under the shared mutation lock. Published keys and posting links
+    /// are never repurposed while epoch readers can retain pointers to them. The legacy
+    /// method name is retained for callers; storage is copied, then retired for reuse.
     pub fn move_payload_relink(
         &self,
         old_key: &K,
@@ -645,38 +823,17 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         payload_len: u16,
         payload: &[u8],
     ) -> Result<bool, ShmSkipListError> {
+        let _mutation_guard = self.lock_mutation()?;
         let _epoch_guard = ProcArrayEpochGuard::acquire(self.shm.as_ref())?;
-        let _ = Self::validate_payload_args(payload_len, payload)?;
-        if old_key.cmp_key(&new_key) == Ordering::Equal {
-            return Ok(true);
+        Self::validate_payload_args(payload_len, payload)?;
+        // Allocate/upsert the destination even when the source is absent. The
+        // complete move stays under one guard; callers must not need an unlocked
+        // remove/insert fallback. An OOM leaves any existing source untouched.
+        self.insert_payload_inner(new_key, payload_len, payload)?;
+        if old_key.cmp_key(&new_key) != Ordering::Equal {
+            self.remove_payload_inner(old_key, payload_len, payload)?;
         }
-
-        let Some(target_offset) = self.find_live_node_offset(&new_key)? else {
-            return Ok(false);
-        };
-
-        if let Some((posting_offset, old_node_offset, old_empty)) =
-            self.detach_matching_posting(old_key, payload_len, payload)?
-        {
-            if let Err(err) = self.attach_posting_to_existing_node(
-                target_offset,
-                posting_offset,
-                payload_len,
-                payload,
-            ) {
-                let _ = self.attach_posting_to_key(*old_key, posting_offset, payload_len, payload);
-                return Err(err);
-            }
-            if old_empty {
-                let _ = self.unlink_node(old_key, old_node_offset);
-            }
-            return Ok(true);
-        }
-
-        let target = self
-            .node_ref(target_offset)
-            .ok_or(ShmSkipListError::InvalidNode(target_offset))?;
-        self.node_contains_live_payload(target, payload_len, payload)
+        Ok(true)
     }
 
     pub fn remove_payload(
@@ -685,47 +842,90 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         payload_len: u16,
         payload: &[u8],
     ) -> Result<(), ShmSkipListError> {
+        let _mutation_guard = self.lock_mutation()?;
         let _epoch_guard = ProcArrayEpochGuard::acquire(self.shm.as_ref())?;
+        self.remove_payload_inner(key, payload_len, payload)
+    }
+
+    fn remove_payload_inner(
+        &self,
+        key: &K,
+        payload_len: u16,
+        payload: &[u8],
+    ) -> Result<(), ShmSkipListError> {
         if Self::validate_payload_args(payload_len, payload).is_err() {
             return Ok(());
         }
-
-        let mut preds = [NULL_OFFSET; MAX_HEIGHT];
-        let mut succs = [NULL_OFFSET; MAX_HEIGHT];
-        let found = self.find(key, &mut preds, &mut succs)?;
-        let Some(node_offset) = found else {
+        let Some(node_offset) = self.find_live_node_offset(key)? else {
             return Ok(());
         };
         let node = self
             .node_ref(node_offset)
             .ok_or(ShmSkipListError::InvalidNode(node_offset))?;
-        if node.live_postings.load(AtomicOrdering::Acquire) == 0 {
-            return Ok(());
-        }
-
+        let mut previous: Option<&PostingEntry> = None;
         let mut post_offset = node.postings_head.load(AtomicOrdering::Acquire);
         while post_offset != NULL_OFFSET {
             let post = self
                 .posting_ref(post_offset)
                 .ok_or(ShmSkipListError::InvalidPosting(post_offset))?;
+            let next = post.next.load(AtomicOrdering::Acquire);
             if post.deleted.load(AtomicOrdering::Acquire) == 0
                 && self.posting_payload_equals(post, payload_len, payload)?
             {
-                if post
-                    .deleted
-                    .compare_exchange(0, 1, AtomicOrdering::AcqRel, AtomicOrdering::Acquire)
-                    .is_ok()
-                {
-                    self.mark_tombstone_seen();
-                    if self.decrement_live_postings(node) == 0 {
-                        self.unlink_node(key, node_offset)?;
+                post.deleted.store(1, AtomicOrdering::Release);
+                self.mark_tombstone_seen();
+                if self.decrement_live_postings(node) == 0 {
+                    // The last posting is reclaimed with its node.
+                    self.unlink_node(key, node_offset)?;
+                } else {
+                    // Readers holding `post` may still follow its next pointer. Keep
+                    // that pointer and payload immutable until their epochs finish.
+                    match previous {
+                        Some(previous) => previous.next.store(next, AtomicOrdering::Release),
+                        None => node.postings_head.store(next, AtomicOrdering::Release),
                     }
-                    return Ok(());
+                    self.retire_posting(post_offset)?;
                 }
+                return Ok(());
             }
-            post_offset = post.next.load(AtomicOrdering::Acquire);
+            previous = Some(post);
+            post_offset = next;
         }
+        Ok(())
+    }
 
+    fn retire_posting(&self, offset: u32) -> Result<(), ShmSkipListError> {
+        let post = self
+            .posting_ref(offset)
+            .ok_or(ShmSkipListError::InvalidPosting(offset))?;
+        let header = self
+            .header_ref()
+            .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
+        post.retire_txid.store(
+            self.shm
+                .global_txid()
+                .load(AtomicOrdering::Acquire)
+                .saturating_sub(1),
+            AtomicOrdering::Release,
+        );
+        post.retire_next.store(NULL_OFFSET, AtomicOrdering::Relaxed);
+        let tail = header.retired_posting_tail.load(AtomicOrdering::Relaxed);
+        if tail == NULL_OFFSET {
+            header
+                .retired_posting_head
+                .store(offset, AtomicOrdering::Release);
+        } else {
+            self.posting_ref(tail)
+                .ok_or(ShmSkipListError::InvalidPosting(tail))?
+                .retire_next
+                .store(offset, AtomicOrdering::Release);
+        }
+        header
+            .retired_posting_tail
+            .store(offset, AtomicOrdering::Release);
+        header
+            .retired_postings
+            .fetch_add(1, AtomicOrdering::Relaxed);
         Ok(())
     }
 
@@ -737,18 +937,33 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
     ) -> Result<(), ShmSkipListError> {
         let _ = Self::validate_payload_args(payload_len, payload)?;
 
+        if let Some(offset) = self.find_readonly_exact(&key)? {
+            let node = self
+                .node_ref(offset)
+                .ok_or(ShmSkipListError::InvalidNode(offset))?;
+            if self.node_contains_live_payload(node, payload_len, payload)? {
+                return Ok(());
+            }
+        }
         let posting_offset = self.alloc_posting_entry(payload_len, payload)?;
-        self.attach_posting_to_key(key, posting_offset, payload_len, payload)
+        match self.attach_posting_to_key(key, posting_offset, payload_len, payload) {
+            Ok(()) => Ok(()),
+            Err(err) => {
+                // attach only returns an error before publishing ownership.
+                self.push_recycled_posting(posting_offset)?;
+                Err(err)
+            }
+        }
     }
 
+    /// The visitor executes under the shared list lock and must not reenter this list.
     pub fn lookup_payloads<F>(&self, key: &K, mut visit: F) -> Result<(), ShmSkipListError>
     where
         F: FnMut(u16, &[u8]),
     {
+        let _mutation_guard = self.lock_mutation()?;
         let _epoch_guard = ProcArrayEpochGuard::acquire(self.shm.as_ref())?;
-        let mut preds = [NULL_OFFSET; MAX_HEIGHT];
-        let mut succs = [NULL_OFFSET; MAX_HEIGHT];
-        let found = self.find(key, &mut preds, &mut succs)?;
+        let found = self.find_readonly_exact(key)?;
         let Some(node_offset) = found else {
             return Ok(());
         };
@@ -781,6 +996,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
     }
 
     pub fn count_payloads(&self, key: &K) -> Result<usize, ShmSkipListError> {
+        let _mutation_guard = self.lock_mutation()?;
         let _epoch_guard = ProcArrayEpochGuard::acquire(self.shm.as_ref())?;
         let Some(node_offset) = self.find_readonly_exact(key)? else {
             return Ok(0);
@@ -798,6 +1014,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         Ok(node.live_postings.load(AtomicOrdering::Acquire) as usize)
     }
 
+    /// The visitor executes under the shared list lock and must not reenter this list.
     pub fn scan_payloads<P, F>(&self, predicate: P, mut visit: F) -> Result<(), ShmSkipListError>
     where
         P: Fn(&K) -> bool,
@@ -810,6 +1027,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         })
     }
 
+    /// The visitor executes under the shared list lock and must not reenter this list.
     pub fn scan_payloads_bounded<F>(
         &self,
         lower: Option<(&K, ScanBound)>,
@@ -824,6 +1042,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         })
     }
 
+    /// The visitor executes under the shared list lock and must not reenter this list.
     pub fn scan_payloads_bounded_with_limit<F>(
         &self,
         lower: Option<(&K, ScanBound)>,
@@ -837,6 +1056,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         if limit == 0 {
             return Ok(());
         }
+        let _mutation_guard = self.lock_mutation()?;
         let _epoch_guard = ProcArrayEpochGuard::acquire(self.shm.as_ref())?;
         let mut emitted = 0_usize;
         let mut curr_offset = match lower {
@@ -1022,7 +1242,248 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         Ok(RelPtr::from_offset(candidate))
     }
 
+    /// Verify allocated = reachable + retired + reusable for this index's nodes,
+    /// postings, and physical tower storage. The list lock makes the census
+    /// quiescent; no operation can temporarily own an unclassified slot.
+    pub fn audit_allocations(&self) -> Result<ShmSkipAllocationAudit, ShmSkipListError> {
+        let _guard = self.lock_mutation()?;
+        let header = self
+            .header_ref()
+            .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
+        let mut audit = ShmSkipAllocationAudit {
+            allocated: ShmSkipAllocationCounts {
+                nodes: header.allocated_nodes.load(AtomicOrdering::Relaxed),
+                postings: header.allocated_postings.load(AtomicOrdering::Relaxed),
+                towers: header.allocated_towers.load(AtomicOrdering::Relaxed),
+                tower_lanes: header.allocated_tower_lanes.load(AtomicOrdering::Relaxed),
+            },
+            ..Default::default()
+        };
+        let mut seen = AllocationAuditSeen::default();
+        let head = header.head.load(AtomicOrdering::Acquire);
+        let mut cursor = head;
+        let mut previous_key: Option<K> = None;
+        while cursor != NULL_OFFSET {
+            let node = self.audit_owned_node(cursor, &mut audit.reachable, &mut seen)?;
+            if node.flags.load(AtomicOrdering::Acquire)
+                & (NODE_FLAG_MARKED | NODE_FLAG_FULLY_LINKED)
+                != NODE_FLAG_FULLY_LINKED
+            {
+                return Err(ShmSkipListError::AllocationAudit(format!(
+                    "nonlive node {cursor} remains reachable"
+                )));
+            }
+            if cursor != head {
+                if node.live_postings.load(AtomicOrdering::Acquire) == 0 {
+                    return Err(ShmSkipListError::AllocationAudit(format!(
+                        "empty node {cursor} remains reachable"
+                    )));
+                }
+                if previous_key.is_some_and(|key| key.cmp_key(&node.key) != Ordering::Less) {
+                    return Err(ShmSkipListError::AllocationAudit(
+                        "level zero keys are not strictly ordered".into(),
+                    ));
+                }
+                previous_key = Some(node.key);
+            }
+            cursor = self.node_next_offset(cursor, 0)?;
+        }
+        // All upper links must refer to live level-zero nodes; validate every lane,
+        // including levels above current_height so stale pointers cannot hide there.
+        for level in 1..MAX_HEIGHT {
+            let mut lane_seen = HashSet::new();
+            let mut cursor = self.node_next_offset(head, level)?;
+            let mut previous_key: Option<K> = None;
+            while cursor != NULL_OFFSET {
+                audit_claim_offset(&mut lane_seen, cursor, "upper-lane node")?;
+                if !seen.nodes.contains(&cursor) {
+                    return Err(ShmSkipListError::AllocationAudit(format!(
+                        "upper lane {level} links detached node {cursor}"
+                    )));
+                }
+                let node = self
+                    .node_ref(cursor)
+                    .ok_or(ShmSkipListError::InvalidNode(cursor))?;
+                if previous_key.is_some_and(|key| key.cmp_key(&node.key) != Ordering::Less) {
+                    return Err(ShmSkipListError::AllocationAudit(format!(
+                        "lane {level} is not strictly ordered"
+                    )));
+                }
+                previous_key = Some(node.key);
+                cursor = self.node_next_offset(cursor, level)?;
+            }
+        }
+        let mut cursor = header.retired_head.load(AtomicOrdering::Acquire);
+        let mut last = NULL_OFFSET;
+        while cursor != NULL_OFFSET {
+            let node = self.audit_owned_node(cursor, &mut audit.retired, &mut seen)?;
+            if node.flags.load(AtomicOrdering::Acquire) & (NODE_FLAG_MARKED | NODE_FLAG_RETIRED)
+                != (NODE_FLAG_MARKED | NODE_FLAG_RETIRED)
+            {
+                return Err(ShmSkipListError::AllocationAudit(format!(
+                    "retired queue contains unretired node {cursor}"
+                )));
+            }
+            last = cursor;
+            cursor = node.retire_next.load(AtomicOrdering::Acquire);
+        }
+        if last != header.retired_tail.load(AtomicOrdering::Acquire)
+            || audit.retired.nodes != header.retired_nodes.load(AtomicOrdering::Acquire)
+        {
+            return Err(ShmSkipListError::AllocationAudit(
+                "retired node queue metadata disagrees with traversal".into(),
+            ));
+        }
+        let mut cursor = header.retired_posting_head.load(AtomicOrdering::Acquire);
+        let mut retired_postings = 0;
+        let mut last = NULL_OFFSET;
+        while cursor != NULL_OFFSET {
+            audit_claim_offset(&mut seen.postings, cursor, "posting")?;
+            let post = self
+                .posting_ref(cursor)
+                .ok_or(ShmSkipListError::InvalidPosting(cursor))?;
+            audit.retired.postings += 1;
+            retired_postings += 1;
+            last = cursor;
+            cursor = post.retire_next.load(AtomicOrdering::Acquire);
+        }
+        if last != header.retired_posting_tail.load(AtomicOrdering::Acquire)
+            || retired_postings != header.retired_postings.load(AtomicOrdering::Acquire)
+        {
+            return Err(ShmSkipListError::AllocationAudit(
+                "retired posting queue metadata disagrees with traversal".into(),
+            ));
+        }
+        for stack in [&header.recycled_nodes, &header.reserve_nodes] {
+            let mut cursor = stack_head_offset(stack.load(AtomicOrdering::Acquire));
+            while cursor != NULL_OFFSET {
+                audit_claim_offset(&mut seen.nodes, cursor, "node")?;
+                audit.reusable.nodes += 1;
+                cursor = self
+                    .node_ref(cursor)
+                    .ok_or(ShmSkipListError::InvalidNode(cursor))?
+                    .retire_next
+                    .load(AtomicOrdering::Acquire);
+            }
+        }
+        for stack in [&header.recycled_postings, &header.reserve_postings] {
+            let mut cursor = stack_head_offset(stack.load(AtomicOrdering::Acquire));
+            while cursor != NULL_OFFSET {
+                audit_claim_offset(&mut seen.postings, cursor, "posting")?;
+                audit.reusable.postings += 1;
+                cursor = self
+                    .posting_ref(cursor)
+                    .ok_or(ShmSkipListError::InvalidPosting(cursor))?
+                    .next
+                    .load(AtomicOrdering::Acquire);
+            }
+        }
+        for height in 1..=MAX_HEIGHT {
+            for stack in [
+                &header.recycled_towers[height - 1],
+                &header.reserve_towers[height - 1],
+            ] {
+                let mut cursor = stack_head_offset(stack.load(AtomicOrdering::Acquire));
+                while cursor != NULL_OFFSET {
+                    self.audit_owned_tower(cursor, height, &mut audit.reusable, &mut seen)?;
+                    let lane = lane_from_node::<K>(self.shm.mmap_base(), cursor, 0, height).ok_or(
+                        ShmSkipListError::InvalidLane {
+                            node_offset: cursor,
+                            level: 0,
+                        },
+                    )?;
+                    cursor = lane.next.load(AtomicOrdering::Acquire);
+                }
+            }
+        }
+        let accounted = audit.reachable.plus(audit.retired).plus(audit.reusable);
+        if accounted != audit.allocated {
+            return Err(ShmSkipListError::AllocationAudit(format!("unaccounted structural storage: allocated={:?}, reachable={:?}, retired={:?}, reusable={:?}", audit.allocated, audit.reachable, audit.retired, audit.reusable)));
+        }
+        if audit.reachable.nodes.saturating_sub(1)
+            != header.distinct_key_count.load(AtomicOrdering::Acquire) as u64
+        {
+            return Err(ShmSkipListError::AllocationAudit(
+                "distinct key count disagrees with live traversal".into(),
+            ));
+        }
+        Ok(audit)
+    }
+
+    fn audit_owned_node<'a>(
+        &'a self,
+        offset: u32,
+        counts: &mut ShmSkipAllocationCounts,
+        seen: &mut AllocationAuditSeen,
+    ) -> Result<&'a ShmSkipNode<K>, ShmSkipListError> {
+        audit_claim_offset(&mut seen.nodes, offset, "node")?;
+        let node = self
+            .node_ref(offset)
+            .ok_or(ShmSkipListError::InvalidNode(offset))?;
+        counts.nodes += 1;
+        self.audit_owned_tower(
+            node.tower_offset,
+            node.tower_capacity as usize,
+            counts,
+            seen,
+        )?;
+        if node.height == 0 || node.height > node.tower_capacity {
+            return Err(ShmSkipListError::AllocationAudit(format!(
+                "node {offset} has invalid logical/physical height"
+            )));
+        }
+        let mut cursor = node.postings_head.load(AtomicOrdering::Acquire);
+        let mut live_postings = 0;
+        while cursor != NULL_OFFSET {
+            audit_claim_offset(&mut seen.postings, cursor, "posting")?;
+            let post = self
+                .posting_ref(cursor)
+                .ok_or(ShmSkipListError::InvalidPosting(cursor))?;
+            counts.postings += 1;
+            live_postings += u32::from(post.deleted.load(AtomicOrdering::Acquire) == 0);
+            cursor = post.next.load(AtomicOrdering::Acquire);
+        }
+        if live_postings != node.live_postings.load(AtomicOrdering::Acquire) {
+            return Err(ShmSkipListError::AllocationAudit(format!(
+                "node {offset} posting count disagrees with traversal"
+            )));
+        }
+        Ok(node)
+    }
+
+    fn audit_owned_tower(
+        &self,
+        offset: u32,
+        height: usize,
+        counts: &mut ShmSkipAllocationCounts,
+        seen: &mut AllocationAuditSeen,
+    ) -> Result<(), ShmSkipListError> {
+        audit_claim_offset(&mut seen.towers, offset, "tower")?;
+        if !(1..=MAX_HEIGHT).contains(&height)
+            || tower_ptr::<K>(self.shm.mmap_base(), offset, height - 1, height).is_none()
+        {
+            return Err(ShmSkipListError::AllocationAudit(format!(
+                "invalid physical tower capacity {height} at {offset}"
+            )));
+        }
+        counts.towers += 1;
+        counts.tower_lanes += height as u64;
+        Ok(())
+    }
+
     pub fn collect_garbage_once(&self, max_nodes: usize) -> usize {
+        let Some(header) = self.header_ref() else {
+            return 0;
+        };
+        // A one-shot try_lock can starve GC indefinitely under continuous writes.
+        // Priority admission prevents a stream of foreground callers from barging
+        // ahead of the collector until the arena is exhausted.
+        let _mutation_guard = header.mutation_lock.lock_priority();
+        self.collect_garbage_inner(max_nodes)
+    }
+
+    // Called either by a locked public collector or by a locked allocation assist.
+    fn collect_garbage_inner(&self, max_nodes: usize) -> usize {
         if max_nodes == 0 {
             return 0;
         }
@@ -1042,10 +1503,15 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
 
         let snapshot = self.shm.create_snapshot();
         let horizon = snapshot.xmin;
+        self.collect_retired_postings(header, horizon, max_nodes);
 
         let mut reclaimed = 0_usize;
         let mut examined = 0_u64;
         let mut requeued = 0_u64;
+        let mut blocked_without_reclaim = 0_usize;
+        let blocked_limit = max_nodes
+            .min(header.retired_nodes.load(AtomicOrdering::Acquire) as usize)
+            .max(1);
 
         while reclaimed < max_nodes {
             let head_offset = header.retired_head.load(AtomicOrdering::Acquire);
@@ -1058,76 +1524,31 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             };
             examined = examined.saturating_add(1);
             let retire_txid = node.retire_txid.load(AtomicOrdering::Acquire);
-            if retire_txid == 0 || retire_txid >= horizon {
-                break;
+            if self.pop_retired_head_offset(header, head_offset).is_none() {
+                continue;
             }
+            header.retired_nodes.fetch_sub(1, AtomicOrdering::AcqRel);
 
-            let mut next = node.retire_next.load(AtomicOrdering::Acquire);
-            if next == NULL_OFFSET {
-                let tail = header.retired_tail.load(AtomicOrdering::Acquire);
-                if tail == head_offset {
-                    if header
-                        .retired_tail
-                        .compare_exchange(
-                            head_offset,
-                            NULL_OFFSET,
-                            AtomicOrdering::AcqRel,
-                            AtomicOrdering::Acquire,
-                        )
-                        .is_err()
-                    {
-                        continue;
-                    }
-                    let _ = header.retired_head.compare_exchange(
-                        head_offset,
-                        NULL_OFFSET,
-                        AtomicOrdering::AcqRel,
-                        AtomicOrdering::Acquire,
-                    );
-                } else {
-                    let mut spins = 0_u32;
-                    while next == NULL_OFFSET && spins < 256 {
-                        next = node.retire_next.load(AtomicOrdering::Acquire);
-                        spins = spins.wrapping_add(1);
-                        std::hint::spin_loop();
-                    }
-                    if next == NULL_OFFSET {
-                        break;
-                    }
-                    if header
-                        .retired_head
-                        .compare_exchange(
-                            head_offset,
-                            next,
-                            AtomicOrdering::AcqRel,
-                            AtomicOrdering::Acquire,
-                        )
-                        .is_err()
-                    {
-                        continue;
-                    }
-                }
-            } else {
-                if header
-                    .retired_head
-                    .compare_exchange(
-                        head_offset,
-                        next,
-                        AtomicOrdering::AcqRel,
-                        AtomicOrdering::Acquire,
-                    )
-                    .is_err()
+            if retire_txid == 0 || retire_txid >= horizon {
+                if self
+                    .enqueue_retired_node_offset(header, head_offset)
+                    .is_ok()
                 {
-                    continue;
+                    requeued = requeued.saturating_add(1);
                 }
+                blocked_without_reclaim = blocked_without_reclaim.saturating_add(1);
+                if blocked_without_reclaim >= blocked_limit {
+                    break;
+                }
+                continue;
             }
+            blocked_without_reclaim = 0;
 
             if let Some(popped) = self.node_ref(head_offset) {
                 popped
                     .retire_next
                     .store(NULL_OFFSET, AtomicOrdering::Release);
             }
-            header.retired_nodes.fetch_sub(1, AtomicOrdering::AcqRel);
 
             match self.recycle_retired_node(head_offset) {
                 Ok(()) => {
@@ -1159,6 +1580,112 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 .fetch_add(requeued, AtomicOrdering::AcqRel);
         }
         reclaimed
+    }
+
+    fn collect_retired_postings(
+        &self,
+        header: &ShmSkipHeader<K>,
+        horizon: u64,
+        max_postings: usize,
+    ) {
+        let mut cursor = header.retired_posting_head.load(AtomicOrdering::Acquire);
+        let mut previous: Option<&PostingEntry> = None;
+        let mut previous_offset = NULL_OFFSET;
+        let mut examined = 0;
+        while cursor != NULL_OFFSET && examined < max_postings {
+            examined += 1;
+            let Some(post) = self.posting_ref(cursor) else {
+                break;
+            };
+            let next = post.retire_next.load(AtomicOrdering::Acquire);
+            let retired = post.retire_txid.load(AtomicOrdering::Acquire);
+            if retired != 0 && retired < horizon {
+                if self.push_recycled_posting(cursor).is_err() {
+                    header
+                        .gc_recycle_errors
+                        .fetch_add(1, AtomicOrdering::Relaxed);
+                    break;
+                }
+                match previous {
+                    Some(previous) => previous.retire_next.store(next, AtomicOrdering::Release),
+                    None => header
+                        .retired_posting_head
+                        .store(next, AtomicOrdering::Release),
+                }
+                if next == NULL_OFFSET {
+                    header
+                        .retired_posting_tail
+                        .store(previous_offset, AtomicOrdering::Release);
+                }
+                header
+                    .retired_postings
+                    .fetch_sub(1, AtomicOrdering::Relaxed);
+                header
+                    .reclaimed_postings
+                    .fetch_add(1, AtomicOrdering::Relaxed);
+            } else {
+                previous = Some(post);
+                previous_offset = cursor;
+            }
+            cursor = next;
+        }
+    }
+
+    fn pop_retired_head_offset(&self, header: &ShmSkipHeader<K>, head_offset: u32) -> Option<u32> {
+        let node = self.node_ref(head_offset)?;
+        let mut next = node.retire_next.load(AtomicOrdering::Acquire);
+        if next == NULL_OFFSET {
+            let tail = header.retired_tail.load(AtomicOrdering::Acquire);
+            if tail == head_offset {
+                if header
+                    .retired_tail
+                    .compare_exchange(
+                        head_offset,
+                        NULL_OFFSET,
+                        AtomicOrdering::AcqRel,
+                        AtomicOrdering::Acquire,
+                    )
+                    .is_err()
+                {
+                    return None;
+                }
+                if header
+                    .retired_head
+                    .compare_exchange(
+                        head_offset,
+                        NULL_OFFSET,
+                        AtomicOrdering::AcqRel,
+                        AtomicOrdering::Acquire,
+                    )
+                    .is_err()
+                {
+                    return None;
+                }
+                return Some(head_offset);
+            }
+            let mut spins = 0_u32;
+            while next == NULL_OFFSET && spins < 256 {
+                next = node.retire_next.load(AtomicOrdering::Acquire);
+                spins = spins.wrapping_add(1);
+                std::hint::spin_loop();
+            }
+            if next == NULL_OFFSET {
+                return None;
+            }
+        }
+        if header
+            .retired_head
+            .compare_exchange(
+                head_offset,
+                next,
+                AtomicOrdering::AcqRel,
+                AtomicOrdering::Acquire,
+            )
+            .is_err()
+        {
+            return None;
+        }
+        Some(head_offset)
     }
 
     fn enqueue_retired_node_offset(
@@ -1194,6 +1721,12 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         &self,
         interval: Duration,
     ) -> Result<ShmSkipListGcDaemon, ShmSkipListError> {
+        let header = self
+            .header_ref()
+            .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
+        header.gc_stop_requested.store(0, AtomicOrdering::Release);
+        let stop_offset = (&header.gc_stop_requested as *const AtomicU32 as usize
+            - self.shm.mmap_base().as_ptr() as usize) as u32;
         let parent_pid = unsafe { libc::getpid() };
         let list = self.clone();
         // SAFETY:
@@ -1211,9 +1744,17 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                         std::thread::sleep(interval);
                         continue;
                     };
+                    if header.gc_stop_requested.load(AtomicOrdering::Acquire) != 0 {
+                        // No mutation/GC guard is held at this point.
+                        unsafe { libc::_exit(0) };
+                    }
+                    header.gc_daemon_cycles.fetch_add(1, AtomicOrdering::AcqRel);
                     let pressure = header.pressure_state.load(AtomicOrdering::Acquire);
                     let failures = header.alloc_failure_events.load(AtomicOrdering::Acquire);
-                    let reclaimed = header.gc_assist_reclaimed.load(AtomicOrdering::Acquire);
+                    let reclaimed = header
+                        .gc_assist_reclaimed
+                        .load(AtomicOrdering::Acquire)
+                        .saturating_add(header.gc_daemon_reclaimed.load(AtomicOrdering::Acquire));
                     let reclaim_efficiency = if failures == 0 {
                         1.0
                     } else {
@@ -1234,15 +1775,22 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                         _ => GC_MAX_PASSES_PER_WAKE,
                     };
                     let mut reclaimed_any = false;
+                    let mut daemon_reclaimed = 0_u64;
                     for _ in 0..max_passes {
                         let reclaimed = list.collect_garbage_once(batch);
                         if reclaimed == 0 {
                             break;
                         }
+                        daemon_reclaimed = daemon_reclaimed.saturating_add(reclaimed as u64);
                         reclaimed_any = true;
                         if reclaimed < batch {
                             break;
                         }
+                    }
+                    if daemon_reclaimed != 0 {
+                        header
+                            .gc_daemon_reclaimed
+                            .fetch_add(daemon_reclaimed, AtomicOrdering::AcqRel);
                     }
                     if reclaimed_any {
                         std::thread::yield_now();
@@ -1258,7 +1806,16 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                             } else {
                                 sleep_for
                             };
-                        std::thread::sleep(sleep_for);
+                        // Bound stop latency even when configured with a long interval.
+                        let deadline = std::time::Instant::now() + sleep_for;
+                        while header.gc_stop_requested.load(AtomicOrdering::Acquire) == 0 {
+                            let remaining =
+                                deadline.saturating_duration_since(std::time::Instant::now());
+                            if remaining.is_zero() {
+                                break;
+                            }
+                            std::thread::sleep(remaining.min(Duration::from_millis(10)));
+                        }
                     }
                 }
             }
@@ -1267,7 +1824,11 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 if let Some(header) = self.header_ref() {
                     header.gc_daemon_pid.store(pid_raw, AtomicOrdering::Release);
                 }
-                Ok(ShmSkipListGcDaemon { pid: pid_raw })
+                Ok(ShmSkipListGcDaemon {
+                    pid: pid_raw,
+                    shm: Arc::clone(&self.shm),
+                    stop_offset,
+                })
             }
         }
     }
@@ -1298,6 +1859,16 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         let Some(header) = self.header_ref() else {
             return ShmSkipMutationTelemetry::default();
         };
+        let total_reclaimed = header
+            .gc_assist_reclaimed
+            .load(AtomicOrdering::Acquire)
+            .saturating_add(header.gc_daemon_reclaimed.load(AtomicOrdering::Acquire));
+        let last_failures = header
+            .pressure_window_last_failures
+            .load(AtomicOrdering::Acquire);
+        let last_reclaimed = header
+            .pressure_window_last_reclaimed
+            .load(AtomicOrdering::Acquire);
         ShmSkipMutationTelemetry {
             insert_ops: header.retry_insert_ops.load(AtomicOrdering::Acquire),
             remove_ops: header.retry_remove_ops.load(AtomicOrdering::Acquire),
@@ -1316,7 +1887,19 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             gc_recycle_errors: header.gc_recycle_errors.load(AtomicOrdering::Acquire),
             gc_assist_calls: header.gc_assist_calls.load(AtomicOrdering::Acquire),
             gc_assist_reclaimed: header.gc_assist_reclaimed.load(AtomicOrdering::Acquire),
+            gc_daemon_cycles: header.gc_daemon_cycles.load(AtomicOrdering::Acquire),
+            gc_daemon_reclaimed: header.gc_daemon_reclaimed.load(AtomicOrdering::Acquire),
+            pressure_window_failures: header
+                .alloc_failure_events
+                .load(AtomicOrdering::Acquire)
+                .saturating_sub(last_failures),
+            pressure_window_reclaimed: total_reclaimed.saturating_sub(last_reclaimed),
+            pressure_consecutive_healthy_windows: header
+                .pressure_window_consecutive_healthy
+                .load(AtomicOrdering::Acquire),
             retired_backlog: header.retired_nodes.load(AtomicOrdering::Acquire),
+            retired_postings: header.retired_postings.load(AtomicOrdering::Acquire),
+            reclaimed_postings: header.reclaimed_postings.load(AtomicOrdering::Acquire),
             pressure_state: header.pressure_state.load(AtomicOrdering::Acquire),
             pressure_to_normal: header.pressure_to_normal.load(AtomicOrdering::Acquire),
             pressure_to_warm: header.pressure_to_warm.load(AtomicOrdering::Acquire),
@@ -1331,7 +1914,14 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             reserve_tower_pushes: header.reserve_tower_pushes.load(AtomicOrdering::Acquire),
             reserve_tower_hits: header.reserve_tower_hits.load(AtomicOrdering::Acquire),
             reserve_tower_misses: header.reserve_tower_misses.load(AtomicOrdering::Acquire),
+            retry_phase_b_hits: header.retry_phase_b_hits.load(AtomicOrdering::Acquire),
+            retry_phase_c_hits: header.retry_phase_c_hits.load(AtomicOrdering::Acquire),
         }
+    }
+
+    #[inline]
+    pub(crate) fn flush_local_recycle_caches(&self) {
+        let _ = self.shm.flush_local_recycle_caches();
     }
 
     #[inline]
@@ -1375,6 +1965,24 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         }
     }
 
+    #[inline]
+    pub(crate) fn record_retry_phase_b_hit(&self) {
+        if let Some(header) = self.header_ref() {
+            header
+                .retry_phase_b_hits
+                .fetch_add(1, AtomicOrdering::AcqRel);
+        }
+    }
+
+    #[inline]
+    pub(crate) fn record_retry_phase_c_hit(&self) {
+        if let Some(header) = self.header_ref() {
+            header
+                .retry_phase_c_hits
+                .fetch_add(1, AtomicOrdering::AcqRel);
+        }
+    }
+
     fn find(
         &self,
         key: &K,
@@ -1406,31 +2014,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                     let curr = self
                         .node_ref(curr_offset)
                         .ok_or(ShmSkipListError::InvalidNode(curr_offset))?;
-                    let curr_lane = match self.lane_ref(curr_offset, curr, level) {
-                        Ok(lane) => lane,
-                        Err(ShmSkipListError::InvalidLane { .. }) => {
-                            // Heal stale upper-lane links (for example, when a node offset is
-                            // recycled with a lower height) by skipping this entry at `level`.
-                            let fallback_next =
-                                self.node_next_offset(curr_offset, 0).unwrap_or(NULL_OFFSET);
-                            let pred_lane = self.lane_ref_by_offset(pred_offset, level)?;
-                            if pred_lane
-                                .next
-                                .compare_exchange(
-                                    curr_offset,
-                                    fallback_next,
-                                    AtomicOrdering::AcqRel,
-                                    AtomicOrdering::Acquire,
-                                )
-                                .is_err()
-                            {
-                                continue 'retry;
-                            }
-                            curr_offset = fallback_next;
-                            continue;
-                        }
-                        Err(err) => return Err(err),
-                    };
+                    let curr_lane = self.lane_ref(curr_offset, curr, level)?;
                     let curr_next = curr_lane.next.load(AtomicOrdering::Acquire);
 
                     let node_marked =
@@ -1698,7 +2282,14 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 Err(observed) => flags = observed,
             }
         }
-        let retire_txid = self.shm.global_txid().fetch_add(1, AtomicOrdering::AcqRel);
+        // Use the already-issued transaction timeline without advancing it. Retirements are
+        // metadata for GC visibility; minting fresh txids here inflates horizons and delays
+        // reclamation under sustained churn.
+        let retire_txid = self
+            .shm
+            .global_txid()
+            .load(AtomicOrdering::Acquire)
+            .saturating_sub(1);
         node.retire_txid.store(retire_txid, AtomicOrdering::Release);
 
         let Some(header) = self.header_ref() else {
@@ -1773,82 +2364,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         Ok(false)
     }
 
-    fn detach_matching_posting(
-        &self,
-        key: &K,
-        payload_len: u16,
-        payload: &[u8],
-    ) -> Result<Option<(u32, u32, bool)>, ShmSkipListError> {
-        let mut preds = [NULL_OFFSET; MAX_HEIGHT];
-        let mut succs = [NULL_OFFSET; MAX_HEIGHT];
-        let Some(node_offset) = self.find(key, &mut preds, &mut succs)? else {
-            return Ok(None);
-        };
-
-        'retry: loop {
-            let node = self
-                .node_ref(node_offset)
-                .ok_or(ShmSkipListError::InvalidNode(node_offset))?;
-            let flags = node.flags.load(AtomicOrdering::Acquire);
-            if flags & NODE_FLAG_MARKED != 0 || flags & NODE_FLAG_FULLY_LINKED == 0 {
-                return Ok(None);
-            }
-
-            let mut prev_offset = NULL_OFFSET;
-            let mut post_offset = node.postings_head.load(AtomicOrdering::Acquire);
-            while post_offset != NULL_OFFSET {
-                let post = self
-                    .posting_ref(post_offset)
-                    .ok_or(ShmSkipListError::InvalidPosting(post_offset))?;
-                let next = post.next.load(AtomicOrdering::Acquire);
-                let is_match = post.deleted.load(AtomicOrdering::Acquire) == 0
-                    && self.posting_payload_equals(post, payload_len, payload)?;
-                if is_match {
-                    let detached = if prev_offset == NULL_OFFSET {
-                        node.postings_head
-                            .compare_exchange(
-                                post_offset,
-                                next,
-                                AtomicOrdering::AcqRel,
-                                AtomicOrdering::Acquire,
-                            )
-                            .is_ok()
-                    } else {
-                        let prev = self
-                            .posting_ref(prev_offset)
-                            .ok_or(ShmSkipListError::InvalidPosting(prev_offset))?;
-                        prev.next
-                            .compare_exchange(
-                                post_offset,
-                                next,
-                                AtomicOrdering::AcqRel,
-                                AtomicOrdering::Acquire,
-                            )
-                            .is_ok()
-                    };
-                    if !detached {
-                        continue 'retry;
-                    }
-
-                    let detached_post = self
-                        .posting_ref(post_offset)
-                        .ok_or(ShmSkipListError::InvalidPosting(post_offset))?;
-                    detached_post
-                        .next
-                        .store(NULL_OFFSET, AtomicOrdering::Release);
-                    detached_post.deleted.store(0, AtomicOrdering::Release);
-                    let old_empty = self.decrement_live_postings(node) == 0;
-                    return Ok(Some((post_offset, node_offset, old_empty)));
-                }
-
-                prev_offset = post_offset;
-                post_offset = next;
-            }
-
-            return Ok(None);
-        }
-    }
-
+    // Requires mutation_lock. Errors occur only before any node/posting publication.
     fn attach_posting_to_key(
         &self,
         key: K,
@@ -1858,116 +2374,56 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
     ) -> Result<(), ShmSkipListError> {
         let mut preds = [NULL_OFFSET; MAX_HEIGHT];
         let mut succs = [NULL_OFFSET; MAX_HEIGHT];
-        loop {
-            let found = self.find(&key, &mut preds, &mut succs)?;
-            if let Some(found_offset) = found {
-                let node = self
-                    .node_ref(found_offset)
-                    .ok_or(ShmSkipListError::InvalidNode(found_offset))?;
-                let flags = node.flags.load(AtomicOrdering::Acquire);
-                if flags & NODE_FLAG_MARKED != 0 || flags & NODE_FLAG_FULLY_LINKED == 0 {
-                    continue;
-                }
-                if self.node_contains_live_payload(node, payload_len, payload)? {
-                    self.push_recycled_posting(posting_offset)?;
-                    return Ok(());
-                }
-                self.prepend_existing_posting(node, posting_offset)?;
-                return Ok(());
-            }
-
-            let header = self
-                .header_ref()
-                .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
-            let node_height = self.random_height(header) as usize;
-            let head_offset = header.head.load(AtomicOrdering::Acquire);
-            let observed_height = header
-                .current_height
-                .load(AtomicOrdering::Acquire)
-                .clamp(1, MAX_HEIGHT as u32) as usize;
-            for level in observed_height..node_height {
-                preds[level] = head_offset;
-                succs[level] = NULL_OFFSET;
-            }
-
-            let tower_offset = self.alloc_tower(node_height, &succs)?;
-            let node_offset =
-                self.alloc_node(key, node_height as u8, tower_offset, posting_offset)?;
-
-            let pred_lane_0 = self.lane_ref_by_offset(preds[0], 0)?;
-            if pred_lane_0
-                .next
-                .compare_exchange(
-                    succs[0],
-                    node_offset,
-                    AtomicOrdering::AcqRel,
-                    AtomicOrdering::Acquire,
-                )
-                .is_err()
-            {
-                self.recycle_unlinked_insert_node_and_tower(
-                    node_offset,
-                    tower_offset,
-                    node_height,
-                )?;
-                continue;
-            }
-            header
-                .distinct_key_count
-                .fetch_add(1, AtomicOrdering::AcqRel);
-
-            for level in 1..node_height {
-                loop {
-                    let pred_lane = self.lane_ref_by_offset(preds[level], level)?;
-                    if pred_lane
-                        .next
-                        .compare_exchange(
-                            succs[level],
-                            node_offset,
-                            AtomicOrdering::AcqRel,
-                            AtomicOrdering::Acquire,
-                        )
-                        .is_ok()
-                    {
-                        break;
-                    }
-
-                    let _ = self.find(&key, &mut preds, &mut succs)?;
-                    if succs[level] == node_offset {
-                        break;
-                    }
-                }
-            }
-
+        if let Some(offset) = self.find(&key, &mut preds, &mut succs)? {
             let node = self
-                .node_ref(node_offset)
-                .ok_or(ShmSkipListError::InvalidNode(node_offset))?;
-            node.flags
-                .fetch_or(NODE_FLAG_FULLY_LINKED, AtomicOrdering::Release);
-            self.maybe_raise_height(header, node_height as u32);
+                .node_ref(offset)
+                .ok_or(ShmSkipListError::InvalidNode(offset))?;
+            if self.node_contains_live_payload(node, payload_len, payload)? {
+                self.push_recycled_posting(posting_offset)?;
+            } else {
+                self.prepend_existing_posting(node, posting_offset)?;
+            }
             return Ok(());
         }
-    }
-
-    fn attach_posting_to_existing_node(
-        &self,
-        node_offset: u32,
-        posting_offset: u32,
-        payload_len: u16,
-        payload: &[u8],
-    ) -> Result<(), ShmSkipListError> {
-        let node = self
-            .node_ref(node_offset)
-            .ok_or(ShmSkipListError::InvalidNode(node_offset))?;
-        let flags = node.flags.load(AtomicOrdering::Acquire);
-        if flags & NODE_FLAG_MARKED != 0 || flags & NODE_FLAG_FULLY_LINKED == 0 {
+        let header = self
+            .header_ref()
+            .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
+        let height = self.random_height(header) as usize;
+        // Validate every destination before acquiring more storage. Holding the
+        // mutation lock keeps these predecessors attached until publication ends.
+        let mut pred_lanes = [None; MAX_HEIGHT];
+        for level in 0..height {
+            pred_lanes[level] = Some(self.lane_ref_by_offset(preds[level], level)?);
+        }
+        let tower = self.alloc_tower(height, &succs)?;
+        let node_offset = match self.alloc_node(
+            key,
+            height as u8,
+            tower.capacity as u8,
+            tower.offset,
+            posting_offset,
+        ) {
+            Ok(offset) => offset,
+            Err(err) => {
+                self.push_recycled_tower(tower.offset, tower.capacity)?;
+                return Err(err);
+            }
+        };
+        let Some(node) = self.node_ref(node_offset) else {
+            self.recycle_unlinked_insert_node_and_tower(node_offset, tower.offset, tower.capacity)?;
             return Err(ShmSkipListError::InvalidNode(node_offset));
+        };
+        // No fallible operation after this point: ownership transfers to the list.
+        for lane in pred_lanes.into_iter().take(height).flatten() {
+            lane.next.store(node_offset, AtomicOrdering::Release);
         }
-        if self.node_contains_live_payload(node, payload_len, payload)? {
-            self.push_recycled_posting(posting_offset)?;
-            return Ok(());
-        }
-        self.prepend_existing_posting(node, posting_offset)
+        node.flags
+            .store(NODE_FLAG_FULLY_LINKED, AtomicOrdering::Release);
+        header
+            .distinct_key_count
+            .fetch_add(1, AtomicOrdering::Relaxed);
+        self.maybe_raise_height(header, height as u32);
+        Ok(())
     }
 
     #[inline]
@@ -1986,15 +2442,73 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         let (warm_enter, warm_exit, hot_enter, hot_exit) =
             Self::pressure_thresholds(self.shm.len());
         let failure_events = header.alloc_failure_events.load(AtomicOrdering::Acquire);
-        let reclaimed = header.gc_assist_reclaimed.load(AtomicOrdering::Acquire);
-        let reclaim_efficiency = if failure_events == 0 {
+        let total_reclaimed = header
+            .gc_assist_reclaimed
+            .load(AtomicOrdering::Acquire)
+            .saturating_add(header.gc_daemon_reclaimed.load(AtomicOrdering::Acquire));
+        let lifetime_efficiency = if failure_events == 0 {
             1.0
         } else {
-            reclaimed as f64 / failure_events as f64
+            total_reclaimed as f64 / failure_events as f64
         };
-        let force_hot_efficiency = failure_events >= 32 && reclaim_efficiency <= 0.10;
-        let force_warm_efficiency = failure_events >= 16 && reclaim_efficiency <= 0.25;
-        let healthy_efficiency = reclaim_efficiency >= 0.60;
+        let last_failures = header
+            .pressure_window_last_failures
+            .load(AtomicOrdering::Acquire);
+        let last_reclaimed = header
+            .pressure_window_last_reclaimed
+            .load(AtomicOrdering::Acquire);
+        let window_failures = failure_events.saturating_sub(last_failures);
+        let window_reclaimed = total_reclaimed.saturating_sub(last_reclaimed);
+        let window_efficiency = if window_failures == 0 {
+            lifetime_efficiency
+        } else {
+            window_reclaimed as f64 / window_failures as f64
+        };
+
+        if window_failures >= PRESSURE_WINDOW_MIN_FAILURES
+            && header
+                .pressure_window_last_failures
+                .compare_exchange(
+                    last_failures,
+                    failure_events,
+                    AtomicOrdering::AcqRel,
+                    AtomicOrdering::Acquire,
+                )
+                .is_ok()
+        {
+            header
+                .pressure_window_last_reclaimed
+                .store(total_reclaimed, AtomicOrdering::Release);
+            if window_efficiency >= PRESSURE_EFFICIENCY_HEALTHY {
+                header
+                    .pressure_window_consecutive_healthy
+                    .fetch_add(1, AtomicOrdering::AcqRel);
+            } else {
+                header
+                    .pressure_window_consecutive_healthy
+                    .store(0, AtomicOrdering::Release);
+            }
+        }
+
+        let effective_failures = if window_failures != 0 {
+            window_failures
+        } else {
+            failure_events
+        };
+        let effective_efficiency = if window_failures != 0 {
+            window_efficiency
+        } else {
+            lifetime_efficiency
+        };
+        let force_hot_efficiency =
+            effective_failures >= 32 && effective_efficiency <= PRESSURE_EFFICIENCY_HOT_FLOOR;
+        let force_warm_efficiency =
+            effective_failures >= 16 && effective_efficiency <= PRESSURE_EFFICIENCY_WARM_FLOOR;
+        let healthy_efficiency = effective_efficiency >= PRESSURE_EFFICIENCY_HEALTHY;
+        let healthy_windows = header
+            .pressure_window_consecutive_healthy
+            .load(AtomicOrdering::Acquire);
+
         loop {
             let current = header.pressure_state.load(AtomicOrdering::Acquire);
             let next = match current {
@@ -2018,7 +2532,10 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 }
                 PRESSURE_STATE_HOT => {
                     if remaining_bytes >= hot_exit && !force_hot_efficiency {
-                        if remaining_bytes >= warm_exit && healthy_efficiency {
+                        if remaining_bytes >= warm_exit
+                            && healthy_efficiency
+                            && healthy_windows >= PRESSURE_HEALTHY_WINDOWS_REQUIRED
+                        {
                             PRESSURE_STATE_NORMAL
                         } else {
                             PRESSURE_STATE_WARM
@@ -2064,9 +2581,51 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                     }
                     _ => {}
                 }
+                if next != current {
+                    self.refill_reserve_stacks_for_pressure(header, next);
+                }
                 return next;
             }
             std::hint::spin_loop();
+        }
+    }
+
+    fn refill_reserve_stacks_for_pressure(&self, header: &ShmSkipHeader<K>, state: u32) {
+        let (node_batch, posting_batch, tower_batch_per_level) = match state {
+            PRESSURE_STATE_HOT => (
+                RESERVE_REFILL_NODE_BATCH_HOT,
+                RESERVE_REFILL_POSTING_BATCH_HOT,
+                RESERVE_REFILL_TOWER_BATCH_PER_LEVEL_HOT,
+            ),
+            PRESSURE_STATE_WARM => (
+                RESERVE_REFILL_NODE_BATCH_WARM,
+                RESERVE_REFILL_POSTING_BATCH_WARM,
+                RESERVE_REFILL_TOWER_BATCH_PER_LEVEL_WARM,
+            ),
+            _ => return,
+        };
+
+        for _ in 0..node_batch {
+            let Some(offset) = self.pop_node_stack(&header.recycled_nodes) else {
+                break;
+            };
+            let _ = self.push_reserve_node(header, offset);
+        }
+
+        for _ in 0..posting_batch {
+            let Some(offset) = self.pop_posting_stack(&header.recycled_postings) else {
+                break;
+            };
+            let _ = self.push_reserve_posting(header, offset);
+        }
+
+        for tower_height in 1..=MAX_HEIGHT {
+            for _ in 0..tower_batch_per_level {
+                let Some(offset) = self.pop_recycled_tower_with_header(header, tower_height) else {
+                    break;
+                };
+                let _ = self.push_reserve_tower(header, offset, tower_height);
+            }
         }
     }
 
@@ -2094,7 +2653,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             _ => GC_ASSIST_BATCH_NORMAL,
         };
         header.gc_assist_calls.fetch_add(1, AtomicOrdering::AcqRel);
-        let reclaimed = self.collect_garbage_once(batch);
+        let reclaimed = self.collect_garbage_inner(batch);
         if reclaimed > 0 {
             header
                 .gc_assist_reclaimed
@@ -2139,9 +2698,16 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         payload: &[u8],
     ) -> Result<u32, ShmSkipListError> {
         let ptr = self.posting_ptr(offset)?;
-        let entry = self.build_posting_entry(payload_len, payload, NULL_OFFSET)?;
-        // SAFETY:
-        // `offset` is a previously allocated posting slot popped from recycle/reserve stacks.
+        // This slot is exclusively owned and not visible to readers. Clear old spill
+        // metadata before a fallible spill allocation so rollback cannot free it twice.
+        unsafe { ptr.write(PostingEntry::new_inline(0, &[], NULL_OFFSET)) };
+        let entry = match self.build_posting_entry(payload_len, payload, NULL_OFFSET) {
+            Ok(entry) => entry,
+            Err(err) => {
+                self.push_recycled_posting(offset)?;
+                return Err(err);
+            }
+        };
         unsafe { ptr.write(entry) };
         Ok(offset)
     }
@@ -2151,12 +2717,12 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         payload_len: u16,
         payload: &[u8],
     ) -> Result<u32, ShmSkipListError> {
+        Self::validate_payload_args(payload_len, payload)?;
         let header = self
             .header_ref()
             .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
         let remaining = self.shm.chunked_arena().remaining_bytes();
         let pressure_state = self.update_pressure_state(header, remaining);
-
         if pressure_state != PRESSURE_STATE_NORMAL {
             if let Some(offset) = self.pop_reserve_posting() {
                 return self.initialize_recycled_posting(offset, payload_len, payload);
@@ -2165,39 +2731,54 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         if let Some(offset) = self.pop_recycled_posting() {
             return self.initialize_recycled_posting(offset, payload_len, payload);
         }
+        // Reserve the posting slot before its spill. No by-value posting containing
+        // an allocated spill is discarded on a failed posting allocation.
+        let allocate_slot = || {
+            let offset = self.shm.chunked_arena().alloc_raw_in_class(
+                size_of::<PostingEntry>(),
+                align_of::<PostingEntry>(),
+                ArenaClass::SkipPosting,
+            )?;
+            header
+                .allocated_postings
+                .fetch_add(1, AtomicOrdering::Relaxed);
+            Ok::<_, ShmAllocError>(offset)
+        };
+        let offset = match allocate_slot() {
+            Ok(offset) => offset,
+            Err(_) => {
+                self.maybe_collect_garbage_on_alloc_failure(header);
+                if let Some(offset) = self
+                    .pop_reserve_posting()
+                    .or_else(|| self.pop_recycled_posting())
+                {
+                    offset
+                } else {
+                    allocate_slot()?
+                }
+            }
+        };
+        self.initialize_recycled_posting(offset, payload_len, payload)
+    }
 
-        let fresh = self.build_posting_entry(payload_len, payload, NULL_OFFSET)?;
-        match self
+    fn alloc_fresh_node(
+        &self,
+        header: &ShmSkipHeader<K>,
+        node: ShmSkipNode<K>,
+    ) -> Result<RelPtr<ShmSkipNode<K>>, ShmAllocError> {
+        let ptr = self
             .shm
             .chunked_arena()
-            .alloc_in_class(fresh, ArenaClass::SkipPosting)
-        {
-            Ok(ptr) => Ok(ptr.load(AtomicOrdering::Acquire)),
-            Err(err) => {
-                self.maybe_collect_garbage_on_alloc_failure(header);
-                if header.pressure_state.load(AtomicOrdering::Acquire) != PRESSURE_STATE_NORMAL {
-                    if let Some(offset) = self.pop_reserve_posting() {
-                        return self.initialize_recycled_posting(offset, payload_len, payload);
-                    }
-                }
-                if let Some(offset) = self.pop_recycled_posting() {
-                    return self.initialize_recycled_posting(offset, payload_len, payload);
-                }
-                let _ = err;
-                let retry_fresh = self.build_posting_entry(payload_len, payload, NULL_OFFSET)?;
-                Ok(self
-                    .shm
-                    .chunked_arena()
-                    .alloc_in_class(retry_fresh, ArenaClass::SkipPosting)?
-                    .load(AtomicOrdering::Acquire))
-            }
-        }
+            .alloc_in_class(node, ArenaClass::SkipNode)?;
+        header.allocated_nodes.fetch_add(1, AtomicOrdering::Relaxed);
+        Ok(ptr)
     }
 
     fn alloc_node(
         &self,
         key: K,
         height: u8,
+        tower_capacity: u8,
         tower_offset: u32,
         posting_offset: u32,
     ) -> Result<u32, ShmSkipListError> {
@@ -2217,6 +2798,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                     ptr.write(ShmSkipNode::new(
                         key,
                         height,
+                        tower_capacity,
                         tower_offset,
                         posting_offset,
                         1,
@@ -2234,6 +2816,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 ptr.write(ShmSkipNode::new(
                     key,
                     height,
+                    tower_capacity,
                     tower_offset,
                     posting_offset,
                     1,
@@ -2242,9 +2825,9 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             return Ok(offset);
         }
 
-        match self.shm.chunked_arena().alloc_in_class(
-            ShmSkipNode::new(key, height, tower_offset, posting_offset, 1),
-            ArenaClass::SkipNode,
+        match self.alloc_fresh_node(
+            header,
+            ShmSkipNode::new(key, height, tower_capacity, tower_offset, posting_offset, 1),
         ) {
             Ok(ptr) => Ok(ptr.load(AtomicOrdering::Acquire)),
             Err(err) => {
@@ -2259,6 +2842,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                             ptr.write(ShmSkipNode::new(
                                 key,
                                 height,
+                                tower_capacity,
                                 tower_offset,
                                 posting_offset,
                                 1,
@@ -2276,6 +2860,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                         ptr.write(ShmSkipNode::new(
                             key,
                             height,
+                            tower_capacity,
                             tower_offset,
                             posting_offset,
                             1,
@@ -2285,11 +2870,16 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
                 }
                 let _ = err;
                 Ok(self
-                    .shm
-                    .chunked_arena()
-                    .alloc_in_class(
-                        ShmSkipNode::new(key, height, tower_offset, posting_offset, 1),
-                        ArenaClass::SkipNode,
+                    .alloc_fresh_node(
+                        header,
+                        ShmSkipNode::new(
+                            key,
+                            height,
+                            tower_capacity,
+                            tower_offset,
+                            posting_offset,
+                            1,
+                        ),
                     )?
                     .load(AtomicOrdering::Acquire))
             }
@@ -2500,7 +3090,9 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             &header.recycled_towers[tower_height - 1],
             tower_offset,
             tower_height,
-        )
+        )?;
+        Self::set_tower_mask_bit(&header.recycled_tower_nonempty_mask, tower_height);
+        Ok(())
     }
 
     fn push_tower_stack(
@@ -2574,6 +3166,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         header
             .reserve_tower_pushes
             .fetch_add(1, AtomicOrdering::AcqRel);
+        Self::set_tower_mask_bit(&header.reserve_tower_nonempty_mask, tower_height);
         Ok(())
     }
 
@@ -2582,7 +3175,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             return None;
         }
         let header = self.header_ref()?;
-        let out = self.pop_tower_stack(&header.reserve_towers[tower_height - 1], tower_height);
+        let out = self.pop_reserve_tower_with_header(header, tower_height);
         if out.is_some() {
             header
                 .reserve_tower_hits
@@ -2599,34 +3192,181 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         if !(1..=MAX_HEIGHT).contains(&tower_height) {
             return None;
         }
-        self.header_ref().and_then(|header| {
-            self.pop_tower_stack(&header.recycled_towers[tower_height - 1], tower_height)
-        })
+        let header = self.header_ref()?;
+        self.pop_recycled_tower_with_header(header, tower_height)
     }
 
-    fn pop_reserve_tower_at_least(&self, min_height: usize) -> Option<u32> {
+    fn pop_reserve_tower_at_least(&self, min_height: usize) -> Option<TowerAlloc> {
         if min_height > MAX_HEIGHT {
             return None;
         }
+        let header = self.header_ref()?;
+        if let Some(mut tower_height) = Self::first_set_tower_height_at_or_above(
+            header
+                .reserve_tower_nonempty_mask
+                .load(AtomicOrdering::Acquire),
+            min_height,
+        ) {
+            loop {
+                if let Some(offset) = self.pop_reserve_tower_with_header(header, tower_height) {
+                    header
+                        .reserve_tower_hits
+                        .fetch_add(1, AtomicOrdering::AcqRel);
+                    return Some(TowerAlloc {
+                        offset,
+                        capacity: tower_height,
+                    });
+                }
+                let mask = header
+                    .reserve_tower_nonempty_mask
+                    .load(AtomicOrdering::Acquire);
+                if let Some(next) =
+                    Self::first_set_tower_height_at_or_above(mask, tower_height.saturating_add(1))
+                {
+                    tower_height = next;
+                    continue;
+                }
+                break;
+            }
+        }
         for tower_height in min_height..=MAX_HEIGHT {
-            if let Some(offset) = self.pop_reserve_tower(tower_height) {
-                return Some(offset);
+            if let Some(offset) = self.pop_reserve_tower_with_header(header, tower_height) {
+                header
+                    .reserve_tower_hits
+                    .fetch_add(1, AtomicOrdering::AcqRel);
+                return Some(TowerAlloc {
+                    offset,
+                    capacity: tower_height,
+                });
+            }
+        }
+        header
+            .reserve_tower_misses
+            .fetch_add(1, AtomicOrdering::AcqRel);
+        None
+    }
+
+    fn pop_recycled_tower_at_least(&self, min_height: usize) -> Option<TowerAlloc> {
+        if min_height > MAX_HEIGHT {
+            return None;
+        }
+        let header = self.header_ref()?;
+        if let Some(mut tower_height) = Self::first_set_tower_height_at_or_above(
+            header
+                .recycled_tower_nonempty_mask
+                .load(AtomicOrdering::Acquire),
+            min_height,
+        ) {
+            loop {
+                if let Some(offset) = self.pop_recycled_tower_with_header(header, tower_height) {
+                    return Some(TowerAlloc {
+                        offset,
+                        capacity: tower_height,
+                    });
+                }
+                let mask = header
+                    .recycled_tower_nonempty_mask
+                    .load(AtomicOrdering::Acquire);
+                if let Some(next) =
+                    Self::first_set_tower_height_at_or_above(mask, tower_height.saturating_add(1))
+                {
+                    tower_height = next;
+                    continue;
+                }
+                break;
+            }
+        }
+
+        for tower_height in min_height..=MAX_HEIGHT {
+            if let Some(offset) = self.pop_recycled_tower_with_header(header, tower_height) {
+                return Some(TowerAlloc {
+                    offset,
+                    capacity: tower_height,
+                });
             }
         }
         None
     }
 
-    fn pop_recycled_tower_at_least(&self, min_height: usize) -> Option<u32> {
-        if min_height > MAX_HEIGHT {
+    #[inline]
+    fn tower_bit(tower_height: usize) -> u64 {
+        1_u64 << (tower_height - 1)
+    }
+
+    #[inline]
+    fn set_tower_mask_bit(mask: &AtomicU64, tower_height: usize) {
+        mask.fetch_or(Self::tower_bit(tower_height), AtomicOrdering::AcqRel);
+    }
+
+    #[inline]
+    fn clear_tower_mask_if_stack_empty(
+        mask: &AtomicU64,
+        stack_head: &AtomicU64,
+        tower_height: usize,
+    ) {
+        if stack_head_offset(stack_head.load(AtomicOrdering::Acquire)) == NULL_OFFSET {
+            mask.fetch_and(!Self::tower_bit(tower_height), AtomicOrdering::AcqRel);
+        }
+    }
+
+    #[inline]
+    fn first_set_tower_height_at_or_above(mask: u64, min_height: usize) -> Option<usize> {
+        if min_height == 0 || min_height > MAX_HEIGHT {
             return None;
         }
-
-        for tower_height in min_height..=MAX_HEIGHT {
-            if let Some(offset) = self.pop_recycled_tower(tower_height) {
-                return Some(offset);
-            }
+        let filtered = mask & (!0_u64 << (min_height - 1));
+        if filtered == 0 {
+            return None;
         }
-        None
+        Some(filtered.trailing_zeros() as usize + 1)
+    }
+
+    #[inline]
+    fn pop_reserve_tower_with_header(
+        &self,
+        header: &ShmSkipHeader<K>,
+        tower_height: usize,
+    ) -> Option<u32> {
+        let stack = &header.reserve_towers[tower_height - 1];
+        let out = self.pop_tower_stack(stack, tower_height);
+        if out.is_none() {
+            Self::clear_tower_mask_if_stack_empty(
+                &header.reserve_tower_nonempty_mask,
+                stack,
+                tower_height,
+            );
+        } else {
+            Self::clear_tower_mask_if_stack_empty(
+                &header.reserve_tower_nonempty_mask,
+                stack,
+                tower_height,
+            );
+        }
+        out
+    }
+
+    #[inline]
+    fn pop_recycled_tower_with_header(
+        &self,
+        header: &ShmSkipHeader<K>,
+        tower_height: usize,
+    ) -> Option<u32> {
+        let stack = &header.recycled_towers[tower_height - 1];
+        let out = self.pop_tower_stack(stack, tower_height);
+        if out.is_none() {
+            Self::clear_tower_mask_if_stack_empty(
+                &header.recycled_tower_nonempty_mask,
+                stack,
+                tower_height,
+            );
+        } else {
+            Self::clear_tower_mask_if_stack_empty(
+                &header.recycled_tower_nonempty_mask,
+                stack,
+                tower_height,
+            );
+        }
+        out
     }
 
     fn node_ptr(&self, offset: u32) -> Result<*mut ShmSkipNode<K>, ShmSkipListError> {
@@ -2665,9 +3405,9 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         &self,
         node_offset: u32,
         tower_offset: u32,
-        node_height: usize,
+        tower_capacity: usize,
     ) -> Result<(), ShmSkipListError> {
-        self.push_recycled_tower(tower_offset, node_height)?;
+        self.push_recycled_tower(tower_offset, tower_capacity)?;
         self.push_recycled_node(node_offset)?;
         Ok(())
     }
@@ -2687,16 +3427,36 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             posting_offset = next;
         }
 
-        self.push_recycled_tower(node.tower_offset, node.height as usize)?;
+        self.push_recycled_tower(node.tower_offset, node.tower_capacity as usize)?;
         self.push_recycled_node(node_offset)?;
         Ok(())
+    }
+
+    fn alloc_fresh_tower(
+        &self,
+        header: &ShmSkipHeader<K>,
+        bytes: usize,
+        height: usize,
+    ) -> Result<u32, ShmAllocError> {
+        let offset = self.shm.chunked_arena().alloc_raw_in_class(
+            bytes,
+            align_of::<SkipLane<K>>(),
+            ArenaClass::SkipTower,
+        )?;
+        header
+            .allocated_towers
+            .fetch_add(1, AtomicOrdering::Relaxed);
+        header
+            .allocated_tower_lanes
+            .fetch_add(height as u64, AtomicOrdering::Relaxed);
+        Ok(offset)
     }
 
     fn alloc_tower(
         &self,
         height: usize,
         succs: &[u32; MAX_HEIGHT],
-    ) -> Result<u32, ShmSkipListError> {
+    ) -> Result<TowerAlloc, ShmSkipListError> {
         let header = self
             .header_ref()
             .ok_or(ShmSkipListError::InvalidHeader(self.header_offset))?;
@@ -2705,92 +3465,114 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
         let bytes = size_of::<SkipLane<K>>()
             .checked_mul(height)
             .ok_or(ShmAllocError::SizeOverflow)?;
-        let tower_offset = if pressure_state != PRESSURE_STATE_NORMAL {
+        let tower_alloc = if pressure_state != PRESSURE_STATE_NORMAL {
             if let Some(offset) = self.pop_reserve_tower(height) {
-                offset
+                TowerAlloc {
+                    offset,
+                    capacity: height,
+                }
             } else if let Some(offset) = self.pop_recycled_tower(height) {
-                offset
-            } else if let Some(offset) = self.pop_reserve_tower_at_least(height + 1) {
-                offset
-            } else if let Some(offset) = self.pop_recycled_tower_at_least(height + 1) {
-                offset
+                TowerAlloc {
+                    offset,
+                    capacity: height,
+                }
+            } else if let Some(tower) = self.pop_reserve_tower_at_least(height + 1) {
+                tower
+            } else if let Some(tower) = self.pop_recycled_tower_at_least(height + 1) {
+                tower
             } else {
-                match self.shm.chunked_arena().alloc_raw_in_class(
-                    bytes,
-                    align_of::<SkipLane<K>>(),
-                    ArenaClass::SkipTower,
-                ) {
-                    Ok(offset) => offset,
+                match self.alloc_fresh_tower(header, bytes, height) {
+                    Ok(offset) => TowerAlloc {
+                        offset,
+                        capacity: height,
+                    },
                     Err(err) => {
                         self.maybe_collect_garbage_on_alloc_failure(header);
                         if let Some(offset) = self.pop_reserve_tower(height) {
-                            offset
+                            TowerAlloc {
+                                offset,
+                                capacity: height,
+                            }
                         } else if let Some(offset) = self.pop_recycled_tower(height) {
-                            offset
-                        } else if let Some(offset) = self.pop_reserve_tower_at_least(height + 1) {
-                            offset
-                        } else if let Some(offset) = self.pop_recycled_tower_at_least(height + 1) {
-                            offset
+                            TowerAlloc {
+                                offset,
+                                capacity: height,
+                            }
+                        } else if let Some(tower) = self.pop_reserve_tower_at_least(height + 1) {
+                            tower
+                        } else if let Some(tower) = self.pop_recycled_tower_at_least(height + 1) {
+                            tower
                         } else {
                             let _ = err;
-                            self.shm.chunked_arena().alloc_raw_in_class(
-                                bytes,
-                                align_of::<SkipLane<K>>(),
-                                ArenaClass::SkipTower,
-                            )?
+                            let offset = self.alloc_fresh_tower(header, bytes, height)?;
+                            TowerAlloc {
+                                offset,
+                                capacity: height,
+                            }
                         }
                     }
                 }
             }
         } else if let Some(offset) = self.pop_recycled_tower(height) {
-            offset
-        } else if let Some(offset) = self.pop_recycled_tower_at_least(height + 1) {
-            offset
+            TowerAlloc {
+                offset,
+                capacity: height,
+            }
+        } else if let Some(tower) = self.pop_recycled_tower_at_least(height + 1) {
+            tower
         } else {
-            match self.shm.chunked_arena().alloc_raw_in_class(
-                bytes,
-                align_of::<SkipLane<K>>(),
-                ArenaClass::SkipTower,
-            ) {
-                Ok(offset) => offset,
+            match self.alloc_fresh_tower(header, bytes, height) {
+                Ok(offset) => TowerAlloc {
+                    offset,
+                    capacity: height,
+                },
                 Err(err) => {
                     self.maybe_collect_garbage_on_alloc_failure(header);
                     if header.pressure_state.load(AtomicOrdering::Acquire) != PRESSURE_STATE_NORMAL
                     {
                         if let Some(offset) = self.pop_reserve_tower(height) {
-                            offset
+                            TowerAlloc {
+                                offset,
+                                capacity: height,
+                            }
                         } else if let Some(offset) = self.pop_recycled_tower(height) {
-                            offset
-                        } else if let Some(offset) = self.pop_reserve_tower_at_least(height + 1) {
-                            offset
-                        } else if let Some(offset) = self.pop_recycled_tower_at_least(height + 1) {
-                            offset
+                            TowerAlloc {
+                                offset,
+                                capacity: height,
+                            }
+                        } else if let Some(tower) = self.pop_reserve_tower_at_least(height + 1) {
+                            tower
+                        } else if let Some(tower) = self.pop_recycled_tower_at_least(height + 1) {
+                            tower
                         } else {
                             let _ = err;
-                            self.shm.chunked_arena().alloc_raw_in_class(
-                                bytes,
-                                align_of::<SkipLane<K>>(),
-                                ArenaClass::SkipTower,
-                            )?
+                            let offset = self.alloc_fresh_tower(header, bytes, height)?;
+                            TowerAlloc {
+                                offset,
+                                capacity: height,
+                            }
                         }
                     } else if let Some(offset) = self.pop_recycled_tower(height) {
-                        offset
-                    } else if let Some(offset) = self.pop_recycled_tower_at_least(height + 1) {
-                        offset
+                        TowerAlloc {
+                            offset,
+                            capacity: height,
+                        }
+                    } else if let Some(tower) = self.pop_recycled_tower_at_least(height + 1) {
+                        tower
                     } else {
                         let _ = err;
-                        self.shm.chunked_arena().alloc_raw_in_class(
-                            bytes,
-                            align_of::<SkipLane<K>>(),
-                            ArenaClass::SkipTower,
-                        )?
+                        let offset = self.alloc_fresh_tower(header, bytes, height)?;
+                        TowerAlloc {
+                            offset,
+                            capacity: height,
+                        }
                     }
                 }
             }
         };
         let base = self.shm.mmap_base();
         for level in 0..height {
-            let ptr = tower_ptr::<K>(base, tower_offset, level, height).ok_or(
+            let ptr = tower_ptr::<K>(base, tower_alloc.offset, level, tower_alloc.capacity).ok_or(
                 ShmSkipListError::InvalidLane {
                     node_offset: NULL_OFFSET,
                     level,
@@ -2800,7 +3582,7 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
             // `alloc_raw` reserved this memory and `tower_ptr` validated bounds/alignment.
             unsafe { ptr.write(SkipLane::new(succs[level])) };
         }
-        Ok(tower_offset)
+        Ok(tower_alloc)
     }
 
     fn maybe_raise_height(&self, header: &ShmSkipHeader<K>, node_height: u32) {
@@ -2937,6 +3719,8 @@ impl<K: ShmSkipKey> ShmSkipList<K> {
 
 pub struct ShmSkipListGcDaemon {
     pid: i32,
+    shm: Arc<ShmArena>,
+    stop_offset: u32,
 }
 
 impl ShmSkipListGcDaemon {
@@ -2945,7 +3729,26 @@ impl ShmSkipListGcDaemon {
         self.pid
     }
 
+    /// Request shutdown outside the shared mutation critical section, then reap the child.
+    pub fn stop(&self) -> Result<(), ShmSkipListError> {
+        self.request_stop()?;
+        self.join()
+    }
+
+    fn request_stop(&self) -> Result<(), ShmSkipListError> {
+        let flag = RelPtr::<AtomicU32>::from_offset(self.stop_offset)
+            .as_ref(self.shm.mmap_base())
+            .ok_or(ShmSkipListError::InvalidHeader(self.stop_offset))?;
+        flag.store(1, AtomicOrdering::Release);
+        Ok(())
+    }
+
     pub fn terminate(&self, signal: i32) -> Result<(), ShmSkipListError> {
+        if signal == libc::SIGTERM || signal == libc::SIGINT {
+            return self.request_stop();
+        }
+        // Abrupt signals are reserved for crash/recovery tests: they may strand
+        // a shared lock, so the arena must be recovered before further use.
         // SAFETY:
         // `pid` came from a successful fork call and belongs to this process group.
         let rc = unsafe { libc::kill(self.pid, signal) };
@@ -3154,6 +3957,516 @@ mod tests {
     }
 
     #[test]
+    fn allocation_audit_accounts_for_churn_retirement_and_reuse() {
+        let list = make_list();
+        let initial = list.audit_allocations().unwrap();
+        assert_eq!(initial.allocated.nodes, 1);
+        assert_eq!(initial.allocated.postings, 0);
+        assert_eq!(initial.allocated.towers, 1);
+        assert_eq!(initial.allocated.tower_lanes, MAX_HEIGHT as u64);
+        assert_eq!(initial.allocated, initial.reachable);
+        for id in 0..64_u32 {
+            list.insert_payload(TestKey((id % 4) as i64), 4, &id.to_le_bytes())
+                .unwrap();
+        }
+        let epoch = ProcArrayEpochGuard::acquire(list.shm.as_ref()).unwrap();
+        for id in 0..64_u32 {
+            list.move_payload_relink(
+                &TestKey((id % 4) as i64),
+                TestKey(100 + id as i64),
+                4,
+                &id.to_le_bytes(),
+            )
+            .unwrap();
+        }
+        let pending = list.audit_allocations().unwrap();
+        assert_eq!(pending.reachable.nodes, 65); // includes sentinel
+        assert_eq!(pending.reachable.postings, 64);
+        assert_eq!(pending.retired.nodes, 4);
+        assert_eq!(pending.retired.postings, 64); // node-owned + individually retired
+        list.collect_garbage_once(usize::MAX);
+        assert_eq!(
+            list.audit_allocations().unwrap(),
+            pending,
+            "pinned epoch retains all retired storage"
+        );
+        drop(epoch);
+        list.collect_garbage_once(usize::MAX);
+        let reclaimed = list.audit_allocations().unwrap();
+        assert_eq!(reclaimed.retired, ShmSkipAllocationCounts::default());
+        assert_eq!(reclaimed.allocated, pending.allocated);
+        assert_eq!(reclaimed.reusable.nodes, 4);
+        assert_eq!(reclaimed.reusable.postings, 64);
+        for id in 0..64_u32 {
+            list.move_payload_relink(
+                &TestKey(100 + id as i64),
+                TestKey((id % 4) as i64),
+                4,
+                &id.to_le_bytes(),
+            )
+            .unwrap();
+            list.collect_garbage_once(usize::MAX);
+        }
+        let reused = list.audit_allocations().unwrap();
+        assert_eq!(reused.reachable.nodes, 5);
+        assert_eq!(reused.reachable.postings, 64);
+        assert_eq!(reused.retired, ShmSkipAllocationCounts::default());
+        assert_eq!(
+            reused.allocated.nodes, reclaimed.allocated.nodes,
+            "recycled node slots remain owned by this index"
+        );
+        assert_eq!(reused.allocated.postings, reclaimed.allocated.postings);
+    }
+
+    #[test]
+    fn allocation_audit_accounts_for_failed_insert_rollbacks() {
+        let list = make_list();
+        leave_arena_bytes(
+            &list,
+            size_of::<PostingEntry>() + 64 + size_of::<SkipLane<TestKey>>(),
+        );
+        let payload = [7_u8; 64];
+        for _ in 0..20 {
+            list.header_ref()
+                .unwrap()
+                .rng_state
+                .store(1, AtomicOrdering::Relaxed);
+            assert!(matches!(
+                list.insert_payload(TestKey(1), 64, &payload),
+                Err(ShmSkipListError::Alloc(_))
+            ));
+            let audit = list.audit_allocations().unwrap();
+            assert_eq!(audit.reachable.nodes, 1);
+            assert_eq!(audit.reachable.postings, 0);
+            assert_eq!(audit.reusable.postings, 1);
+            assert_eq!(audit.reusable.towers, 1);
+            assert_eq!(audit.reusable.tower_lanes, 1);
+            assert_eq!(audit.retired, ShmSkipAllocationCounts::default());
+        }
+    }
+
+    #[test]
+    fn allocation_audit_counts_physical_capacity_after_tower_reuse() {
+        let list = make_list();
+        let succs = [NULL_OFFSET; MAX_HEIGHT];
+        let tower = list.alloc_tower(8, &succs).unwrap();
+        list.push_recycled_tower(tower.offset, tower.capacity)
+            .unwrap();
+        let shorter = list.alloc_tower(1, &succs).unwrap();
+        assert_eq!(shorter.offset, tower.offset);
+        assert_eq!(shorter.capacity, 8);
+        list.push_recycled_tower(shorter.offset, shorter.capacity)
+            .unwrap();
+        let audit = list.audit_allocations().unwrap();
+        assert_eq!(audit.allocated.towers, 2);
+        assert_eq!(audit.allocated.tower_lanes, MAX_HEIGHT as u64 + 8);
+        assert_eq!(audit.reusable.towers, 1);
+        assert_eq!(audit.reusable.tower_lanes, 8);
+    }
+
+    #[test]
+    fn allocation_audit_rejects_an_unreachable_unretired_node() {
+        let list = make_list();
+        list.header_ref()
+            .unwrap()
+            .rng_state
+            .store(1, AtomicOrdering::Relaxed);
+        list.insert_payload(TestKey(1), 1, b"x").unwrap();
+        list.audit_allocations().unwrap();
+        // Reproduce the leaked ownership state: allocation counters and logical
+        // distinct count still include a node that no live/retired/free root owns.
+        let head = list
+            .header_ref()
+            .unwrap()
+            .head
+            .load(AtomicOrdering::Acquire);
+        list.lane_ref_by_offset(head, 0)
+            .unwrap()
+            .next
+            .store(NULL_OFFSET, AtomicOrdering::Release);
+        match list.audit_allocations() {
+            Err(ShmSkipListError::AllocationAudit(message)) => assert!(
+                message.contains("unaccounted structural storage"),
+                "{message}"
+            ),
+            result => panic!("audit accepted an unreachable allocated node: {result:?}"),
+        }
+    }
+
+    #[test]
+    fn allocation_audit_rejects_duplicate_pool_ownership() {
+        let list = make_list();
+        list.insert_payload(TestKey(1), 1, b"x").unwrap();
+        list.remove_payload(&TestKey(1), 1, b"x").unwrap();
+        list.collect_garbage_once(usize::MAX);
+        list.audit_allocations().unwrap();
+        let header = list.header_ref().unwrap();
+        let offset = stack_head_offset(header.recycled_nodes.load(AtomicOrdering::Acquire));
+        assert_ne!(offset, NULL_OFFSET);
+        // The same slot cannot belong to both recycling pools.
+        header
+            .reserve_nodes
+            .store(pack_stack_head(offset, 1), AtomicOrdering::Release);
+        assert!(
+            matches!(list.audit_allocations(), Err(ShmSkipListError::AllocationAudit(message)) if message.contains("duplicate ownership"))
+        );
+    }
+
+    #[test]
+    fn insert_cannot_publish_through_a_deleted_predecessor() {
+        use std::cell::{Cell, RefCell};
+        use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
+        thread_local! {
+            // Skip the duplicate preflight lookup; pause inside the mutating find.
+            static SKIP_PREFLIGHT: Cell<bool> = const { Cell::new(false) };
+            static PAUSE: RefCell<Option<(SyncSender<()>, Receiver<()>)>> = const { RefCell::new(None) };
+        }
+        #[derive(Clone, Copy)]
+        struct PausingKey(i64);
+        impl ShmSkipKey for PausingKey {
+            fn sentinel() -> Self {
+                Self(i64::MIN)
+            }
+            fn cmp_key(&self, other: &Self) -> Ordering {
+                let result = self.0.cmp(&other.0);
+                if self.0 == 1 && other.0 == 2 && !SKIP_PREFLIGHT.with(|skip| skip.replace(false)) {
+                    if let Some((observed, resume)) = PAUSE.with(|pause| pause.borrow_mut().take())
+                    {
+                        observed.send(()).unwrap();
+                        resume.recv().unwrap();
+                    }
+                }
+                result
+            }
+        }
+        let arena = Arc::new(ShmArena::new(1 << 20).unwrap());
+        let list = ShmSkipList::<PausingKey>::new_in_shared(arena).unwrap();
+        list.insert_payload(PausingKey(1), 1, b"a").unwrap();
+        let (observed_tx, observed_rx) = sync_channel(0);
+        let (resume_tx, resume_rx) = sync_channel(0);
+        let inserting = list.clone();
+        let insert = std::thread::spawn(move || {
+            SKIP_PREFLIGHT.with(|skip| skip.set(true));
+            PAUSE.with(|pause| *pause.borrow_mut() = Some((observed_tx, resume_rx)));
+            inserting.insert_payload(PausingKey(2), 1, b"b")
+        });
+        observed_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        let (started_tx, started_rx) = sync_channel(0);
+        let (removed_tx, removed_rx) = sync_channel(1);
+        let deleting = list.clone();
+        let delete = std::thread::spawn(move || {
+            started_tx.send(()).unwrap();
+            let result = deleting.remove_payload(&PausingKey(1), 1, b"a");
+            removed_tx.send(()).unwrap();
+            result
+        });
+        started_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        // The old protocol completes deletion here, then publishes through the
+        // detached node. The guarded protocol prevents that destructive interleave.
+        let removed_while_insert_paused =
+            removed_rx.recv_timeout(Duration::from_millis(30)).is_ok();
+        resume_tx.send(()).unwrap();
+        insert.join().unwrap().unwrap();
+        delete.join().unwrap().unwrap();
+        assert!(
+            !removed_while_insert_paused,
+            "deletion must wait for predecessor publication"
+        );
+        list.collect_garbage_once(usize::MAX);
+        assert_eq!(list.count_payloads(&PausingKey(2)).unwrap(), 1);
+        let mut keys = Vec::new();
+        list.scan_payloads_bounded(None, None, |key, _, _| keys.push(key.0))
+            .unwrap();
+        assert_eq!(keys, vec![2]);
+        assert_eq!(list.distinct_key_count(), 1);
+        assert_eq!(list.retired_nodes(), 0);
+    }
+
+    fn leave_arena_bytes(list: &ShmSkipList<TestKey>, bytes: usize) {
+        let remaining = list.shm.chunked_arena().remaining_bytes();
+        list.shm
+            .chunked_arena()
+            .alloc_raw(remaining - bytes, 1)
+            .unwrap();
+    }
+
+    #[test]
+    fn failed_constructor_returns_its_head_node_and_tower() {
+        let shm = Arc::new(ShmArena::new(1 << 20).unwrap());
+        let arena = shm.chunked_arena();
+        let available =
+            size_of::<SkipLane<TestKey>>() * MAX_HEIGHT + size_of::<ShmSkipNode<TestKey>>();
+        arena
+            .alloc_raw(arena.remaining_bytes() - available, 1)
+            .unwrap();
+        assert!(matches!(
+            ShmSkipList::<TestKey>::new_in_shared(Arc::clone(&shm)),
+            Err(ShmSkipListError::Alloc(_))
+        ));
+        let head = arena.head_offset();
+        for _ in 0..100 {
+            assert!(matches!(
+                ShmSkipList::<TestKey>::new_in_shared(Arc::clone(&shm)),
+                Err(ShmSkipListError::Alloc(_))
+            ));
+        }
+        assert_eq!(arena.head_offset(), head);
+        assert!(arena
+            .alloc_raw_in_class(
+                size_of::<SkipLane<TestKey>>() * MAX_HEIGHT,
+                align_of::<u64>(),
+                ArenaClass::SkipTower
+            )
+            .is_ok());
+        assert!(arena
+            .alloc_raw_in_class(
+                size_of::<ShmSkipNode<TestKey>>(),
+                align_of::<ShmSkipNode<TestKey>>(),
+                ArenaClass::SkipNode
+            )
+            .is_ok());
+    }
+
+    #[test]
+    fn failed_insert_returns_posting_and_tower_for_reuse() {
+        let list = make_list();
+        let header = list.header_ref().unwrap();
+        leave_arena_bytes(
+            &list,
+            size_of::<PostingEntry>() + size_of::<SkipLane<TestKey>>(),
+        );
+        header.rng_state.store(1, AtomicOrdering::Relaxed); // one-lane tower
+        assert!(matches!(
+            list.insert_payload(TestKey(1), 1, b"x"),
+            Err(ShmSkipListError::Alloc(_))
+        ));
+        let head = list.shm.chunked_arena().head_offset();
+        for _ in 0..100 {
+            header.rng_state.store(1, AtomicOrdering::Relaxed);
+            assert!(matches!(
+                list.insert_payload(TestKey(1), 1, b"x"),
+                Err(ShmSkipListError::Alloc(_))
+            ));
+        }
+        assert_eq!(list.shm.chunked_arena().head_offset(), head);
+        let posting = list
+            .pop_reserve_posting()
+            .or_else(|| list.pop_recycled_posting())
+            .expect("failed insert must return its posting");
+        let tower = list
+            .pop_reserve_tower(1)
+            .or_else(|| list.pop_recycled_tower(1))
+            .expect("failed node allocation must return its tower");
+        assert_ne!(posting, 0);
+        assert_ne!(tower, 0);
+        assert!(
+            list.pop_reserve_posting()
+                .or_else(|| list.pop_recycled_posting())
+                .is_none(),
+            "rollback must not double-free a posting"
+        );
+        assert_eq!(list.distinct_key_count(), 0);
+        assert_eq!(list.retired_nodes(), 0);
+    }
+
+    #[test]
+    fn failed_spill_allocation_returns_the_reserved_posting_slot() {
+        let list = make_list();
+        leave_arena_bytes(&list, size_of::<PostingEntry>());
+        let payload = [7_u8; 64];
+        assert!(matches!(
+            list.insert_payload(TestKey(1), 64, &payload),
+            Err(ShmSkipListError::Alloc(_))
+        ));
+        let head = list.shm.chunked_arena().head_offset();
+        for _ in 0..100 {
+            assert!(matches!(
+                list.insert_payload(TestKey(1), 64, &payload),
+                Err(ShmSkipListError::Alloc(_))
+            ));
+        }
+        assert_eq!(list.shm.chunked_arena().head_offset(), head);
+        let slot = list
+            .pop_reserve_posting()
+            .or_else(|| list.pop_recycled_posting())
+            .expect("spill failure must not consume posting ownership");
+        assert_eq!(
+            list.posting_ref(slot).unwrap().storage_kind,
+            POSTING_STORAGE_INLINE
+        );
+    }
+
+    #[test]
+    fn collector_waits_for_a_busy_list_instead_of_skipping_reclamation() {
+        use std::sync::mpsc::sync_channel;
+        let list = make_list();
+        list.insert_payload(TestKey(1), 1, b"x").unwrap();
+        list.remove_payload(&TestKey(1), 1, b"x").unwrap();
+        let guard = list.lock_mutation().unwrap();
+        let (started_tx, started_rx) = sync_channel(0);
+        let (completed_tx, completed_rx) = sync_channel(1);
+        let collecting = list.clone();
+        let collector = std::thread::spawn(move || {
+            started_tx.send(()).unwrap();
+            completed_tx
+                .send(collecting.collect_garbage_once(usize::MAX))
+                .unwrap();
+        });
+        started_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        let skipped = completed_rx.recv_timeout(Duration::from_millis(30)).ok();
+        drop(guard);
+        let reclaimed =
+            skipped.unwrap_or_else(|| completed_rx.recv_timeout(Duration::from_secs(5)).unwrap());
+        collector.join().unwrap();
+        assert_eq!(
+            reclaimed, 1,
+            "busy writers must not cause a GC wake to be discarded"
+        );
+        assert_eq!(list.retired_nodes(), 0);
+    }
+
+    #[test]
+    fn failed_insert_reuses_spill_storage_as_well_as_posting_and_tower() {
+        let list = make_list();
+        let header = list.header_ref().unwrap();
+        leave_arena_bytes(
+            &list,
+            size_of::<PostingEntry>() + 64 + size_of::<SkipLane<TestKey>>(),
+        );
+        let payload = [7_u8; 64];
+        header.rng_state.store(1, AtomicOrdering::Relaxed);
+        assert!(matches!(
+            list.insert_payload(TestKey(1), 64, &payload),
+            Err(ShmSkipListError::Alloc(_))
+        ));
+        let head = list.shm.chunked_arena().head_offset();
+        for _ in 0..100 {
+            header.rng_state.store(1, AtomicOrdering::Relaxed);
+            assert!(matches!(
+                list.insert_payload(TestKey(1), 64, &payload),
+                Err(ShmSkipListError::Alloc(_))
+            ));
+        }
+        assert_eq!(list.shm.chunked_arena().head_offset(), head);
+        assert!(
+            list.shm
+                .chunked_arena()
+                .alloc_raw_in_class(64, align_of::<u64>(), ArenaClass::Spill64)
+                .is_ok(),
+            "failed insert must return its spill allocation"
+        );
+        assert_eq!(list.distinct_key_count(), 0);
+    }
+
+    #[test]
+    fn move_upserts_a_missing_source_without_an_external_fallback() {
+        let list = make_list();
+        assert!(list
+            .move_payload_relink(&TestKey(1), TestKey(2), 1, b"x")
+            .unwrap());
+        assert_eq!(list.count_payloads(&TestKey(1)).unwrap(), 0);
+        assert_eq!(list.count_payloads(&TestKey(2)).unwrap(), 1);
+        assert!(list
+            .move_payload_relink(&TestKey(1), TestKey(2), 1, b"x")
+            .unwrap());
+        assert_eq!(
+            list.count_payloads(&TestKey(2)).unwrap(),
+            1,
+            "retry must remain idempotent"
+        );
+        assert!(list
+            .move_payload_relink(&TestKey(3), TestKey(3), 1, b"y")
+            .unwrap());
+        assert_eq!(list.count_payloads(&TestKey(3)).unwrap(), 1);
+    }
+
+    #[test]
+    fn failed_move_keeps_source_posting_visible() {
+        let list = make_list();
+        list.insert_payload(TestKey(1), 1, b"x").unwrap();
+        leave_arena_bytes(&list, 0);
+        assert!(matches!(
+            list.move_payload_relink(&TestKey(1), TestKey(2), 1, b"x"),
+            Err(ShmSkipListError::Alloc(_))
+        ));
+        assert_eq!(list.count_payloads(&TestKey(1)).unwrap(), 1);
+        assert_eq!(list.count_payloads(&TestKey(2)).unwrap(), 0);
+    }
+
+    #[test]
+    fn persistent_key_churn_reclaims_individual_postings_after_readers_finish() {
+        let list = make_list();
+        list.insert_payload(TestKey(1), 1, b"a").unwrap();
+        list.insert_payload(TestKey(2), 1, b"b").unwrap();
+        list.insert_payload(TestKey(1), 1, b"x").unwrap();
+        let epoch = ProcArrayEpochGuard::acquire(list.shm.as_ref()).unwrap();
+        let old_node = list
+            .node_ref(list.find_readonly_exact(&TestKey(1)).unwrap().unwrap())
+            .unwrap();
+        let old_posting_offset = old_node.postings_head.load(AtomicOrdering::Acquire);
+        let old_posting = list.posting_ref(old_posting_offset).unwrap();
+        let old_next = old_posting.next.load(AtomicOrdering::Acquire);
+        assert!(list
+            .move_payload_relink(&TestKey(1), TestKey(2), 1, b"x")
+            .unwrap());
+        list.collect_garbage_once(usize::MAX);
+        assert_eq!(
+            old_posting.next.load(AtomicOrdering::Acquire),
+            old_next,
+            "retained posting must not point into another key's chain"
+        );
+        assert_eq!(
+            list.header_ref()
+                .unwrap()
+                .retired_postings
+                .load(AtomicOrdering::Acquire),
+            1
+        );
+        drop(epoch);
+        list.collect_garbage_once(usize::MAX);
+        assert_eq!(
+            list.header_ref()
+                .unwrap()
+                .retired_postings
+                .load(AtomicOrdering::Acquire),
+            0
+        );
+        // After warmup, two permanent keys can move a posting indefinitely without
+        // retaining tombstones or allocating more storage.
+        for _ in 0..2 {
+            assert!(list
+                .move_payload_relink(&TestKey(2), TestKey(1), 1, b"x")
+                .unwrap());
+            list.collect_garbage_once(usize::MAX);
+            assert!(list
+                .move_payload_relink(&TestKey(1), TestKey(2), 1, b"x")
+                .unwrap());
+            list.collect_garbage_once(usize::MAX);
+        }
+        let head = list.shm.chunked_arena().head_offset();
+        for _ in 0..1_000 {
+            assert!(list
+                .move_payload_relink(&TestKey(2), TestKey(1), 1, b"x")
+                .unwrap());
+            list.collect_garbage_once(usize::MAX);
+            assert!(list
+                .move_payload_relink(&TestKey(1), TestKey(2), 1, b"x")
+                .unwrap());
+            list.collect_garbage_once(usize::MAX);
+        }
+        assert_eq!(list.shm.chunked_arena().head_offset(), head);
+        assert_eq!(list.count_payloads(&TestKey(1)).unwrap(), 1);
+        assert_eq!(list.count_payloads(&TestKey(2)).unwrap(), 2);
+        assert_eq!(
+            list.header_ref()
+                .unwrap()
+                .retired_postings
+                .load(AtomicOrdering::Acquire),
+            0
+        );
+    }
+
+    #[test]
     fn skiplist_levels_are_sorted_acyclic_and_fully_linked() {
         const KEYS: usize = 512;
         let list = make_list();
@@ -3245,6 +4558,66 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn move_payload_keeps_old_key_immutable_for_pinned_readers() {
+        let list = make_list();
+        let old_key = TestKey(10);
+        let new_key = TestKey(10_000);
+        let payload = 1234_u64.to_le_bytes();
+        let payload_len = payload.len() as u16;
+
+        list.insert_payload(old_key, payload_len, &payload)
+            .expect("insert failed");
+        let old_node_offset = list
+            .find_readonly_exact(&old_key)
+            .expect("find old key failed")
+            .expect("old node should exist");
+        let reader_epoch = ProcArrayEpochGuard::acquire(list.shm.as_ref()).unwrap();
+
+        assert!(
+            list.move_payload_relink(&old_key, new_key, payload_len, &payload)
+                .expect("move relink failed"),
+            "single-posting absent-target move should succeed"
+        );
+
+        assert_eq!(
+            list.collect_garbage_once(usize::MAX),
+            0,
+            "pinned reader retains the old node"
+        );
+        assert_eq!(
+            list.node_ref(old_node_offset).unwrap().key,
+            old_key,
+            "a retained node key must stay immutable"
+        );
+        assert_eq!(
+            list.count_payloads(&old_key).expect("count old failed"),
+            0,
+            "old key should be empty after relink move"
+        );
+        assert_eq!(
+            list.count_payloads(&new_key).expect("count new failed"),
+            1,
+            "new key should contain moved payload"
+        );
+
+        let new_node_offset = list
+            .find_readonly_exact(&new_key)
+            .expect("find new key failed")
+            .expect("new node should exist");
+        assert_ne!(
+            new_node_offset, old_node_offset,
+            "a live reader prevents old node reuse"
+        );
+        drop(reader_epoch);
+        assert_eq!(list.collect_garbage_once(usize::MAX), 1);
+        assert_eq!(
+            list.distinct_key_count(),
+            1,
+            "distinct key count should remain stable when moving between absent keys"
+        );
     }
 
     #[test]
@@ -3600,7 +4973,7 @@ mod tests {
     }
 
     #[test]
-    fn gc_stops_at_first_unreclaimable_fifo_head() {
+    fn gc_rotates_unreclaimable_head_and_preserves_backlog() {
         let list = make_list();
         let blocker = list
             .shared_arena()
@@ -3632,10 +5005,14 @@ mod tests {
             retired_before,
             "retired backlog should remain unchanged when horizon blocks reclamation",
         );
-        assert_eq!(
-            telemetry_after.gc_nodes_examined - telemetry_before.gc_nodes_examined,
-            1,
-            "FIFO GC should stop after examining the first unreclaimable head node",
+        let examined_delta = telemetry_after.gc_nodes_examined - telemetry_before.gc_nodes_examined;
+        assert!(
+            examined_delta >= 1 && examined_delta <= retired_before,
+            "GC should examine at most one full blocked queue rotation when head nodes are not reclaimable",
+        );
+        assert!(
+            telemetry_after.gc_nodes_requeued > telemetry_before.gc_nodes_requeued,
+            "GC should rotate unreclaimable head nodes to allow progress on later eligible entries",
         );
 
         list.shared_arena()
@@ -3719,7 +5096,13 @@ mod tests {
             .expect("alloc posting a failed");
         let tower_a = list.alloc_tower(1, &succs).expect("alloc tower a failed");
         let node_a = list
-            .alloc_node(TestKey(10), 1, tower_a, posting_a)
+            .alloc_node(
+                TestKey(10),
+                1,
+                tower_a.capacity as u8,
+                tower_a.offset,
+                posting_a,
+            )
             .expect("alloc node a failed");
         list.push_reserve_node(header, node_a)
             .expect("reserve node push failed");
@@ -3738,7 +5121,13 @@ mod tests {
             .expect("alloc posting b failed");
         let tower_b = list.alloc_tower(1, &succs).expect("alloc tower b failed");
         let node_b = list
-            .alloc_node(TestKey(20), 1, tower_b, posting_b)
+            .alloc_node(
+                TestKey(20),
+                1,
+                tower_b.capacity as u8,
+                tower_b.offset,
+                posting_b,
+            )
             .expect("alloc node b failed");
         assert_eq!(node_b, node_a, "reserve node offset should be reused first");
 
@@ -3758,7 +5147,7 @@ mod tests {
         let tower = list
             .alloc_tower(reserved_height, &succs)
             .expect("alloc reserve tower failed");
-        list.push_reserve_tower(header, tower, reserved_height)
+        list.push_reserve_tower(header, tower.offset, reserved_height)
             .expect("reserve tower push failed");
 
         let (_, _, hot_enter, _) = ShmSkipList::<TestKey>::pressure_thresholds(list.shm.len());
@@ -3774,13 +5163,66 @@ mod tests {
             .alloc_tower(reused_for_height, &succs)
             .expect("alloc tower under pressure failed");
         assert_eq!(
-            reused, tower,
+            reused.offset, tower.offset,
             "tower allocator should reuse taller reserve tower when exact height missing"
+        );
+        assert_eq!(
+            reused.capacity, reserved_height,
+            "tower allocator should retain physical capacity metadata when reusing taller towers"
         );
 
         let telemetry = list.mutation_telemetry();
         assert!(telemetry.reserve_tower_pushes >= 1);
         assert!(telemetry.reserve_tower_hits >= 1);
+    }
+
+    #[test]
+    fn reserve_tower_mask_tracks_nonempty_heights_and_bounds_miss_count() {
+        let list = make_list();
+        let header = list.header_ref().expect("missing skiplist header");
+        let succs = [NULL_OFFSET; MAX_HEIGHT];
+        let tower_height = 3_usize;
+        let tower = list
+            .alloc_tower(tower_height, &succs)
+            .expect("alloc reserve tower failed");
+        list.push_reserve_tower(header, tower.offset, tower_height)
+            .expect("reserve tower push failed");
+
+        let bit = 1_u64 << (tower_height - 1);
+        assert_ne!(
+            header
+                .reserve_tower_nonempty_mask
+                .load(AtomicOrdering::Acquire)
+                & bit,
+            0,
+            "reserve tower nonempty mask should set the pushed tower height bit"
+        );
+
+        let before = list.mutation_telemetry();
+        let reused = list
+            .pop_reserve_tower_at_least(2)
+            .expect("expected reserve tower candidate at-or-above requested height");
+        assert_eq!(reused.offset, tower.offset);
+        assert_eq!(reused.capacity, tower_height);
+        let after_hit = list.mutation_telemetry();
+        assert!(after_hit.reserve_tower_hits >= before.reserve_tower_hits + 1);
+        assert_eq!(after_hit.reserve_tower_misses, before.reserve_tower_misses);
+
+        let none = list.pop_reserve_tower_at_least(2);
+        assert!(none.is_none(), "reserve stack should now be empty");
+        let after_miss = list.mutation_telemetry();
+        assert!(
+            after_miss.reserve_tower_misses <= after_hit.reserve_tower_misses + 1,
+            "at-least search should record at most one miss when the reserve tower pool is empty"
+        );
+        assert_eq!(
+            header
+                .reserve_tower_nonempty_mask
+                .load(AtomicOrdering::Acquire)
+                & bit,
+            0,
+            "reserve tower nonempty mask should clear once the stack is empty"
+        );
     }
 
     #[test]
@@ -3805,6 +5247,53 @@ mod tests {
 
         let telemetry = list.mutation_telemetry();
         assert!(telemetry.pressure_to_hot >= 1);
+    }
+
+    #[test]
+    fn pressure_state_hot_needs_healthy_windows_to_return_normal() {
+        let list = make_list();
+        let header = list.header_ref().expect("missing skiplist header");
+        let (_, warm_exit, _, hot_exit) =
+            ShmSkipList::<TestKey>::pressure_thresholds(list.shm.len());
+        let remaining = warm_exit.saturating_add(1).max(hot_exit.saturating_add(1));
+
+        header
+            .pressure_state
+            .store(PRESSURE_STATE_HOT, AtomicOrdering::Release);
+        header
+            .alloc_failure_events
+            .store(PRESSURE_WINDOW_MIN_FAILURES * 2, AtomicOrdering::Release);
+        header.gc_assist_reclaimed.store(0, AtomicOrdering::Release);
+        header
+            .gc_daemon_reclaimed
+            .store(PRESSURE_WINDOW_MIN_FAILURES * 2, AtomicOrdering::Release);
+        header
+            .pressure_window_last_failures
+            .store(PRESSURE_WINDOW_MIN_FAILURES, AtomicOrdering::Release);
+        header
+            .pressure_window_last_reclaimed
+            .store(PRESSURE_WINDOW_MIN_FAILURES, AtomicOrdering::Release);
+        header
+            .pressure_window_consecutive_healthy
+            .store(0, AtomicOrdering::Release);
+
+        let warm_only = list.update_pressure_state(header, remaining);
+        assert_eq!(
+            warm_only, PRESSURE_STATE_WARM,
+            "HOT should de-escalate only to WARM until enough healthy windows accumulate"
+        );
+
+        header
+            .pressure_state
+            .store(PRESSURE_STATE_HOT, AtomicOrdering::Release);
+        header
+            .pressure_window_consecutive_healthy
+            .store(PRESSURE_HEALTHY_WINDOWS_REQUIRED, AtomicOrdering::Release);
+        let normal = list.update_pressure_state(header, remaining);
+        assert_eq!(
+            normal, PRESSURE_STATE_NORMAL,
+            "HOT should return to NORMAL when healthy efficiency has persisted long enough"
+        );
     }
 
     #[test]

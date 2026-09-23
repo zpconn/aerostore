@@ -250,19 +250,18 @@ fn vacuum_loop<T>(
                 }
             }
         }
-        sleep_interruptible(interval, stop.as_ref());
+        sleep_interruptible(interval, stop.as_ref(), table.as_ref());
     }
 }
 
-fn sleep_interruptible(interval: Duration, stop: &AtomicBool) {
-    if interval <= STOP_POLL_INTERVAL {
-        std::thread::sleep(interval);
-        return;
-    }
-
+fn sleep_interruptible<T: Copy + Send + Sync + 'static>(
+    interval: Duration,
+    stop: &AtomicBool,
+    table: &OccTable<T>,
+) {
     let mut remaining = interval;
     while remaining > Duration::ZERO {
-        if stop.load(Ordering::Acquire) {
+        if stop.load(Ordering::Acquire) || table.take_vacuum_request() {
             break;
         }
 
