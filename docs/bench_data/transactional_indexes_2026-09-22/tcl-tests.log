@@ -1,0 +1,24 @@
+   Compiling aerostore_tcl v0.1.0 (/home/zpconn/code/aerostore/aerostore_tcl)
+    Finished `release` profile [optimized] target(s) in 1.01s
+     Running unittests src/lib.rs (target/release/deps/aerostore_tcl-51c345cc919ed115)
+
+running 16 tests
+test tests::append_stapi_option_wraps_values_in_braces ... ok
+test tests::decode_fixed_ascii_stops_at_first_nul ... ok
+test tests::fixed_ascii_round_trip_and_overflow_rejection ... ok
+test tests::flight_state_delta_codec_round_trips_changed_fields ... ok
+test tests::format_decode_error_includes_line_column_and_message ... ok
+test tests::native_commit_updates_only_changed_indexes ... ok
+test tests::native_delete_then_reinsert_restores_full_index_state ... ok
+test tests::resolve_scan_mode_honors_chunked_configuration ... ok
+test tests::resolve_scan_mode_invalid_chunk_rows_falls_back_to_defaults ... ok
+test tests::resolve_shm_path_honors_environment_override ... ok
+test tests::scale_coord_rounds_to_microdegrees ... ok
+test tests::wal_failure_after_atomic_publication_keeps_indexes_and_is_not_retryable ... ok
+test vacuum_index_cleanup_tests::savepoint_and_abort_do_not_publish_rolled_back_index_keys ... ok
+test vacuum_index_cleanup_tests::vacuum_after_delete_never_recreates_or_removes_another_live_posting ... ok
+test vacuum_index_cleanup_tests::vacuum_keeps_current_postings_when_key_returns_to_reclaimed_value ... ok
+test vacuum_index_cleanup_tests::warm_attachment_rebinds_all_six_indexes_before_writing ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

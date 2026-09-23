@@ -1,0 +1,15 @@
+{
+  "command": [
+    "bash",
+    "scripts/check_crucible_2g_120_vs_240.sh"
+  ],
+  "environment": {
+    "AEROSTORE_CRUCIBLE_AEROSTORE_ONLY": "1",
+    "AEROSTORE_CRUCIBLE_SHM_MIB": "128",
+    "AEROSTORE_CRUCIBLE_LOG_DIR": "/home/zpconn/code/aerostore/docs/bench_data/transactional_indexes_2026-09-22/churn_128m",
+    "CARGO_NET_OFFLINE": "true"
+  },
+  "exit_code": 0,
+  "elapsed_seconds": 369.82176204700227,
+  "note": "Investigation before bounded index bucket acquisition. Correctness/stability pass; single-try lock acquisition caused excessive retries and p99 latency. Logs archived from their original output path."
+}

@@ -792,10 +792,8 @@ fn run_aerostore_crucible(
             profile.label, err
         )
     })?);
-    let table = Arc::new(
-        OccTable::<CrucibleRow>::new(Arc::clone(&shm), TOTAL_KEYS)
-            .map_err(|err| err.to_string())?,
-    );
+    let mut table = OccTable::<CrucibleRow>::new(Arc::clone(&shm), TOTAL_KEYS)
+        .map_err(|err| err.to_string())?;
     let time_index = SecondaryIndex::<usize>::new_in_shared("event_ts", Arc::clone(&shm));
 
     for row_id in 0..TOTAL_KEYS {
@@ -805,6 +803,13 @@ fn run_aerostore_crucible(
             .try_insert(IndexValue::I64(row.event_ts), row_id)
             .map_err(|err| format!("failed to seed index row {row_id}: {err}"))?;
     }
+
+    table
+        .bind_index(time_index.clone(), |row| {
+            Some(IndexValue::I64(row.event_ts))
+        })
+        .map_err(|err| err.to_string())?;
+    let table = Arc::new(table);
 
     let state_ptr = shm
         .chunked_arena()
@@ -1312,8 +1317,8 @@ fn run_aerostore_worker(
                 let is_hot = (upsert_idx % HOT_UPSERT_EVERY) == 0;
                 let row_id = pick_row_id(worker_idx, is_hot, &mut rng);
 
-                // Keep commit order and index publication order identical for this row.
-                // This is a process-shared engine lock, also used by production callers.
+                // Bound hot-row contention before taking the transaction snapshot.
+                // Native commit itself now publishes the row and index together.
                 let _indexed_update = match table.lock_indexed_rows(&[row_id]) {
                     Ok(guard) => guard,
                     Err(err) => {
@@ -1363,7 +1368,6 @@ fn run_aerostore_worker(
                         }
                     };
 
-                    let old_ts = current.event_ts;
                     let new_ts = state.global_event_ts.fetch_add(1, Ordering::AcqRel) + 1;
                     let mut next = current;
                     next.altitude = next.altitude.wrapping_add(1);
@@ -1385,20 +1389,7 @@ fn run_aerostore_worker(
                     }
 
                     match committer.commit(table, &mut tx) {
-                        Ok(_) => {
-                            // Stop prevents starting new transactions, but must never
-                            // cancel index maintenance for an already committed row.
-                            if let Err(err) =
-                                move_index_payload_with_retry(time_index, old_ts, new_ts, row_id)
-                            {
-                                eprintln!("worker {worker_idx}: committed row {row_id} index move failed: {err}");
-                                stats.index_remove_failures.fetch_add(1, Ordering::AcqRel);
-                                stats.index_insert_failures.fetch_add(1, Ordering::AcqRel);
-                                state.stop.store(1, Ordering::Release);
-                                break 'worker;
-                            }
-                            break;
-                        }
+                        Ok(_) => break,
                         Err(WalWriterError::Occ(OccError::SerializationFailure)) => {
                             stats.conflicts.fetch_add(1, Ordering::AcqRel);
                             attempts = attempts.saturating_add(1);
@@ -1408,18 +1399,9 @@ fn run_aerostore_worker(
                             }
                         }
                         Err(err) => {
-                            // OccCommitter publishes the row before WAL encoding/write.
-                            // Preserve index agreement for postcommit WAL errors, then
-                            // fail the run; retrying the transaction would commit twice.
-                            if !matches!(&err, WalWriterError::Occ(_)) {
-                                if let Err(index_err) = move_index_payload_with_retry(
-                                    time_index, old_ts, new_ts, row_id,
-                                ) {
-                                    eprintln!("worker {worker_idx}: index maintenance after WAL failure: {index_err}");
-                                    stats.index_remove_failures.fetch_add(1, Ordering::AcqRel);
-                                    stats.index_insert_failures.fetch_add(1, Ordering::AcqRel);
-                                }
-                            } else {
+                            // Native commit already maintains row/index agreement.
+                            // A later WAL failure remains fatal and cannot retry.
+                            if matches!(&err, WalWriterError::Occ(_)) {
                                 let _ = table.abort(&mut tx);
                             }
                             eprintln!("worker {worker_idx}: commit row {row_id} failed: {err}");
@@ -1443,6 +1425,9 @@ fn run_aerostore_worker(
             QueryKind::Scan => {
                 let head_ts = state.global_event_ts.load(Ordering::Acquire);
                 let bound = head_ts.saturating_sub(SCAN_TAIL_WINDOW);
+                // This original storage-churn probe intentionally counts raw
+                // postings. Transactional range semantics are checked by the
+                // Extended Crucible and native index regression suite.
                 let hits = match time_index.try_lookup_count_with_limit(
                     &IndexCompare::Gt(IndexValue::I64(bound)),
                     SCAN_LIMIT as usize,
@@ -2530,34 +2515,6 @@ fn pick_row_id(worker_idx: usize, is_hot: bool, rng_state: &mut u64) -> usize {
     };
 
     base + ((next_u64(rng_state) as usize) % span)
-}
-
-fn move_index_payload_with_retry(
-    time_index: &SecondaryIndex<usize>,
-    old_ts: i64,
-    new_ts: i64,
-    row_id: usize,
-) -> Result<(), String> {
-    const MOVE_RETRY_LIMIT: usize = 16;
-    for attempt in 0..=MOVE_RETRY_LIMIT {
-        match time_index.try_move_payload(
-            &IndexValue::I64(old_ts),
-            IndexValue::I64(new_ts),
-            &row_id,
-        ) {
-            Ok(()) => return Ok(()),
-            Err(err) if attempt == MOVE_RETRY_LIMIT => return Err(err.to_string()),
-            Err(_) => {}
-        }
-        if attempt < 8 {
-            std::hint::spin_loop();
-        } else if attempt < 12 {
-            std::thread::yield_now();
-        } else {
-            std::thread::sleep(Duration::from_micros(50));
-        }
-    }
-    unreachable!()
 }
 
 #[inline]

@@ -1,0 +1,58 @@
+[
+  {
+    "name": "undersized_arena_failure",
+    "command": [
+      "/home/zpconn/code/aerostore/target/release/deps/hyperfeed_extended_crucible-f6396a1626fe6719",
+      "--engine",
+      "aerostore",
+      "--mode",
+      "replay",
+      "--families",
+      "4096",
+      "--cycles",
+      "1",
+      "--workers",
+      "1",
+      "--shm-mib",
+      "32",
+      "--output",
+      "/home/zpconn/code/aerostore/docs/bench_data/transactional_indexes_2026-09-22/undersized_arena_failure.json"
+    ],
+    "exit_code": 2,
+    "passed": false,
+    "completed": true,
+    "killed_own_worker_pid": null,
+    "errors": [
+      "Aerostore coordinator exited exit status: 2"
+    ],
+    "operational_errors": []
+  },
+  {
+    "name": "killed_worker_failure",
+    "command": [
+      "/home/zpconn/code/aerostore/target/release/deps/hyperfeed_extended_crucible-f6396a1626fe6719",
+      "--engine",
+      "aerostore",
+      "--mode",
+      "replay",
+      "--families",
+      "64",
+      "--cycles",
+      "64",
+      "--workers",
+      "8",
+      "--shm-mib",
+      "128",
+      "--output",
+      "/home/zpconn/code/aerostore/docs/bench_data/transactional_indexes_2026-09-22/killed_worker_failure.json"
+    ],
+    "exit_code": 2,
+    "passed": false,
+    "completed": true,
+    "killed_own_worker_pid": 8666,
+    "errors": [
+      "Broken pipe (os error 32)"
+    ],
+    "operational_errors": []
+  }
+]

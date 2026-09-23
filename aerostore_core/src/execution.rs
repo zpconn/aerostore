@@ -6,6 +6,7 @@ use crate::filters::compare_optional;
 use crate::occ::{OccTable, OccTransaction};
 use crate::rbo_planner::{AccessPath, CompiledPlan, PlannerError, StapiRow};
 use crate::shm::{RelPtr, ShmAllocError, ShmArena};
+use crate::{RetryBackoff, RetryPolicy};
 
 const EMPTY_OFFSET: u32 = 0;
 const PK_INLINE_BYTES: usize = 64;
@@ -481,7 +482,7 @@ impl ExecutionEngine {
         table: &OccTable<T>,
         tx: &mut OccTransaction<T>,
     ) -> Result<Vec<T>, PlannerError> {
-        let candidate_row_ids = self.candidate_row_ids(plan, table)?;
+        let candidate_row_ids = self.candidate_row_ids(plan, table, tx)?;
         self.collect_rows_from_candidates(plan, table, tx, candidate_row_ids.as_slice())
     }
 
@@ -503,9 +504,13 @@ impl ExecutionEngine {
             };
 
             if plan
-                .residual_filters
-                .iter()
-                .all(|compiled| (compiled.predicate)(&row))
+                .driver_filter
+                .as_ref()
+                .is_none_or(|filter| (filter.predicate)(&row))
+                && plan
+                    .residual_filters
+                    .iter()
+                    .all(|compiled| (compiled.predicate)(&row))
             {
                 rows.push(row);
             }
@@ -533,7 +538,9 @@ impl ExecutionEngine {
         table: &OccTable<T>,
         chunk_rows: usize,
     ) -> Result<Vec<T>, PlannerError> {
-        let candidate_row_ids = self.candidate_row_ids(plan, table)?;
+        // This mode deliberately uses independent chunk snapshots. Scanning
+        // stable slots avoids treating a raw index scan as a snapshot predicate.
+        let candidate_row_ids: Vec<_> = (0..table.capacity()).collect();
         let chunk_rows = chunk_rows.max(1);
         let early_limit = if plan.sort.is_none() {
             plan.limit.unwrap_or(usize::MAX)
@@ -548,13 +555,22 @@ impl ExecutionEngine {
                 if *row_id >= table.capacity() {
                     continue;
                 }
-                let Some(row) = table.read(&mut tx, *row_id)? else {
-                    continue;
+                let row = match table.read(&mut tx, *row_id) {
+                    Ok(Some(row)) => row,
+                    Ok(None) => continue,
+                    Err(error) => {
+                        let _ = table.abort(&mut tx);
+                        return Err(error.into());
+                    }
                 };
                 if plan
-                    .residual_filters
-                    .iter()
-                    .all(|compiled| (compiled.predicate)(&row))
+                    .driver_filter
+                    .as_ref()
+                    .is_none_or(|filter| (filter.predicate)(&row))
+                    && plan
+                        .residual_filters
+                        .iter()
+                        .all(|compiled| (compiled.predicate)(&row))
                 {
                     rows.push(row);
                     if rows.len() >= early_limit {
@@ -586,23 +602,30 @@ impl ExecutionEngine {
         &self,
         plan: &CompiledPlan<T>,
         table: &OccTable<T>,
+        tx: &mut OccTransaction<T>,
     ) -> Result<Vec<usize>, PlannerError> {
-        match &plan.access_path {
-            AccessPath::PrimaryKeyEq { key, .. } => {
-                let Some(pk_map) = plan.catalog.primary_key_map() else {
-                    return Ok((0..table.capacity()).collect());
-                };
-
-                let found = pk_map.get(key.as_str())?;
-                Ok(found.into_iter().collect())
+        let indexed = match &plan.access_path {
+            AccessPath::PrimaryKeyEq { field, .. } => {
+                // A missing primary-key-map entry has no transaction dependency.
+                // Prefer the registered equality index, including empty results.
+                plan.catalog
+                    .get_index(field)
+                    .zip(plan.primary_key_compare.clone())
             }
-            AccessPath::Indexed { field, compare } => Ok(plan
+            AccessPath::Indexed { field, compare } => plan
                 .catalog
-                .get_index(field.as_str())
-                .map(|index| index.lookup(compare))
-                .unwrap_or_else(|| (0..table.capacity()).collect())),
-            AccessPath::FullScan => Ok((0..table.capacity()).collect()),
+                .get_index(field)
+                .map(|index| (index, compare.clone())),
+            AccessPath::FullScan => None,
+        };
+        if let Some((index, predicate)) = indexed {
+            if table.index_is_bound(index.as_ref()) {
+                return Ok(table.index_lookup(tx, index.as_ref(), &predicate)?);
+            }
         }
+        // An unregistered/raw index cannot establish predicate completeness.
+        // Full slot reads enroll real row dependencies and apply every filter.
+        Ok((0..table.capacity()).collect())
     }
 }
 
@@ -622,10 +645,31 @@ impl<T: StapiRow> CompiledPlan<T> {
     ) -> Result<Vec<T>, PlannerError> {
         match mode {
             SnapshotExecutionMode::StrictSnapshot => {
-                let mut tx = table.begin_transaction()?;
-                let rows = ExecutionEngine::new().execute(self, table, &mut tx)?;
-                table.abort(&mut tx)?;
-                Ok(rows)
+                let policy = RetryPolicy::hot_key_default();
+                let mut backoff = RetryBackoff::with_seed(
+                    table.current_global_txid() ^ std::process::id() as u64,
+                    policy,
+                );
+                for attempt in 0..policy.max_retries_per_unit {
+                    let mut tx = table.begin_transaction()?;
+                    let result = ExecutionEngine::new()
+                        .execute(self, table, &mut tx)
+                        .and_then(|rows| {
+                            table.commit(&mut tx)?;
+                            Ok(rows)
+                        });
+                    // This also releases registrations on query/validation errors.
+                    let _ = table.abort(&mut tx);
+                    match result {
+                        Err(PlannerError::SerializationFailure)
+                            if attempt + 1 < policy.max_retries_per_unit =>
+                        {
+                            backoff.sleep_for_attempt(attempt);
+                        }
+                        other => return other,
+                    }
+                }
+                Err(PlannerError::SerializationFailure)
             }
             SnapshotExecutionMode::ChunkedEventual { chunk_rows } => {
                 ExecutionEngine::new().execute_chunked(self, table, chunk_rows)

@@ -1,0 +1,89 @@
+{
+  "note": "Exploratory 30-second 128 MiB Aerostore-only probes. Some include temporary conflict tracing; use final validation for retained performance claims. Benchmark gates and retry backoff were unchanged.",
+  "probes": [
+    {
+      "log": "occ-bounded-acquisition-30s.log",
+      "index_buckets": 256,
+      "index_attempt_limit": 512,
+      "row_attempt_limit": 512,
+      "bounded_partition_sleeps": true,
+      "tps": 304296.94,
+      "total_operations": 9130301,
+      "p99_us": 1048.58,
+      "upserts": 7304321,
+      "conflicts": 243819,
+      "correctness_exact_match": true,
+      "allocation_audit_pass": true
+    },
+    {
+      "log": "occ-no-locked-sleeps-30s.log",
+      "index_buckets": 256,
+      "index_attempt_limit": 512,
+      "row_attempt_limit": 512,
+      "bounded_partition_sleeps": false,
+      "tps": 316314.26,
+      "total_operations": 9490861,
+      "p99_us": 1048.58,
+      "upserts": 7592814,
+      "conflicts": 242848,
+      "correctness_exact_match": true,
+      "allocation_audit_pass": true
+    },
+    {
+      "log": "occ-index4096-30s.log",
+      "index_buckets": 256,
+      "index_attempt_limit": 4096,
+      "row_attempt_limit": 512,
+      "bounded_partition_sleeps": false,
+      "tps": 302649.63,
+      "total_operations": 9080809,
+      "p99_us": 1048.58,
+      "upserts": 7264769,
+      "conflicts": 196001,
+      "correctness_exact_match": true,
+      "allocation_audit_pass": true
+    },
+    {
+      "log": "occ-buckets1024-attempts512-30s.log",
+      "index_buckets": 1024,
+      "index_attempt_limit": 512,
+      "row_attempt_limit": 512,
+      "bounded_partition_sleeps": false,
+      "tps": 315772.81,
+      "total_operations": 9474548,
+      "p99_us": 1048.58,
+      "upserts": 7579750,
+      "conflicts": 155823,
+      "correctness_exact_match": true,
+      "allocation_audit_pass": true
+    },
+    {
+      "log": "occ-buckets4096-attempts512-30s.log",
+      "index_buckets": 4096,
+      "index_attempt_limit": 512,
+      "row_attempt_limit": 512,
+      "bounded_partition_sleeps": false,
+      "tps": 296033.35,
+      "total_operations": 8882324,
+      "p99_us": 524.29,
+      "upserts": 7105944,
+      "conflicts": 103205,
+      "correctness_exact_match": true,
+      "allocation_audit_pass": true
+    },
+    {
+      "log": "occ-buckets4096-all-attempts4096-30s.log",
+      "index_buckets": 4096,
+      "index_attempt_limit": 4096,
+      "row_attempt_limit": 4096,
+      "bounded_partition_sleeps": false,
+      "tps": 302950.22,
+      "total_operations": 9092376,
+      "p99_us": 262.14,
+      "upserts": 7274024,
+      "conflicts": 89475,
+      "correctness_exact_match": true,
+      "allocation_audit_pass": true
+    }
+  ]
+}

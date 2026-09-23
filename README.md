@@ -11,7 +11,7 @@ The intended application is replacing PostgreSQL's shared transactional state st
 ## Features
 
 - **Shared-memory storage:** multiple processes can access mapped rows and indexes through relative pointers.
-- **Transactions:** optimistic concurrency control, versioned rows, savepoints, and coordinated indexed updates.
+- **Transactions:** optimistic concurrency control, versioned rows, savepoints, predicate conflict detection, and atomic row/index publication.
 - **Indexes and queries:** skiplist secondary indexes, bounded range scans, and a rule-based query planner.
 - **Durability and restart:** synchronous or asynchronous WAL commits, delta-encoded updates, checkpoints, replay, and warm attachment to compatible shared mappings.
 - **Memory reuse:** background vacuum and index garbage collection reclaim storage during sustained updates.
@@ -71,7 +71,7 @@ Expected output: `1`. `FlightState search` returns the number of matching rows. 
 
 The Tcl bridge currently uses a fixed flight schema, a 32,768-row capacity, and one database instance per process. Keep a dedicated mapping path for each database; `AEROSTORE_SHM_PATH` is separate from the data-directory argument. The default mapping path is `/dev/shm/aerostore.mmap`.
 
-See [the Tcl example](aerostore_tcl/test.tcl) for more ingestion and query examples. For Rust integration, start with the [public API](aerostore_core/src/lib.rs) and [indexed transaction examples](aerostore_core/tests/occ_index_ordering.rs).
+See [the Tcl example](aerostore_tcl/test.tcl) for more ingestion and query examples. For Rust integration, start with the [public API](aerostore_core/src/lib.rs) and [transactional index guide](docs/transactional_indexes.md).
 
 ## Tests and verification
 
@@ -93,7 +93,7 @@ The release workspace suite and all five bounded models passed in the September 
 
 ## The Crucible benchmark
 
-Crucible exercises 50,000 rows with 16 workers: 80% keyed upserts and 20% indexed range scans, with 5% of upserts targeting hot keys. It checks exact table/index agreement, allocation ownership, reclamation, operation failures, memory growth, and sustained throughput.
+Crucible exercises 50,000 rows with 16 workers: 80% keyed upserts and 20% indexed range probes, with 5% of upserts targeting hot keys. Writes publish rows and indexes transactionally; the range probes count raw postings to stress storage churn. Extended Crucible separately checks transactional indexed-query semantics. The original test checks exact table/index agreement, allocation ownership, reclamation, operation failures, memory growth, and sustained throughput.
 
 Run a 30-second Aerostore-only check with a 128 MiB arena:
 
@@ -110,18 +110,18 @@ Run the 120- and 240-second 2 GiB comparison against PostgreSQL, with Docker run
 ./scripts/check_crucible_2g_120_vs_240.sh
 ```
 
-### Validated results
+### Sustained validation
 
-On 2026-09-22, the 2 GiB comparison produced these results on an Intel Core Ultra 9 285K host running WSL2, with PostgreSQL 16 and asynchronous commit in both engines:
+The 2026-09-23 comparison with native transactional indexes (shared layout 4) passed the 2 GiB 120/240-second gates on an Intel Core Ultra 9 285K host running WSL2, with PostgreSQL 16 and asynchronous commit in both engines:
 
-| Duration | Aerostore ops/s | PostgreSQL ops/s | Throughput ratio |
-| --- | ---: | ---: | ---: |
-| 120 seconds | 358,954 | 51,290 | 7.00× |
-| 240 seconds | 376,727 | 49,161 | 7.66× |
+| Duration | Aerostore ops/s | PostgreSQL ops/s | Throughput ratio | Overall p99 ratio |
+| --- | ---: | ---: | ---: | ---: |
+| 120 seconds | 315,881 | 51,098 | 6.18× | 0.50× |
+| 240 seconds | 309,568 | 50,592 | 6.12× | 0.25× |
 
-The 128 MiB Aerostore-only runs also passed at both durations. Across all four runs, **267 million operations** completed with correct final indexes, no unaccounted structural allocations, and arena high-water usage below **21 MiB**. These results are specific to this workload and host. Aerostore's direct shared-memory access and PostgreSQL's client/server path have different overheads.
+Both runs passed exact index agreement, allocation ownership, reclamation, and memory-growth checks. The 128 MiB Aerostore-only runs also passed at both durations. The longer run retained 98.0% of aggregate throughput. These are workload-wide results: Aerostore's update-only p99 was higher than PostgreSQL's in these runs. Direct shared-memory access, client/server overhead, and durability paths also differ.
 
-The latest sustained validation covers the 2 GiB and 128 MiB configurations. Other default arena profiles were not rerun in that validation. See the [raw results and reproduction commands](docs/bench_data/crucible_fixed_2026-09-22/README.md) and [performance runbook](docs/nightly_perf.md) for the full scope.
+See the [current results and reproduction commands](docs/bench_data/transactional_indexes_2026-09-22/README.md), [earlier layout-3 baseline](docs/bench_data/crucible_fixed_2026-09-22/README.md), and [performance runbook](docs/nightly_perf.md) for the full scope.
 
 ## Extended HyperFeed Crucible
 
@@ -133,7 +133,9 @@ cargo bench -p aerostore_core --bench hyperfeed_extended_crucible -- \
   --output target/extended-crucible.json
 ```
 
-**The full extended gate currently fails.** Its native probes expose missing predicate conflict detection and incomplete transactional visibility through secondary indexes. A passing bounded replay does not override those failures. The original sustained-churn result remains a separate, narrower regression.
+The native contracts cover predicate conflicts, atomic row/index publication, historical indexed reads, rollback, and snapshot consistency. Their initial three failures drove the [transactional-index repairs](docs/transactional_indexes.md). A passing bounded replay never overrides a failed native contract. The original sustained-churn result remains a separate, narrower regression.
+
+The [repaired validation](docs/bench_data/transactional_indexes_2026-09-22/README.md) passes all six contracts on both engines, 3,840 deliveries per engine, and an additional 30,720-delivery Aerostore run.
 
 See the [extended benchmark runbook](docs/extended_crucible.md) for modes, assumptions, and reproduction commands, and the [research specification](docs/extended_crucible_research.md) for the public sources behind its design.
 
@@ -149,9 +151,9 @@ See the [extended benchmark runbook](docs/extended_crucible.md) for modes, assum
 
 ## Compatibility and recovery
 
-The current shared-memory layout is **version 3**, with boot metadata **version 6**. Older mappings require a cold rebuild using the appropriate durable recovery inputs. Preserve WAL and checkpoint data when upgrading.
+The current shared-memory layout is **version 4**, with boot metadata **version 6**. Older mappings require a cold rebuild using the appropriate durable recovery inputs. Preserve WAL and checkpoint data when upgrading.
 
-Applications using the Rust table and index APIs directly must follow the indexed-write coordination protocol. Process death while holding a shared lock and failures during postcommit maintenance across multiple indexes also require recovery handling. The [correctness report](docs/sustained_churn_correctness.md#current-protocol-and-invariants) describes those contracts and limits.
+Applications using `OccTable` should bind their secondary indexes before starting transactions and query through `index_lookup`; commit then maintains rows and indexes together. Raw posting operations are for initialization and diagnostics. Process death while holding a shared lock and poisoned storage still require recovery. The [transactional-index guide](docs/transactional_indexes.md) describes the API, retry behavior, and limits.
 
 ## Contributing
 

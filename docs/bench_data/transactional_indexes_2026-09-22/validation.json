@@ -1,0 +1,96 @@
+[
+  {
+    "name": "both_32f_4c_8w",
+    "command": [
+      "cargo",
+      "bench",
+      "--offline",
+      "-p",
+      "aerostore_core",
+      "--bench",
+      "hyperfeed_extended_crucible",
+      "--",
+      "--engine",
+      "both",
+      "--families",
+      "32",
+      "--cycles",
+      "4",
+      "--workers",
+      "8",
+      "--seed",
+      "20260922",
+      "--output",
+      "/home/zpconn/code/aerostore/docs/bench_data/transactional_indexes_2026-09-22/both_32f_4c_8w.json"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 44.77511520299959,
+    "passed": true,
+    "completed": true,
+    "operational_errors": [],
+    "replays": [
+      {
+        "engine": "aerostore",
+        "passed": true,
+        "messages": 3840,
+        "committed_messages": 3712,
+        "retries": 757,
+        "error": null
+      },
+      {
+        "engine": "postgres",
+        "passed": true,
+        "messages": 3840,
+        "committed_messages": 3712,
+        "retries": 9917,
+        "error": null
+      }
+    ],
+    "failed_contracts": []
+  },
+  {
+    "name": "aerostore_64f_16c_8w_128m",
+    "command": [
+      "cargo",
+      "bench",
+      "--offline",
+      "-p",
+      "aerostore_core",
+      "--bench",
+      "hyperfeed_extended_crucible",
+      "--",
+      "--engine",
+      "aerostore",
+      "--mode",
+      "all",
+      "--families",
+      "64",
+      "--cycles",
+      "16",
+      "--workers",
+      "8",
+      "--shm-mib",
+      "128",
+      "--seed",
+      "8675309",
+      "--output",
+      "/home/zpconn/code/aerostore/docs/bench_data/transactional_indexes_2026-09-22/aerostore_64f_16c_8w_128m.json"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 5.012231911998242,
+    "passed": true,
+    "completed": true,
+    "operational_errors": [],
+    "replays": [
+      {
+        "engine": "aerostore",
+        "passed": true,
+        "messages": 30720,
+        "committed_messages": 29696,
+        "retries": 7395,
+        "error": null
+      }
+    ],
+    "failed_contracts": []
+  }
+]

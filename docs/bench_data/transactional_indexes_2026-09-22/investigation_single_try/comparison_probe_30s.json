@@ -1,0 +1,21 @@
+{
+  "command": [
+    "cargo",
+    "bench",
+    "--offline",
+    "-p",
+    "aerostore_core",
+    "--bench",
+    "hyperfeed_crucible",
+    "--",
+    "--noplot"
+  ],
+  "environment": {
+    "AEROSTORE_CRUCIBLE_AEROSTORE_ONLY": "0",
+    "AEROSTORE_CRUCIBLE_PROFILE_FILTER": "profile_2g",
+    "AEROSTORE_CRUCIBLE_DURATION_SECS": "30"
+  },
+  "exit_code": 0,
+  "elapsed_seconds": 99.41676156600079,
+  "note": "Exploratory full PostgreSQL comparison after contention tuning, before the final private index-header version bump. Retained final 120/240-second comparisons use the final source."
+}

@@ -1,0 +1,30 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "--offline",
+    "-p",
+    "aerostore_core",
+    "--release",
+    "--lib",
+    "--test",
+    "occ_transactional_index",
+    "--test",
+    "transactional_query_execution",
+    "--test",
+    "occ_row_lock_semantics",
+    "--test",
+    "vacuum_free_list_invariants",
+    "--test",
+    "extended_crucible_model",
+    "--",
+    "--test-threads=1"
+  ],
+  "environment": {},
+  "started_utc": "2026-09-23T05:29:32.823313+00:00",
+  "exit_code": 0,
+  "elapsed_seconds": 5.387074754999048,
+  "passed_tests": 234,
+  "failed_tests": 0,
+  "ignored_tests": 0
+}

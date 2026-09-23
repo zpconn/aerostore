@@ -70,6 +70,13 @@ impl ShmMutex {
         guard
     }
 
+    /// Reset abandoned metadata only after the caller has excluded all prior
+    /// users. Never use this to unlock a live contender or ordinary contention.
+    pub(crate) fn reset_after_exclusive_recovery(&self) {
+        self.priority_waiters.store(0, Ordering::Release);
+        self.state.store(0, Ordering::Release);
+    }
+
     fn acquire(&self, priority: bool) -> ShmMutexGuard<'_> {
         let mut attempts = 0_u32;
         loop {

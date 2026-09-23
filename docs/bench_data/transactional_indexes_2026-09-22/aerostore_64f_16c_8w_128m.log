@@ -1,0 +1,66 @@
+    Finished `bench` profile [optimized] target(s) in 0.06s
+     Running benches/hyperfeed_extended_crucible.rs (target/release/deps/hyperfeed_extended_crucible-f6396a1626fe6719)
+extended_crucible_start families=64 cycles=16 workers=8 phases=432 trace=fnv1a64:ba45cf2b6cc22b68
+extended_crucible_phase engine=aerostore phase=1/432 name=cycle-000-plan-or-adhoc messages=64 retries=14 outputs=64 parity=PASS
+extended_crucible_phase engine=aerostore phase=9/432 name=cycle-000-third-provenance messages=64 retries=22 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=17/432 name=cycle-000-position-refresh messages=64 retries=47 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=25/432 name=cycle-000-duplicate-terminal messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=33/432 name=cycle-001-position-source-2 messages=64 retries=12 outputs=128 parity=PASS
+extended_crucible_phase engine=aerostore phase=41/432 name=cycle-001-project-due messages=64 retries=2 outputs=448 parity=PASS
+extended_crucible_phase engine=aerostore phase=49/432 name=cycle-001-cancelled-projections messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=57/432 name=cycle-002-duplicate-position messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=65/432 name=cycle-002-invalid-position messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=73/432 name=cycle-002-terminal-source-1 messages=64 retries=24 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=81/432 name=cycle-002-expire-family messages=64 retries=36 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=89/432 name=cycle-003-position-after-failed-fork messages=64 retries=20 outputs=128 parity=PASS
+extended_crucible_phase engine=aerostore phase=97/432 name=cycle-003-position-after-diversion messages=64 retries=53 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=105/432 name=cycle-003-housekeeping messages=64 retries=3 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=113/432 name=cycle-004-second-provenance messages=64 retries=18 outputs=128 parity=PASS
+extended_crucible_phase engine=aerostore phase=121/432 name=cycle-004-reschedule messages=64 retries=59 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=129/432 name=cycle-004-terminal-source-4 messages=64 retries=19 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=137/432 name=cycle-005-position-source-1 messages=256 retries=50 outputs=64 parity=PASS
+extended_crucible_phase engine=aerostore phase=145/432 name=cycle-005-position-source-4 messages=64 retries=52 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=153/432 name=cycle-005-project-again messages=64 retries=1 outputs=448 parity=PASS
+extended_crucible_phase engine=aerostore phase=161/432 name=cycle-005-project-after-housekeeping messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=169/432 name=cycle-006-failed-fork-savepoint messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=177/432 name=cycle-006-diversion messages=64 retries=43 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=185/432 name=cycle-006-position-after-terminal messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=193/432 name=cycle-007-delayed-position messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=201/432 name=cycle-007-whole-message-abort messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=209/432 name=cycle-007-terminal-source-2 messages=64 retries=20 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=217/432 name=cycle-008-plan-or-adhoc messages=64 retries=12 outputs=64 parity=PASS
+extended_crucible_phase engine=aerostore phase=225/432 name=cycle-008-third-provenance messages=64 retries=33 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=233/432 name=cycle-008-position-refresh messages=64 retries=67 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=241/432 name=cycle-008-duplicate-terminal messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=249/432 name=cycle-009-position-source-2 messages=64 retries=14 outputs=128 parity=PASS
+extended_crucible_phase engine=aerostore phase=257/432 name=cycle-009-project-due messages=64 retries=4 outputs=448 parity=PASS
+extended_crucible_phase engine=aerostore phase=265/432 name=cycle-009-cancelled-projections messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=273/432 name=cycle-010-duplicate-position messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=281/432 name=cycle-010-invalid-position messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=289/432 name=cycle-010-terminal-source-1 messages=64 retries=19 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=297/432 name=cycle-010-expire-family messages=64 retries=32 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=305/432 name=cycle-011-position-after-failed-fork messages=64 retries=15 outputs=128 parity=PASS
+extended_crucible_phase engine=aerostore phase=313/432 name=cycle-011-position-after-diversion messages=64 retries=44 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=321/432 name=cycle-011-housekeeping messages=64 retries=2 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=329/432 name=cycle-012-second-provenance messages=64 retries=14 outputs=128 parity=PASS
+extended_crucible_phase engine=aerostore phase=337/432 name=cycle-012-reschedule messages=64 retries=42 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=345/432 name=cycle-012-terminal-source-4 messages=64 retries=20 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=353/432 name=cycle-013-position-source-1 messages=256 retries=50 outputs=64 parity=PASS
+extended_crucible_phase engine=aerostore phase=361/432 name=cycle-013-position-source-4 messages=64 retries=48 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=369/432 name=cycle-013-project-again messages=64 retries=4 outputs=448 parity=PASS
+extended_crucible_phase engine=aerostore phase=377/432 name=cycle-013-project-after-housekeeping messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=385/432 name=cycle-014-failed-fork-savepoint messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=393/432 name=cycle-014-diversion messages=64 retries=39 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=401/432 name=cycle-014-position-after-terminal messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=409/432 name=cycle-015-delayed-position messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=417/432 name=cycle-015-whole-message-abort messages=64 retries=0 outputs=0 parity=PASS
+extended_crucible_phase engine=aerostore phase=425/432 name=cycle-015-terminal-source-2 messages=64 retries=18 outputs=256 parity=PASS
+extended_crucible_phase engine=aerostore phase=432/432 name=cycle-015-expire-family messages=64 retries=35 outputs=0 parity=PASS
+extended_crucible_contract engine=aerostore case=serializable_absent_candidate_creation status=PASS details=Expected one commit and one serialization rejection after overlapping empty candidate searches activate different slots for the same key. Observed initial counts=0/0, committed=1, rejected=1, matching_rows=1, matching_index_postings=1. Native predicate dependencies and automatic index maintenance; no caller-supplied locks.
+extended_crucible_contract engine=aerostore case=committed_row_and_index_visibility status=PASS details=Expected staged writes to remain invisible, and native commit to publish row and index together. Before commit row=Some(10), new_key=[]; immediately after commit row=Some(20), new_key=[0], fresh_reader_committed=true, overlapping_reader_committed=false, raw_old_postings=[], raw_new_postings=[0].
+extended_crucible_contract engine=aerostore case=index_candidates_respect_transaction_snapshot status=PASS details=Expected the old snapshot's row to remain discoverable after a key move, or explicit serialization rejection. Independent witness sees row=Some(10); old_key_candidates=[], rejected_at_lookup=true, candidate_reader_committed=false. Operational errors are not accepted as serialization protection.
+extended_crucible_contract engine=aerostore case=savepoint_and_whole_message_rollback status=PASS details=Expected rollback to preserve pre-savepoint multirow writes [90,60,0], discard nested candidate writes, and leave the committed transfer unchanged after a later whole-message abort. Observed restored=[Some(90), Some(60), Some(0)], committed=true, committed_rows=[(0, 90), (1, 60), (2, 0)], after_abort=[(0, 90), (1, 60), (2, 0)]. This probe covers native table state; it makes no claim about an external index overlay.
+extended_crucible_contract engine=aerostore case=multirow_table_snapshot_visibility status=PASS details=Expected a reader spanning a two-row transfer to retain [100,50] in its snapshot, and a new reader to observe [90,60]. Observed old_reader=[Some(100),Some(50)], writer_committed=true, new_reader=[Some(90), Some(60)], new_reader_committed=true. Both views must conserve total=150.
+extended_crucible_contract engine=aerostore case=concrete_read_dependency_write_skew status=PASS details=Expected one serialization rejection when overlapping transactions read both active records and each deactivates a different record. Observed committed=1, rejected=1, remaining_active=1, final_rows=[(0, 0), (1, 1)]. This contrasts concrete row-read dependencies with the separate empty-candidate probe.
+extended_crucible_replay engine=aerostore status=PASS messages=30720 committed=29696 retries=7395 messages_per_second=23728.05 p99_us=1894.98 error=None
+extended_crucible_result mode=all status=PASS report=/home/zpconn/code/aerostore/docs/bench_data/transactional_indexes_2026-09-22/aerostore_64f_16c_8w_128m.json

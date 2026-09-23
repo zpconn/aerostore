@@ -213,7 +213,13 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
 
     pub fn begin_transaction(&self) -> Result<OccTransaction<T>, Error> {
         let registration = self.shm.begin_transaction()?;
-        let snapshot = self.shm.create_snapshot();
+        let snapshot = match self.shm.create_transaction_snapshot(registration) {
+            Ok(snapshot) => snapshot,
+            Err(err) => {
+                let _ = self.shm.end_transaction(registration);
+                return Err(err.into());
+            }
+        };
         let mut snapshot_active = HashSet::with_capacity(snapshot.len());
         for txid in snapshot.in_flight_txids() {
             if *txid != registration.txid {

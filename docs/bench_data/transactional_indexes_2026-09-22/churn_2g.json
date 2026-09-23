@@ -1,0 +1,14 @@
+{
+  "command": [
+    "bash",
+    "scripts/check_crucible_2g_120_vs_240.sh"
+  ],
+  "environment": {
+    "AEROSTORE_CRUCIBLE_AEROSTORE_ONLY": "0",
+    "AEROSTORE_CRUCIBLE_LOG_DIR": "/home/zpconn/code/aerostore/docs/bench_data/transactional_indexes_2026-09-22/churn_2g",
+    "CARGO_NET_OFFLINE": "true"
+  },
+  "started_utc": "2026-09-23T05:32:24.181828+00:00",
+  "exit_code": 0,
+  "elapsed_seconds": 784.629073131
+}

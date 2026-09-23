@@ -1,6 +1,6 @@
 # Sustained churn correctness and verification
 
-The sustained Crucible workload exposed structural corruption that throughput alone did not detect. The repaired baseline uses process-shared serialization for index operations and stable per-row coordination from transaction start through index maintenance. Performance work must retain the correctness gates described below.
+The sustained Crucible workload exposed structural corruption that throughput alone did not detect. The original repair established process-shared serialization for index structure operations and stable per-row writer coordination. Subsequent Extended Crucible failures led to [native transactional index publication and predicate validation](transactional_indexes.md). Performance work must retain the correctness gates described below. The historical measurements in this report predate those transaction-layer changes.
 
 ## Failure mechanisms
 
@@ -23,23 +23,23 @@ Error and telemetry checks also matter: exhausted deletion retries now return th
 
 The shared index lock covers predecessor search, publication, unlinking, moves, scans, and collection. It resides in shared memory and coordinates independently attached processes. The skiplist retains ordered links and epoch tracking, but its repaired mutation protocol is serialized. Published keys remain immutable; a move publishes its destination before removing its source, preserving the source when destination allocation fails. Partial allocations must return to reusable storage before their operation exits.
 
-`OccTable::lock_indexed_rows` locks stable row slots, distinct from MVCC version locks. Acquire it before beginning the transaction and retain it until every associated index change finishes. Batched row locks acquire sorted, deduplicated row identifiers. Crucible and Tcl indexed writes use this protocol. External callers that assemble their own table/index operations must also participate; the guard does not automatically coordinate unrelated unguarded writes.
+`OccTable::bind_index` now registers native index maintenance before transactions start. Every commit validates indexed predicate reads (including empty results), prepares all index destinations, publishes the rows and index changes under shared publication guards, and invalidates older incompatible indexed snapshots with a serialization error. Savepoint rollback and abort derive index state from the surviving row writes. Initial binding and independently attached handles validate the shared registry. Raw mutations of bound indexes are rejected.
 
-A stop request prevents new transactions. It cannot cancel index maintenance after a row has committed. `OccCommitter` publishes the row before WAL encoding and output, so a postcommit WAL error still requires index maintenance before the original error is returned. It must not cause the transaction to be retried.
+`OccTable::lock_indexed_rows` remains available to bound contention before taking a snapshot, but is no longer the mechanism that establishes atomic index publication. The Tcl bridge and both Crucible writers use the native commit path. A stop request cannot split an already started native commit. `OccCommitter` publishes rows and indexes before WAL encoding/output; a later WAL error remains fatal and must not replay the committed transaction.
 
-Table publication and maintenance of multiple secondary indexes are not one atomic rollback unit. If index allocation or another maintenance operation fails after the table commit, some indexes may already contain the new value while others retain their previous state. Tcl returns an explicit fatal error requiring an index rebuild before writes resume; it does not silently retry the committed transaction. The source-preserving failure behavior of an individual index move does not provide transaction-wide rollback. Sustained benchmark runs reject any such maintenance failure.
+Index destinations are allocated before any source is removed. Preparation failure rolls back successful additions without requiring allocation. Unexpected failure during source removal, rollback, or publication poisons the shared table/indexes so inconsistent state cannot be queried as healthy. See the [transactional-index guide](transactional_indexes.md) for the complete protocol, snapshot horizon protection, regression tests, and limits.
 
 The checked invariants are:
 
 - Every successfully published insertion remains reachable until deletion.
 - Live links remain ordered and acyclic; previously published keys do not change.
 - An allocation is live, temporarily owned by an operation, retired, or reusable. Failure before publication returns temporary allocations.
-- Cooperating writers preserve row-commit order when publishing index deltas.
+- Native commits publish registered index changes with rows and validate positive and empty index predicate dependencies.
 - After writers quiesce, the raw index traversal exactly equals the committed table, including cardinality, key/row association, ordering, and multiplicity.
 - After workers and readers finish, retired index work drains without recycling errors.
 - A quiescent allocation census requires `allocated = reachable + retired + reusable` for index nodes, postings, tower slots, and physical tower lanes. The census detects missing ownership, duplicate ownership, cyclic storage chains, and invalid upper links. After the final drain, every retired count is zero.
 
-Per-row writer coordination is not a claim that a separate table read and index read form one atomic snapshot. Abrupt process death while holding a shared lock requires arena recovery; ordinary shutdown requests GC termination outside its critical section. The benchmark fails its disposable process if a worker crashes or must be killed, avoiding a graceful join on a potentially stranded lock.
+Raw index diagnostics do not form a transaction snapshot; application queries must use the registered transactional API. Abrupt process death while holding a shared lock requires arena recovery; ordinary shutdown requests GC termination outside its critical section. The benchmark fails its disposable process if a worker crashes or must be killed, avoiding a graceful join on a potentially stranded lock.
 
 ### OCC allocation pressure
 
@@ -73,7 +73,7 @@ cargo test -p aerostore_core --test shm_mutation_model --release
 
 The models cover a small live graph where two workers interleave insertion, deletion, observation, collection, and allocation ownership; two writers publishing table/index changes; and failures during partial allocation. Two negative controls check that the original unprotected predecessor protocol and omission of the row guard both have counterexamples. Together with the three repaired-protocol checks, the suite contains five Loom models. The production lock's acquisition/release protocol is shared with the models, while the graph, table, and allocator are abstractions.
 
-Exploration uses a **preemption bound of 2** and **10,000 maximum branches**, with no elapsed-time or permutation cutoff. Exceeding the branch bound fails the test; it is not a successful partial run. These tests establish the modeled properties within those bounds. They do not prove the entire skiplist, mmap behavior, arbitrary process failures, all allocator states, or unbounded execution. Real allocation-failure tests, controlled race regressions, process tests, and sustained workloads remain necessary.
+Exploration uses a **preemption bound of 2** and **10,000 maximum branches**, with no elapsed-time or permutation cutoff. Exceeding the branch bound fails the test; it is not a successful partial run. These tests establish the older structural/row-coordination model properties within those bounds; they do not model the newer native predicate/publication protocol. They do not prove the entire skiplist, mmap behavior, arbitrary process failures, all allocator states, or unbounded execution. Real allocation-failure tests, controlled race regressions, process tests, and sustained workloads remain necessary.
 
 Use `aerostore_loom`, not the generic `loom` configuration flag: the latter also changes dependency behavior, including Tokio, and does not select this suite correctly.
 
@@ -112,9 +112,9 @@ For runs of at least 30 seconds, second-half arena growth must be no more than o
 
 ## Shared-memory compatibility
 
-The shared arena layout is version **3** and boot metadata is version **6** after adding lock/reclamation/accounting state. Old mmap files are incompatible and must be cold-rebuilt using the application's recovery path and durable input/WAL as appropriate. Do not attach an old mapping using guessed offsets or change version fields to bypass validation. Preserve required durable recovery inputs before replacing an existing mapping.
+The current shared arena layout is version **4** and boot metadata is version **6**. Layout 4 adds transactional index metadata and snapshot lifecycle/horizon state to the earlier lock/reclamation/accounting repairs. Old mmap files are incompatible and must be cold-rebuilt using the application's recovery path and durable input/WAL as appropriate. Do not attach an old mapping using guessed offsets or change version fields to bypass validation. Preserve required durable recovery inputs before replacing an existing mapping.
 
-## Validation results
+## Historical validation results (before transactional indexes)
 
 Validated on 2026-09-22 using Rust 1.93.1 on WSL2, Intel Core Ultra 9 285K with 24 visible CPUs, Docker 29.8.0, and PostgreSQL 16. The tested working tree is based on `c96fd38ad048ab3ade095d22151341bf5e7ab0bd`. [Raw logs, CSVs, commands, source fingerprints, and machine-readable results](bench_data/crucible_fixed_2026-09-22/README.md) accompany this report.
 

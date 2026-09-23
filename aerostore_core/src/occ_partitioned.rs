@@ -1,19 +1,37 @@
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fmt;
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::index::{IndexCompare, IndexValue, SecondaryIndex};
 use crate::procarray::{ProcArrayError, ProcArrayRegistration};
 use crate::shm::{ArenaClass, RelPtr, ShmAllocError, ShmArena, OCC_PARTITION_LOCKS};
+use crate::shm_index::ShmIndexError;
 use crate::shm_lock::{ShmMutex, ShmMutexGuard};
 use crate::TxId;
 
 const EMPTY_PTR: u32 = 0;
-const COMMIT_LOCK_SPIN_LIMIT: u32 = 512;
+const COMMIT_LOCK_SPIN_LIMIT: u32 = 4096;
+const INDEX_LOCK_SPIN_LIMIT: u32 = 4096;
 const RECYCLE_SHARD_PROBE_LIMIT: usize = 4;
 const MAX_VISIBLE_CHAIN_STEPS: u32 = 262_144;
+const MAX_TABLE_INDEXES: usize = 32;
+
+#[cfg(test)]
+thread_local! {
+    // An explicit deterministic interleaving seam, only compiled into unit
+    // tests. Thread-local ownership avoids interference between parallel tests.
+    static INDEX_PUBLICATION_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+        std::cell::RefCell::new(None);
+    static INDEX_DESTINATION_HOOK: std::cell::RefCell<Option<Box<dyn FnMut(usize)>>> =
+        std::cell::RefCell::new(None);
+    static INDEX_CANDIDATES_CAPTURED_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+        std::cell::RefCell::new(None);
+    static INDEX_BUCKET_CONTENDED_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+        std::cell::RefCell::new(None);
+}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct StarvedRecycleKey {
@@ -37,6 +55,11 @@ thread_local! {
 
 #[repr(C, align(64))]
 struct OccSharedHeader {
+    index_registry_lock: ShmMutex,
+    index_registry_sealed: AtomicBool,
+    index_count: AtomicU32,
+    index_offsets: [AtomicU32; MAX_TABLE_INDEXES],
+    index_poisoned: AtomicBool,
     recycled_heads: [AtomicU32; OCC_PARTITION_LOCKS],
     recycle_locks: [ShmMutex; OCC_PARTITION_LOCKS],
     vacuum_requested: AtomicBool,
@@ -55,6 +78,11 @@ impl OccSharedHeader {
     #[inline]
     fn new() -> Self {
         Self {
+            index_registry_lock: ShmMutex::new(),
+            index_registry_sealed: AtomicBool::new(false),
+            index_count: AtomicU32::new(0),
+            index_offsets: std::array::from_fn(|_| AtomicU32::new(0)),
+            index_poisoned: AtomicBool::new(false),
             recycled_heads: std::array::from_fn(|_| AtomicU32::new(EMPTY_PTR)),
             recycle_locks: std::array::from_fn(|_| ShmMutex::new()),
             vacuum_requested: AtomicBool::new(false),
@@ -126,7 +154,9 @@ pub struct RowLockGuard<'a, T: Copy + Send + Sync + 'static> {
 /// Acquire the complete set of rows before beginning the transaction, and keep
 /// this guard until both commit and all index updates finish. Acquire all rows in
 /// one call: acquiring additional rows while holding a guard can deadlock.
-/// All writers maintaining indexes for these rows must follow this protocol.
+/// This optional application coordination does not provide predicate isolation.
+/// Bind indexes with `OccTable::bind_index` for automatic transactional maintenance;
+/// stable row guards alone cannot make external post-commit index edits atomic.
 #[must_use = "the guard must be held through commit and index maintenance"]
 pub struct IndexedUpdateGuard<'a> {
     _locks: Vec<ShmMutexGuard<'a>>,
@@ -136,6 +166,25 @@ struct ReadSetEntry<T: Copy> {
     row_id: usize,
     row_ptr: RelPtr<OccRow<T>>,
     observed_xmin: TxId,
+}
+
+#[derive(Clone, Copy)]
+struct IndexRead {
+    index_offset: u32,
+    bucket: usize,
+    stamp: u64,
+}
+
+struct BoundIndex<T> {
+    index: SecondaryIndex<usize>,
+    key: fn(&T) -> Option<IndexValue>,
+}
+
+struct IndexChange {
+    binding: usize,
+    row_id: usize,
+    before: Option<IndexValue>,
+    after: Option<IndexValue>,
 }
 
 struct PendingWrite<T: Copy> {
@@ -152,6 +201,10 @@ struct Savepoint {
 }
 
 pub struct OccTransaction<T: Copy> {
+    table_offset: u32,
+    arena_base: usize,
+    index_reads: Vec<IndexRead>,
+    index_conflict: bool,
     txid: TxId,
     snapshot_xmin: TxId,
     snapshot_xmax: TxId,
@@ -216,6 +269,10 @@ pub enum Error {
     InvalidPointer { offset: u32 },
     ProcArray(String),
     Allocation(String),
+    Index(String),
+    IndexBindingsIncomplete,
+    IndexRegistrationClosed,
+    TransactionTableMismatch,
 }
 
 impl fmt::Display for Error {
@@ -240,11 +297,28 @@ impl fmt::Display for Error {
             }
             Error::ProcArray(msg) => write!(f, "procarray error: {}", msg),
             Error::Allocation(msg) => write!(f, "shared allocation failed: {}", msg),
+            Error::Index(msg) => write!(f, "transactional index error: {}", msg),
+            Error::IndexBindingsIncomplete => {
+                write!(f, "table handle must bind every registered secondary index")
+            }
+            Error::IndexRegistrationClosed => write!(
+                f,
+                "index registration is sealed after the first transaction"
+            ),
+            Error::TransactionTableMismatch => {
+                write!(f, "transaction belongs to a different table or mapping")
+            }
         }
     }
 }
 
 impl std::error::Error for Error {}
+
+impl From<ShmIndexError> for Error {
+    fn from(value: ShmIndexError) -> Self {
+        Error::Index(value.to_string())
+    }
+}
 
 impl From<ProcArrayError> for Error {
     fn from(value: ProcArrayError) -> Self {
@@ -262,6 +336,7 @@ pub struct OccTable<T: Copy + Send + Sync + 'static> {
     shm: Arc<ShmArena>,
     shared_header: RelPtr<OccSharedHeader>,
     index_slots: Vec<RelPtr<OccIndexSlot>>,
+    indexes: Vec<BoundIndex<T>>,
     _marker: PhantomData<T>,
 }
 
@@ -279,6 +354,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             shm,
             shared_header,
             index_slots,
+            indexes: Vec::new(),
             _marker: PhantomData,
         })
     }
@@ -308,6 +384,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             shm,
             shared_header,
             index_slots,
+            indexes: Vec::new(),
             _marker: PhantomData,
         })
     }
@@ -327,6 +404,433 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             .iter()
             .map(|slot| slot.load(Ordering::Acquire))
             .collect()
+    }
+
+    /// Register a secondary index before the first transaction. The extractor
+    /// must be deterministic and identical for all attached handles. Existing
+    /// rows and postings must already agree when the index is first bound.
+    ///
+    /// Once bound, every ordinary commit maintains this index. Independent
+    /// attachments must bind the complete shared registry before transactions
+    /// can begin; omission therefore cannot silently leave an index stale.
+    pub fn bind_index(
+        &mut self,
+        index: SecondaryIndex<usize>,
+        key: fn(&T) -> Option<IndexValue>,
+    ) -> Result<(), Error> {
+        if !Arc::ptr_eq(&self.shm, index.shared_arena()) {
+            return Err(Error::Index(
+                "index and table must share one arena handle".into(),
+            ));
+        }
+        let offset = index.header_offset();
+        if self
+            .indexes
+            .iter()
+            .any(|bound| bound.index.header_offset() == offset)
+        {
+            return Err(Error::Index(
+                "secondary index is already bound on this handle".into(),
+            ));
+        }
+        {
+            let header = self.shared_header_ref()?;
+            let _registry = header.index_registry_lock.lock();
+            if header.index_poisoned.load(Ordering::Acquire) {
+                return Err(Error::Index(
+                    "table is poisoned after failed index publication".into(),
+                ));
+            }
+            let count = header.index_count.load(Ordering::Acquire) as usize;
+            let existing = header.index_offsets[..count]
+                .iter()
+                .any(|value| value.load(Ordering::Acquire) == offset);
+            if !existing {
+                if header.index_registry_sealed.load(Ordering::Acquire) {
+                    return Err(Error::IndexRegistrationClosed);
+                }
+                if count == MAX_TABLE_INDEXES {
+                    return Err(Error::Index("too many secondary indexes for table".into()));
+                }
+                // Initial registration is a quiescent bootstrap operation.
+                // Validate actual postings, preserving duplicates, so an empty
+                // or stale index cannot become a silently trusted access path.
+                let mut expected = self
+                    .snapshot_latest_rows()?
+                    .into_iter()
+                    .filter_map(|(row_id, value)| key(&value).map(|key| (key, row_id)))
+                    .collect::<Vec<_>>();
+                let mut actual = index.try_entries()?;
+                expected.sort_unstable();
+                actual.sort_unstable();
+                if expected != actual {
+                    return Err(Error::Index(
+                        "initial index postings do not match table rows".into(),
+                    ));
+                }
+            }
+            index.transactional_bind(self.shared_header_offset())?;
+            if !existing {
+                header.index_offsets[count].store(offset, Ordering::Release);
+                header
+                    .index_count
+                    .store((count + 1) as u32, Ordering::Release);
+            }
+        }
+        self.indexes.push(BoundIndex { index, key });
+        self.indexes
+            .sort_unstable_by_key(|bound| bound.index.header_offset());
+        Ok(())
+    }
+
+    pub fn index_is_bound(&self, index: &SecondaryIndex<usize>) -> bool {
+        Arc::ptr_eq(&self.shm, index.shared_arena())
+            && self
+                .indexes
+                .iter()
+                .any(|bound| bound.index.header_offset() == index.header_offset())
+    }
+
+    /// Return the complete matching row-id set for this transaction's snapshot,
+    /// including its own pending writes. Empty predicates are dependencies too.
+    /// Indexes hold only current postings: if a relevant bucket has changed
+    /// since the transaction began, conservatively reject instead of silently
+    /// omitting a historical candidate. Hash collisions and broad range scans
+    /// can cause additional serialization retries, never missing rows.
+    pub fn index_lookup(
+        &self,
+        tx: &mut OccTransaction<T>,
+        index: &SecondaryIndex<usize>,
+        predicate: &IndexCompare,
+    ) -> Result<Vec<usize>, Error> {
+        self.ensure_open(tx)?;
+        if !self.index_is_bound(index) {
+            return Err(Error::Index(
+                "query index is not bound to this table".into(),
+            ));
+        }
+        let binding = self
+            .indexes
+            .iter()
+            .find(|bound| bound.index.header_offset() == index.header_offset())
+            .expect("bound index checked above");
+        index.transactional_check_owner(self.shared_header_offset())?;
+        let buckets = index.transactional_bucket_ids(predicate)?;
+        let mut guards = Vec::with_capacity(buckets.len());
+        for bucket in &buckets {
+            let guard = match Self::acquire_index_bucket(index, *bucket) {
+                Ok(guard) => guard,
+                Err(Error::SerializationFailure) => {
+                    tx.index_conflict = true;
+                    return Err(Error::SerializationFailure);
+                }
+                Err(err) => return Err(err),
+            };
+            guards.push(guard);
+        }
+        for bucket in &buckets {
+            let stamp = index.transactional_stamp(*bucket)?;
+            if stamp >= tx.txid {
+                tx.index_conflict = true;
+                return Err(Error::SerializationFailure);
+            }
+            if let Some(previous) = tx
+                .index_reads
+                .iter()
+                .find(|read| read.index_offset == index.header_offset() && read.bucket == *bucket)
+            {
+                if previous.stamp != stamp {
+                    tx.index_conflict = true;
+                    return Err(Error::SerializationFailure);
+                }
+            } else {
+                tx.index_reads.push(IndexRead {
+                    index_offset: index.header_offset(),
+                    bucket: *bucket,
+                    stamp,
+                });
+            }
+        }
+        let candidates = index.transactional_raw_lookup(predicate)?;
+        // Candidate completeness and predicate stamps are now captured. Stable
+        // row IDs and the pinned MVCC horizon let us materialize without holding
+        // index latches; later mutations are checked again at commit. In
+        // particular, a broad range query need not exclude writers while it
+        // filters rows or grows its concrete row-read set.
+        drop(guards);
+        #[cfg(test)]
+        INDEX_CANDIDATES_CAPTURED_HOOK.with(|hook| {
+            if let Some(hook) = hook.borrow_mut().take() {
+                hook();
+            }
+        });
+        let mut candidates: BTreeSet<usize> = candidates.into_iter().collect();
+        candidates.extend(tx.write_set.iter().map(|write| write.row_id));
+        let mut result = Vec::new();
+        for row_id in candidates {
+            if let Some(value) = self.read(tx, row_id)? {
+                if (binding.key)(&value)
+                    .as_ref()
+                    .is_some_and(|key| index_predicate_matches(predicate, key))
+                {
+                    result.push(row_id);
+                }
+            }
+        }
+        Ok(result)
+    }
+
+    fn validate_index_bindings(&self) -> Result<(), Error> {
+        let header = self.shared_header_ref()?;
+        if header.index_poisoned.load(Ordering::Acquire) {
+            return Err(Error::Index(
+                "table is poisoned after failed index publication".into(),
+            ));
+        }
+        let count = header.index_count.load(Ordering::Acquire) as usize;
+        if count != self.indexes.len() || count > MAX_TABLE_INDEXES {
+            return Err(Error::IndexBindingsIncomplete);
+        }
+        for offset in &header.index_offsets[..count] {
+            let offset = offset.load(Ordering::Acquire);
+            let Some(bound) = self
+                .indexes
+                .iter()
+                .find(|bound| bound.index.header_offset() == offset)
+            else {
+                return Err(Error::IndexBindingsIncomplete);
+            };
+            bound
+                .index
+                .transactional_check_owner(self.shared_header_offset())?;
+        }
+        Ok(())
+    }
+
+    fn ensure_unmanaged_write(&self) -> Result<(), Error> {
+        if self
+            .shared_header_ref()?
+            .index_count
+            .load(Ordering::Acquire)
+            != 0
+        {
+            return Err(Error::Index(
+                "direct seed/recovery writes are forbidden after an index is bound".into(),
+            ));
+        }
+        Ok(())
+    }
+
+    fn poison_indexes(&self) {
+        if let Ok(header) = self.shared_header_ref() {
+            header.index_poisoned.store(true, Ordering::Release);
+        }
+        for bound in &self.indexes {
+            let _ = bound.index.transactional_poison();
+        }
+    }
+
+    fn index_changes(
+        &self,
+        tx: &OccTransaction<T>,
+        final_writes: &[usize],
+    ) -> Result<Vec<IndexChange>, Error> {
+        let mut changes = Vec::new();
+        for write_idx in final_writes {
+            let write = &tx.write_set[*write_idx];
+            let before = &self.resolve_row_ptr(&write.base_ptr)?.value;
+            let after = &self.resolve_row_ptr(&write.new_ptr)?.value;
+            for (binding, bound) in self.indexes.iter().enumerate() {
+                let before = (bound.key)(before);
+                let after = (bound.key)(after);
+                if before == after {
+                    continue;
+                }
+                if let Some(key) = &before {
+                    bound.index.transactional_prevalidate(key, &write.row_id)?;
+                }
+                if let Some(key) = &after {
+                    bound.index.transactional_prevalidate(key, &write.row_id)?;
+                }
+                changes.push(IndexChange {
+                    binding,
+                    row_id: write.row_id,
+                    before,
+                    after,
+                });
+            }
+        }
+        Ok(changes)
+    }
+
+    fn index_lock_keys(
+        &self,
+        tx: &OccTransaction<T>,
+        changes: &[IndexChange],
+    ) -> Result<Vec<(usize, usize)>, Error> {
+        let mut keys = BTreeSet::new();
+        for read in &tx.index_reads {
+            let binding = self
+                .indexes
+                .iter()
+                .position(|bound| bound.index.header_offset() == read.index_offset)
+                .ok_or(Error::IndexBindingsIncomplete)?;
+            keys.insert((binding, read.bucket));
+        }
+        for change in changes {
+            let index = &self.indexes[change.binding].index;
+            for key in [change.before.as_ref(), change.after.as_ref()]
+                .into_iter()
+                .flatten()
+            {
+                keys.insert((change.binding, index.transactional_key_bucket(key)?));
+            }
+        }
+        Ok(keys.into_iter().collect())
+    }
+
+    fn acquire_index_locks(
+        &self,
+        keys: &[(usize, usize)],
+    ) -> Result<Vec<ShmMutexGuard<'_>>, Error> {
+        let mut guards = Vec::with_capacity(keys.len());
+        for (binding, bucket) in keys {
+            guards.push(Self::acquire_index_bucket(
+                &self.indexes[*binding].index,
+                *bucket,
+            )?);
+        }
+        Ok(guards)
+    }
+
+    fn acquire_index_bucket(
+        index: &SecondaryIndex<usize>,
+        bucket: usize,
+    ) -> Result<ShmMutexGuard<'_>, Error> {
+        // Publication usually holds a bucket for only microseconds. Retry that
+        // short contention locally instead of immediately turning it into an
+        // application-level transaction retry and millisecond backoff. Every
+        // caller acquires canonical bucket order, and this wait remains bounded.
+        for attempt in 0..INDEX_LOCK_SPIN_LIMIT {
+            if let Some(guard) = index.transactional_try_lock_bucket(bucket)? {
+                return Ok(guard);
+            }
+            #[cfg(test)]
+            if attempt == 0 {
+                INDEX_BUCKET_CONTENDED_HOOK.with(|hook| {
+                    if let Some(hook) = hook.borrow_mut().take() {
+                        hook();
+                    }
+                });
+            }
+            if attempt & 0x3f == 0x3f {
+                std::thread::yield_now();
+            }
+            std::hint::spin_loop();
+        }
+        Err(Error::SerializationFailure)
+    }
+
+    fn index_read_conflict(&self, tx: &OccTransaction<T>) -> Result<bool, Error> {
+        if tx.index_conflict {
+            return Ok(true);
+        }
+        for read in &tx.index_reads {
+            let bound = self
+                .indexes
+                .iter()
+                .find(|bound| bound.index.header_offset() == read.index_offset)
+                .ok_or(Error::IndexBindingsIncomplete)?;
+            let stamp = bound.index.transactional_stamp(read.bucket)?;
+            if stamp != read.stamp || stamp >= tx.txid {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
+    // Destination insertion is the only allocating phase. If any insertion
+    // fails, remove just the successful additions: source postings are intact,
+    // and rollback needs no allocation. A failure to undo or remove is fatal
+    // and poisons the shared table and every registered index.
+    fn apply_index_changes(&self, changes: &[IndexChange]) -> Result<(), Error> {
+        let mut inserted = Vec::new();
+        for (change_idx, change) in changes.iter().enumerate() {
+            if let Some(after) = &change.after {
+                let index = &self.indexes[change.binding].index;
+                if let Err(err) = index.transactional_insert(after.clone(), change.row_id) {
+                    let mut rollback_error = None;
+                    for idx in inserted.into_iter().rev() {
+                        let previous: &IndexChange = &changes[idx];
+                        if let Err(undo) =
+                            self.indexes[previous.binding].index.transactional_remove(
+                                previous.after.as_ref().expect("inserted destination"),
+                                &previous.row_id,
+                            )
+                        {
+                            rollback_error = Some(undo.to_string());
+                        }
+                    }
+                    if let Some(undo) = rollback_error {
+                        self.poison_indexes();
+                        return Err(Error::Index(format!("destination insertion failed ({err}); rollback failed ({undo}); table poisoned")));
+                    }
+                    return Err(err.into());
+                }
+                inserted.push(change_idx);
+                #[cfg(test)]
+                INDEX_DESTINATION_HOOK.with(|hook| {
+                    if let Some(hook) = hook.borrow_mut().as_mut() {
+                        hook(inserted.len());
+                    }
+                });
+            }
+        }
+        for change in changes {
+            if let Some(before) = &change.before {
+                if let Err(err) = self.indexes[change.binding]
+                    .index
+                    .transactional_remove(before, &change.row_id)
+                {
+                    self.poison_indexes();
+                    return Err(Error::Index(format!(
+                        "source removal failed ({err}); table poisoned"
+                    )));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn publish_index_stamps(&self, changes: &[IndexChange]) -> Result<(), Error> {
+        if changes.is_empty() {
+            return Ok(());
+        }
+        // A publication clock shares the txid allocator, but is reserved only
+        // AFTER deregistration. Thus even an older, late-committing writer gets
+        // a stamp newer than every transaction whose snapshot might exclude it.
+        // Bucket latches remain held until all stamps have been published.
+        let stamp = self.shm.global_txid().fetch_add(1, Ordering::AcqRel);
+        let mut touched = BTreeSet::new();
+        for change in changes {
+            for key in [change.before.as_ref(), change.after.as_ref()]
+                .into_iter()
+                .flatten()
+            {
+                touched.insert((
+                    change.binding,
+                    self.indexes[change.binding]
+                        .index
+                        .transactional_key_bucket(key)?,
+                ));
+            }
+        }
+        for (binding, bucket) in touched {
+            self.indexes[binding]
+                .index
+                .transactional_publish_stamp(bucket, stamp)?;
+        }
+        Ok(())
     }
 
     /// Locks stable, shared-memory row slots in a deterministic order.
@@ -372,7 +876,13 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             .collect()
     }
 
+    /// Bootstrap a stable physical row slot before concurrent transactions.
+    /// The caller must ensure no transaction or reader is using this table.
+    /// Runtime creation should activate a preseeded logical slot via `write`;
+    /// seeding provides no predicate dependency and is forbidden after binding
+    /// an index. Full-slot query scans rely on this stable-slot lifecycle.
     pub fn seed_row(&self, row_id: usize, value: T) -> Result<(), Error> {
+        self.ensure_unmanaged_write()?;
         let slot = self.slot_ref(row_id)?;
         let seed_txid = self.shm.global_txid().fetch_add(1, Ordering::AcqRel);
         let row_ptr = self.allocate_row(row_id, value, seed_txid, EMPTY_PTR)?;
@@ -390,8 +900,20 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
     }
 
     pub fn begin_transaction(&self) -> Result<OccTransaction<T>, Error> {
+        {
+            let header = self.shared_header_ref()?;
+            let _registry = header.index_registry_lock.lock();
+            self.validate_index_bindings()?;
+            header.index_registry_sealed.store(true, Ordering::Release);
+        }
         let registration = self.shm.begin_transaction()?;
-        let snapshot = self.shm.create_snapshot();
+        let snapshot = match self.shm.create_transaction_snapshot(registration) {
+            Ok(snapshot) => snapshot,
+            Err(err) => {
+                let _ = self.shm.end_transaction(registration);
+                return Err(err.into());
+            }
+        };
         let mut snapshot_active = HashSet::with_capacity(snapshot.len());
         for txid in snapshot.in_flight_txids() {
             if *txid != registration.txid {
@@ -400,6 +922,10 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         }
 
         Ok(OccTransaction {
+            table_offset: self.shared_header_offset(),
+            arena_base: self.shm.mmap_base().as_ptr() as usize,
+            index_reads: Vec::new(),
+            index_conflict: false,
             txid: registration.txid,
             snapshot_xmin: snapshot.xmin,
             snapshot_xmax: snapshot.xmax,
@@ -611,6 +1137,11 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
     }
 
     pub fn abort(&self, tx: &mut OccTransaction<T>) -> Result<(), Error> {
+        if tx.table_offset != self.shared_header_offset()
+            || tx.arena_base != self.shm.mmap_base().as_ptr() as usize
+        {
+            return Err(Error::TransactionTableMismatch);
+        }
         self.clear_local_sets(tx)?;
         let _ = self.shm.flush_local_recycle_caches();
         self.finish_transaction(tx)
@@ -626,7 +1157,9 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
     ) -> Result<OccCommitRecord<T>, Error> {
         self.ensure_open(tx)?;
         let final_write_indices = self.final_write_indices(tx);
-        let locks = match self.acquire_partition_locks(tx) {
+        let index_changes = self.index_changes(tx, &final_write_indices)?;
+        let index_keys = self.index_lock_keys(tx, &index_changes)?;
+        let index_locks = match self.acquire_index_locks(&index_keys) {
             Ok(locks) => locks,
             Err(Error::SerializationFailure) => {
                 self.abort_for_serialization_failure(tx);
@@ -634,50 +1167,80 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             }
             Err(err) => return Err(err),
         };
-
-        if self.has_row_lock_conflict(tx)? {
-            drop(locks);
-            self.abort_for_serialization_failure(tx);
-            return Err(Error::SerializationFailure);
-        }
-
-        if self.has_serialization_conflict(tx)? {
-            drop(locks);
-            self.abort_for_serialization_failure(tx);
-            return Err(Error::SerializationFailure);
-        }
-
-        if self.has_write_base_conflict(tx, &final_write_indices)? {
-            drop(locks);
-            self.abort_for_serialization_failure(tx);
-            return Err(Error::SerializationFailure);
-        }
-
-        let writes = match self.publish_write_set(tx, &final_write_indices) {
-            Ok(writes) => writes,
+        let locks = match self.acquire_partition_locks(tx) {
+            Ok(locks) => locks,
             Err(Error::SerializationFailure) => {
-                drop(locks);
+                drop(index_locks);
                 self.abort_for_serialization_failure(tx);
                 return Err(Error::SerializationFailure);
             }
+            Err(err) => return Err(err),
+        };
+
+        if self.index_read_conflict(tx)?
+            || self.has_row_lock_conflict(tx)?
+            || self.has_serialization_conflict(tx)?
+            || self.has_write_base_conflict(tx, &final_write_indices)?
+        {
+            drop(locks);
+            drop(index_locks);
+            self.abort_for_serialization_failure(tx);
+            return Err(Error::SerializationFailure);
+        }
+
+        // All index destinations are allocated before any source is removed;
+        // no table version is published until that preparation has succeeded.
+        // Readers of affected predicates reject the held bucket latches.
+        self.apply_index_changes(&index_changes)?;
+        let writes = match self.publish_write_set(tx, &final_write_indices) {
+            Ok(writes) => writes,
             Err(err) => {
-                drop(locks);
-                return Err(err);
+                // Pointer/CAS failure after validation indicates corruption.
+                // Some heads might already be published: do not recycle them
+                // as aborted private versions, and never allow more commits.
+                self.poison_indexes();
+                tx.write_set.clear();
+                tx.read_set.clear();
+                tx.index_reads.clear();
+                let _ = self.finish_transaction(tx);
+                return Err(Error::Index(format!(
+                    "row publication failed after index preparation ({err}); table poisoned"
+                )));
             }
         };
-        drop(locks);
-
+        #[cfg(test)]
+        INDEX_PUBLICATION_HOOK.with(|hook| {
+            if let Some(hook) = hook.borrow_mut().take() {
+                hook();
+            }
+        });
         let commit_record = OccCommitRecord {
             txid: tx.txid,
             writes,
         };
-
-        self.recycle_non_final_writes(tx, &final_write_indices)?;
+        if let Err(err) = self.recycle_non_final_writes(tx, &final_write_indices) {
+            self.poison_indexes();
+            tx.write_set.clear();
+            let _ = self.finish_transaction(tx);
+            return Err(err);
+        }
         tx.read_set.clear();
+        tx.index_reads.clear();
+        tx.index_conflict = false;
         tx.write_set.clear();
         tx.savepoints.clear();
         let _ = self.shm.flush_local_recycle_caches();
-        self.finish_transaction(tx)?;
+        if let Err(err) = self
+            .finish_transaction(tx)
+            .and_then(|()| self.publish_index_stamps(&index_changes))
+        {
+            self.poison_indexes();
+            return Err(err);
+        }
+        // Keep both row partition locks and index predicate latches until the
+        // complete transaction is visible and its publication stamps exist.
+        drop(locks);
+        drop(index_locks);
         Ok(commit_record)
     }
 
@@ -993,36 +1556,33 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
 
         let locks = self.shm.occ_partition_locks();
         let mut acquired: Vec<usize> = Vec::with_capacity(lock_indices.len());
-        let mut observed_contention = false;
         for idx in &lock_indices {
             let mut spins = 0_u32;
             while !locks[*idx].try_lock() {
-                observed_contention = true;
                 spins = spins.wrapping_add(1);
                 if let Some(limit) = spin_limit {
                     if spins >= limit {
                         for held in acquired.iter().rev() {
                             locks[*held].unlock();
                         }
-                        std::thread::sleep(Duration::from_micros(100));
+                        // Commit callers can still hold predicate latches.
+                        // Return immediately after releasing row locks so their
+                        // retry backoff runs only after every latch is dropped.
                         return None;
                     }
                 }
                 if spins & 0x3f == 0 {
                     std::thread::yield_now();
                 }
-                // Under heavy cross-process contention, periodic micro-sleeps
-                // reduce lock-holder starvation from pure busy spinning.
-                if spins & 0x3ff == 0 {
+                // Exclusive bootstrap/vacuum may wait without a finite budget.
+                // Commit callers must not sleep while holding predicate latches;
+                // their retry policy runs after all guards have been released.
+                if spin_limit.is_none() && spins & 0x3ff == 0 {
                     std::thread::sleep(Duration::from_micros(100));
                 }
                 std::hint::spin_loop();
             }
             acquired.push(*idx);
-        }
-
-        if spin_limit.is_some() && observed_contention {
-            std::thread::sleep(Duration::from_micros(50));
         }
 
         Some(PartitionLockGuard {
@@ -1319,6 +1879,8 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
     fn clear_local_sets(&self, tx: &mut OccTransaction<T>) -> Result<(), Error> {
         self.recycle_write_suffix(tx, 0)?;
         tx.read_set.clear();
+        tx.index_reads.clear();
+        tx.index_conflict = false;
         tx.write_set.clear();
         tx.savepoints.clear();
         Ok(())
@@ -1326,6 +1888,12 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
 
     #[inline]
     fn ensure_open(&self, tx: &OccTransaction<T>) -> Result<(), Error> {
+        if tx.table_offset != self.shared_header_offset()
+            || tx.arena_base != self.shm.mmap_base().as_ptr() as usize
+        {
+            return Err(Error::TransactionTableMismatch);
+        }
+        self.validate_index_bindings()?;
         if tx.registration.is_none() {
             return Err(Error::TransactionClosed);
         }
@@ -1362,7 +1930,11 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         Ok(slot.head.load(Ordering::Acquire))
     }
 
+    /// Replay only during exclusive bootstrap/recovery, before any index is
+    /// bound and with no live transactions or concurrent readers. Rebuild the
+    /// indexes from the recovered rows before binding them for runtime use.
     pub fn apply_recovered_write(&self, row_id: usize, txid: TxId, value: T) -> Result<(), Error> {
+        self.ensure_unmanaged_write()?;
         if row_id >= self.capacity() {
             return Err(Error::RowOutOfBounds {
                 row_id,
@@ -1394,6 +1966,8 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         Ok(())
     }
 
+    /// CAS replay variant with the same exclusive recovery requirements as
+    /// `apply_recovered_write`; this is not a runtime transactional write API.
     pub fn apply_recovered_write_cas(
         &self,
         row_id: usize,
@@ -1401,6 +1975,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         expected_base_offset: u32,
         value: T,
     ) -> Result<(), Error> {
+        self.ensure_unmanaged_write()?;
         if row_id >= self.capacity() {
             return Err(Error::RowOutOfBounds {
                 row_id,
@@ -1524,7 +2099,10 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
                 let next_offset = curr_row.next.load(Ordering::Acquire);
                 let xmax = curr_row.xmax.load(Ordering::Acquire);
 
-                if xmax != 0 && xmax < global_xmin {
+                // A RowLockGuard can outlive its transaction. Its Drop writes
+                // to this version, so recycling it before the guard releases
+                // could let an old guard unlock an unrelated later owner.
+                if xmax != 0 && xmax < global_xmin && !curr_row.is_locked.load(Ordering::Acquire) {
                     let prev_ptr = RelPtr::<OccRow<T>>::from_offset(prev_offset);
                     let prev_row = self.resolve_row_ptr(&prev_ptr)?;
                     prev_row.next.store(next_offset, Ordering::Release);
@@ -1869,5 +2447,241 @@ mod tests {
             pops,
             telemetry.push_success
         );
+    }
+}
+
+fn index_predicate_matches(predicate: &IndexCompare, key: &IndexValue) -> bool {
+    match predicate {
+        IndexCompare::Eq(value) => key == value,
+        IndexCompare::Gt(value) => key > value,
+        IndexCompare::Gte(value) => key >= value,
+        IndexCompare::Lt(value) => key < value,
+        IndexCompare::Lte(value) => key <= value,
+        IndexCompare::In(values) => values.contains(key),
+    }
+}
+
+#[cfg(test)]
+mod transactional_publication_tests {
+    use super::*;
+    use std::sync::Barrier;
+
+    fn key(value: &u64) -> Option<IndexValue> {
+        Some(IndexValue::U64(*value))
+    }
+
+    #[test]
+    fn bounded_partition_contention_releases_every_partial_lock_before_retry() {
+        let arena = Arc::new(ShmArena::new(8 << 20).unwrap());
+        let table = OccTable::new(Arc::clone(&arena), 2).unwrap();
+        table.seed_row(0, 10).unwrap();
+        table.seed_row(1, 20).unwrap();
+        let mut tx = table.begin_transaction().unwrap();
+        table.write(&mut tx, 0, 11).unwrap();
+        table.write(&mut tx, 1, 21).unwrap();
+        let partitions = table.collect_lock_indices(&tx);
+        assert_eq!(partitions.len(), 2);
+        let locks = arena.occ_partition_locks();
+        assert!(locks[partitions[1]].try_lock());
+        let committed = table.commit(&mut tx);
+        locks[partitions[1]].unlock();
+        assert_eq!(committed, Err(Error::SerializationFailure));
+        // The first partition was acquired before the second hit its finite
+        // contention budget. It must be available before application backoff.
+        assert!(locks[partitions[0]].try_lock());
+        locks[partitions[0]].unlock();
+        assert_eq!(table.latest_value(0).unwrap(), Some(10));
+        assert_eq!(table.latest_value(1).unwrap(), Some(20));
+    }
+
+    #[test]
+    fn brief_predicate_latch_contention_does_not_force_a_transaction_retry() {
+        use std::sync::mpsc;
+        for write_transaction in [false, true] {
+            let arena = Arc::new(ShmArena::new(8 << 20).unwrap());
+            let mut table = OccTable::new(Arc::clone(&arena), 1).unwrap();
+            table.seed_row(0, 10).unwrap();
+            let index = SecondaryIndex::new_in_shared("key", arena);
+            index.try_insert(IndexValue::U64(10), 0).unwrap();
+            table.bind_index(index.clone(), key).unwrap();
+            let bucket = index
+                .transactional_key_bucket(&IndexValue::U64(10))
+                .unwrap();
+            let mut tx = table.begin_transaction().unwrap();
+            let holder_index = index.clone();
+            let (ready_send, ready_recv) = mpsc::channel();
+            let (release_send, release_recv) = mpsc::channel();
+            let (released_send, released_recv) = mpsc::channel();
+            let holder = std::thread::spawn(move || {
+                let guard = holder_index
+                    .transactional_try_lock_bucket(bucket)
+                    .unwrap()
+                    .unwrap();
+                ready_send.send(()).unwrap();
+                release_recv.recv().unwrap();
+                drop(guard);
+                released_send.send(()).unwrap();
+            });
+            ready_recv.recv().unwrap();
+            INDEX_BUCKET_CONTENDED_HOOK.with(|hook| {
+                *hook.borrow_mut() = Some(Box::new(move || {
+                    // Force exactly one failed lock attempt, then release the
+                    // existing holder before acquisition retries. No timing
+                    // assumption or sleep determines the test result.
+                    release_send.send(()).unwrap();
+                    released_recv.recv().unwrap();
+                }));
+            });
+            if write_transaction {
+                table.write(&mut tx, 0, 20).unwrap();
+                assert_eq!(table.commit(&mut tx).unwrap(), 1);
+            } else {
+                assert_eq!(
+                    table
+                        .index_lookup(&mut tx, &index, &IndexCompare::Eq(IndexValue::U64(10)))
+                        .unwrap(),
+                    vec![0]
+                );
+                table.commit(&mut tx).unwrap();
+            }
+            holder.join().unwrap();
+        }
+    }
+
+    #[test]
+    fn captured_candidates_survive_concurrent_key_move_and_vacuum_after_latch_release() {
+        let arena = Arc::new(ShmArena::new(8 << 20).unwrap());
+        let mut table = OccTable::new(Arc::clone(&arena), 1).unwrap();
+        table.seed_row(0, 10).unwrap();
+        let index = SecondaryIndex::new_in_shared("key", arena);
+        index.try_insert(IndexValue::U64(10), 0).unwrap();
+        table.bind_index(index.clone(), key).unwrap();
+        let table = Arc::new(table);
+        // The writer is older but still active in the reader's snapshot. That
+        // snapshot must retain the old version even after the writer finishes.
+        let mut writer = table.begin_transaction().unwrap();
+        let mut reader = table.begin_transaction().unwrap();
+        let writer_table = Arc::clone(&table);
+        INDEX_CANDIDATES_CAPTURED_HOOK.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(move || {
+                writer_table.write(&mut writer, 0, 20).unwrap();
+                // This can succeed only after the reader releases its bucket
+                // latches. Schedule a real vacuum before row materialization.
+                writer_table.commit(&mut writer).unwrap();
+                assert!(crate::run_vacuum_pass(&writer_table).unwrap().is_empty());
+            }));
+        });
+        assert_eq!(
+            table
+                .index_lookup(&mut reader, &index, &IndexCompare::Eq(IndexValue::U64(10)))
+                .unwrap(),
+            vec![0]
+        );
+        assert_eq!(table.read(&mut reader, 0).unwrap(), Some(10));
+        assert_eq!(index.try_entries().unwrap(), vec![(IndexValue::U64(20), 0)]);
+        // The materialized snapshot was complete, but serializable commit must
+        // still reject its changed predicate dependency.
+        assert!(table.index_read_conflict(&reader).unwrap());
+        assert_eq!(table.commit(&mut reader), Err(Error::SerializationFailure));
+        assert_eq!(crate::run_vacuum_pass(&table).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn real_allocation_failure_after_first_destination_rolls_back_without_publishing_rows() {
+        let arena = Arc::new(ShmArena::new(2 << 20).unwrap());
+        let mut table = OccTable::new(Arc::clone(&arena), 1).unwrap();
+        table.seed_row(0, 10).unwrap();
+        let first = SecondaryIndex::new_in_shared("first", Arc::clone(&arena));
+        let second = SecondaryIndex::new_in_shared("second", Arc::clone(&arena));
+        for index in [&first, &second] {
+            index.try_insert(IndexValue::U64(10), 0).unwrap();
+            table.bind_index(index.clone(), key).unwrap();
+        }
+        let mut tx = table.begin_transaction().unwrap();
+        table.write(&mut tx, 0, 20).unwrap();
+        let fill_arena = Arc::clone(&arena);
+        INDEX_DESTINATION_HOOK.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(move |count| {
+                if count == 1 {
+                    // Fill real shared allocation space AFTER one destination was
+                    // installed, so the second fails allocation rather than key
+                    // validation. Remaining slack is consumed with tiny blocks.
+                    while fill_arena.chunked_arena().alloc([0_u8; 1024]).is_ok() {}
+                    while fill_arena.chunked_arena().alloc([0_u8; 1]).is_ok() {}
+                }
+            }))
+        });
+        let error = table
+            .commit(&mut tx)
+            .expect_err("second destination must exhaust arena");
+        INDEX_DESTINATION_HOOK.with(|hook| *hook.borrow_mut() = None);
+        assert!(matches!(error, Error::Index(_)), "{error:?}");
+        table.abort(&mut tx).unwrap();
+        assert_eq!(table.latest_value(0).unwrap(), Some(10));
+        for index in [&first, &second] {
+            assert_eq!(index.try_entries().unwrap(), vec![(IndexValue::U64(10), 0)]);
+        }
+        let mut read = table
+            .begin_transaction()
+            .expect("rollback must not poison clean table");
+        assert_eq!(
+            table
+                .index_lookup(&mut read, &first, &IndexCompare::Eq(IndexValue::U64(10)))
+                .unwrap(),
+            vec![0]
+        );
+        table.commit(&mut read).unwrap();
+    }
+
+    #[test]
+    fn reader_paused_inside_row_index_publication_cannot_commit_incomplete_view() {
+        let arena = Arc::new(ShmArena::new(8 << 20).unwrap());
+        let mut table = OccTable::new(Arc::clone(&arena), 1).unwrap();
+        table.seed_row(0, 10).unwrap();
+        let index = SecondaryIndex::new_in_shared("key", arena);
+        index.try_insert(IndexValue::U64(10), 0).unwrap();
+        table.bind_index(index.clone(), key).unwrap();
+        let table = Arc::new(table);
+        let paused = Arc::new(Barrier::new(2));
+        let resume = Arc::new(Barrier::new(2));
+        let writer_table = Arc::clone(&table);
+        let writer_paused = Arc::clone(&paused);
+        let writer_resume = Arc::clone(&resume);
+        let writer = std::thread::spawn(move || {
+            let mut tx = writer_table.begin_transaction().unwrap();
+            writer_table.write(&mut tx, 0, 20).unwrap();
+            INDEX_PUBLICATION_HOOK.with(|hook| {
+                *hook.borrow_mut() = Some(Box::new(move || {
+                    writer_paused.wait();
+                    writer_resume.wait();
+                }))
+            });
+            writer_table.commit(&mut tx).unwrap();
+        });
+        paused.wait();
+        let mut reader = table.begin_transaction().unwrap();
+        // Index mutations and heads exist, but writer registration still pins
+        // the old visible row. Querying either key must reject the busy latch.
+        assert_eq!(table.read(&mut reader, 0).unwrap(), Some(10));
+        assert_eq!(
+            table.index_lookup(&mut reader, &index, &IndexCompare::Eq(IndexValue::U64(20))),
+            Err(Error::SerializationFailure)
+        );
+        assert_eq!(table.commit(&mut reader), Err(Error::SerializationFailure));
+        resume.wait();
+        writer.join().unwrap();
+        let mut reader = table.begin_transaction().unwrap();
+        assert_eq!(
+            table
+                .index_lookup(&mut reader, &index, &IndexCompare::Eq(IndexValue::U64(20)))
+                .unwrap(),
+            vec![0]
+        );
+        assert_eq!(table.read(&mut reader, 0).unwrap(), Some(20));
+        assert!(table
+            .index_lookup(&mut reader, &index, &IndexCompare::Eq(IndexValue::U64(10)))
+            .unwrap()
+            .is_empty());
+        table.commit(&mut reader).unwrap();
     }
 }

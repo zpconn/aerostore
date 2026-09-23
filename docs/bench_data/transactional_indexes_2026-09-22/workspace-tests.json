@@ -1,0 +1,19 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "--offline",
+    "--workspace",
+    "--release",
+    "--",
+    "--test-threads=1"
+  ],
+  "environment": {},
+  "started_utc": "2026-09-23T05:23:02.679393+00:00",
+  "exit_code": 0,
+  "elapsed_seconds": 389.0088333720014,
+  "passed_tests": 384,
+  "failed_tests": 0,
+  "ignored_tests": 2,
+  "compilation_note": "Compiled before the final private index-header version bump from 1 to 2 and its added attachment rejection test. All runtime protocol and performance changes were included. Final focused and Tcl tests rebuild and cover the version bump."
+}

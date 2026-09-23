@@ -1,0 +1,272 @@
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/aerostore_core)
+    Finished `release` profile [optimized] target(s) in 4.56s
+     Running unittests src/lib.rs (target/release/deps/aerostore_core-54d4cda9ad712651)
+
+running 182 tests
+test bootloader::tests::alloc_empty_u32_array_returns_zero_tuple ... ok
+test bootloader::tests::alloc_u32_array_and_read_u32_array_roundtrip ... ok
+test bootloader::tests::bootlayout_new_rejects_row_capacity_over_u32 ... ok
+test bootloader::tests::clear_persisted_boot_layout_makes_layout_missing ... ok
+test bootloader::tests::load_rejects_bad_magic_bad_version_zero_row_capacity ... ok
+test bootloader::tests::persist_then_load_layout_roundtrip ... ok
+test bootloader::tests::persist_updates_existing_layout_in_place ... ok
+test bootloader::tests::read_u32_array_rejects_out_of_bounds ... ok
+test execution::tests::chunked_eventual_scan_matches_strict_snapshot_on_stable_input ... ok
+test execution::tests::execution_engine_applies_residual_filter_then_sort_then_limit ... ok
+test execution::tests::execution_engine_primary_key_path_returns_single_candidate ... ok
+test execution::tests::pk_map_capacity_exceeded_is_reported ... ok
+test execution::tests::pk_map_get_or_insert_is_idempotent_for_same_key ... ok
+test execution::tests::pk_map_insert_existing_bumps_next_row_id_floor ... ok
+test filters::tests::filters_handle_negative_and_range_operators_correctly ... ok
+test filters::tests::filters_non_null_paths_remain_correct_for_in_range_and_negative_ops ... ok
+test filters::tests::filters_null_and_notnull_depend_only_on_bitmask ... ok
+test filters::tests::filters_short_circuit_all_non_null_operators_when_field_is_null ... ok
+test filters::tests::null_bitmask_masks_garbage_payload_bytes_without_option_storage ... ok
+test index::tests::index_value_ordering_is_stable_across_variants ... ok
+test index::tests::into_index_value_signed_maps_to_i64_variants ... ok
+test index::tests::into_index_value_string_owned_and_borrowed_equivalent ... ok
+test index::tests::into_index_value_unsigned_maps_to_u64_variants ... ok
+test ingest::tests::bulk_upsert_tsv_maps_decode_error_line_and_column ... ok
+test ingest::tests::bulk_upsert_tsv_rejects_zero_batch_size ... ok
+test ingest::tests::ingest_stats_metrics_line_contains_all_fields ... ok
+test ingest::tests::tsv_columns_ensure_end_rejects_extra_columns ... ok
+test ingest::tests::tsv_columns_expect_reports_correct_column_number ... ok
+test ingest::tests::tsv_columns_next_bytes_handles_empty_and_terminal_columns ... ok
+test occ_partitioned::tests::allocate_row_prefers_starved_before_other_sources ... ok
+test occ_partitioned::tests::allocate_row_uses_primary_recycle_head_before_probe ... ok
+test occ_partitioned::tests::allocate_row_uses_probe_when_primary_empty ... ok
+test occ_partitioned::tests::concurrent_recycler_never_loses_or_double_owns_a_row ... ok
+test occ_partitioned::tests::exhaustion_uses_recycled_rows_outside_fast_probe_set ... ok
+test occ_partitioned::tests::failed_fresh_row_allocation_does_not_increment_success_counter ... ok
+test occ_partitioned::tests::occupied_starved_slot_does_not_abandon_previous_allocation ... ok
+test occ_partitioned::tests::recycle_telemetry_invariant_holds_in_single_recycle_cycle ... ok
+test occ_partitioned::tests::starved_slot_roundtrip_isolated_by_recycle_key ... ok
+test occ_partitioned::transactional_publication_tests::bounded_partition_contention_releases_every_partial_lock_before_retry ... ok
+test occ_partitioned::transactional_publication_tests::brief_predicate_latch_contention_does_not_force_a_transaction_retry ... ok
+test occ_partitioned::transactional_publication_tests::captured_candidates_survive_concurrent_key_move_and_vacuum_after_latch_release ... ok
+test occ_partitioned::transactional_publication_tests::reader_paused_inside_row_index_publication_cannot_commit_incomplete_view ... ok
+test occ_partitioned::transactional_publication_tests::real_allocation_failure_after_first_destination_rolls_back_without_publishing_rows ... ok
+test planner_cardinality::tests::prefers_highest_distinct_count ... ok
+test planner_cardinality::tests::tie_breaks_to_primary_key_then_filter_order ... ok
+test procarray::tests::begin_transaction_exhausts_slots_and_returns_no_free_slot ... ok
+test procarray::tests::clear_orphaned_slots_clears_and_reports_count ... ok
+test procarray::tests::end_transaction_rejects_invalid_slot ... ok
+test procarray::tests::end_transaction_rejects_slot_ownership_mismatch ... ok
+test procarray::tests::exclusive_orphan_recovery_resets_a_dead_metadata_latch ... ok
+test procarray::tests::snapshot_cannot_mistake_reserved_unpublished_txid_for_a_commit ... ok
+test procarray::tests::snapshot_xmin_xmax_and_inflight_set_consistent ... ok
+test recovery_delta::tests::replay_update_delta_overlays_only_changed_segments ... ok
+test retry::tests::delay_is_truncated_at_policy_max ... ok
+test retry::tests::different_seed_produces_divergent_sequence ... ok
+test retry::tests::next_delay_respects_jitter_bounds_for_each_attempt ... ok
+test retry::tests::nominal_backoff_is_truncated ... ok
+test retry::tests::same_seed_produces_same_delay_sequence ... ok
+test shm::tests::arena_reinitialization_cannot_reuse_cached_offsets_outside_the_new_allocator ... ok
+test shm::tests::class_segregated_reuse_does_not_cross_allocate_between_bins ... ok
+test shm::tests::exiting_thread_returns_recycled_blocks_to_other_allocators ... ok
+test shm::tests::forked_allocators_do_not_inherit_duplicate_cached_ownership ... ok
+test shm::tests::free_list_depth_estimate_reports_truncation_when_scan_limit_hit ... ok
+test shm::tests::free_pool_pop_cannot_resurrect_a_slot_owned_by_another_thread ... ok
+test shm::tests::general_class_path_bypasses_local_cache_behavior ... ok
+test shm::tests::mixed_sizes_in_one_class_retain_every_recycled_block ... ok
+test shm::tests::recycle_raw_in_class_invalid_block_does_not_mutate_free_list_counters ... ok
+test shm::tests::recycled_offsets_are_visible_cross_thread_without_an_explicit_flush ... ok
+test shm::tests::recycling_in_one_arena_survives_allocating_from_another_arena ... ok
+test shm::tests::shared_recycle_pool_round_trips_same_class_offsets ... ok
+test shm_index::tests::attachment_rejects_prior_publication_bucket_layout ... ok
+test shm_index::tests::attachment_rejects_skiplist_header_used_as_transactional_header ... ok
+test shm_index::tests::exhausted_epoch_slots_surface_remove_errors_and_move_retries ... ok
+test shm_index::tests::fallible_count_rejects_invalid_bounds_instead_of_widening_the_scan ... ok
+test shm_index::tests::fallible_in_lookup_limits_the_complete_union_not_overlapping_branches ... ok
+test shm_index::tests::fallible_lookup_preserves_predicate_ordering_deduplication_and_limits ... ok
+test shm_index::tests::fallible_lookup_rejects_corrupt_postings_instead_of_returning_partial_rows ... ok
+test shm_index::tests::fallible_lookup_rejects_invalid_keys_even_in_later_union_branches ... ok
+test shm_index::tests::fallible_lookup_rejects_malformed_stored_keys ... ok
+test shm_index::tests::from_existing_attaches_to_same_shared_skiplist ... ok
+test shm_index::tests::integrity_scan_exposes_stale_postings_and_malformed_payloads ... ok
+test shm_index::tests::lookup_and_remove_match_expected_postings ... ok
+test shm_index::tests::lookup_count_with_limit_caps_range_results ... ok
+test shm_index::tests::lookup_with_limit_caps_range_results ... ok
+test shm_index::tests::managed_index_binding_survives_attachment_and_rejects_raw_writes ... ok
+test shm_index::tests::move_payload_avoids_duplicate_when_target_already_contains_row ... ok
+test shm_index::tests::move_payload_old_missing_still_ensures_target_contains_row ... ok
+test shm_index::tests::move_payload_rekeys_posting_without_duplication ... ok
+test shm_index::tests::move_payload_relinks_into_existing_target_key ... ok
+test shm_index::tests::move_payload_same_key_is_noop ... ok
+test shm_index::tests::mutation_telemetry_counts_insert_and_remove_ops ... ok
+test shm_index::tests::mutation_telemetry_exposes_retry_phase_counters ... ok
+test shm_index::tests::predicate_buckets_cover_unions_ranges_and_validate_every_key ... ok
+test shm_index::tests::publication_locks_and_stamps_are_shared_with_attached_handles ... ok
+test shm_index::tests::range_queries_match_btree_model ... ok
+test shm_index::tests::rejects_oversized_row_id_payloads ... ok
+test shm_index::tests::rejects_oversized_string_keys ... ok
+test shm_skiplist::tests::alloc_node_prefers_reserve_node_offsets_under_pressure ... ok
+test shm_skiplist::tests::alloc_posting_prefers_reserve_pool_offsets ... ok
+test shm_skiplist::tests::alloc_tower_prefers_reserve_tower_and_can_reuse_taller_tower ... ok
+test shm_skiplist::tests::allocation_audit_accounts_for_churn_retirement_and_reuse ... ok
+test shm_skiplist::tests::allocation_audit_accounts_for_failed_insert_rollbacks ... ok
+test shm_skiplist::tests::allocation_audit_counts_physical_capacity_after_tower_reuse ... ok
+test shm_skiplist::tests::allocation_audit_rejects_an_unreachable_unretired_node ... ok
+test shm_skiplist::tests::allocation_audit_rejects_duplicate_pool_ownership ... ok
+test shm_skiplist::tests::bounded_scan_gt_starts_at_seek_ge_and_collects_tail_only ... ok
+test shm_skiplist::tests::bounded_scan_lt_and_lte_apply_strict_early_termination ... ok
+test shm_skiplist::tests::bounded_scan_matches_btreeset_model ... ok
+test shm_skiplist::tests::collector_waits_for_a_busy_list_instead_of_skipping_reclamation ... ok
+test shm_skiplist::tests::count_payloads_matches_lookup_payloads ... ok
+test shm_skiplist::tests::distinct_key_count_remains_stable_across_churn_cycles ... ok
+test shm_skiplist::tests::distinct_key_count_tracks_live_keys_with_duplicate_postings ... ok
+test shm_skiplist::tests::failed_constructor_returns_its_head_node_and_tower ... ok
+test shm_skiplist::tests::failed_insert_returns_posting_and_tower_for_reuse ... ok
+test shm_skiplist::tests::failed_insert_reuses_spill_storage_as_well_as_posting_and_tower ... ok
+test shm_skiplist::tests::failed_move_keeps_source_posting_visible ... ok
+test shm_skiplist::tests::failed_spill_allocation_returns_the_reserved_posting_slot ... ok
+test shm_skiplist::tests::gc_rotates_unreclaimable_head_and_preserves_backlog ... ok
+test shm_skiplist::tests::gc_unlinks_nodes_from_all_levels_before_reclaim_horizon ... ok
+test shm_skiplist::tests::insert_cannot_publish_through_a_deleted_predecessor ... ok
+test shm_skiplist::tests::marked_nodes_are_not_visible_after_deletions ... ok
+test shm_skiplist::tests::maybe_collect_garbage_on_alloc_failure_updates_failure_and_gc_counters ... ok
+test shm_skiplist::tests::move_payload_keeps_old_key_immutable_for_pinned_readers ... ok
+test shm_skiplist::tests::move_upserts_a_missing_source_without_an_external_fallback ... ok
+test shm_skiplist::tests::persistent_key_churn_reclaims_individual_postings_after_readers_finish ... ok
+test shm_skiplist::tests::pressure_state_forces_hot_when_reclaim_efficiency_collapses ... ok
+test shm_skiplist::tests::pressure_state_hot_needs_healthy_windows_to_return_normal ... ok
+test shm_skiplist::tests::pressure_state_transitions_use_hysteresis ... ok
+test shm_skiplist::tests::reserve_tower_mask_tracks_nonempty_heights_and_bounds_miss_count ... ok
+test shm_skiplist::tests::retired_queue_preserves_fifo_order ... ok
+test shm_skiplist::tests::seek_ge_and_bounded_scan_stay_correct_with_tombstone_heavy_keys ... ok
+test shm_skiplist::tests::seek_ge_returns_exact_gap_and_end_candidates ... ok
+test shm_skiplist::tests::skiplist_higher_levels_are_subsets_of_lower_levels ... ok
+test shm_skiplist::tests::skiplist_levels_are_sorted_acyclic_and_fully_linked ... ok
+test shm_skiplist::tests::spill_payloads_round_trip_and_remove_cleanly ... ok
+test shm_tmpfs::tests::cold_then_warm_attach_reuses_existing_segment ... ok
+test stapi_parser::tests::malformed_input_never_panics_across_boundary ... ok
+test stapi_parser::tests::parse_error_display_is_human_readable ... ok
+test stapi_parser::tests::parser_never_panics_for_arbitrary_input ... ok
+test stapi_parser::tests::parses_complex_nested_compare_list ... ok
+test stapi_parser::tests::parses_each_supported_operator ... ok
+test stapi_parser::tests::parses_eq_clause_with_generated_identifiers ... ok
+test stapi_parser::tests::parses_in_clause_with_generated_atoms ... ok
+test stapi_parser::tests::parses_nested_negative_and_null_compare_clauses ... ok
+test stapi_parser::tests::parses_operator_aliases_and_case_variants ... ok
+test stapi_parser::tests::parses_single_clause_unary_compare_form ... ok
+test stapi_parser::tests::rejects_invalid_arity_for_notnull_notmatch_and_neq ... ok
+test stapi_parser::tests::rejects_invalid_null_operator_arity ... ok
+test stapi_parser::tests::rejects_malformed_syntax_with_explicit_tcl_error ... ok
+test stapi_parser::tests::rejects_unknown_option_with_tcl_error_message ... ok
+test stapi_parser::tests::value_from_atom_parses_all_i64_values ... ok
+test txn::tests::begin_with_txid_advances_global_txid_floor ... ok
+test txn::tests::commit_and_abort_mark_node_inactive ... ok
+test txn::tests::oldest_active_snapshot_xmin_uses_snapshot_xmin_not_txid ... ok
+test txn::tests::oldest_active_txid_tracks_live_transactions ... ok
+test txn::tests::snapshot_excludes_current_txid_from_active_set ... ok
+test wal_delta::tests::build_and_apply_update_record_round_trips ... ok
+test wal_delta::tests::computes_sparse_mask_and_round_trips_delta_overlay ... ok
+test wal_delta::tests::dirty_mask_hint_does_not_inflate_semantic_codec_mask ... ok
+test wal_delta::tests::falls_back_to_full_for_variable_length_rows ... ok
+test wal_delta::tests::faulty_codec_degrades_to_full_row_record ... ok
+test wal_delta::tests::random_bytes_round_trip_through_delta_overlay ... ok
+test wal_delta::tests::random_delta_rejects_trailing_junk_bytes ... ok
+test wal_delta::tests::rejects_malformed_delta_when_mask_is_clean_but_payload_is_not_empty ... ok
+test wal_delta::tests::rejects_malformed_delta_when_payload_has_extra_bytes ... ok
+test wal_delta::tests::rejects_malformed_delta_when_payload_is_too_short ... ok
+test wal_delta::tests::tiny_row_round_trips_for_random_values ... ok
+test wal_logical::tests::append_and_read_logical_wal_record_roundtrip ... ok
+test wal_logical::tests::read_logical_wal_records_rejects_truncated_frame_payload ... ok
+test wal_logical::tests::read_logical_wal_records_rejects_truncated_length_prefix ... ok
+test wal_logical::tests::serialize_deserialize_wal_record_roundtrip ... ok
+test wal_logical::tests::wal_record_txid_accessor_all_variants ... ok
+test wal_ring::tests::close_causes_push_to_return_closed ... ok
+test wal_ring::tests::deserialize_commit_rejects_wrong_version ... ok
+test wal_ring::tests::push_pop_roundtrip_preserves_payload_bytes ... ok
+test wal_ring::tests::reset_for_restart_clears_closed_and_sequence_state ... ok
+test wal_ring::tests::shared_ring_create_rejects_zero_slots_or_slot_bytes ... ok
+test wal_ring::tests::wal_commit_policy_force_full_and_delta_allowed_paths ... ok
+test watch::tests::subscribe_filtered_skips_nonmatching_events_in_order ... ok
+test watch::tests::table_watch_watch_key_filters_only_target_key ... ok
+test watch::tests::ttl_sweeper_drop_stops_background_task ... ok
+test watch::tests::with_capacity_zero_clamps_to_minimum_channel_capacity ... ok
+
+test result: ok. 182 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.42s
+
+     Running tests/extended_crucible_model.rs (target/release/deps/extended_crucible_model-2e183b67c2753a97)
+
+running 21 tests
+test adapter_rejects_out_of_transaction_index_corruption ... ok
+test aerostore::tests::attachment_preserves_existing_rows ... ok
+test aerostore::tests::attachment_rejects_missing_wrong_size_and_corrupt_files_without_modification ... ok
+test aerostore::tests::family_range_queries_do_not_materialize_unrelated_families ... ok
+test aerostore::tests::fully_encoded_maximum_transaction_fits_wal_slot ... ok
+test model::tests::allocation_hint_is_not_used_to_hide_a_candidate_match ... ok
+test model::tests::duplicate_delivery_group_has_one_accepted_message_and_three_duplicates ... ok
+test model::tests::duplicate_has_no_observable_mutation_or_output ... ok
+test model::tests::empty_candidate_query_cannot_match_through_allocation_hint ... ok
+test model::tests::failed_family_expiration_rolls_back_every_related_row ... ok
+test model::tests::failed_fork_rolls_back_physical_rows_and_buffered_outputs ... ok
+test model::tests::family_expiration_requires_terminal_views_and_strict_age_threshold ... ok
+test model::tests::housekeeping_retains_exact_expected_real_position_history ... ok
+test model::tests::independently_expected_coordinates_prove_fork_privacy ... ok
+test model::tests::invariant_checker_detects_provenance_leak_and_terminal_event ... ok
+test model::tests::projection_uses_expected_history_without_replacing_real_observation ... ok
+test model::tests::same_callsign_is_disambiguated_using_route_and_tail ... ok
+test model::tests::serial_trace_preserves_independent_invariants_every_phase ... ok
+test model::tests::source_one_never_changes_source_two_or_four_only_views ... ok
+test model::tests::whole_message_abort_changes_neither_state_nor_output ... ok
+test native_adapter_replays_transactions_and_retains_exact_indexes ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/occ_row_lock_semantics.rs (target/release/deps/occ_row_lock_semantics-2cba3ed5b9c477c6)
+
+running 2 tests
+test lock_for_update_forces_competing_tx_fast_abort ... ok
+test row_lock_releases_after_holder_abort_and_guard_drop ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/occ_transactional_index.rs (target/release/deps/occ_transactional_index-fc83264dfda9e8d4)
+
+running 20 tests
+test absent_candidate_creation_rejects_one_disjoint_slot_writer ... ok
+test all_predicate_forms_detect_a_row_entering_their_result ... ok
+test attached_table_cannot_begin_without_complete_registered_index_set ... ok
+test concurrent_multirow_key_moves_never_return_a_mixed_successful_snapshot ... ok
+test different_equality_keys_do_not_force_table_wide_serialization ... ok
+test ignored_lookup_conflict_cannot_be_cleared_by_savepoint_rollback ... ok
+test invalid_later_index_key_cannot_partially_publish_rows_or_earlier_indexes ... ok
+test managed_indexes_reject_raw_mutations_through_attached_handles ... ok
+test newer_overlapping_reader_does_not_inherit_an_obsolete_vacuum_horizon ... ok
+test old_snapshot_first_lookup_after_delete_is_complete_or_rejected ... ok
+test old_snapshot_first_lookup_after_key_move_is_complete_or_rejected ... ok
+test older_writer_committing_after_newer_writer_invalidates_later_snapshot ... ok
+test own_writes_nested_savepoints_and_abort_preserve_exact_index_state ... ok
+test postcommit_wal_error_leaves_row_and_managed_index_consistent ... ok
+test predicate_publication_is_visible_across_independently_mapped_processes ... ok
+test repeated_in_members_and_many_colliding_keys_preserve_exact_candidates ... ok
+test rollback_to_savepoint_cannot_erase_an_outer_empty_predicate_dependency ... ok
+test row_guard_outliving_commit_pins_its_version_without_unlocking_a_later_owner ... ok
+test transactional_index_child ... ok
+test vacuum_preserves_snapshot_excluding_an_older_late_committing_writer ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests/transactional_query_execution.rs (target/release/deps/transactional_query_execution-79c6b2586ce9de0c)
+
+running 8 tests
+test chunked_query_read_error_releases_only_its_own_registration ... ok
+test indexed_plan_cannot_silently_lose_an_old_snapshots_moved_key ... ok
+test missing_primary_map_entry_still_enrolls_the_empty_predicate ... ok
+test numeric_primary_key_keeps_its_type_when_using_a_registered_index ... ok
+test primary_key_plan_uses_registered_predicate_when_map_is_stale ... ok
+test strict_query_errors_release_transaction_registrations ... ok
+test strict_snapshot_retries_a_filter_time_write_before_returning_results ... ok
+test unbound_stale_index_falls_back_and_rechecks_its_driving_filter ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/vacuum_free_list_invariants.rs (target/release/deps/vacuum_free_list_invariants-4508eedbe99e75e9)
+
+running 1 test
+test multiprocess_churn_preserves_shared_free_list_invariants ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+

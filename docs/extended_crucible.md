@@ -2,7 +2,7 @@
 
 Extended Crucible simulates complete single-machine flight-tracking transactions using the real Aerostore engine, PostgreSQL, and a serial reference store. It supplements the original [Crucible](../aerostore_core/benches/hyperfeed_crucible.rs) storage-churn benchmark. Its domain behavior is synthetic and grounded in the public material summarized in [the research and coverage specification](extended_crucible_research.md).
 
-**A successful bounded replay is not a HyperFeed compatibility pass.** The suite separately tests native storage contracts. The initial Aerostore probes expose three failures: concurrent creation after empty candidate searches, atomic table/index publication, and finding historical rows through changed index keys. `--mode all` must fail while any selected contract fails, even when every replayed message matches the reference.
+**A successful bounded replay is not a HyperFeed compatibility pass.** The suite separately tests native storage contracts. Its initial probes exposed three Aerostore failures: concurrent creation after empty candidate searches, atomic table/index publication, and finding historical rows through changed index keys. [Native transactional indexes](transactional_indexes.md) now address these contracts. `--mode all` still fails if any selected contract fails, even when every replayed message matches the reference.
 
 ## Run it
 
@@ -24,7 +24,7 @@ cargo bench --offline -p aerostore_core --bench hyperfeed_extended_crucible -- \
   --seed 20260922 --output target/extended-crucible.json
 ```
 
-The current native failures make those commands exit unsuccessfully after reporting the failed contracts. This is an observed correctness result, not an expected-failure test converted into a green gate.
+Any failed native contract makes those commands exit unsuccessfully. The assertions remain correctness requirements; no known failure is converted into an expected-success gate.
 
 For storage-adapter diagnosis, isolate the bounded replay:
 
@@ -75,20 +75,22 @@ Identifiers, source masks, timestamps, rejection rules, projection arithmetic, m
 
 Workers are separate local processes and their assignments rotate between phases. Within one phase, different families run concurrently; each family receives at most one distinct message. The first position phase submits four identical deliveries per family across workers. Its oracle compares a semantic multiset: one successful application and three duplicates, without choosing a winning worker in advance. Phase barriers preserve the order of distinct messages and permit exact state comparison. Concurrent independent-family outcomes commute.
 
-The fixture declares all potentially written family slots. Aerostore tries to acquire its indexed-row guards before beginning the transaction and retries contention; PostgreSQL locks the same reserved rows with `SELECT ... FOR UPDATE` inside a `SERIALIZABLE` transaction. Both adapters then run real candidate queries and real transactions. Aerostore also overlays pending index intents so reads see their own writes and savepoint rollback restores that overlay.
+The fixture declares all potentially written family slots. Aerostore tries to acquire its indexed-row guards before beginning the transaction and retries contention; PostgreSQL locks the same reserved rows with `SELECT ... FOR UPDATE` inside a `SERIALIZABLE` transaction. Both adapters then run real candidate queries and real transactions. Aerostore uses registered native indexes: lookups enroll predicate dependencies, pending row writes supply own-write candidates, savepoints restore those candidates, and commit publishes every index with the rows. The row guards bound fixture contention; native correctness no longer depends on caller-managed postcommit maintenance. Family/time conjunctions use the selective family index and apply time/kind conditions to the returned rows, avoiding an unnecessary global time-range dependency.
 
 This coordination is part of the measured adapter contract. It tests concurrent duplicate deliveries but does not prove arbitrary predicate protection, dynamic write-set discovery, or unrestricted simultaneous processing of distinct events for one hot family. Native probes deliberately test relevant properties without supplying a compensating predicate lock or serializing all transactions in the harness.
 
-| Native contract | Initial Aerostore observation | Initial PostgreSQL observation |
-| --- | --- | --- |
-| Empty candidate search followed by competing creation | **FAIL:** both transactions can commit | PASS |
-| Committed row and secondary-index visibility | **FAIL:** a reader can miss the new index key during publication | PASS |
-| Historical index candidates for a transaction snapshot | **FAIL:** an old snapshot can miss a row after its key moves | PASS |
-| Savepoint and whole-message rollback | PASS | PASS |
-| Multirow table snapshot visibility | PASS | PASS |
-| Concrete row-read dependency/write-skew rejection | PASS | PASS |
+| Native contract | Initial Aerostore | Repaired Aerostore | PostgreSQL |
+| --- | --- | --- | --- |
+| Empty candidate search followed by competing creation | FAIL: both could commit | PASS: one serialization rejection | PASS |
+| Committed row and secondary-index visibility | FAIL: publication gap | PASS: native atomic publication | PASS |
+| Historical index candidates for a transaction snapshot | FAIL: missing old-key candidate | PASS: explicit stale-snapshot retry | PASS |
+| Savepoint and whole-message rollback | PASS | PASS | PASS |
+| Multirow table snapshot visibility | PASS | PASS | PASS |
+| Concrete row-read dependency/write-skew rejection | PASS | PASS | PASS |
 
-PostgreSQL has counterpart probes for all six contracts. Consult the generated JSON for the results of the selected engine and run; this table records the initial findings, not an assertion about every future revision. The [retained validation results](bench_data/extended_crucible_2026-09-22/README.md) include 3,840 deliveries per engine with eight workers and a further 30,720-delivery Aerostore replay in a 128 MiB arena. Both replays passed; the strict combined gate failed on the three native Aerostore contracts. The evidence also records workspace tests, the original Crucible regression, and injected runner failures.
+PostgreSQL has counterpart probes for all six contracts. Consult the generated JSON for the results of a particular revision. The [initial retained validation](bench_data/extended_crucible_2026-09-22/README.md) preserves the failing baseline; its successful bounded replays did not override the three native failures. Regression tests now additionally exercise a reader paused inside native publication, multi-index allocation failure, independent process attachment, and vacuum while older snapshots remain active.
+
+The [repaired validation](bench_data/transactional_indexes_2026-09-22/README.md) passes the complete gate on both engines with 3,840 deliveries each, and another 30,720-delivery Aerostore run. It includes the exact commands, reports, test logs, and source fingerprints.
 
 ## Reading the report
 

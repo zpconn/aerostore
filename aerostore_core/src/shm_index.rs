@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::marker::PhantomData;
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering as AtomicOrdering};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -11,7 +12,8 @@ use serde::Serialize;
 
 use crate::index::{IndexCompare, IndexValue};
 use crate::procarray::ProcArrayError;
-use crate::shm::ShmArena;
+use crate::shm::{RelPtr, ShmArena};
+use crate::shm_lock::{ShmMutex, ShmMutexGuard};
 use crate::shm_skiplist::{
     ScanBound, ShmSkipKey, ShmSkipList, ShmSkipListError, ShmSkipListGcDaemon,
     ShmSkipMutationTelemetry, MAX_PAYLOAD_BYTES,
@@ -35,6 +37,50 @@ const KEY_TAG_I64: u8 = 1;
 const KEY_TAG_U64: u8 = 2;
 const KEY_TAG_STRING: u8 = 3;
 const KEY_TAG_SENTINEL: u8 = 255;
+
+/// Equality predicates protect a stable hash bucket. Range predicates protect
+/// every bucket, conservatively covering insertions into currently empty gaps.
+pub(crate) const INDEX_TX_BUCKETS: usize = 4096;
+const INDEX_HEADER_MAGIC: u64 = 0x4145_524F_494E_4458;
+// Version 1 used 256 publication buckets in the initial development build.
+// Reject those headers before interpreting the expanded bucket array.
+const INDEX_HEADER_VERSION: u32 = 2;
+
+#[repr(C)]
+struct IndexPublicationBucket {
+    lock: ShmMutex,
+    stamp: AtomicU64,
+}
+
+#[repr(C, align(64))]
+struct SecondaryIndexHeader {
+    magic: u64,
+    version: u32,
+    skiplist_offset: u32,
+    // Binding and unbound raw writes share this lock, so an in-progress raw
+    // mutation cannot slip past publication of the managed owner.
+    management_lock: ShmMutex,
+    owner_table_header: AtomicU32,
+    poisoned: AtomicBool,
+    buckets: [IndexPublicationBucket; INDEX_TX_BUCKETS],
+}
+
+impl SecondaryIndexHeader {
+    fn new(skiplist_offset: u32) -> Self {
+        Self {
+            magic: INDEX_HEADER_MAGIC,
+            version: INDEX_HEADER_VERSION,
+            skiplist_offset,
+            management_lock: ShmMutex::new(),
+            owner_table_header: AtomicU32::new(0),
+            poisoned: AtomicBool::new(false),
+            buckets: std::array::from_fn(|_| IndexPublicationBucket {
+                lock: ShmMutex::new(),
+                stamp: AtomicU64::new(0),
+            }),
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct IndexMutationTelemetry {
@@ -130,6 +176,10 @@ pub enum ShmIndexError {
     InvalidEncoding(&'static str),
     KeyTooLong { len: usize, max: usize },
     RowIdTooLarge { len: usize, max: usize },
+    ManagedMutation { owner_table_header: u32 },
+    OwnerMismatch { expected: u32, actual: u32 },
+    InvalidBucket(usize),
+    Poisoned,
     Alloc(crate::shm::ShmAllocError),
     Epoch(ProcArrayError),
     Fork(std::io::Error),
@@ -161,6 +211,20 @@ impl fmt::Display for ShmIndexError {
             ShmIndexError::RowIdTooLarge { len, max } => {
                 write!(f, "row-id payload length {} exceeds max {}", len, max)
             }
+            ShmIndexError::ManagedMutation { owner_table_header } => write!(
+                f,
+                "index belongs to OCC table {}; mutate it through the table transaction",
+                owner_table_header
+            ),
+            ShmIndexError::OwnerMismatch { expected, actual } => write!(
+                f,
+                "index owner mismatch: expected table {}, observed {}",
+                expected, actual
+            ),
+            ShmIndexError::InvalidBucket(bucket) => {
+                write!(f, "invalid transactional index bucket {}", bucket)
+            }
+            ShmIndexError::Poisoned => write!(f, "transactional index requires recovery"),
             ShmIndexError::Alloc(err) => write!(f, "shared index allocation failed: {}", err),
             ShmIndexError::Epoch(err) => write!(f, "index ProcArray registration failed: {}", err),
             ShmIndexError::Fork(err) => write!(f, "fork failed: {}", err),
@@ -363,6 +427,7 @@ where
     RowId: Ord + Clone + Send + Sync + Serialize + DeserializeOwned + 'static,
 {
     field: &'static str,
+    header: RelPtr<SecondaryIndexHeader>,
     skiplist: ShmSkipList<EncodedKey>,
     _marker: PhantomData<RowId>,
 }
@@ -380,10 +445,15 @@ where
     }
 
     pub fn new_in_shared(field: &'static str, shm: Arc<ShmArena>) -> Self {
-        let skiplist = ShmSkipList::<EncodedKey>::new_in_shared(shm)
+        let skiplist = ShmSkipList::<EncodedKey>::new_in_shared(Arc::clone(&shm))
             .expect("failed to allocate shared-memory skiplist index");
+        let header = shm
+            .chunked_arena()
+            .alloc(SecondaryIndexHeader::new(skiplist.header_offset()))
+            .expect("failed to allocate shared-memory index publication metadata");
         Self {
             field,
+            header,
             skiplist,
             _marker: PhantomData,
         }
@@ -394,9 +464,18 @@ where
         shm: Arc<ShmArena>,
         header_offset: u32,
     ) -> Result<Self, ShmIndexError> {
-        let skiplist = ShmSkipList::<EncodedKey>::from_existing(shm, header_offset)?;
+        let header = RelPtr::<SecondaryIndexHeader>::from_offset(header_offset);
+        let metadata = header
+            .as_ref(shm.mmap_base())
+            .filter(|header| {
+                header.magic == INDEX_HEADER_MAGIC && header.version == INDEX_HEADER_VERSION
+            })
+            .ok_or(ShmIndexError::InvalidHeader(header_offset))?;
+        let skiplist =
+            ShmSkipList::<EncodedKey>::from_existing(Arc::clone(&shm), metadata.skiplist_offset)?;
         Ok(Self {
             field,
+            header,
             skiplist,
             _marker: PhantomData,
         })
@@ -409,12 +488,195 @@ where
 
     #[inline]
     pub fn header_offset(&self) -> u32 {
-        self.skiplist.header_offset()
+        self.header.load(AtomicOrdering::Acquire)
     }
 
     #[inline]
     pub fn shared_arena(&self) -> &Arc<ShmArena> {
         self.skiplist.shared_arena()
+    }
+
+    fn publication_header(&self) -> Result<&SecondaryIndexHeader, ShmIndexError> {
+        self.header
+            .as_ref(self.shared_arena().mmap_base())
+            .filter(|header| {
+                header.magic == INDEX_HEADER_MAGIC && header.version == INDEX_HEADER_VERSION
+            })
+            .ok_or(ShmIndexError::InvalidHeader(self.header_offset()))
+    }
+
+    fn raw_mutation_guard(&self) -> Result<ShmMutexGuard<'_>, ShmIndexError> {
+        let header = self.publication_header()?;
+        let guard = header.management_lock.lock();
+        if header.poisoned.load(AtomicOrdering::Acquire) {
+            return Err(ShmIndexError::Poisoned);
+        }
+        let owner_table_header = header.owner_table_header.load(AtomicOrdering::Acquire);
+        if owner_table_header != 0 {
+            return Err(ShmIndexError::ManagedMutation { owner_table_header });
+        }
+        Ok(guard)
+    }
+
+    pub(crate) fn transactional_bind(&self, owner_table_header: u32) -> Result<(), ShmIndexError> {
+        let header = self.publication_header()?;
+        let _guard = header.management_lock.lock();
+        if header.poisoned.load(AtomicOrdering::Acquire) {
+            return Err(ShmIndexError::Poisoned);
+        }
+        let actual = header.owner_table_header.load(AtomicOrdering::Acquire);
+        if owner_table_header == 0 || (actual != 0 && actual != owner_table_header) {
+            return Err(ShmIndexError::OwnerMismatch {
+                expected: owner_table_header,
+                actual,
+            });
+        }
+        header
+            .owner_table_header
+            .store(owner_table_header, AtomicOrdering::Release);
+        Ok(())
+    }
+
+    pub(crate) fn transactional_check_owner(
+        &self,
+        owner_table_header: u32,
+    ) -> Result<(), ShmIndexError> {
+        let header = self.publication_header()?;
+        if header.poisoned.load(AtomicOrdering::Acquire) {
+            return Err(ShmIndexError::Poisoned);
+        }
+        let actual = header.owner_table_header.load(AtomicOrdering::Acquire);
+        if owner_table_header == 0 || actual != owner_table_header {
+            return Err(ShmIndexError::OwnerMismatch {
+                expected: owner_table_header,
+                actual,
+            });
+        }
+        Ok(())
+    }
+
+    /// Hash the tagged, canonical bytes explicitly. Rust's randomized hashers
+    /// and native-endian encodings must not select process-dependent locks.
+    pub(crate) fn transactional_key_bucket(
+        &self,
+        value: &IndexValue,
+    ) -> Result<usize, ShmIndexError> {
+        let key = EncodedKey::from_index_value(value)?;
+        let mut hash = 0xcbf2_9ce4_8422_2325_u64;
+        for byte in std::iter::once(key.tag).chain(key.data[..key.len as usize].iter().copied()) {
+            hash = (hash ^ u64::from(byte)).wrapping_mul(0x100_0000_01b3);
+        }
+        Ok((hash as usize) % INDEX_TX_BUCKETS)
+    }
+
+    pub(crate) fn transactional_bucket_ids(
+        &self,
+        predicate: &IndexCompare,
+    ) -> Result<Vec<usize>, ShmIndexError> {
+        let mut buckets = match predicate {
+            IndexCompare::Eq(value) => vec![self.transactional_key_bucket(value)?],
+            IndexCompare::In(values) => values
+                .iter()
+                .map(|value| self.transactional_key_bucket(value))
+                .collect::<Result<Vec<_>, _>>()?,
+            IndexCompare::Gt(value)
+            | IndexCompare::Gte(value)
+            | IndexCompare::Lt(value)
+            | IndexCompare::Lte(value) => {
+                EncodedKey::from_index_value(value)?;
+                (0..INDEX_TX_BUCKETS).collect()
+            }
+        };
+        buckets.sort_unstable();
+        buckets.dedup();
+        Ok(buckets)
+    }
+
+    pub(crate) fn transactional_try_lock_bucket(
+        &self,
+        bucket: usize,
+    ) -> Result<Option<ShmMutexGuard<'_>>, ShmIndexError> {
+        let header = self.publication_header()?;
+        if header.poisoned.load(AtomicOrdering::Acquire) {
+            return Err(ShmIndexError::Poisoned);
+        }
+        let bucket = header
+            .buckets
+            .get(bucket)
+            .ok_or(ShmIndexError::InvalidBucket(bucket))?;
+        Ok(bucket.lock.try_lock())
+    }
+
+    pub(crate) fn transactional_stamp(&self, bucket: usize) -> Result<u64, ShmIndexError> {
+        let header = self.publication_header()?;
+        if header.poisoned.load(AtomicOrdering::Acquire) {
+            return Err(ShmIndexError::Poisoned);
+        }
+        Ok(header
+            .buckets
+            .get(bucket)
+            .ok_or(ShmIndexError::InvalidBucket(bucket))?
+            .stamp
+            .load(AtomicOrdering::Acquire))
+    }
+
+    /// The caller holds this bucket until every affected row and index is
+    /// published and the committing transaction has left the ProcArray.
+    pub(crate) fn transactional_publish_stamp(
+        &self,
+        bucket: usize,
+        stamp: u64,
+    ) -> Result<(), ShmIndexError> {
+        self.publication_header()?
+            .buckets
+            .get(bucket)
+            .ok_or(ShmIndexError::InvalidBucket(bucket))?
+            .stamp
+            .store(stamp, AtomicOrdering::Release);
+        Ok(())
+    }
+
+    pub(crate) fn transactional_poison(&self) {
+        if let Ok(header) = self.publication_header() {
+            header.poisoned.store(true, AtomicOrdering::Release);
+        }
+    }
+
+    pub(crate) fn transactional_prevalidate(
+        &self,
+        key: &IndexValue,
+        row_id: &RowId,
+    ) -> Result<(), ShmIndexError> {
+        EncodedKey::from_index_value(key)?;
+        Self::encode_row_id(row_id)?;
+        Ok(())
+    }
+
+    pub(crate) fn transactional_raw_lookup(
+        &self,
+        predicate: &IndexCompare,
+    ) -> Result<Vec<RowId>, ShmIndexError> {
+        self.try_lookup(predicate)
+    }
+
+    pub(crate) fn transactional_insert(
+        &self,
+        indexed_value: IndexValue,
+        row_id: RowId,
+    ) -> Result<(), ShmIndexError> {
+        let key = EncodedKey::from_index_value(&indexed_value)?;
+        let (payload_len, payload) = Self::encode_row_id(&row_id)?;
+        self.try_insert_encoded(key, payload_len, &payload[..payload_len as usize])
+    }
+
+    pub(crate) fn transactional_remove(
+        &self,
+        indexed_value: &IndexValue,
+        row_id: &RowId,
+    ) -> Result<(), ShmIndexError> {
+        let key = EncodedKey::from_index_value(indexed_value)?;
+        let (payload_len, payload) = Self::encode_row_id(row_id)?;
+        self.try_remove_encoded(&key, payload_len, &payload[..payload_len as usize])
     }
 
     pub fn insert(&self, indexed_value: IndexValue, row_id: RowId) {
@@ -426,9 +688,8 @@ where
         indexed_value: IndexValue,
         row_id: RowId,
     ) -> Result<(), ShmIndexError> {
-        let key = EncodedKey::from_index_value(&indexed_value)?;
-        let (payload_len, payload) = Self::encode_row_id(&row_id)?;
-        self.try_insert_encoded(key, payload_len, &payload[..payload_len as usize])
+        let _guard = self.raw_mutation_guard()?;
+        self.transactional_insert(indexed_value, row_id)
     }
 
     pub fn remove(&self, indexed_value: &IndexValue, row_id: &RowId) {
@@ -440,9 +701,8 @@ where
         indexed_value: &IndexValue,
         row_id: &RowId,
     ) -> Result<(), ShmIndexError> {
-        let key = EncodedKey::from_index_value(indexed_value)?;
-        let (payload_len, payload) = Self::encode_row_id(row_id)?;
-        self.try_remove_encoded(&key, payload_len, &payload[..payload_len as usize])
+        let _guard = self.raw_mutation_guard()?;
+        self.transactional_remove(indexed_value, row_id)
     }
 
     pub fn try_move_payload(
@@ -451,6 +711,7 @@ where
         new_indexed_value: IndexValue,
         row_id: &RowId,
     ) -> Result<(), ShmIndexError> {
+        let _guard = self.raw_mutation_guard()?;
         let old_key = EncodedKey::from_index_value(old_indexed_value)?;
         let new_key = EncodedKey::from_index_value(&new_indexed_value)?;
 
@@ -1139,6 +1400,152 @@ mod tests {
     use proptest::prelude::*;
     use std::collections::{BTreeMap, BTreeSet};
     use std::sync::Arc;
+
+    #[test]
+    fn managed_index_binding_survives_attachment_and_rejects_raw_writes() {
+        let shm = Arc::new(ShmArena::new(4 << 20).unwrap());
+        let index = SecondaryIndex::<usize>::new_in_shared("key", Arc::clone(&shm));
+        index.try_insert(IndexValue::I64(10), 0).unwrap();
+        index.transactional_bind(256).unwrap();
+        let attached =
+            SecondaryIndex::<usize>::from_existing("key", shm, index.header_offset()).unwrap();
+        attached.transactional_bind(256).unwrap();
+        assert!(matches!(
+            attached.transactional_bind(512),
+            Err(ShmIndexError::OwnerMismatch { .. })
+        ));
+        assert!(matches!(
+            attached.try_insert(IndexValue::I64(20), 1),
+            Err(ShmIndexError::ManagedMutation { .. })
+        ));
+        assert!(matches!(
+            attached.try_remove(&IndexValue::I64(10), &0),
+            Err(ShmIndexError::ManagedMutation { .. })
+        ));
+        assert!(matches!(
+            attached.try_move_payload(&IndexValue::I64(10), IndexValue::I64(20), &0),
+            Err(ShmIndexError::ManagedMutation { .. })
+        ));
+        assert_eq!(
+            attached.try_entries().unwrap(),
+            vec![(IndexValue::I64(10), 0)]
+        );
+    }
+
+    #[test]
+    fn publication_locks_and_stamps_are_shared_with_attached_handles() {
+        let shm = Arc::new(ShmArena::new(4 << 20).unwrap());
+        let index = SecondaryIndex::<usize>::new_in_shared("key", Arc::clone(&shm));
+        let attached =
+            SecondaryIndex::<usize>::from_existing("key", shm, index.header_offset()).unwrap();
+        index.transactional_bind(256).unwrap();
+        let bucket = index
+            .transactional_key_bucket(&IndexValue::I64(42))
+            .unwrap();
+        let guard = index
+            .transactional_try_lock_bucket(bucket)
+            .unwrap()
+            .unwrap();
+        assert!(attached
+            .transactional_try_lock_bucket(bucket)
+            .unwrap()
+            .is_none());
+        index.transactional_publish_stamp(bucket, 97).unwrap();
+        assert_eq!(attached.transactional_stamp(bucket).unwrap(), 97);
+        drop(guard);
+        assert!(attached
+            .transactional_try_lock_bucket(bucket)
+            .unwrap()
+            .is_some());
+        index.transactional_poison();
+        assert!(matches!(
+            attached.transactional_check_owner(256),
+            Err(ShmIndexError::Poisoned)
+        ));
+        assert!(matches!(
+            attached.transactional_stamp(bucket),
+            Err(ShmIndexError::Poisoned)
+        ));
+        // Recovery diagnostics remain available even when transactions are blocked.
+        assert!(attached.try_entries().unwrap().is_empty());
+    }
+
+    #[test]
+    fn predicate_buckets_cover_unions_ranges_and_validate_every_key() {
+        let index = SecondaryIndex::<usize>::new("key");
+        let first = IndexValue::I64(1);
+        let second = IndexValue::I64(2);
+        let mut expected = vec![
+            index.transactional_key_bucket(&first).unwrap(),
+            index.transactional_key_bucket(&second).unwrap(),
+        ];
+        assert_ne!(expected[0], expected[1]);
+        expected.sort_unstable();
+        assert_eq!(
+            index
+                .transactional_bucket_ids(&IndexCompare::In(vec![
+                    first.clone(),
+                    second,
+                    first.clone()
+                ]))
+                .unwrap(),
+            expected
+        );
+        for predicate in [
+            IndexCompare::Lt(first.clone()),
+            IndexCompare::Lte(first.clone()),
+            IndexCompare::Gt(first.clone()),
+            IndexCompare::Gte(first),
+        ] {
+            assert_eq!(
+                index.transactional_bucket_ids(&predicate).unwrap(),
+                (0..super::INDEX_TX_BUCKETS).collect::<Vec<_>>()
+            );
+        }
+        let invalid = IndexValue::String("x".repeat(super::KEY_INLINE_BYTES + 1));
+        assert!(matches!(
+            index.transactional_bucket_ids(&IndexCompare::In(vec![
+                IndexValue::I64(1),
+                invalid.clone()
+            ])),
+            Err(ShmIndexError::KeyTooLong { .. })
+        ));
+        assert!(matches!(
+            index.transactional_bucket_ids(&IndexCompare::Lt(invalid)),
+            Err(ShmIndexError::KeyTooLong { .. })
+        ));
+        assert!(index
+            .transactional_bucket_ids(&IndexCompare::In(Vec::new()))
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn attachment_rejects_skiplist_header_used_as_transactional_header() {
+        let shm = Arc::new(ShmArena::new(4 << 20).unwrap());
+        let index = SecondaryIndex::<usize>::new_in_shared("key", Arc::clone(&shm));
+        assert!(matches!(
+            SecondaryIndex::<usize>::from_existing("key", shm, index.skiplist.header_offset()),
+            Err(ShmIndexError::InvalidHeader(_))
+        ));
+    }
+
+    #[test]
+    fn attachment_rejects_prior_publication_bucket_layout() {
+        let shm = Arc::new(ShmArena::new(4 << 20).unwrap());
+        let index = SecondaryIndex::<usize>::new_in_shared("key", Arc::clone(&shm));
+        let mut old_header = super::SecondaryIndexHeader::new(index.skiplist.header_offset());
+        old_header.version = 1;
+        let old = shm.chunked_arena().alloc(old_header).unwrap();
+        assert!(matches!(
+            SecondaryIndex::<usize>::from_existing(
+                "key",
+                shm,
+                old.load(super::AtomicOrdering::Acquire)
+            ),
+            Err(ShmIndexError::InvalidHeader(_))
+        ));
+    }
 
     #[test]
     fn exhausted_epoch_slots_surface_remove_errors_and_move_retries() {
