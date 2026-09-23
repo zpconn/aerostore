@@ -235,7 +235,7 @@ fn benchmark_stapi_parse_compile_execute_vs_typed_query_path() {
 
     // STAPI parser + planner path over OCC table/indexes.
     let shm = Arc::new(ShmArena::new(64 << 20).expect("failed to create shared arena"));
-    let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+    let mut occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
         .expect("failed to create OCC table");
     let alt_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
         "alt",
@@ -261,6 +261,10 @@ fn benchmark_stapi_parse_compile_execute_vs_typed_query_path() {
             .expect("failed to seed OCC row for STAPI benchmark");
         alt_index.insert(IndexValue::I64(alt), row_id);
     }
+
+    occ_table
+        .bind_index((*alt_index).clone(), |row| Some(IndexValue::I64(row.alt)))
+        .expect("failed to bind alt_index for indexed benchmark");
 
     let catalog = SchemaCatalog::new("flight_id").with_index("alt", alt_index);
     let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
@@ -307,7 +311,7 @@ fn benchmark_tcl_style_alias_match_desc_offset_limit_path() {
     const FETCH_LIMIT: usize = LIMIT + OFFSET;
 
     let shm = Arc::new(ShmArena::new(96 << 20).expect("failed to create shared arena"));
-    let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+    let mut occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
         .expect("failed to create OCC table");
     let alt_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
         "altitude",
@@ -332,6 +336,10 @@ fn benchmark_tcl_style_alias_match_desc_offset_limit_path() {
             .expect("failed to seed OCC row for alias benchmark");
         alt_index.insert(IndexValue::I64(alt), row_id);
     }
+
+    occ_table
+        .bind_index((*alt_index).clone(), |row| Some(IndexValue::I64(row.alt)))
+        .expect("failed to bind alt_index for indexed benchmark");
 
     let catalog = SchemaCatalog::new("flight_id")
         .with_index("alt", Arc::clone(&alt_index))
@@ -389,7 +397,7 @@ fn benchmark_tcl_bridge_style_stapi_assembly_compile_execute() {
     const OFFSET: usize = 4;
 
     let shm = Arc::new(ShmArena::new(96 << 20).expect("failed to create shared arena"));
-    let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+    let mut occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
         .expect("failed to create OCC table");
     let alt_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
         "altitude",
@@ -414,6 +422,10 @@ fn benchmark_tcl_bridge_style_stapi_assembly_compile_execute() {
             .expect("failed to seed OCC row for Tcl bridge benchmark");
         alt_index.insert(IndexValue::I64(alt), row_id);
     }
+
+    occ_table
+        .bind_index((*alt_index).clone(), |row| Some(IndexValue::I64(row.alt)))
+        .expect("failed to bind alt_index for indexed benchmark");
 
     let catalog = SchemaCatalog::new("flight_id")
         .with_index("alt", Arc::clone(&alt_index))
@@ -469,12 +481,17 @@ fn benchmark_stapi_rbo_pk_point_lookup_vs_full_scan() {
     const PASSES: usize = 96;
 
     let shm = Arc::new(ShmArena::new(96 << 20).expect("failed to create shared arena"));
-    let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+    let mut occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
         .expect("failed to create OCC table");
     let pk_map = Arc::new(
         ShmPrimaryKeyMap::new_in_shared(Arc::clone(&shm), 4096, ROWS)
             .expect("failed to create shared primary key map"),
     );
+
+    let flight_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "flight_id",
+        Arc::clone(&shm),
+    ));
 
     for row_id in 0..ROWS {
         let alt = ((row_id % 45_000) as i64) + 500;
@@ -488,12 +505,22 @@ fn benchmark_stapi_rbo_pk_point_lookup_vs_full_scan() {
         occ_table
             .seed_row(row_id, row)
             .expect("failed to seed OCC row for PK benchmark");
+        flight_index
+            .try_insert(IndexValue::String(flight.clone()), row_id)
+            .expect("failed to seed flight-id predicate index");
         pk_map
             .insert_existing(flight.as_str(), row_id)
             .expect("failed to seed PK map");
     }
 
-    let catalog = SchemaCatalog::new("flight_id").with_primary_key_map(Arc::clone(&pk_map));
+    occ_table
+        .bind_index((*flight_index).clone(), |row| {
+            Some(IndexValue::String(decode_ascii(&row.flight)))
+        })
+        .expect("failed to bind flight-id predicate index");
+    let catalog = SchemaCatalog::new("flight_id")
+        .with_primary_key_map(Arc::clone(&pk_map))
+        .with_index("flight_id", flight_index);
     let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
     let key = "UAL01234";
     let pk_stapi = format!("-compare {{{{= flight_id {key}}}}} -limit 1");
@@ -561,7 +588,7 @@ fn benchmark_stapi_rbo_tiebreak_dest_over_altitude() {
     const LIMIT: usize = 50;
 
     let shm = Arc::new(ShmArena::new(128 << 20).expect("failed to create shared arena"));
-    let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+    let mut occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
         .expect("failed to create OCC table");
     let dest_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
         "dest",
@@ -598,6 +625,17 @@ fn benchmark_stapi_rbo_tiebreak_dest_over_altitude() {
         dest_index.insert(IndexValue::String(dest.to_string()), row_id);
         altitude_index.insert(IndexValue::I64(alt), row_id);
     }
+
+    occ_table
+        .bind_index((*dest_index).clone(), |row| {
+            Some(IndexValue::String(decode_ascii(&row.dest)))
+        })
+        .expect("failed to bind dest_index for indexed benchmark");
+    occ_table
+        .bind_index((*altitude_index).clone(), |row| {
+            Some(IndexValue::I64(row.alt))
+        })
+        .expect("failed to bind altitude_index for indexed benchmark");
 
     let mut catalog = SchemaCatalog::new("flight_id")
         .with_index("dest", dest_index)
@@ -649,7 +687,7 @@ fn benchmark_stapi_rbo_cardinality_trap_flight_id_over_aircraft_type() {
     const TARGET_ROW_ID: usize = 42_123;
 
     let shm = Arc::new(ShmArena::new(128 << 20).expect("failed to create shared arena"));
-    let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+    let mut occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
         .expect("failed to create OCC table");
     let flight_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
         "flight_id",
@@ -681,6 +719,17 @@ fn benchmark_stapi_rbo_cardinality_trap_flight_id_over_aircraft_type() {
 
     assert_eq!(flight_index.distinct_key_count(), ROWS);
     assert_eq!(typ_index.distinct_key_count(), 5);
+
+    occ_table
+        .bind_index((*flight_index).clone(), |row| {
+            Some(IndexValue::String(decode_ascii(&row.flight)))
+        })
+        .expect("failed to bind flight_index for indexed benchmark");
+    occ_table
+        .bind_index((*typ_index).clone(), |row| {
+            Some(IndexValue::String(decode_ascii(&row.typ)))
+        })
+        .expect("failed to bind typ_index for indexed benchmark");
 
     let catalog = SchemaCatalog::new("pk_unused")
         .with_index("flight_id", Arc::clone(&flight_index))
@@ -739,7 +788,7 @@ fn benchmark_stapi_residual_negative_filters_with_index_driver() {
     const LIMIT: usize = 25;
 
     let shm = Arc::new(ShmArena::new(128 << 20).expect("failed to create shared arena"));
-    let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+    let mut occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
         .expect("failed to create OCC table");
     let altitude_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
         "altitude",
@@ -765,6 +814,12 @@ fn benchmark_stapi_residual_negative_filters_with_index_driver() {
             .expect("failed to seed OCC row for residual negative benchmark");
         altitude_index.insert(IndexValue::I64(alt), row_id);
     }
+
+    occ_table
+        .bind_index((*altitude_index).clone(), |row| {
+            Some(IndexValue::I64(row.alt))
+        })
+        .expect("failed to bind altitude_index for indexed benchmark");
 
     let catalog = SchemaCatalog::new("flight_id")
         .with_index("altitude", Arc::clone(&altitude_index))
@@ -812,7 +867,7 @@ fn benchmark_stapi_null_notnull_residual_filters() {
     const LIMIT: usize = 100;
 
     let shm = Arc::new(ShmArena::new(128 << 20).expect("failed to create shared arena"));
-    let occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+    let mut occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
         .expect("failed to create OCC table");
     let altitude_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
         "altitude",
@@ -837,6 +892,12 @@ fn benchmark_stapi_null_notnull_residual_filters() {
             .expect("failed to seed OCC row for null/notnull benchmark");
         altitude_index.insert(IndexValue::I64(alt), row_id);
     }
+
+    occ_table
+        .bind_index((*altitude_index).clone(), |row| {
+            Some(IndexValue::I64(row.alt))
+        })
+        .expect("failed to bind altitude_index for indexed benchmark");
 
     let catalog = SchemaCatalog::new("flight_id")
         .with_index("altitude", Arc::clone(&altitude_index))

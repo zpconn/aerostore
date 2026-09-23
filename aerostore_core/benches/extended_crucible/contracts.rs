@@ -7,7 +7,9 @@
 
 use std::sync::Arc;
 
-use aerostore_core::{IndexValue, OccError, OccTable, OccTransaction, SecondaryIndex, ShmArena};
+use aerostore_core::{
+    IndexCompare, IndexValue, OccError, OccTable, OccTransaction, SecondaryIndex, ShmArena,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -100,14 +102,27 @@ fn materialized_candidates(
     index: &SecondaryIndex<usize>,
     tx: &mut ProbeTransaction<'_>,
     key: u64,
-) -> Result<Vec<usize>, String> {
-    let mut found = Vec::new();
-    for row in candidates(index, key)? {
-        if tx.read(row)? == Some(key) {
-            found.push(row);
+) -> Result<Vec<usize>, OccError> {
+    tx.table
+        .index_lookup(&mut tx.tx, index, &IndexCompare::Eq(IndexValue::U64(key)))
+}
+
+fn indexed_fixture(values: &[u64]) -> Result<(OccTable<u64>, SecondaryIndex<usize>), String> {
+    let (arena, mut table) = fixture(values)?;
+    let index = SecondaryIndex::<usize>::new_in_shared("flight_key", arena);
+    for (row, value) in values.iter().copied().enumerate() {
+        if value != 0 {
+            index
+                .try_insert(IndexValue::U64(value), row)
+                .map_err(|err| err.to_string())?;
         }
     }
-    Ok(found)
+    table
+        .bind_index(index.clone(), |value| {
+            (*value != 0).then_some(IndexValue::U64(*value))
+        })
+        .map_err(|err| err.to_string())?;
+    Ok((table, index))
 }
 
 fn result(name: &str, passed: bool, details: String) -> ContractResult {
@@ -119,37 +134,21 @@ fn result(name: &str, passed: bool, details: String) -> ContractResult {
 }
 
 fn absent_candidate_creation() -> Result<ContractResult, String> {
-    let (arena, table) = fixture(&[0, 0])?;
-    let index = SecondaryIndex::<usize>::new_in_shared("flight_key", arena);
-    // These are independent reserved slots, not a uniqueness constraint on the
-    // candidate key. Both writers follow the production indexed-row protocol.
-    let _first_guard = table
-        .lock_indexed_rows(&[0])
-        .map_err(|err| err.to_string())?;
-    let _second_guard = table
-        .lock_indexed_rows(&[1])
-        .map_err(|err| err.to_string())?;
+    let (table, index) = indexed_fixture(&[0, 0])?;
+    // Independent reserved slots, with no caller-held row or predicate locks.
     let mut first = ProbeTransaction::begin(&table)?;
     let mut second = ProbeTransaction::begin(&table)?;
-    let first_search = materialized_candidates(&index, &mut first, 42)?;
-    let second_search = materialized_candidates(&index, &mut second, 42)?;
+    let first_search =
+        materialized_candidates(&index, &mut first, 42).map_err(|e| e.to_string())?;
+    let second_search =
+        materialized_candidates(&index, &mut second, 42).map_err(|e| e.to_string())?;
     if !first_search.is_empty() || !second_search.is_empty() {
         return Err("absent-candidate fixture unexpectedly contained a flight".into());
     }
     first.write(0, 42)?;
     second.write(1, 42)?;
     let first_committed = first.commit()?;
-    if first_committed {
-        index
-            .try_insert(IndexValue::U64(42), 0)
-            .map_err(|err| err.to_string())?;
-    }
     let second_committed = second.commit()?;
-    if second_committed {
-        index
-            .try_insert(IndexValue::U64(42), 1)
-            .map_err(|err| err.to_string())?;
-    }
     let committed = usize::from(first_committed) + usize::from(second_committed);
     let matching_rows = table
         .snapshot_latest_rows()
@@ -162,87 +161,78 @@ fn absent_candidate_creation() -> Result<ContractResult, String> {
         "serializable_absent_candidate_creation",
         committed == 1 && matching_rows == 1 && matching_postings == 1,
         format!(
-            "Expected one commit and one serialization rejection when two overlapping transactions \
-             both find no matching flight and activate different slots for the same key. \
-             Observed initial candidate counts=0/0, committed={committed}, rejected={}, \
-             matching_rows={matching_rows}, matching_index_postings={matching_postings}. \
-             Both writers held their own native indexed-row guard; no predicate lock was added.",
+            "Expected one commit and one serialization rejection after overlapping empty \
+             candidate searches activate different slots for the same key. Observed initial \
+             counts=0/0, committed={committed}, rejected={}, matching_rows={matching_rows}, \
+             matching_index_postings={matching_postings}. Native predicate dependencies and \
+             automatic index maintenance; no caller-supplied locks.",
             2 - committed,
         ),
     ))
 }
 
 fn committed_index_visibility() -> Result<ContractResult, String> {
-    let (arena, table) = fixture(&[10])?;
-    let index = SecondaryIndex::<usize>::new_in_shared("flight_key", arena);
-    index
-        .try_insert(IndexValue::U64(10), 0)
-        .map_err(|err| err.to_string())?;
-    let _guard = table
-        .lock_indexed_rows(&[0])
-        .map_err(|err| err.to_string())?;
+    let (table, index) = indexed_fixture(&[10])?;
     let mut writer = ProbeTransaction::begin(&table)?;
     writer.write(0, 20)?;
+    let mut before = ProbeTransaction::begin(&table)?;
+    let before_row = before.read(0)?;
+    let before_new_key =
+        materialized_candidates(&index, &mut before, 20).map_err(|e| e.to_string())?;
     if !writer.commit()? {
         return Err("uncontended publication-probe writer was rejected".into());
     }
-    // The transaction is committed, but index maintenance has deliberately not
-    // run yet. Keeping the row guard matches the normal production protocol.
+    // No separate index maintenance call exists at this boundary. A newly
+    // committed row must already be discoverable through its new key.
     let mut reader = ProbeTransaction::begin(&table)?;
     let visible_value = reader.read(0)?;
-    let found = materialized_candidates(&index, &mut reader, 20)?;
+    let found = materialized_candidates(&index, &mut reader, 20).map_err(|e| e.to_string())?;
     let reader_committed = reader.commit()?;
-    index
-        .try_move_payload(&IndexValue::U64(10), IndexValue::U64(20), &0)
-        .map_err(|err| err.to_string())?;
+    let before_committed = before.commit()?;
+    let old_postings = candidates(&index, 10)?;
     let after_publication = candidates(&index, 20)?;
     Ok(result(
         "committed_row_and_index_visibility",
-        (!reader_committed || (visible_value == Some(20) && found == vec![0]))
-            && after_publication == vec![0],
+        before_row == Some(10) && before_new_key.is_empty() && !before_committed
+            && reader_committed && visible_value == Some(20) && found == vec![0]
+            && old_postings.is_empty() && after_publication == vec![0],
         format!(
-            "Expected a successfully committed reader to find a newly committed row through its \
-             new index key. Paused the writer between native row commit and index maintenance \
-             while retaining its indexed-row guard. Observed visible_row={visible_value:?}, \
-             new_key_candidates={found:?}, reader_committed={reader_committed}; \
-             after index publication candidates={after_publication:?}.",
+            "Expected staged writes to remain invisible, and native commit to publish row \
+             and index together. Before commit row={before_row:?}, new_key={before_new_key:?}; \
+             immediately after commit row={visible_value:?}, new_key={found:?}, \
+             fresh_reader_committed={reader_committed}, overlapping_reader_committed={before_committed}, \
+             raw_old_postings={old_postings:?}, raw_new_postings={after_publication:?}.",
         ),
     ))
 }
 
 fn historical_index_visibility() -> Result<ContractResult, String> {
-    let (arena, table) = fixture(&[10])?;
-    let index = SecondaryIndex::<usize>::new_in_shared("flight_key", arena);
-    index
-        .try_insert(IndexValue::U64(10), 0)
-        .map_err(|err| err.to_string())?;
+    let (table, index) = indexed_fixture(&[10])?;
     let mut reader = ProbeTransaction::begin(&table)?;
-    // A separate equally old snapshot witnesses the expected row value without
-    // adding an artificial point-read dependency to the candidate-search reader.
+    // Independent witness avoids masking an index omission with a point-read
+    // dependency in the candidate-search reader.
     let mut witness = ProbeTransaction::begin(&table)?;
-    let _guard = table
-        .lock_indexed_rows(&[0])
-        .map_err(|err| err.to_string())?;
     let mut writer = ProbeTransaction::begin(&table)?;
     writer.write(0, 20)?;
     if !writer.commit()? {
         return Err("uncontended historical-index writer was rejected".into());
     }
-    index
-        .try_move_payload(&IndexValue::U64(10), IndexValue::U64(20), &0)
-        .map_err(|err| err.to_string())?;
     let expected_snapshot_value = witness.read(0)?;
-    let found = materialized_candidates(&index, &mut reader, 10)?;
-    let reader_committed = reader.commit()?;
+    let (found, rejected_at_lookup, reader_committed) =
+        match materialized_candidates(&index, &mut reader, 10) {
+            Ok(found) => (found, false, reader.commit()?),
+            Err(OccError::SerializationFailure) => (Vec::new(), true, false),
+            Err(err) => return Err(err.to_string()),
+        };
     Ok(result(
         "index_candidates_respect_transaction_snapshot",
         expected_snapshot_value == Some(10) && (!reader_committed || found == vec![0]),
         format!(
-            "Expected the native transaction snapshot's old-key row to remain discoverable \
-             after another transaction moves that row's key, or the candidate reader to reject \
-             its transaction. An independent equally old snapshot sees row={expected_snapshot_value:?}; \
-             old_key_candidates={found:?}, candidate_reader_committed={reader_committed}. \
-             This checks fixed-snapshot candidate completeness, not just latest-state index consistency.",
+            "Expected the old snapshot's row to remain discoverable after a key move, \
+             or explicit serialization rejection. Independent witness sees \
+             row={expected_snapshot_value:?}; old_key_candidates={found:?}, \
+             rejected_at_lookup={rejected_at_lookup}, candidate_reader_committed={reader_committed}. \
+             Operational errors are not accepted as serialization protection.",
         ),
     ))
 }

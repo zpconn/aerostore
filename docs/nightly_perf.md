@@ -28,9 +28,11 @@ cargo bench -p aerostore_core --bench hyperfeed_extended_crucible -- \
   --output target/extended-crucible.json
 ```
 
-Its full gate currently fails three Aerostore index/isolation contracts. Preserve
-that failure in automation; a bounded replay pass is not a substitute. This
-finite, phased workload complements the sustained churn checks below.
+Its full gate includes native predicate, publication, and snapshot contracts.
+Preserve any failure in automation; a bounded replay pass is not a substitute.
+The [transactional-index guide](transactional_indexes.md) describes the repairs
+driven by the initial failures. This finite, phased workload complements the
+sustained churn checks below.
 
 `hyperfeed_crucible` notes:
 - comparison mode requires Docker daemon access (PostgreSQL is launched via `testcontainers`).

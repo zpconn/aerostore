@@ -890,6 +890,7 @@ pub fn run() -> Result<(), String> {
             "Identical phased trace, full returned rows and per-phase state/output parity against serial reference",
             "One process per worker, rotating assignments; distinct events ordered per family, duplicate deliveries compete",
             "128 preallocated typed slots/family; native guards before Aerostore snapshot, PostgreSQL FOR UPDATE at transaction start",
+            "Aerostore native transactional indexes protect empty predicates and publish with rows; stale indexed snapshots retry explicitly",
             "Aerostore direct shared memory vs PostgreSQL local client/server; not equal transport overhead",
             "WAL enabled, asynchronous acknowledgement in both; clean WAL drain checked, crash durability untested",
             "Native contract probes supply no predicate lock and determine overall compatibility status",

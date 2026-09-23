@@ -26,6 +26,7 @@ pub enum PlannerError {
     UnknownField(String),
     InvalidIndexedValue(String),
     Occ(String),
+    SerializationFailure,
     PrimaryKey(String),
 }
 
@@ -43,6 +44,7 @@ impl fmt::Display for PlannerError {
             PlannerError::UnknownField(field) => write!(f, "unknown field '{}'", field),
             PlannerError::InvalidIndexedValue(msg) => write!(f, "{}", msg),
             PlannerError::Occ(msg) => write!(f, "occ error: {}", msg),
+            PlannerError::SerializationFailure => write!(f, "serialization failure"),
             PlannerError::PrimaryKey(msg) => write!(f, "primary key map error: {}", msg),
         }
     }
@@ -58,7 +60,10 @@ impl From<ParseError> for PlannerError {
 
 impl From<OccError> for PlannerError {
     fn from(value: OccError) -> Self {
-        PlannerError::Occ(value.to_string())
+        match value {
+            OccError::SerializationFailure => Self::SerializationFailure,
+            other => Self::Occ(other.to_string()),
+        }
     }
 }
 
@@ -179,6 +184,8 @@ pub struct CompiledPlan<T: StapiRow> {
     pub(crate) route_kind: RouteKind,
     pub(crate) access_path: AccessPath,
     pub(crate) residual_filters: Vec<CompiledFilter<T>>,
+    pub(crate) driver_filter: Option<CompiledFilter<T>>,
+    pub(crate) primary_key_compare: Option<IndexCompare>,
     pub(crate) sort: Option<String>,
     pub(crate) limit: Option<usize>,
 }
@@ -256,6 +263,17 @@ impl<T: StapiRow> RuleBasedOptimizer<T> {
         }
 
         let (route_kind, access_path, driver_filter_idx) = self.select_access_path(query)?;
+        // Index postings and the primary-key map are candidate structures. Keep
+        // the driving predicate so snapshot rows (and safe full-scan fallbacks)
+        // are checked against the complete query, including its chosen route.
+        let driver_filter = driver_filter_idx.map(|idx| CompiledFilter {
+            field: field_name(&query.filters[idx]).to_string(),
+            predicate: compile_filter::<T>(&query.filters[idx]),
+        });
+        let primary_key_compare = driver_filter_idx.and_then(|idx| match &query.filters[idx] {
+            Filter::Eq { value, .. } => value_to_index(value).map(IndexCompare::Eq),
+            _ => None,
+        });
         let mut residual_filters = Vec::with_capacity(query.filters.len());
 
         for (idx, filter) in query.filters.iter().enumerate() {
@@ -273,6 +291,8 @@ impl<T: StapiRow> RuleBasedOptimizer<T> {
             route_kind,
             access_path,
             residual_filters,
+            driver_filter,
+            primary_key_compare,
             sort: query.sort.clone(),
             limit: query.limit,
         })

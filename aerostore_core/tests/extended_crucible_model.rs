@@ -43,7 +43,7 @@ fn native_adapter_replays_transactions_and_retains_exact_indexes() {
 }
 
 #[test]
-fn adapter_must_surface_missing_candidate_postings() {
+fn adapter_rejects_out_of_transaction_index_corruption() {
     let dir = tempfile::tempdir().unwrap();
     let shared = aerostore::Shared::create(
         &dir.path().join("arena"),
@@ -61,20 +61,16 @@ fn adapter_must_surface_missing_candidate_postings() {
         .iter()
         .filter(|r| r.active && r.kind == model::FLIGHT)
     {
-        shared.indexes[0]
-            .try_remove(&aerostore_core::IndexValue::I64(row.callsign), &row.id)
-            .unwrap();
-        shared.indexes[1]
-            .try_remove(&aerostore_core::IndexValue::I64(row.tail), &row.id)
-            .unwrap();
+        // The old postcommit protocol permitted these removals. Bound native
+        // indexes now reject the attempted corruption before it can hide rows.
+        for (index, key) in [(0, row.callsign), (1, row.tail)] {
+            assert!(matches!(
+                shared.indexes[index].try_remove(&aerostore_core::IndexValue::I64(key), &row.id),
+                Err(aerostore_core::ShmIndexError::ManagedMutation { .. })
+            ));
+        }
     }
-    let error = model::execute_message(&mut store, &phases[1].messages[0]).unwrap_err();
-    assert!(
-        error.to_string().contains("candidate lookup missed"),
-        "{error}"
-    );
-    assert!(
-        shared.audit().is_err(),
-        "corrupted candidate indexes must fail the independent table/index audit"
-    );
+    model::execute_message(&mut store, &phases[1].messages[0]).unwrap();
+    while shared.ring.pop_bytes().unwrap().is_some() {}
+    shared.audit().unwrap();
 }

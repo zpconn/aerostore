@@ -1,198 +1,145 @@
 #![cfg(test)]
 
-use super::{
-    cleanup_reclaimed_index_entries, FlightIndexes, FlightState, VacuumReclaimedRow,
-    FLIGHT_ID_BYTES,
-};
-use aerostore_core::{IndexValue, OccTable, ShmArena};
+use super::{FlightIndexes, FlightState};
+use aerostore_core::{IndexCompare, IndexValue, OccTable, ShmArena};
 use std::sync::Arc;
 
-#[test]
-fn cleanup_preserves_live_postings_for_unchanged_columns() {
-    let shm = Arc::new(ShmArena::new(16 << 20).expect("failed to create shared memory"));
-    let indexes = FlightIndexes::new(Arc::clone(&shm));
-    let row_id = 7_usize;
-
-    let old = make_row("UAL123", 37.6189, -122.3750, 32_000, 450, 1_700_000_000);
-    let mut live = old;
-    live.gs = 455;
-    live.updated_at = 1_700_000_100;
-
-    let table = OccTable::new(Arc::clone(&shm), row_id + 1).unwrap();
-    table.seed_row(row_id, live).unwrap();
-
-    // Current live postings.
-    indexes.insert_row(row_id, &live).unwrap();
-    // Simulate stale postings only for changed fields.
-    indexes.gs.insert(IndexValue::I64(old.gs as i64), row_id);
-    indexes
-        .updated_at
-        .insert(IndexValue::I64(old.updated_at as i64), row_id);
-
-    cleanup_reclaimed_index_entries(
-        &table,
-        &indexes,
-        &[VacuumReclaimedRow {
-            row_id,
-            reclaimed_value: old,
-            live_head_value: Some(live),
-        }],
-    );
-
-    // Unchanged columns must still contain the live row id.
-    assert_eq!(
-        indexes
-            .flight_id
-            .lookup_posting_count(&IndexValue::String(live.flight_id_string())),
-        1
-    );
-    assert_eq!(
-        indexes
-            .altitude
-            .lookup_posting_count(&IndexValue::I64(live.altitude as i64)),
-        1
-    );
-    assert_eq!(
-        indexes
-            .lat
-            .lookup_posting_count(&IndexValue::I64(live.lat_scaled)),
-        1
-    );
-    assert_eq!(
-        indexes
-            .lon
-            .lookup_posting_count(&IndexValue::I64(live.lon_scaled)),
-        1
-    );
-
-    // Changed stale postings must be removed.
-    assert_eq!(
-        indexes
-            .gs
-            .lookup_posting_count(&IndexValue::I64(old.gs as i64)),
-        0
-    );
-    assert_eq!(
-        indexes
-            .updated_at
-            .lookup_posting_count(&IndexValue::I64(old.updated_at as i64)),
-        0
-    );
-
-    // Changed live postings must remain.
-    assert_eq!(
-        indexes
-            .gs
-            .lookup_posting_count(&IndexValue::I64(live.gs as i64)),
-        1
-    );
-    assert_eq!(
-        indexes
-            .updated_at
-            .lookup_posting_count(&IndexValue::I64(live.updated_at as i64)),
-        1
-    );
-}
-
-#[test]
-fn cleanup_drops_all_postings_when_no_live_head_exists() {
-    let shm = Arc::new(ShmArena::new(16 << 20).expect("failed to create shared memory"));
-    let indexes = FlightIndexes::new(Arc::clone(&shm));
-    let row_id = 19_usize;
-    let old = make_row("DAL789", 35.0000, -120.1000, 28_000, 402, 1_700_100_000);
-
-    let table = OccTable::new(Arc::clone(&shm), row_id + 1).unwrap();
-    indexes.insert_row(row_id, &old).unwrap();
-    cleanup_reclaimed_index_entries(
-        &table,
-        &indexes,
-        &[VacuumReclaimedRow {
-            row_id,
-            reclaimed_value: old,
-            live_head_value: None,
-        }],
-    );
-
-    assert_eq!(
-        indexes
-            .flight_id
-            .lookup_posting_count(&IndexValue::String(old.flight_id_string())),
-        0
-    );
-    assert_eq!(
-        indexes
-            .altitude
-            .lookup_posting_count(&IndexValue::I64(old.altitude as i64)),
-        0
-    );
-    assert_eq!(
-        indexes
-            .gs
-            .lookup_posting_count(&IndexValue::I64(old.gs as i64)),
-        0
-    );
-    assert_eq!(
-        indexes
-            .lat
-            .lookup_posting_count(&IndexValue::I64(old.lat_scaled)),
-        0
-    );
-    assert_eq!(
-        indexes
-            .lon
-            .lookup_posting_count(&IndexValue::I64(old.lon_scaled)),
-        0
-    );
-    assert_eq!(
-        indexes
-            .updated_at
-            .lookup_posting_count(&IndexValue::I64(old.updated_at as i64)),
-        0
-    );
-}
-
-#[test]
-fn cleanup_rechecks_current_row_when_reclaimed_key_becomes_live_again() {
+fn fixture() -> (
+    Arc<ShmArena>,
+    OccTable<FlightState>,
+    FlightIndexes,
+    FlightState,
+) {
     let shm = Arc::new(ShmArena::new(16 << 20).unwrap());
+    let mut table = OccTable::new(Arc::clone(&shm), 1).unwrap();
     let indexes = FlightIndexes::new(Arc::clone(&shm));
-    let table = OccTable::new(Arc::clone(&shm), 1).unwrap();
-    let old = make_row("UAL123", 37.6189, -122.3750, 32_000, 450, 100);
-    let mut captured_head = old;
-    captured_head.gs = 455;
-    // The writer has returned to gs=450 after vacuum captured gs=455.
-    table.seed_row(0, old).unwrap();
-    indexes.insert_row(0, &old).unwrap();
-    cleanup_reclaimed_index_entries(
-        &table,
-        &indexes,
-        &[VacuumReclaimedRow {
-            row_id: 0,
-            reclaimed_value: old,
-            live_head_value: Some(captured_head),
-        }],
-    );
-    assert_eq!(indexes.gs.lookup_posting_count(&IndexValue::I64(450)), 1);
+    let row = FlightState::from_decoded("UAL123", 37.6189, -122.375, 32000, 450, 100).unwrap();
+    table.seed_row(0, row).unwrap();
+    indexes.insert_row(0, &row).unwrap();
+    indexes.bind(&mut table).unwrap();
+    (shm, table, indexes, row)
 }
 
-fn make_row(
-    flight: &str,
-    lat: f64,
-    lon: f64,
-    altitude: i32,
-    gs: u16,
-    updated_at: u64,
-) -> FlightState {
-    let mut encoded = [0_u8; FLIGHT_ID_BYTES];
-    let bytes = flight.as_bytes();
-    let len = bytes.len().min(FLIGHT_ID_BYTES);
-    encoded[..len].copy_from_slice(&bytes[..len]);
-    FlightState {
-        exists: 1,
-        flight_id: encoded,
-        lat_scaled: (lat * 1_000_000.0).round() as i64,
-        lon_scaled: (lon * 1_000_000.0).round() as i64,
-        altitude,
-        gs,
-        updated_at,
+#[test]
+fn vacuum_keeps_current_postings_when_key_returns_to_reclaimed_value() {
+    let (shm, table, indexes, initial) = fixture();
+    for speed in [455, 460, 450] {
+        let mut row = initial;
+        row.gs = speed;
+        let mut tx = table.begin_transaction().unwrap();
+        table.write(&mut tx, 0, row).unwrap();
+        table.commit(&mut tx).unwrap();
     }
+    let reclaimed = table
+        .vacuum_reclaim_once(aerostore_core::compute_global_xmin(&shm))
+        .unwrap();
+    assert_eq!(reclaimed.len(), 3);
+    assert_eq!(
+        indexes.gs.try_entries().unwrap(),
+        vec![(IndexValue::I64(450), 0)]
+    );
+    assert_eq!(
+        indexes.altitude.try_entries().unwrap(),
+        vec![(IndexValue::I64(32000), 0)]
+    );
+    let mut tx = table.begin_transaction().unwrap();
+    assert_eq!(
+        table
+            .index_lookup(
+                &mut tx,
+                &indexes.gs,
+                &IndexCompare::Eq(IndexValue::I64(450))
+            )
+            .unwrap(),
+        vec![0]
+    );
+    table.commit(&mut tx).unwrap();
+}
+
+#[test]
+fn vacuum_after_delete_never_recreates_or_removes_another_live_posting() {
+    let (shm, table, indexes, initial) = fixture();
+    let mut deleted = initial;
+    deleted.exists = 0;
+    let mut tx = table.begin_transaction().unwrap();
+    table.write(&mut tx, 0, deleted).unwrap();
+    table.commit(&mut tx).unwrap();
+    table
+        .vacuum_reclaim_once(aerostore_core::compute_global_xmin(&shm))
+        .unwrap();
+    for index in [
+        &indexes.flight_id,
+        &indexes.altitude,
+        &indexes.gs,
+        &indexes.lat,
+        &indexes.lon,
+        &indexes.updated_at,
+    ] {
+        assert!(index.try_entries().unwrap().is_empty());
+        index.collect_garbage_once(usize::MAX);
+        index.audit_allocations().unwrap();
+    }
+    let mut tx = table.begin_transaction().unwrap();
+    table.write(&mut tx, 0, initial).unwrap();
+    table.commit(&mut tx).unwrap();
+    table
+        .vacuum_reclaim_once(aerostore_core::compute_global_xmin(&shm))
+        .unwrap();
+    assert_eq!(
+        indexes.gs.try_entries().unwrap(),
+        vec![(IndexValue::I64(450), 0)]
+    );
+}
+
+#[test]
+fn savepoint_and_abort_do_not_publish_rolled_back_index_keys() {
+    let (_, table, indexes, initial) = fixture();
+    let mut committed = initial;
+    committed.gs = 455;
+    let mut rolled_back = committed;
+    rolled_back.gs = 460;
+    let mut tx = table.begin_transaction().unwrap();
+    table.write(&mut tx, 0, committed).unwrap();
+    table.savepoint(&mut tx, "branch").unwrap();
+    table.write(&mut tx, 0, rolled_back).unwrap();
+    table.rollback_to(&mut tx, "branch").unwrap();
+    table.commit(&mut tx).unwrap();
+    assert_eq!(
+        indexes.gs.try_entries().unwrap(),
+        vec![(IndexValue::I64(455), 0)]
+    );
+    let mut tx = table.begin_transaction().unwrap();
+    table.write(&mut tx, 0, rolled_back).unwrap();
+    table.abort(&mut tx).unwrap();
+    assert_eq!(table.snapshot_latest_rows().unwrap(), vec![(0, committed)]);
+    assert_eq!(
+        indexes.gs.try_entries().unwrap(),
+        vec![(IndexValue::I64(455), 0)]
+    );
+}
+
+#[test]
+fn warm_attachment_rebinds_all_six_indexes_before_writing() {
+    let (shm, table, indexes, initial) = fixture();
+    let mut layout = aerostore_core::BootLayout::new(1).unwrap();
+    indexes.write_layout_offsets(&mut layout).unwrap();
+    let attached_indexes = FlightIndexes::from_layout(Arc::clone(&shm), &layout).unwrap();
+    let mut attached_table = OccTable::from_existing(
+        Arc::clone(&shm),
+        table.shared_header_offset(),
+        table.index_slot_offsets(),
+    )
+    .unwrap();
+    assert!(attached_table.begin_transaction().is_err());
+    attached_indexes.bind(&mut attached_table).unwrap();
+    let mut changed = initial;
+    changed.gs = 455;
+    let mut tx = attached_table.begin_transaction().unwrap();
+    attached_table.write(&mut tx, 0, changed).unwrap();
+    attached_table.commit(&mut tx).unwrap();
+    assert_eq!(
+        indexes.gs.try_entries().unwrap(),
+        vec![(IndexValue::I64(455), 0)]
+    );
+    assert_eq!(table.snapshot_latest_rows().unwrap(), vec![(0, changed)]);
 }

@@ -2,12 +2,21 @@ use std::fmt;
 use std::mem::MaybeUninit;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use crate::shm_lock::ShmMutex;
+
 pub const PROCARRAY_SLOTS: usize = 256;
 const EMPTY_SLOT: u64 = 0;
+
+#[cfg(test)]
+thread_local! {
+    static REGISTRATION_RESERVED_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+        std::cell::RefCell::new(None);
+}
 
 #[repr(align(64))]
 pub struct ProcSlot {
     txid: AtomicU64,
+    snapshot_xmin: AtomicU64,
 }
 
 impl ProcSlot {
@@ -15,6 +24,7 @@ impl ProcSlot {
     fn new() -> Self {
         Self {
             txid: AtomicU64::new(EMPTY_SLOT),
+            snapshot_xmin: AtomicU64::new(EMPTY_SLOT),
         }
     }
 
@@ -25,12 +35,18 @@ impl ProcSlot {
 }
 
 pub struct ProcArray {
+    // Only protects metadata transitions and snapshot copying. In particular,
+    // this is never held for the lifetime of a transaction. Reserving an ID
+    // and advertising it must be indivisible to snapshot observers; otherwise
+    // a paused new transaction can be mistaken for an already committed one.
+    lifecycle: ShmMutex,
     slots: [ProcSlot; PROCARRAY_SLOTS],
 }
 
 impl ProcArray {
     pub fn new() -> Self {
         Self {
+            lifecycle: ShmMutex::new(),
             slots: std::array::from_fn(|_| ProcSlot::new()),
         }
     }
@@ -39,7 +55,14 @@ impl ProcArray {
         &self,
         global_txid: &AtomicU64,
     ) -> Result<ProcArrayRegistration, ProcArrayError> {
+        let _lifecycle = self.lifecycle.lock();
         let txid = global_txid.fetch_add(1, Ordering::AcqRel);
+        #[cfg(test)]
+        REGISTRATION_RESERVED_HOOK.with(|hook| {
+            if let Some(hook) = hook.borrow_mut().take() {
+                hook();
+            }
+        });
 
         for (slot_idx, slot) in self.slots.iter().enumerate() {
             if slot
@@ -47,6 +70,7 @@ impl ProcArray {
                 .compare_exchange(EMPTY_SLOT, txid, Ordering::AcqRel, Ordering::Acquire)
                 .is_ok()
             {
+                slot.snapshot_xmin.store(txid, Ordering::Release);
                 return Ok(ProcArrayRegistration {
                     slot_idx: slot_idx as u16,
                     txid,
@@ -61,6 +85,7 @@ impl ProcArray {
         &self,
         registration: ProcArrayRegistration,
     ) -> Result<(), ProcArrayError> {
+        let _lifecycle = self.lifecycle.lock();
         let slot_idx = registration.slot_idx as usize;
         if slot_idx >= PROCARRAY_SLOTS {
             return Err(ProcArrayError::InvalidSlot {
@@ -78,11 +103,60 @@ impl ProcArray {
             });
         }
 
+        slot.snapshot_xmin.store(EMPTY_SLOT, Ordering::Release);
         slot.txid.store(EMPTY_SLOT, Ordering::Release);
         Ok(())
     }
 
     pub fn create_snapshot(&self, global_txid: &AtomicU64) -> ProcSnapshot {
+        let _lifecycle = self.lifecycle.lock();
+        self.snapshot_locked(global_txid)
+    }
+
+    /// Capture and publish a transaction's retention horizon in one metadata
+    /// critical section. Vacuum must not pass this horizon while the snapshot
+    /// can still need versions deleted by an older, then-active writer.
+    pub fn create_transaction_snapshot(
+        &self,
+        registration: ProcArrayRegistration,
+        global_txid: &AtomicU64,
+    ) -> Result<ProcSnapshot, ProcArrayError> {
+        let _lifecycle = self.lifecycle.lock();
+        let slot =
+            self.slots
+                .get(registration.slot_idx as usize)
+                .ok_or(ProcArrayError::InvalidSlot {
+                    slot_idx: registration.slot_idx,
+                })?;
+        let observed = slot.load(Ordering::Acquire);
+        if observed != registration.txid {
+            return Err(ProcArrayError::SlotOwnershipMismatch {
+                slot_idx: registration.slot_idx,
+                expected_txid: registration.txid,
+                observed_txid: observed,
+            });
+        }
+        let snapshot = self.snapshot_locked(global_txid);
+        slot.snapshot_xmin.store(snapshot.xmin, Ordering::Release);
+        Ok(snapshot)
+    }
+
+    /// Oldest pinned MVCC snapshot, including a reader's older active writers.
+    /// This is deliberately separate from new snapshots' active-tx xmin: copying
+    /// retained horizons into subsequent snapshots would pin old versions
+    /// indefinitely under a continuous stream of overlapping readers.
+    pub fn oldest_snapshot_xmin(&self, global_txid: &AtomicU64) -> u64 {
+        let _lifecycle = self.lifecycle.lock();
+        let mut xmin = global_txid.load(Ordering::Acquire);
+        for slot in &self.slots {
+            if slot.load(Ordering::Acquire) != EMPTY_SLOT {
+                xmin = xmin.min(slot.snapshot_xmin.load(Ordering::Acquire));
+            }
+        }
+        xmin
+    }
+
+    fn snapshot_locked(&self, global_txid: &AtomicU64) -> ProcSnapshot {
         let mut xmax = global_txid.load(Ordering::Relaxed);
         let mut xmin = xmax;
         let mut max_in_flight = 0_u64;
@@ -115,13 +189,20 @@ impl ProcArray {
         }
     }
 
+    /// Startup recovery only: the caller must establish exclusive ownership
+    /// after all previous workers have stopped. This already clears every slot,
+    /// including apparently active registrations; it is not live-worker cleanup.
+    /// Reset the metadata latch too, since a dead process may have held it.
     pub fn clear_orphaned_slots(&self) -> usize {
+        self.lifecycle.reset_after_exclusive_recovery();
+        let _lifecycle = self.lifecycle.lock();
         let mut cleared = 0_usize;
         for slot in self.slots.iter() {
             let txid = slot.load(Ordering::Acquire);
             if txid == EMPTY_SLOT {
                 continue;
             }
+            slot.snapshot_xmin.store(EMPTY_SLOT, Ordering::Release);
             slot.txid.store(EMPTY_SLOT, Ordering::Release);
             cleared += 1;
         }
@@ -226,6 +307,59 @@ mod tests {
     use std::sync::atomic::AtomicU64;
 
     #[test]
+    fn snapshot_cannot_mistake_reserved_unpublished_txid_for_a_commit() {
+        use std::sync::{mpsc, Arc, Barrier};
+        use std::time::Duration;
+        let procarray = Arc::new(ProcArray::new());
+        let global = Arc::new(AtomicU64::new(100));
+        let reserved = Arc::new(Barrier::new(2));
+        let publish = Arc::new(Barrier::new(2));
+        let writer_array = Arc::clone(&procarray);
+        let writer_global = Arc::clone(&global);
+        let writer_reserved = Arc::clone(&reserved);
+        let writer_publish = Arc::clone(&publish);
+        let writer = std::thread::spawn(move || {
+            super::REGISTRATION_RESERVED_HOOK.with(|hook| {
+                *hook.borrow_mut() = Some(Box::new(move || {
+                    writer_reserved.wait();
+                    writer_publish.wait();
+                }))
+            });
+            writer_array.begin_transaction(&writer_global).unwrap()
+        });
+        reserved.wait();
+        assert_eq!(global.load(std::sync::atomic::Ordering::Acquire), 101);
+        assert!(
+            procarray.lifecycle.try_lock().is_none(),
+            "reservation must hold snapshot metadata latch"
+        );
+        let reader_array = Arc::clone(&procarray);
+        let reader_global = Arc::clone(&global);
+        let (started_send, started_recv) = mpsc::channel();
+        let (snapshot_send, snapshot_recv) = mpsc::channel();
+        let reader = std::thread::spawn(move || {
+            started_send.send(()).unwrap();
+            snapshot_send
+                .send(reader_array.create_snapshot(&reader_global))
+                .unwrap();
+        });
+        started_recv.recv().unwrap();
+        let premature = snapshot_recv.recv_timeout(Duration::from_millis(20));
+        publish.wait();
+        let registration = writer.join().unwrap();
+        let snapshot = match premature {
+            Ok(snapshot) => snapshot,
+            Err(_) => snapshot_recv.recv_timeout(Duration::from_secs(2)).unwrap(),
+        };
+        reader.join().unwrap();
+        // A scan without the lifecycle latch can incorrectly return xmax=101
+        // and an empty active set while txid100 is reserved but unpublished.
+        assert!(snapshot.in_flight_txids().contains(&registration.txid));
+        assert_eq!(snapshot.xmin, registration.txid);
+        procarray.end_transaction(registration).unwrap();
+    }
+
+    #[test]
     fn begin_transaction_exhausts_slots_and_returns_no_free_slot() {
         let procarray = ProcArray::new();
         let global = AtomicU64::new(1);
@@ -298,6 +432,19 @@ mod tests {
 
         procarray.end_transaction(a).expect("end A");
         procarray.end_transaction(b).expect("end B");
+    }
+
+    #[test]
+    fn exclusive_orphan_recovery_resets_a_dead_metadata_latch() {
+        let procarray = ProcArray::new();
+        let global = AtomicU64::new(1);
+        let _registration = procarray.begin_transaction(&global).unwrap();
+        // A terminated process cannot run the guard destructor. There are no
+        // live users in this fixture, matching exclusive startup recovery.
+        std::mem::forget(procarray.lifecycle.lock());
+        assert_eq!(procarray.clear_orphaned_slots(), 1);
+        let registration = procarray.begin_transaction(&global).unwrap();
+        procarray.end_transaction(registration).unwrap();
     }
 
     #[test]

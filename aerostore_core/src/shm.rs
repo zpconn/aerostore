@@ -18,7 +18,7 @@ use crate::procarray::{
 };
 
 const SHM_HEADER_MAGIC: u32 = 0xAEB0_B007;
-const SHM_LAYOUT_VERSION: u32 = 3;
+const SHM_LAYOUT_VERSION: u32 = 4;
 const SHM_HEADER_ALIGN: u32 = 64;
 pub(crate) const OCC_PARTITION_LOCKS: usize = 1024;
 const FREE_LIST_NODE_MAGIC: u32 = 0xAEB0_F1E5;
@@ -517,6 +517,15 @@ impl ShmArena {
     #[inline]
     pub fn create_snapshot(&self) -> ProcSnapshot {
         self.proc_array().create_snapshot(self.global_txid())
+    }
+
+    #[inline]
+    pub fn create_transaction_snapshot(
+        &self,
+        registration: ProcArrayRegistration,
+    ) -> Result<ProcSnapshot, ProcArrayError> {
+        self.proc_array()
+            .create_transaction_snapshot(registration, self.global_txid())
     }
 
     #[inline]

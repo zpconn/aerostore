@@ -223,15 +223,7 @@ where
 }
 
 pub fn compute_global_xmin(shm: &ShmArena) -> TxId {
-    let mut xmin = shm.global_txid().load(Ordering::Acquire);
-    let proc_array = shm.proc_array();
-    for slot_idx in 0..proc_array.slots_len() {
-        let txid = proc_array.slot_txid(slot_idx).unwrap_or(0);
-        if txid != 0 && txid < xmin {
-            xmin = txid;
-        }
-    }
-    xmin
+    shm.proc_array().oldest_snapshot_xmin(shm.global_txid())
 }
 
 fn vacuum_loop<T>(

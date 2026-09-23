@@ -1,5 +1,5 @@
-//! Adapter over the real process-shared engine. Only pending index intents are
-//! local: row versions, snapshots, savepoints and commits belong to OccTable.
+//! Adapter over the process-shared engine. Native OccTable transactions own
+//! predicate dependencies, row versions, savepoints, and index publication.
 use super::metrics::StoreMetrics;
 use super::model::{DbError, Query, Record, Store, FLIGHT, SCHEDULED};
 use aerostore_core::occ_partitioned::{OccCommitRecord, OccCommittedWrite};
@@ -22,6 +22,13 @@ pub const WAL_SLOTS: usize = 16;
 pub const WAL_SLOT_BYTES: usize = 65_536;
 pub type Ring = SharedWalRing<WAL_SLOTS, WAL_SLOT_BYTES>;
 const INDEX_NAMES: [&str; 5] = ["callsign", "tail", "family", "due", "event_time"];
+const INDEX_KEYS: [fn(&Record) -> Option<IndexValue>; 5] = [
+    |row| keys(row)[0].map(IndexValue::I64),
+    |row| keys(row)[1].map(IndexValue::I64),
+    |row| keys(row)[2].map(IndexValue::I64),
+    |row| keys(row)[3].map(IndexValue::I64),
+    |row| keys(row)[4].map(IndexValue::I64),
+];
 
 impl WalDeltaCodec for Record {}
 
@@ -160,8 +167,8 @@ impl Shared {
                 .map_err(|e| e.to_string())?
                 .arena,
         );
-        let table =
-            Arc::new(OccTable::new(Arc::clone(&arena), records.len()).map_err(|e| e.to_string())?);
+        let mut table =
+            OccTable::new(Arc::clone(&arena), records.len()).map_err(|e| e.to_string())?;
         let indexes = INDEX_NAMES
             .iter()
             .map(|name| SecondaryIndex::new_in_shared(name, Arc::clone(&arena)))
@@ -176,6 +183,12 @@ impl Shared {
                 }
             }
         }
+        for (index, key) in indexes.iter().zip(INDEX_KEYS) {
+            table
+                .bind_index(index.clone(), key)
+                .map_err(|e| e.to_string())?;
+        }
+        let table = Arc::new(table);
         let ring = Ring::create(Arc::clone(&arena)).map_err(|e| e.to_string())?;
         Ok(Self {
             arena,
@@ -205,10 +218,9 @@ impl Shared {
             return Err("invalid extended index attachment".into());
         }
         let arena = Arc::new(attach_existing_arena(&a.path, a.bytes)?);
-        let table = Arc::new(
+        let mut table =
             OccTable::from_existing(Arc::clone(&arena), a.table_header, a.table_slots.clone())
-                .map_err(|e| e.to_string())?,
-        );
+                .map_err(|e| e.to_string())?;
         let indexes = INDEX_NAMES
             .iter()
             .zip(&a.indexes)
@@ -217,6 +229,12 @@ impl Shared {
                     .map_err(|e| e.to_string())
             })
             .collect::<Result<Vec<_>, _>>()?;
+        for (index, key) in indexes.iter().zip(INDEX_KEYS) {
+            table
+                .bind_index(index.clone(), key)
+                .map_err(|e| e.to_string())?;
+        }
+        let table = Arc::new(table);
         let ring = Ring::from_existing(Arc::clone(&arena), RelPtr::from_offset(a.ring));
         Ok(Self {
             arena,
@@ -308,36 +326,6 @@ impl<'a> Adapter<'a> {
         }
     }
 
-    fn finish_indexes(&mut self) -> Result<(), DbError> {
-        for (id, (before, after)) in &self.pending {
-            for ((index, old), new) in self
-                .shared
-                .indexes
-                .iter()
-                .zip(keys(before))
-                .zip(keys(after))
-            {
-                if old == new {
-                    continue;
-                }
-                match (old, new) {
-                    (Some(old), Some(new)) => index
-                        .try_move_payload(&IndexValue::I64(old), IndexValue::I64(new), id)
-                        .map_err(fatal)?,
-                    (Some(old), None) => {
-                        index.try_remove(&IndexValue::I64(old), id).map_err(fatal)?
-                    }
-                    (None, Some(new)) => {
-                        index.try_insert(IndexValue::I64(new), *id).map_err(fatal)?
-                    }
-                    (None, None) => {}
-                }
-                self.metrics.index_mutations += 1;
-            }
-        }
-        Ok(())
-    }
-
     fn release(&mut self) {
         self.tx = None;
         self.pending.clear();
@@ -387,52 +375,35 @@ impl Store for Adapter<'_> {
     fn query(&mut self, query: &Query) -> Result<Vec<Record>, DbError> {
         self.metrics.queries += 1;
         let ix = &self.shared.indexes;
+        let table = &self.shared.table;
+        let tx = self
+            .tx
+            .as_mut()
+            .ok_or_else(|| fatal("no open transaction"))?;
         let eq = |value| IndexCompare::Eq(IndexValue::I64(value));
-        let mut ids: BTreeSet<usize> = match *query {
+        let mut lookup = |index: usize, predicate: IndexCompare| {
+            table.index_lookup(tx, &ix[index], &predicate).map_err(occ)
+        };
+        let ids: BTreeSet<usize> = match *query {
             Query::Candidates { callsign, tail, .. } => {
-                let mut ids = ix[0].try_lookup(&eq(callsign)).map_err(fatal)?;
+                let mut ids = lookup(0, eq(callsign))?;
                 if tail != 0 {
-                    ids.extend(ix[1].try_lookup(&eq(tail)).map_err(fatal)?);
+                    ids.extend(lookup(1, eq(tail))?);
                 }
                 ids.into_iter().collect()
             }
-            Query::Family { family, .. } | Query::Positions { family, .. } => ix[2]
-                .try_lookup(&eq(family))
-                .map_err(fatal)?
-                .into_iter()
-                .collect(),
-            Query::Due { family, at } => {
-                let family_ids: BTreeSet<_> = ix[2]
-                    .try_lookup(&eq(family))
-                    .map_err(fatal)?
-                    .into_iter()
-                    .collect();
-                ix[3]
-                    .try_lookup(&IndexCompare::Lte(IndexValue::I64(at)))
-                    .map_err(fatal)?
-                    .into_iter()
-                    .filter(|id| family_ids.contains(id))
-                    .collect()
+            Query::Family { family, .. }
+            | Query::Positions { family, .. }
+            | Query::Due { family, .. }
+            | Query::Expired { family, .. } => {
+                // Family equality is the selective index predicate for these
+                // conjunctive queries. Materialize it and apply the time/kind
+                // residual below. This protects the complete matching family
+                // without enrolling unrelated families in a global time range.
+                lookup(2, eq(family))?.into_iter().collect()
             }
-            Query::Expired { family, before } => {
-                let family_ids: BTreeSet<_> = ix[2]
-                    .try_lookup(&eq(family))
-                    .map_err(fatal)?
-                    .into_iter()
-                    .collect();
-                ix[4]
-                    .try_lookup(&IndexCompare::Lt(IndexValue::I64(before)))
-                    .map_err(fatal)?
-                    .into_iter()
-                    .filter(|id| family_ids.contains(id))
-                    .collect()
-            }
-            Query::All => (0..self.shared.table.capacity()).collect(),
+            Query::All => (0..table.capacity()).collect(),
         };
-        // Uncommitted writes have not been published into the shared indexes.
-        // Overlay those IDs so SQL-style read-your-own-writes works, including
-        // newly activated keys and savepoint rollback of their pending intents.
-        ids.extend(self.pending.keys().copied());
         let mut rows = Vec::new();
         for id in ids {
             let row = self.read(id)?;
@@ -500,15 +471,25 @@ impl Store for Adapter<'_> {
     }
 
     fn commit(&mut self) -> Result<(), DbError> {
+        let index_mutations = self
+            .pending
+            .values()
+            .map(|(before, after)| {
+                keys(before)
+                    .into_iter()
+                    .zip(keys(after))
+                    .filter(|(old, new)| old != new)
+                    .count() as u64
+            })
+            .sum::<u64>();
         let result = self.committer.commit(
             &self.shared.table,
             self.tx.as_mut().ok_or_else(|| fatal("no transaction"))?,
         );
         match result {
             Ok(_) => {
-                let indexed = self.finish_indexes();
+                self.metrics.index_mutations += index_mutations;
                 self.release();
-                indexed?;
                 self.metrics.commits += 1;
                 Ok(())
             }
@@ -517,11 +498,10 @@ impl Store for Adapter<'_> {
                 Err(occ(e))
             }
             Err(e) => {
-                let indexed = self.finish_indexes();
+                // Row and index publication already completed atomically.
+                // A subsequent WAL failure is fatal and cannot retry the input.
                 self.release();
-                Err(fatal(format!(
-                    "fatal after row commit: WAL={e}; indexes={indexed:?}; rebuild required"
-                )))
+                Err(fatal(format!("fatal after row/index commit: WAL={e}")))
             }
         }
     }
@@ -664,8 +644,8 @@ mod tests {
         let due = adapter.query(&Query::Due { family: 0, at: 10 }).unwrap();
         assert_eq!(due.iter().map(|row| row.id).collect::<Vec<_>>(), vec![0]);
         assert_eq!(
-            adapter.metrics.reads, 1,
-            "unrelated due rows must not enter the read set"
+            adapter.metrics.reads, 2,
+            "only the requested family's candidates should be materialized"
         );
         let expired = adapter
             .query(&Query::Expired {
@@ -678,9 +658,17 @@ mod tests {
             vec![1]
         );
         assert_eq!(
-            adapter.metrics.reads, 3,
+            adapter.metrics.reads, 4,
             "only the requested family's indexed candidates should be materialized"
         );
-        adapter.abort().unwrap();
+        // Changing an unrelated family's non-key state must not invalidate
+        // either query through an accidentally enrolled point-read dependency.
+        let other = super::super::model::SLOTS_PER_FAMILY;
+        let mut writer = shared.table.begin_transaction().unwrap();
+        let mut changed = shared.table.read(&mut writer, other).unwrap().unwrap();
+        changed.altitude += 1;
+        shared.table.write(&mut writer, other, changed).unwrap();
+        shared.table.commit(&mut writer).unwrap();
+        adapter.commit().unwrap();
     }
 }

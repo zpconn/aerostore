@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::os::raw::{c_char, c_int};
 use std::path::{Path, PathBuf};
 use std::slice;
@@ -10,14 +9,13 @@ use std::time::{Duration, Instant};
 use aerostore_core::{
     alloc_u32_array, clear_persisted_boot_layout, load_boot_layout, open_boot_context,
     persist_boot_layout as persist_shared_boot_layout, read_u32_array,
-    recover_occ_table_from_checkpoint_and_wal_with_pk_map, spawn_vacuum_daemon_with_callback,
+    recover_occ_table_from_checkpoint_and_wal_with_pk_map, spawn_vacuum_daemon,
     spawn_wal_writer_daemon, write_occ_checkpoint_and_truncate_wal, BootLayout, BootMode,
     IndexValue, IngestStats, OccError, OccTable, OccTransaction, PlannerError, RelPtr,
     RetryBackoff, RetryPolicy, RuleBasedOptimizer, SchemaCatalog, SecondaryIndex, SharedWalRing,
     ShmArena, ShmIndexError, ShmPrimaryKeyMap, SnapshotExecutionMode, StapiRow, StapiValue,
-    SynchronousCommit, TsvColumns, TsvDecodeError, VacuumDaemon, VacuumReclaimedRow, WalDeltaCodec,
-    WalDeltaError, WalRing, WalWriterError, BOOT_LAYOUT_MAX_INDEXES, DEFAULT_TMPFS_PATH,
-    SYNCHRONOUS_COMMIT_KEY,
+    SynchronousCommit, TsvColumns, TsvDecodeError, VacuumDaemon, WalDeltaCodec, WalDeltaError,
+    WalRing, WalWriterError, BOOT_LAYOUT_MAX_INDEXES, DEFAULT_TMPFS_PATH, SYNCHRONOUS_COMMIT_KEY,
 };
 use serde::{Deserialize, Serialize};
 use tcl::Interp;
@@ -317,18 +315,6 @@ impl FlightTsvDecoder {
     }
 }
 
-struct PendingIndexUpdate {
-    before: FlightState,
-    after: FlightState,
-}
-
-enum IndexDeltaOp {
-    NoOp,
-    Insert(IndexValue),
-    Remove(IndexValue),
-    Move { from: IndexValue, to: IndexValue },
-}
-
 #[derive(Clone)]
 struct PendingBatchRow {
     flight_key: String,
@@ -485,26 +471,6 @@ impl FlightIndexes {
         catalog
     }
 
-    #[allow(dead_code)]
-    fn remove_row(&self, row_id: usize, row: &FlightState) {
-        if row.exists == 0 {
-            return;
-        }
-
-        let row_key = row.flight_id_string();
-        self.flight_id.remove(&IndexValue::String(row_key), &row_id);
-
-        self.altitude
-            .remove(&IndexValue::I64(row.altitude as i64), &row_id);
-        self.gs.remove(&IndexValue::I64(row.gs as i64), &row_id);
-        self.lat.remove(&IndexValue::I64(row.lat_scaled), &row_id);
-        self.lon.remove(&IndexValue::I64(row.lon_scaled), &row_id);
-        if let Ok(updated_at) = i64::try_from(row.updated_at) {
-            self.updated_at
-                .remove(&IndexValue::I64(updated_at), &row_id);
-        }
-    }
-
     fn insert_row(&self, row_id: usize, row: &FlightState) -> Result<(), ShmIndexError> {
         if row.exists == 0 {
             return Ok(());
@@ -528,174 +494,31 @@ impl FlightIndexes {
         Ok(())
     }
 
-    fn apply_row_delta(
-        &self,
-        row_id: usize,
-        before: &FlightState,
-        after: &FlightState,
-    ) -> Result<(), ShmIndexError> {
-        let before_live = before.exists != 0;
-        let after_live = after.exists != 0;
-
-        Self::apply_index_delta(
-            &self.flight_id,
-            row_id,
-            Self::plan_delta_op(
-                before_live.then(|| IndexValue::String(before.flight_id_string())),
-                after_live.then(|| IndexValue::String(after.flight_id_string())),
-            ),
-        )?;
-        Self::apply_index_delta(
-            &self.altitude,
-            row_id,
-            Self::plan_delta_op(
-                before_live.then(|| IndexValue::I64(before.altitude as i64)),
-                after_live.then(|| IndexValue::I64(after.altitude as i64)),
-            ),
-        )?;
-        Self::apply_index_delta(
-            &self.gs,
-            row_id,
-            Self::plan_delta_op(
-                before_live.then(|| IndexValue::I64(before.gs as i64)),
-                after_live.then(|| IndexValue::I64(after.gs as i64)),
-            ),
-        )?;
-        Self::apply_index_delta(
-            &self.lat,
-            row_id,
-            Self::plan_delta_op(
-                before_live.then(|| IndexValue::I64(before.lat_scaled)),
-                after_live.then(|| IndexValue::I64(after.lat_scaled)),
-            ),
-        )?;
-        Self::apply_index_delta(
-            &self.lon,
-            row_id,
-            Self::plan_delta_op(
-                before_live.then(|| IndexValue::I64(before.lon_scaled)),
-                after_live.then(|| IndexValue::I64(after.lon_scaled)),
-            ),
-        )?;
-        Self::apply_index_delta(
-            &self.updated_at,
-            row_id,
-            Self::plan_delta_op(
-                before_live
-                    .then(|| i64::try_from(before.updated_at).ok().map(IndexValue::I64))
-                    .flatten(),
-                after_live
-                    .then(|| i64::try_from(after.updated_at).ok().map(IndexValue::I64))
-                    .flatten(),
-            ),
-        )?;
+    /// Register the six partial indexes with native OCC publication. Cold
+    /// recovery rebuilds postings before binding; warm handles bind the same
+    /// shared identities before starting any transaction.
+    fn bind(&self, table: &mut OccTable<FlightState>) -> Result<(), OccError> {
+        table.bind_index((*self.flight_id).clone(), |row| {
+            (row.exists != 0).then(|| IndexValue::String(row.flight_id_string()))
+        })?;
+        table.bind_index((*self.altitude).clone(), |row| {
+            (row.exists != 0).then_some(IndexValue::I64(row.altitude as i64))
+        })?;
+        table.bind_index((*self.gs).clone(), |row| {
+            (row.exists != 0).then_some(IndexValue::I64(row.gs as i64))
+        })?;
+        table.bind_index((*self.lat).clone(), |row| {
+            (row.exists != 0).then_some(IndexValue::I64(row.lat_scaled))
+        })?;
+        table.bind_index((*self.lon).clone(), |row| {
+            (row.exists != 0).then_some(IndexValue::I64(row.lon_scaled))
+        })?;
+        table.bind_index((*self.updated_at).clone(), |row| {
+            (row.exists != 0)
+                .then(|| i64::try_from(row.updated_at).ok().map(IndexValue::I64))
+                .flatten()
+        })?;
         Ok(())
-    }
-
-    #[inline]
-    fn plan_delta_op(before: Option<IndexValue>, after: Option<IndexValue>) -> IndexDeltaOp {
-        match (before, after) {
-            (None, None) => IndexDeltaOp::NoOp,
-            (None, Some(to)) => IndexDeltaOp::Insert(to),
-            (Some(from), None) => IndexDeltaOp::Remove(from),
-            (Some(from), Some(to)) => {
-                if from == to {
-                    IndexDeltaOp::NoOp
-                } else {
-                    IndexDeltaOp::Move { from, to }
-                }
-            }
-        }
-    }
-
-    #[inline]
-    fn apply_index_delta(
-        index: &SecondaryIndex<usize>,
-        row_id: usize,
-        op: IndexDeltaOp,
-    ) -> Result<(), ShmIndexError> {
-        match op {
-            IndexDeltaOp::NoOp => {}
-            IndexDeltaOp::Insert(value) => index.try_insert(value, row_id)?,
-            IndexDeltaOp::Remove(value) => {
-                index.try_remove(&value, &row_id)?;
-            }
-            IndexDeltaOp::Move { from, to } => index.try_move_payload(&from, to, &row_id)?,
-        }
-        Ok(())
-    }
-}
-
-fn cleanup_reclaimed_index_entries(
-    table: &OccTable<FlightState>,
-    indexes: &FlightIndexes,
-    reclaimed_rows: &[VacuumReclaimedRow<FlightState>],
-) {
-    for reclaimed in reclaimed_rows {
-        let row_id = reclaimed.row_id;
-        let old = reclaimed.reclaimed_value;
-        if old.exists == 0 {
-            continue;
-        }
-
-        // Vacuum's captured head can be stale by callback time. A key may have
-        // changed back to this reclaimed value, so recheck under the same stable
-        // slot lock used by writers before removing any posting.
-        let Ok(_guard) = table.lock_indexed_rows(&[row_id]) else {
-            continue;
-        };
-        let Ok(mut tx) = table.begin_transaction() else {
-            continue;
-        };
-        let live = table.read(&mut tx, row_id);
-        let _ = table.abort(&mut tx);
-        let Ok(live) = live else {
-            continue;
-        };
-        let live = live.filter(|row| row.exists != 0);
-
-        if live
-            .map(|row| row.flight_id != old.flight_id)
-            .unwrap_or(true)
-        {
-            indexes
-                .flight_id
-                .remove(&IndexValue::String(old.flight_id_string()), &row_id);
-        }
-        if live.map(|row| row.altitude != old.altitude).unwrap_or(true) {
-            indexes
-                .altitude
-                .remove(&IndexValue::I64(old.altitude as i64), &row_id);
-        }
-        if live.map(|row| row.gs != old.gs).unwrap_or(true) {
-            indexes.gs.remove(&IndexValue::I64(old.gs as i64), &row_id);
-        }
-        if live
-            .map(|row| row.lat_scaled != old.lat_scaled)
-            .unwrap_or(true)
-        {
-            indexes
-                .lat
-                .remove(&IndexValue::I64(old.lat_scaled), &row_id);
-        }
-        if live
-            .map(|row| row.lon_scaled != old.lon_scaled)
-            .unwrap_or(true)
-        {
-            indexes
-                .lon
-                .remove(&IndexValue::I64(old.lon_scaled), &row_id);
-        }
-        if live
-            .map(|row| row.updated_at != old.updated_at)
-            .unwrap_or(true)
-        {
-            if let Ok(updated_at) = i64::try_from(old.updated_at) {
-                indexes
-                    .updated_at
-                    .remove(&IndexValue::I64(updated_at), &row_id);
-            }
-        }
     }
 }
 
@@ -713,7 +536,6 @@ struct SharedFlightDb {
     optimizer: RuleBasedOptimizer<FlightState>,
     key_index: Arc<ShmPrimaryKeyMap>,
     row_capacity: usize,
-    indexes: FlightIndexes,
     wal_runtime: Mutex<WalRuntime>,
     wal_path: PathBuf,
     checkpoint_path: PathBuf,
@@ -751,7 +573,7 @@ impl SharedFlightDb {
         let mut boot_mode = boot_context.mode;
         let orphaned_proc_slots_cleared = boot_context.orphaned_proc_slots_cleared;
 
-        let (table, indexes, key_index, optimizer, ring) = if boot_mode == BootMode::WarmAttach {
+        let (table, _indexes, key_index, optimizer, ring) = if boot_mode == BootMode::WarmAttach {
             let layout = load_boot_layout(shm.as_ref())
                 .map_err(|err| format!("failed to load warm boot layout: {}", err))?
                 .ok_or_else(|| {
@@ -797,7 +619,8 @@ impl SharedFlightDb {
             ring,
             _wal_daemon: wal_daemon,
         };
-        let vacuum_daemon = Self::spawn_vacuum_daemon(Arc::clone(&table), indexes.clone())?;
+        let vacuum_daemon = spawn_vacuum_daemon(Arc::clone(&table))
+            .map_err(|err| format!("failed to spawn vacuum daemon: {}", err))?;
         let scan_mode = resolve_scan_mode();
 
         Ok(Self {
@@ -807,7 +630,6 @@ impl SharedFlightDb {
             optimizer,
             key_index,
             row_capacity: DEFAULT_ROW_CAPACITY,
-            indexes,
             wal_runtime: Mutex::new(wal_runtime),
             wal_path,
             checkpoint_path,
@@ -834,10 +656,8 @@ impl SharedFlightDb {
         ),
         String,
     > {
-        let table = Arc::new(
-            OccTable::<FlightState>::new(Arc::clone(&shm), DEFAULT_ROW_CAPACITY)
-                .map_err(|err| format!("failed to create OCC table: {}", err))?,
-        );
+        let mut table = OccTable::<FlightState>::new(Arc::clone(&shm), DEFAULT_ROW_CAPACITY)
+            .map_err(|err| format!("failed to create OCC table: {}", err))?;
         for row_id in 0..DEFAULT_ROW_CAPACITY {
             table
                 .seed_row(row_id, FlightState::empty())
@@ -874,6 +694,10 @@ impl SharedFlightDb {
                 .map_err(|err| format!("failed to rebuild primary key map: {}", err))?;
         }
 
+        indexes
+            .bind(&mut table)
+            .map_err(|err| format!("failed to bind recovered indexes: {}", err))?;
+        let table = Arc::new(table);
         let ring = SharedWalRing::<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>::create(Arc::clone(&shm))
             .map_err(|err| format!("failed to create shared WAL ring: {}", err))?;
         Self::persist_layout(shm.as_ref(), &table, key_index.as_ref(), &indexes, &ring)?;
@@ -908,14 +732,12 @@ impl SharedFlightDb {
             layout.occ_slot_offsets_len,
         )
         .map_err(|err| format!("failed to read OCC slot offsets from boot layout: {}", err))?;
-        let table = Arc::new(
-            OccTable::<FlightState>::from_existing(
-                Arc::clone(&shm),
-                layout.occ_shared_header_offset,
-                occ_slot_offsets,
-            )
-            .map_err(|err| format!("failed to attach OCC table from boot layout: {}", err))?,
-        );
+        let mut table = OccTable::<FlightState>::from_existing(
+            Arc::clone(&shm),
+            layout.occ_shared_header_offset,
+            occ_slot_offsets,
+        )
+        .map_err(|err| format!("failed to attach OCC table from boot layout: {}", err))?;
 
         let pk_bucket_offsets = read_u32_array(
             shm.as_ref(),
@@ -933,6 +755,10 @@ impl SharedFlightDb {
         );
 
         let indexes = FlightIndexes::from_layout(Arc::clone(&shm), layout)?;
+        indexes
+            .bind(&mut table)
+            .map_err(|err| format!("failed to bind attached indexes: {}", err))?;
+        let table = Arc::new(table);
         let optimizer = RuleBasedOptimizer::new(indexes.as_catalog(Arc::clone(&key_index)));
 
         if layout.wal_ring_offset == 0 {
@@ -985,18 +811,6 @@ impl SharedFlightDb {
         persist_shared_boot_layout(shm, &layout)
             .map_err(|err| format!("failed to persist shared boot layout: {}", err))?;
         Ok(())
-    }
-
-    fn spawn_vacuum_daemon(
-        table: Arc<OccTable<FlightState>>,
-        indexes: FlightIndexes,
-    ) -> Result<VacuumDaemon<FlightState>, String> {
-        let callback_table = Arc::clone(&table);
-        let callback = Arc::new(move |reclaimed: &[VacuumReclaimedRow<FlightState>]| {
-            cleanup_reclaimed_index_entries(&callback_table, &indexes, reclaimed);
-        });
-        spawn_vacuum_daemon_with_callback(table, callback)
-            .map_err(|err| format!("failed to spawn vacuum daemon: {}", err))
     }
 
     fn start_checkpointer(self: &Arc<Self>) {
@@ -1220,7 +1034,7 @@ impl SharedFlightDb {
 
         for attempt in 0..MAX_BATCH_RETRY_ATTEMPTS {
             // Acquire the entire batch in stable order before taking a snapshot.
-            // Keep these locks through index maintenance, including WAL waits.
+            // Native commit publishes all registered indexes with the rows.
             let indexed_update = self
                 .table
                 .lock_indexed_rows(&row_ids)
@@ -1229,24 +1043,17 @@ impl SharedFlightDb {
                 .table
                 .begin_transaction()
                 .map_err(|err| format!("begin_transaction failed: {}", err))?;
-            let mut pending_index_updates: HashMap<usize, PendingIndexUpdate> = HashMap::new();
             let mut batch_stats = BatchStats::default();
             let mut attempt_result = Ok(());
             for (pending, &row_id) in batch_rows.iter().zip(&row_ids) {
-                attempt_result = self.upsert_one(
-                    &mut tx,
-                    &mut pending_index_updates,
-                    row_id,
-                    pending.row,
-                    &mut batch_stats,
-                );
+                attempt_result = self.upsert_one(&mut tx, row_id, pending.row, &mut batch_stats);
                 if attempt_result.is_err() {
                     break;
                 }
             }
 
             if attempt_result.is_ok() {
-                attempt_result = self.commit_batch(&mut tx, &mut pending_index_updates);
+                attempt_result = self.commit_batch(&mut tx);
             }
 
             match attempt_result {
@@ -1285,7 +1092,6 @@ impl SharedFlightDb {
     fn upsert_one(
         &self,
         tx: &mut OccTransaction<FlightState>,
-        pending_index_updates: &mut HashMap<usize, PendingIndexUpdate>,
         row_id: usize,
         next_row: FlightState,
         batch_stats: &mut BatchStats,
@@ -1324,14 +1130,6 @@ impl SharedFlightDb {
             }
         }
 
-        pending_index_updates
-            .entry(row_id)
-            .and_modify(|update| update.after = next_row)
-            .or_insert(PendingIndexUpdate {
-                before: current,
-                after: next_row,
-            });
-
         if was_live {
             batch_stats.rows_updated += 1;
         } else {
@@ -1357,11 +1155,7 @@ impl SharedFlightDb {
         Ok(row_id)
     }
 
-    fn commit_batch(
-        &self,
-        tx: &mut OccTransaction<FlightState>,
-        pending_index_updates: &mut HashMap<usize, PendingIndexUpdate>,
-    ) -> Result<(), BatchRetryError> {
+    fn commit_batch(&self, tx: &mut OccTransaction<FlightState>) -> Result<(), BatchRetryError> {
         let commit_result = {
             let mut guard = self
                 .wal_runtime
@@ -1370,50 +1164,26 @@ impl SharedFlightDb {
             guard.committer.commit(&self.table, tx)
         };
 
-        finish_batch_commit(&self.indexes, pending_index_updates, commit_result)
+        finish_batch_commit(commit_result)
     }
 }
 
-/// Caller holds the stable row guards until this function completes.
+/// Native OCC has already published rows and their bound indexes together.
+/// A subsequent WAL failure is fatal and must never retry the committed work.
 fn finish_batch_commit(
-    indexes: &FlightIndexes,
-    pending_index_updates: &mut HashMap<usize, PendingIndexUpdate>,
     commit_result: Result<usize, WalWriterError>,
 ) -> Result<(), BatchRetryError> {
-    // OccCommitter publishes the table before encoding/writing WAL. Non-OCC
-    // failures therefore still need index maintenance, and must never retry the
-    // complete transaction. OCC errors do not establish successful publication.
-    let wal_error = match commit_result {
-        Ok(_) => None,
+    match commit_result {
+        Ok(_) => Ok(()),
         Err(WalWriterError::Occ(OccError::SerializationFailure)) => {
-            pending_index_updates.clear();
-            return Err(BatchRetryError::RetryableSerialization);
+            Err(BatchRetryError::RetryableSerialization)
         }
         Err(err @ WalWriterError::Occ(_)) => {
-            pending_index_updates.clear();
-            return Err(BatchRetryError::Fatal(format!("commit failed: {}", err)));
+            Err(BatchRetryError::Fatal(format!("commit failed: {}", err)))
         }
-        Err(err) => Some(err),
-    };
-    let mut index_error = None;
-    for (row_id, update) in pending_index_updates.drain() {
-        if let Err(err) = indexes.apply_row_delta(row_id, &update.before, &update.after) {
-            index_error.get_or_insert_with(|| format!(
-                "row {} committed, but index maintenance failed: {}; rebuild indexes before resuming writes",
-                row_id, err
-            ));
-        }
-    }
-    match (wal_error, index_error) {
-        (None, None) => Ok(()),
-        (None, Some(err)) => Err(BatchRetryError::Fatal(err)),
-        (Some(wal), None) => Err(BatchRetryError::Fatal(format!(
-            "rows committed and indexes updated, but WAL failed: {}",
-            wal
-        ))),
-        (Some(wal), Some(index)) => Err(BatchRetryError::Fatal(format!(
-            "rows committed, but WAL failed: {}; {}",
-            wal, index
+        Err(err) => Err(BatchRetryError::Fatal(format!(
+            "rows and indexes committed atomically, but WAL failed: {}",
+            err
         ))),
     }
 }
@@ -2055,53 +1825,9 @@ mod tests {
     }
 
     #[test]
-    fn plan_delta_op_covers_noop_insert_remove_and_move() {
-        assert!(matches!(
-            FlightIndexes::plan_delta_op(None, None),
-            IndexDeltaOp::NoOp
-        ));
-        assert!(matches!(
-            FlightIndexes::plan_delta_op(None, Some(IndexValue::I64(10))),
-            IndexDeltaOp::Insert(IndexValue::I64(10))
-        ));
-        assert!(matches!(
-            FlightIndexes::plan_delta_op(Some(IndexValue::I64(10)), None),
-            IndexDeltaOp::Remove(IndexValue::I64(10))
-        ));
-        assert!(matches!(
-            FlightIndexes::plan_delta_op(Some(IndexValue::I64(10)), Some(IndexValue::I64(10))),
-            IndexDeltaOp::NoOp
-        ));
-        assert!(matches!(
-            FlightIndexes::plan_delta_op(Some(IndexValue::I64(10)), Some(IndexValue::I64(11))),
-            IndexDeltaOp::Move {
-                from: IndexValue::I64(10),
-                to: IndexValue::I64(11)
-            }
-        ));
-    }
-
-    #[test]
-    fn failed_index_move_surfaces_error_and_preserves_source_posting() {
-        let index = SecondaryIndex::<usize>::new("flight_id");
-        let from = IndexValue::String("UAL123".to_string());
-        index.try_insert(from.clone(), 0).unwrap();
-        let result = FlightIndexes::apply_index_delta(
-            &index,
-            0,
-            IndexDeltaOp::Move {
-                from: from.clone(),
-                to: IndexValue::String("X".repeat(4096)),
-            },
-        );
-        assert!(matches!(result, Err(ShmIndexError::KeyTooLong { .. })));
-        assert_eq!(index.lookup_posting_count(&from), 1);
-    }
-
-    #[test]
-    fn wal_failure_after_publication_finishes_indexes_and_is_not_retryable() {
+    fn wal_failure_after_atomic_publication_keeps_indexes_and_is_not_retryable() {
         let shm = Arc::new(ShmArena::new(16 << 20).unwrap());
-        let table = OccTable::new(Arc::clone(&shm), 1).unwrap();
+        let mut table = OccTable::new(Arc::clone(&shm), 1).unwrap();
         let indexes = FlightIndexes::new(Arc::clone(&shm));
         let before = make_state("UAL123", 37.6, -122.4, 32000, 450, 100);
         let mut after = before;
@@ -2109,6 +1835,7 @@ mod tests {
         after.updated_at = 101;
         table.seed_row(0, before).unwrap();
         indexes.insert_row(0, &before).unwrap();
+        indexes.bind(&mut table).unwrap();
         let ring = SharedWalRing::<8, 512>::create(Arc::clone(&shm)).unwrap();
         ring.close().unwrap();
         let mut committer = aerostore_core::OccCommitter::new_asynchronous(ring);
@@ -2122,16 +1849,14 @@ mod tests {
             Err(WalWriterError::Ring(aerostore_core::WalRingError::Closed))
         ));
         assert_eq!(table.snapshot_latest_rows().unwrap(), vec![(0, after)]);
-        let mut pending = HashMap::from([(0, PendingIndexUpdate { before, after })]);
-        let error = finish_batch_commit(&indexes, &mut pending, commit_result);
+        let error = finish_batch_commit(commit_result);
         match error {
             Err(BatchRetryError::Fatal(message)) => {
                 assert!(message.contains("wal ring is closed"));
-                assert!(message.contains("rows committed and indexes updated"));
+                assert!(message.contains("rows and indexes committed atomically"));
             }
             _ => panic!("a postcommit WAL failure must be fatal, never retryable"),
         }
-        assert!(pending.is_empty());
         assert_eq!(indexes.gs.traverse(), vec![(IndexValue::I64(455), vec![0])]);
         assert_eq!(
             indexes.updated_at.traverse(),
@@ -2152,7 +1877,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_row_delta_updates_only_changed_indexes() {
+    fn native_commit_updates_only_changed_indexes() {
         let shm = Arc::new(ShmArena::new(16 << 20).expect("create test shm"));
         let indexes = FlightIndexes::new(Arc::clone(&shm));
         let row_id = 17_usize;
@@ -2161,8 +1886,13 @@ mod tests {
         after.gs = 455;
         after.updated_at = 1010;
 
+        let mut table = OccTable::new(Arc::clone(&shm), row_id + 1).unwrap();
+        table.seed_row(row_id, before).unwrap();
         indexes.insert_row(row_id, &before).unwrap();
-        indexes.apply_row_delta(row_id, &before, &after).unwrap();
+        indexes.bind(&mut table).unwrap();
+        let mut tx = table.begin_transaction().unwrap();
+        table.write(&mut tx, row_id, after).unwrap();
+        table.commit(&mut tx).unwrap();
 
         assert_eq!(
             indexes
@@ -2216,7 +1946,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_row_delta_delete_then_reinsert_restores_full_index_state() {
+    fn native_delete_then_reinsert_restores_full_index_state() {
         let shm = Arc::new(ShmArena::new(16 << 20).expect("create test shm"));
         let indexes = FlightIndexes::new(Arc::clone(&shm));
         let row_id = 21_usize;
@@ -2225,8 +1955,13 @@ mod tests {
         deleted.exists = 0;
         let reinserted = make_state("DAL789", 35.0050, -120.1050, 28500, 410, 2100);
 
+        let mut table = OccTable::new(Arc::clone(&shm), row_id + 1).unwrap();
+        table.seed_row(row_id, before).unwrap();
         indexes.insert_row(row_id, &before).unwrap();
-        indexes.apply_row_delta(row_id, &before, &deleted).unwrap();
+        indexes.bind(&mut table).unwrap();
+        let mut tx = table.begin_transaction().unwrap();
+        table.write(&mut tx, row_id, deleted).unwrap();
+        table.commit(&mut tx).unwrap();
 
         assert_eq!(
             indexes
@@ -2265,9 +2000,9 @@ mod tests {
             0
         );
 
-        indexes
-            .apply_row_delta(row_id, &deleted, &reinserted)
-            .unwrap();
+        let mut tx = table.begin_transaction().unwrap();
+        table.write(&mut tx, row_id, reinserted).unwrap();
+        table.commit(&mut tx).unwrap();
         assert_eq!(
             indexes
                 .flight_id
