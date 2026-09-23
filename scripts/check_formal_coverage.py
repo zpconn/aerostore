@@ -28,7 +28,7 @@ def frozen_paths(root: Path) -> list[str]:
     paths = {"Cargo.toml", "Cargo.lock", "aerostore_core/Cargo.toml",
              "aerostore_verified/Cargo.toml", "aerostore_tcl/Cargo.toml",
              "aerostore_macros/Cargo.toml", "verification/assumptions.toml",
-             "verification/claims.toml", "scripts/check_formal_coverage.py",
+             "verification/claims.toml", "verification/refinement_campaigns.json", "scripts/check_formal_coverage.py",
              "scripts/verify_formal.py", "scripts/verify_formal.sh",
              "verification/lean/roots.json", "verification/lean/lakefile.lean",
              "verification/lean/lake-manifest.json", "verification/lean/lean-toolchain",
@@ -40,11 +40,14 @@ def frozen_paths(root: Path) -> list[str]:
                       "scripts", ".github", ".cargo"]:
         paths.update(str(p.relative_to(root)) for p in (root / directory).rglob("*")
                      if p.is_file() and not any(part in {"target", "__pycache__"} for part in p.relative_to(root).parts))
-    for directory in ["verification/verus", "verification/tla", "verification/concurrent"]:
+    for directory in ["verification/verus", "verification/tla", "verification/concurrent",
+                      "verification/predicate", "verification/predicate_capture",
+                      "verification/predicate_composition", "verification/skiplist_detach", "verification/postings"]:
+        if not (root / directory).exists():
+            continue
         paths.update(str(p.relative_to(root)) for p in (root / directory).iterdir()
-                     if p.is_file() and (p.suffix in {".py", ".json", ".tla", ".rs"}
-                                       or directory == "verification/concurrent" and p.suffix == ".md")
-                     and p.name not in {"kernels.verus.rs", "commit.verus.rs"})
+                     if p.is_file() and p.suffix in {".py", ".json", ".tla", ".rs", ".md"}
+                     and p.name not in {"kernels.verus.rs", "commit.verus.rs", "predicate.verus.rs", "capture.verus.rs", "composition.verus.rs", "detach.verus.rs", "postings.verus.rs"})
     # New build scripts, alternate Rust modules and Cargo/toolchain configuration
     # must not silently expand the one editable production source file.
     paths.update(str(p.relative_to(root)) for p in (root / "aerostore_verified").rglob("*")

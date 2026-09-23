@@ -14,7 +14,7 @@ TLC runs in a fresh temporary working directory containing only checksum-matched
 
 `python3 scripts/test_tla_runner.py` exercises fail-closed evidence classification without Java or network access. It checks complete-search markers and an exactly empty queue, the pinned TLC invariant/temporal exit codes (12/13), named properties, real trace/lasso markers, timeout/signal handling, unrelated failures, and environment override rejection that clears stale success reports. It also reclassifies every retained campaign log. These are tests of the evidence runner, not proofs of TLC.
 
-The [retained campaign report](evidence/report.json) records all 49 cases: seventeen completed finite searches (four also check conditional liveness), fifteen intended safety counterexamples, three intended liveness counterexamples, and fourteen positive reachability witnesses. Safety counterexamples and witnesses stop when the named invariant fails; they are **not completed safety searches**. Liveness failures retain a cyclic or stuttering behavior violating the exact named temporal property. Individual logs retain the actual state traces. The runner rejects syntax errors, other properties, unexpected errors, timeouts, and stale tool/source identities. It also clears a stale success report before starting. Each case has a 120-second limit, 512 MiB Java heap, one worker, fixed fingerprint index and random seed. There are no depth/state constraints or symmetry reductions. TLC's finite-state fingerprinting remains part of the model-checking evidence, not a deductive proof.
+The [retained campaign report](evidence/report.json) records all 74 cases: twenty-nine completed finite searches (four also check conditional liveness), twenty-three intended safety counterexamples, three intended liveness counterexamples, and nineteen positive reachability witnesses. Safety counterexamples and witnesses stop when the named invariant fails; they are **not completed safety searches**. Liveness failures retain a cyclic or stuttering behavior violating the exact named temporal property. Individual logs retain the actual state traces. The runner rejects syntax errors, other properties, unexpected errors, timeouts, and stale tool/source identities. It also clears a stale success report before starting. Each case has a 120-second limit, 512 MiB Java heap, one worker, fixed fingerprint index and random seed. There are no depth/state constraints or symmetry reductions. TLC's finite-state fingerprinting remains part of the model-checking evidence, not a deductive proof.
 
 ## Publication and predicate model
 
@@ -39,6 +39,45 @@ Four deliberate mutations must fail `Safety`:
 - `EarlyUnlock`: release publication guards after physical row publication but before deregistration/stamping.
 
 The finite state spaces arise from two transactions that each execute at most once. Their completion is not evidence about an unbounded number of transactions, arbitrary capacity, or long-running memory growth. Additional models and inductive proofs are required for those claims.
+
+## Repeated predicates and local writes
+
+[PredicatePublication.tla](PredicatePublication.tla) adds a separate data-bearing
+slice with one older writer, one reader that performs two equality lookups, two
+rows and one or two publication buckets. Six scenarios cover an empty predicate,
+a key move, and staged own inserts, moves into/out of the predicate, and deletion.
+The own-write overlay is used during materialization; these local changes are not
+published by the reader in this model.
+
+Candidate capture records its dependency even for an empty result. Each repeated
+capture rechecks stamp equality and the snapshot boundary. Candidate IDs survive
+guard release and are materialized against the pinned snapshot plus local writes.
+Commit acquisition, validation and completion are separate actions, so the model
+checks the guard lifetime after validation. The writer prepares the destination,
+removes the source, publishes the row, deregisters, reserves a fresh stamp and
+unlocks in distinct actions. Reader start remains enabled between deregistration
+and stamping.
+
+The added 25 cases comprise twelve complete safety searches, eight intended
+`PredicateSafety` counterexamples, and five reachability witnesses. The invariant
+checks exact returned row IDs, excludes successful stale predicate commits by
+comparing snapshot membership to logical membership at commit, checks visible-row
+agreement, and checks terminal postings. Counterexamples remove empty dependencies,
+repeat validation, own-write candidates, old-key bucket coverage, fresh publication
+time, or required guard lifetime. The own-candidate mutation is exercised for both
+insertion and a move into the predicate. Witnesses require an own insert to be
+returned, a successful repeated read, a rejected repeated read, a start between
+deregistration and stamping, and materialization of captured IDs after a key move.
+Witnesses also check `PredicateSafety`; an unrelated failure cannot count.
+
+This is still a finite abstract protocol model. Snapshot reservation/registration,
+exact raw candidate capture, pinned MVCC, atomic all-bucket writer acquisition and
+per-bucket exclusion are primitive assumptions. It omits failed allocations,
+rollback, row conflicts, repeated writer commits, broad predicates, multiple
+indexes, weak memory, process failure and counter exhaustion. It supplies no
+Rust refinement, general serializability or liveness theorem. The existing
+`Publication.tla` remains the complementary conflicting-creator model with two
+writing transactions and separate canonical bucket acquisitions.
 
 ## Durability design exploration
 
@@ -130,4 +169,4 @@ general termination claim is made.
 
 ## Evidence integrity
 
-[campaign.json](campaign.json) is the complete configuration manifest, including constants and expected property for every case. [evidence/report.json](evidence/report.json) hashes all seven models, the campaign, tool metadata and runner and records exact Java invocations. Re-run with `--output verification/tla/evidence` only when intentionally refreshing the retained evidence. Routine verification should use the default disposable target directory.
+[campaign.json](campaign.json) is the complete configuration manifest, including constants and expected property for every case. [evidence/report.json](evidence/report.json) hashes all eight models, the campaign, tool metadata and runner and records exact Java invocations. Re-run with `--output verification/tla/evidence` only when intentionally refreshing the retained evidence. Routine verification should use the default disposable target directory.

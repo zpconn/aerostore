@@ -12,6 +12,7 @@ import unittest
 from unittest.mock import patch
 import verify_formal
 import check_lock_models as lock_models
+import check_refinement_evidence as refinement
 
 HERE = Path(__file__).resolve().parent
 SPEC = importlib.util.spec_from_file_location("coverage", HERE / "check_formal_coverage.py")
@@ -65,6 +66,14 @@ class FrozenBoundaryTests(unittest.TestCase):
 
     def test_weakened_concurrent_primitive_contract_fails(self):
         (self.root / "verification/concurrent/contracts.rs").write_text("// silently assume publication\n")
+        self.assertFalse(coverage.validate(self.root)["passed"])
+
+    def test_weakened_predicate_contract_fails(self):
+        (self.root / "verification/predicate_capture/contracts.rs").write_text("// drop captured dependency\n")
+        self.assertFalse(coverage.validate(self.root)["passed"])
+
+    def test_omitted_refinement_campaign_fails(self):
+        (self.root / "verification/refinement_campaigns.json").write_text('{"campaigns": {}}')
         self.assertFalse(coverage.validate(self.root)["passed"])
 
     def test_changed_required_roots_fails(self):
@@ -124,11 +133,148 @@ class EvidenceTests(unittest.TestCase):
                 "kernel_recheck_passed": True, "forged_theorem_rejected": True,
                 "mutation_checks": [{"name": name, "rejected": True} for name in
                     ["stamp_accepts_equal", "bitmap_drops_membership", "bitmap_accepts_equal_bound",
-                     "sort_writes_wrong_bucket", "sort_accepts_equal_bound"]], "required_roots": []}))
+                     "sort_writes_wrong_bucket", "sort_accepts_equal_bound",
+                     "predicate_ignores_changed_stamp", "predicate_accepts_equal_start",
+                     "predicate_drops_publication", "predicate_omits_own_candidates"]], "required_roots": []}))
             with self.assertRaisesRegex(RuntimeError, "missing declared proof roots"):
                 verify_formal.collect_claim_evidence([{"id": "test", "scope": "test", "status": "partial",
                     "required_checks": ["lean"], "lean_roots": ["must_exist"]}],
                     [{"name": "lean", "passed": True}], root)
+
+
+class RefinementEvidenceTests(unittest.TestCase):
+    """Synthetic artifacts exercise receipt validation, never assert real proofs."""
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix="aerostore-refinement-receipt-")
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.output = self.root / "target/predicate-capture"
+        self.output.mkdir(parents=True)
+        self.path = self.output / "receipt.json"
+        manifest = json.loads((coverage.ROOT / refinement.MANIFEST).read_text())
+        campaign = manifest["campaigns"]["predicate-capture"]
+        for filename in campaign["inputs"]:
+            path = self.root / filename
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("synthetic input: " + filename)
+        (self.root / refinement.MANIFEST).write_text(json.dumps(manifest))
+        distribution = "target/tools"
+        tool = self.root / distribution / "verus"
+        tool.parent.mkdir(parents=True)
+        tool.write_text("synthetic verifier")
+        pin = {"distribution": distribution, "platform": "synthetic-platform",
+               "artifact_sha256": {"verus": refinement.digest(tool)}}
+        (self.root / "verification/verus/toolchain.json").write_text(json.dumps(pin))
+        inputs = {filename: refinement.digest(self.root / filename) for filename in campaign["inputs"]}
+        self.receipt = {"passed": True, "status": "passed", "source_stable": True,
+            "scope": campaign["scope"], "required_roots": campaign["roots"],
+            "required_mutations": list(campaign["mutations"]), "input_sha256": inputs,
+            "final_input_sha256": dict(inputs), "toolchain": pin, "checks": []}
+        self.receipt.update({flag: False for flag in campaign["false_flags"]})
+        names = [campaign["full_check"], *["root_" + r for r in campaign["roots"]], *campaign["mutations"]]
+        for name in names:
+            negative = name in campaign["mutations"]
+            required = campaign["mutations"].get(name)
+            if name.startswith("root_"):
+                required = name[5:]
+            artifact = self.output / (name + ".rs") if negative else self.root / campaign["generated"]
+            if negative:
+                artifact.write_text("synthetic negative input " + name)
+            command = [str(tool), "--crate-name", campaign["crate_name"], "--crate-type=lib", "--edition=2021",
+                "--target", pin["platform"], "--no-cheating", "--triggers-mode", "silent",
+                "--rlimit", str(campaign["rlimit"])]
+            if required:
+                command += ["--verify-root", "--verify-function", required]
+            command += [str(artifact)]
+            count = 0 if negative else 1 if required else len(campaign["roots"])
+            errors = int(negative)
+            contents = ("error: invariant not satisfied\n" if negative else "") + f"verification results:: {count} verified, {errors} errors\n"
+            log = self.output / (name + ".log")
+            log.write_text(contents)
+            self.receipt["checks"].append({"name": name, "expected_failure": negative,
+                "required_root": required, "command": command, "exit_code": int(negative),
+                "source_sha256": refinement.digest(artifact), "log": str(log.relative_to(self.root)),
+                "log_sha256": refinement.digest(log), "verified": count, "errors": errors})
+
+    def validate(self):
+        self.path.write_text(json.dumps(self.receipt))
+        return refinement.validate_receipt(self.path, "predicate-capture", self.root)
+
+    def test_complete_fixture(self):
+        self.assertTrue(self.validate()["passed"])
+
+    def test_empty_success_receipt(self):
+        self.receipt = {"passed": True, "status": "passed"}
+        with self.assertRaisesRegex(RuntimeError, "incomplete campaign"):
+            self.validate()
+
+    def test_missing_mutation(self):
+        self.receipt["checks"].pop()
+        with self.assertRaisesRegex(RuntimeError, "missing, duplicate"):
+            self.validate()
+
+    def test_duplicate_root(self):
+        self.receipt["checks"][2] = self.receipt["checks"][1]
+        with self.assertRaisesRegex(RuntimeError, "missing, duplicate"):
+            self.validate()
+
+    def test_stale_native_source(self):
+        (self.root / "aerostore_core/src/occ_partitioned.rs").write_text("changed native source")
+        with self.assertRaisesRegex(RuntimeError, "stale proof source"):
+            self.validate()
+
+    def test_stale_tool(self):
+        (self.root / "target/tools/verus").write_text("different verifier")
+        with self.assertRaisesRegex(RuntimeError, "substituted verifier"):
+            self.validate()
+
+    def test_source_changed_during_run(self):
+        self.receipt["final_input_sha256"] = {}
+        with self.assertRaisesRegex(RuntimeError, "source changed during"):
+            self.validate()
+
+    def test_parser_failure_is_not_counterexample(self):
+        check = self.receipt["checks"][-1]
+        log = self.root / check["log"]
+        log.write_text("error: unexpected token\n")
+        check["log_sha256"] = refinement.digest(log)
+        with self.assertRaisesRegex(RuntimeError, "missing or ambiguous verifier result"):
+            self.validate()
+
+    def test_wrong_verified_root(self):
+        self.receipt["checks"][1]["command"][-2] = "unrelated_function"
+        with self.assertRaisesRegex(RuntimeError, "wrong verified root"):
+            self.validate()
+
+    def test_broader_claim(self):
+        self.receipt["transaction_history_refinement_proved"] = True
+        with self.assertRaisesRegex(RuntimeError, "unsupported proof scope"):
+            self.validate()
+
+    def test_extra_verifier_filter(self):
+        command = self.receipt["checks"][1]["command"]
+        command[-1:-1] = ["--verify-function", "unrelated_function"]
+        with self.assertRaisesRegex(RuntimeError, "unsupported verifier command"):
+            self.validate()
+
+    def test_invalid_negative_exit_code(self):
+        for code in [None, "failed", True]:
+            self.receipt["checks"][-1]["exit_code"] = code
+            with self.subTest(code=code), self.assertRaisesRegex(RuntimeError, "invalid verifier exit code"):
+                self.validate()
+
+    def test_edited_log(self):
+        (self.root / self.receipt["checks"][0]["log"]).write_text("new output")
+        with self.assertRaisesRegex(RuntimeError, "stale proof log"):
+            self.validate()
+
+    def test_no_proofs(self):
+        check = self.receipt["checks"][1]
+        log = self.root / check["log"]
+        log.write_text("verification results:: 0 verified, 0 errors\n")
+        check.update(verified=0, log_sha256=refinement.digest(log))
+        with self.assertRaisesRegex(RuntimeError, "required proof did not pass"):
+            self.validate()
 
 
 class LockModelEvidenceTests(unittest.TestCase):
@@ -333,6 +479,14 @@ class RunnerTests(unittest.TestCase):
         commands = dict(calls)
         self.assertIn("lock-models", commands)
         self.assertIn("scripts/check_lock_models.py", commands["lock-models"])
+
+    def test_proofs_require_native_predicate_campaigns(self):
+        code, _, calls = self.run_fixture("proofs")
+        self.assertEqual(code, 0)
+        commands = dict(calls)
+        for name in ["predicate", "predicate-capture", "predicate-composition", "skiplist-detach", "postings"]:
+            self.assertIn(name, commands)
+            self.assertIn(name + "-adapter-tests", commands)
 
 
 if __name__ == "__main__":

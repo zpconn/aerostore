@@ -80,6 +80,12 @@ allocation-failure behavior, and WAL/publication boundary. Its native regression
 and mutation evidence supports these obligations but does not discharge the
 open native skiplist-refinement or memory-ownership claims.
 
+The [detachment proof](../skiplist_detach/README.md) now checks the actual cached
+and fallback loops against explicit guarded lane/search/retirement contracts.
+It establishes the all-lane retirement precondition and preserves the abstract
+pinned contents. It does not prove that native pointer operations, every
+structural writer or the epoch/allocator implementation satisfy those contracts.
+
 Safety must hold without fairness. Progress and finite-space guarantees require
 stated scheduling, worker-lifetime, resource, and live-set assumptions. Collector
 admission must permit reclamation while foreground work continues. Readers

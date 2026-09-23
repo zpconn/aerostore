@@ -7,7 +7,8 @@
     "Exact snapshot row materialization is assumed; allocator, process-sharing and weak-memory implementations are not modeled",
     "Durability.tla retains historical candidate-ordering models; CheckpointCut.tla models the implemented partition-exclusion plus active-cut alternative, still without Rust refinement",
     "Resource pilots use finite cyclic scenario abstractions with explicitly stated weak fairness; conditional liveness only, no general timestamp-abstraction or Rust-refinement proof",
-    "PrimaryKeyInsert models two one-shot insertions into one append-only bucket, same-key exclusion and distinct colliding keys; captured-chain search/CAS and row-ID reservation are abstract primitives, not a Rust refinement"
+    "PrimaryKeyInsert models two one-shot insertions into one append-only bucket, same-key exclusion and distinct colliding keys; captured-chain search/CAS and row-ID reservation are abstract primitives, not a Rust refinement",
+    "PredicatePublication adds two repeated equality lookups, local insert/move/delete overlay, a one-shot older writer, and separate post-deregister publication stamps; exact pinned MVCC and raw candidate capture remain abstract primitives"
   ],
   "cases": [
     {
@@ -605,6 +606,319 @@
       },
       "expected": "witness",
       "safety_property": "Safety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "predicate_empty_b1",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_empty_b2",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_move_b1",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_move_b2",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_owninsert_b1",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnInsert",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_owninsert_b2",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnInsert",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_ownmovein_b1",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnMoveIn",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_ownmovein_b2",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnMoveIn",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_ownmoveout_b1",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnMoveOut",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_ownmoveout_b2",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnMoveOut",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_owndelete_b1",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnDelete",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_owndelete_b2",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnDelete",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_negative_empty_omitempty",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "OmitEmpty",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "PredicateSafety",
+      "failure_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_negative_move_skiprepeatvalidation",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "SkipRepeatValidation",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "PredicateSafety",
+      "failure_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_negative_owninsert_omitowncandidates",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnInsert",
+        "Mutation": "OmitOwnCandidates",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "PredicateSafety",
+      "failure_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_negative_ownmovein_omitowncandidates",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnMoveIn",
+        "Mutation": "OmitOwnCandidates",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "PredicateSafety",
+      "failure_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_negative_move_beginstamp",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "BeginStamp",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "PredicateSafety",
+      "failure_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_negative_move_earlyunlock",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "EarlyUnlock",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "PredicateSafety",
+      "failure_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_negative_move_omitoldbucket",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "OmitOldBucket",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "PredicateSafety",
+      "failure_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_negative_empty_unlockaftervalidation",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "UnlockAfterValidation",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "PredicateSafety",
+      "failure_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_witness_own_insert",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnInsert",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "own_insert"
+      },
+      "expected": "witness",
+      "safety_property": "PredicateSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "predicate_witness_repeat_success",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "repeat_success"
+      },
+      "expected": "witness",
+      "safety_property": "PredicateSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "predicate_witness_repeat_retry",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "repeat_retry"
+      },
+      "expected": "witness",
+      "safety_property": "PredicateSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "predicate_witness_start_between_deregister_and_stamp",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "start_between_deregister_and_stamp"
+      },
+      "expected": "witness",
+      "safety_property": "PredicateSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "predicate_witness_captured_before_move",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "captured_before_move"
+      },
+      "expected": "witness",
+      "safety_property": "PredicateSafety",
       "failure_property": "WitnessNotReached"
     }
   ]

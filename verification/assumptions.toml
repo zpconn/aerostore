@@ -31,6 +31,21 @@ scope = "Native commit control-flow proof"
 statement = "Source-bound commit and callback cleanup bodies are proved parametrically over explicit event contracts. Actual row/index contents, lock coverage, atomic memory order, arena ownership, WAL durability, callback behavior and machine-clock no-wrap remain unproved native obligations; the operation proof establishes ordering conditional on those contracts."
 
 [[assumptions]]
+id = "PREDICATE-DATA-PRIMITIVES"
+scope = "Native predicate dependency capture and publication algorithms"
+statement = "Restricted source adapters preserve selected executable operations while lowering standard iteration and projecting data representations. Native registry and binding validity, key-to-bucket correspondence, canonical collections, held-guard stamp visibility and allocation success remain explicit primitive contracts. Publication state is an operation-local guarded projection and one allocator reservation step, not a claim that concurrent global state is frozen. Initial dependency uniqueness and valid change bindings must be established by callers. Clock freshness, no wraparound, raw-index completeness, MVCC ownership and actual process-shared interference remain open. No Lean or TLA theorem is imported unchecked into Verus."
+
+[[assumptions]]
+id = "GUARDED-SKIPLIST-LANES"
+scope = "Native cached/fallback detachment and retirement ordering"
+statement = "The live mutation guard and epoch pin protect typed node/predecessor/successor offsets. Each expected-target predecessor CAS has the stated per-lane detachment effect; guarded find accurately reports remaining target lanes and cannot reattach the target. Marking and lane operations preserve the target contents visible to pinned readers. Retirement defers reuse under the native epoch policy. The selected loop proof checks all-lane detachment before retirement; actual pointer validity, attached-predecessor ownership, CAS/search refinement, safe reuse and retry termination remain unproved native obligations."
+
+[[assumptions]]
+id = "POSTING-OWNERSHIP-PRIMITIVES"
+scope = "Native destination preparation, rollback and source removal"
+statement = "The caller supplies valid bindings, held key permissions derived from publication guards, distinct destinations and absence of every destination from the initial posting projection. These depend on final-write selection, before/after extraction, index consistency and row-base validation, whose native composition remains open. Successful insertion adds its absent target and insertion errors leave the logical posting set unchanged. Removal errors may have removed their target, but preserve unrelated postings. Poisoning sets the failure flag. These are explicit contracts on operation-local guarded projections, not proofs of the underlying unsafe index or instantaneous global poison visibility. Allocation panic, process death and arbitrary corruption remain outside this returned-Result proof."
+
+[[assumptions]]
 id = "PLATFORM"
 scope = "Integration evidence"
 statement = "Current target is x86_64 Linux/WSL2 with process-shared mappings. Integration tests are bounded evidence and do not prove OS, filesystem, crash, or mmap guarantees."
