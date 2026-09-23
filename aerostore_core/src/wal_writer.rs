@@ -1,14 +1,15 @@
 use std::collections::HashSet;
 use std::fmt;
 use std::fs::{self, File, OpenOptions};
-use std::io::{self, BufWriter, Write};
+use std::io::{self, Write};
 use std::os::fd::AsRawFd;
+use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use crate::occ::{Error as OccError, OccTable, OccTransaction};
+use crate::occ::{Error as OccError, OccCommitRecord, OccTable, OccTransaction};
 use crate::recovery_delta::{replay_update_record, replay_update_record_with_pk_map};
 use crate::wal_delta::{deserialize_wal_record as deserialize_delta_wal_record, WalDeltaCodec};
 use crate::wal_ring::{
@@ -25,6 +26,15 @@ pub enum WalWriterError {
     Ring(WalRingError),
     Codec(String),
     InvalidMode(&'static str),
+    /// A failed append could not be durably removed. Further commits must stop
+    /// until exclusive recovery determines the surviving transaction history.
+    Indeterminate {
+        append: io::Error,
+        rollback: io::Error,
+    },
+    /// WAL accepted the transaction but volatile publication failed. Recovery
+    /// may commit it, so the caller must not treat this as an ordinary retry.
+    PublicationAfterWal(OccError),
 }
 
 impl fmt::Display for WalWriterError {
@@ -35,6 +45,14 @@ impl fmt::Display for WalWriterError {
             WalWriterError::Ring(err) => write!(f, "ring error: {}", err),
             WalWriterError::Codec(msg) => write!(f, "codec error: {}", msg),
             WalWriterError::InvalidMode(msg) => write!(f, "invalid wal writer mode: {}", msg),
+            WalWriterError::Indeterminate { append, rollback } => write!(
+                f,
+                "indeterminate WAL append ({append}); durable tail rollback failed ({rollback}); recovery required"
+            ),
+            WalWriterError::PublicationAfterWal(err) => write!(
+                f,
+                "indeterminate publication after WAL acceptance ({err}); recovery required"
+            ),
         }
     }
 }
@@ -61,35 +79,104 @@ impl From<WalRingError> for WalWriterError {
 
 pub struct SyncWalWriter {
     file: File,
+    stream_identity: [u64; 4],
+    path: PathBuf,
+    opener_pid: libc::pid_t,
 }
 
 impl SyncWalWriter {
     pub fn open(path: impl AsRef<Path>) -> io::Result<Self> {
+        let path = path.as_ref();
         let file = OpenOptions::new()
             .create(true)
             .append(true)
             .read(true)
             .open(path)?;
-        Ok(Self { file })
+        sync_parent_directory(path)?;
+        let stream_identity = wal_file_identity(&file)?;
+        Ok(Self {
+            file,
+            stream_identity,
+            path: path.to_path_buf(),
+            opener_pid: unsafe { libc::getpid() },
+        })
     }
 
+    /// Append a complete frame without an OccTable health boundary. Raw users
+    /// must stop and recover after an indeterminate error; this writer cannot
+    /// propagate poison to other independent writers by itself.
     pub fn append_commit(&mut self, commit: &WalRingCommit) -> Result<(), WalWriterError> {
         let payload = serialize_commit_record(commit)?;
         self.append_payload_sync(payload.as_slice())?;
         Ok(())
     }
 
-    fn append_payload_sync(&mut self, payload: &[u8]) -> io::Result<()> {
+    fn append_payload_sync(&mut self, payload: &[u8]) -> Result<(), WalWriterError> {
+        self.append_payload_sync_with_health(payload, || Ok(()), || {})
+    }
+
+    fn append_payload_sync_with_health<C, P>(
+        &mut self,
+        payload: &[u8],
+        check_health: C,
+        poison: P,
+    ) -> Result<(), WalWriterError>
+    where
+        C: FnOnce() -> Result<(), WalWriterError>,
+        P: FnOnce(),
+    {
+        let pid = unsafe { libc::getpid() };
+        if pid != self.opener_pid {
+            // flock ownership follows an open-file description, which fork
+            // shares. Reopen once in each child so its lock excludes the parent.
+            let file = OpenOptions::new()
+                .append(true)
+                .read(true)
+                .open(&self.path)?;
+            if wal_file_identity(&file)? != self.stream_identity {
+                return Err(WalWriterError::InvalidMode(
+                    "inherited WAL path now names a different file",
+                ));
+            }
+            self.file = file;
+            self.opener_pid = pid;
+        }
+        #[cfg(test)]
+        poison_regressions::before_file_lock();
+        let _lock = WalFileLock::exclusive(self.file.as_raw_fd())?;
+        // A managed writer may have waited behind another writer whose failed
+        // tail rollback poisoned this same table. Observe that state only after
+        // owning the file lock, before extending potentially uncertain bytes.
+        check_health()?;
+        let original_len = self.file.metadata()?.len();
         let len = payload.len() as u32;
-        self.file.write_all(&len.to_le_bytes())?;
-        self.file.write_all(payload)?;
-        self.file.flush()?;
-        fdatasync(self.file.as_raw_fd())
+        let append = (|| -> io::Result<()> {
+            self.file.write_all(&len.to_le_bytes())?;
+            self.file.write_all(payload)?;
+            fdatasync(self.file.as_raw_fd())
+        })();
+        match append {
+            Ok(()) => Ok(()),
+            Err(append) => match self
+                .file
+                .set_len(original_len)
+                .and_then(|()| fdatasync(self.file.as_raw_fd()))
+            {
+                Ok(()) => Err(WalWriterError::Io(append)),
+                Err(rollback) => {
+                    // Publish the detected failure before another managed
+                    // writer can acquire this file lock and check table health.
+                    poison();
+                    Err(WalWriterError::Indeterminate { append, rollback })
+                }
+            },
+        }
     }
 }
 
 pub struct WalWriterDaemon {
     pid: libc::pid_t,
+    release_writer: Option<Box<dyn FnOnce() + Send + Sync>>,
 }
 
 impl WalWriterDaemon {
@@ -109,13 +196,16 @@ impl WalWriterDaemon {
         }
     }
 
-    pub fn join(self) -> io::Result<()> {
+    pub fn join(mut self) -> io::Result<()> {
         let mut status: libc::c_int = 0;
         // SAFETY:
         // waiting for child process created by `fork`.
         let waited = unsafe { libc::waitpid(self.pid, &mut status as *mut libc::c_int, 0) };
         if waited != self.pid {
             return Err(io::Error::last_os_error());
+        }
+        if let Some(release) = self.release_writer.take() {
+            release();
         }
         if !libc::WIFEXITED(status) || libc::WEXITSTATUS(status) != 0 {
             return Err(io::Error::new(
@@ -129,13 +219,16 @@ impl WalWriterDaemon {
         Ok(())
     }
 
-    pub fn join_any_status(self) -> io::Result<libc::c_int> {
+    pub fn join_any_status(mut self) -> io::Result<libc::c_int> {
         let mut status: libc::c_int = 0;
         // SAFETY:
         // waiting for child process created by `fork`.
         let waited = unsafe { libc::waitpid(self.pid, &mut status as *mut libc::c_int, 0) };
         if waited != self.pid {
             return Err(io::Error::last_os_error());
+        }
+        if let Some(release) = self.release_writer.take() {
+            release();
         }
         Ok(status)
     }
@@ -146,18 +239,30 @@ pub fn spawn_wal_writer_daemon<const SLOTS: usize, const SLOT_BYTES: usize>(
     wal_path: impl AsRef<Path>,
 ) -> io::Result<WalWriterDaemon> {
     let wal_path = wal_path.as_ref().to_path_buf();
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .read(true)
+        .open(&wal_path)?;
+    sync_parent_directory(&wal_path)?;
+    let identity = wal_file_identity(&file)?;
+    ring.claim_writer(identity[1], identity[2])
+        .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err.to_string()))?;
     let parent_pid = unsafe { libc::getpid() };
     // Advance the writer epoch in the parent before forking so any immediately
     // following commits observe the new epoch and force full-row baselines.
-    let _ = ring
-        .bump_writer_epoch()
-        .map_err(|err| io::Error::new(io::ErrorKind::Other, err.to_string()))?;
+    if let Err(err) = ring.bump_writer_epoch() {
+        let _ = ring.release_writer_after_join();
+        return Err(io::Error::new(io::ErrorKind::Other, err.to_string()));
+    }
 
     // SAFETY:
     // `fork` is used intentionally to emulate a dedicated WAL writer OS process.
     let pid = unsafe { libc::fork() };
     if pid < 0 {
-        return Err(io::Error::last_os_error());
+        let error = io::Error::last_os_error();
+        let _ = ring.release_writer_after_join();
+        return Err(error);
     }
 
     if pid == 0 {
@@ -166,7 +271,7 @@ pub fn spawn_wal_writer_daemon<const SLOTS: usize, const SLOT_BYTES: usize>(
             // child exits immediately without unwinding parent runtime state.
             unsafe { libc::_exit(1) };
         }
-        let code = match wal_writer_daemon_loop(ring, &wal_path) {
+        let code = match wal_writer_daemon_loop(ring, file) {
             Ok(_) => 0_i32,
             Err(_) => 1_i32,
         };
@@ -175,7 +280,12 @@ pub fn spawn_wal_writer_daemon<const SLOTS: usize, const SLOT_BYTES: usize>(
         unsafe { libc::_exit(code) };
     }
 
-    Ok(WalWriterDaemon { pid })
+    Ok(WalWriterDaemon {
+        pid,
+        release_writer: Some(Box::new(move || {
+            let _ = ring.release_writer_after_join();
+        })),
+    })
 }
 
 #[cfg(target_os = "linux")]
@@ -208,14 +318,11 @@ fn arm_parent_death_signal(_expected_parent: libc::pid_t) -> io::Result<()> {
 
 fn wal_writer_daemon_loop<const SLOTS: usize, const SLOT_BYTES: usize>(
     ring: SharedWalRing<SLOTS, SLOT_BYTES>,
-    wal_path: &Path,
+    mut file: File,
 ) -> Result<(), WalWriterError> {
-    let file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .read(true)
-        .open(wal_path)?;
-    let mut writer = BufWriter::with_capacity(1 << 20, file);
+    // Explicit complete-frame batches avoid BufWriter's implicit flush in the
+    // middle of a frame. The file lock protects actual I/O, not each enqueue.
+    let mut pending = Vec::with_capacity(1 << 20);
     let mut last_sync = Instant::now();
 
     loop {
@@ -224,8 +331,11 @@ fn wal_writer_daemon_loop<const SLOTS: usize, const SLOT_BYTES: usize>(
                 // Validate payload shape to fail fast on corruption.
                 let _ = deserialize_commit_record(payload.as_slice())?;
                 let len = payload.len() as u32;
-                writer.write_all(&len.to_le_bytes())?;
-                writer.write_all(payload.as_slice())?;
+                pending.extend_from_slice(&len.to_le_bytes());
+                pending.extend_from_slice(payload.as_slice());
+                if pending.len() >= 1 << 20 {
+                    flush_wal_batch(&mut file, &mut pending, false)?;
+                }
             }
             None => {
                 if ring.is_closed()? && ring.is_empty()? {
@@ -237,14 +347,22 @@ fn wal_writer_daemon_loop<const SLOTS: usize, const SLOT_BYTES: usize>(
         }
 
         if last_sync.elapsed() >= Duration::from_secs(10) {
-            writer.flush()?;
-            fdatasync(writer.get_ref().as_raw_fd())?;
+            flush_wal_batch(&mut file, &mut pending, true)?;
             last_sync = Instant::now();
         }
     }
 
-    writer.flush()?;
-    fdatasync(writer.get_ref().as_raw_fd())?;
+    flush_wal_batch(&mut file, &mut pending, true)?;
+    Ok(())
+}
+
+fn flush_wal_batch(file: &mut File, pending: &mut Vec<u8>, sync: bool) -> io::Result<()> {
+    let _lock = WalFileLock::exclusive(file.as_raw_fd())?;
+    file.write_all(pending)?;
+    pending.clear();
+    if sync {
+        fdatasync(file.as_raw_fd())?;
+    }
     Ok(())
 }
 
@@ -258,6 +376,7 @@ enum CommitSink<const SLOTS: usize, const SLOT_BYTES: usize> {
 struct AsyncDeltaState {
     observed_writer_epoch: u64,
     rows_with_full_baseline_in_epoch: HashSet<u64>,
+    pending_full_baselines: Vec<u64>,
 }
 
 pub struct OccCommitter<const SLOTS: usize, const SLOT_BYTES: usize> {
@@ -311,6 +430,44 @@ impl<const SLOTS: usize, const SLOT_BYTES: usize> OccCommitter<SLOTS, SLOT_BYTES
         self.mode
     }
 
+    fn stream_identity_for_table<T: Copy + Send + Sync + 'static>(
+        &self,
+        table: &OccTable<T>,
+    ) -> Result<[u64; 4], WalWriterError> {
+        match &self.sink {
+            CommitSink::Synchronous(_) => self
+                .sync_writer
+                .as_ref()
+                .map(|writer| writer.stream_identity)
+                .ok_or(WalWriterError::InvalidMode(
+                    "missing synchronous WAL writer",
+                )),
+            CommitSink::Asynchronous(ring) => {
+                if !std::sync::Arc::ptr_eq(table.shared_arena(), ring.shared_arena()) {
+                    return Err(WalWriterError::InvalidMode(
+                        "asynchronous WAL ring and table must share one local arena handle",
+                    ));
+                }
+                Ok([
+                    2,
+                    u64::from(ring.ring_ptr().load(std::sync::atomic::Ordering::Acquire)),
+                    SLOTS as u64,
+                    SLOT_BYTES as u64,
+                ])
+            }
+        }
+    }
+
+    /// Check a proposed mode/stream without changing table state. Once bound,
+    /// mode changes require draining and exclusive cold recovery into a table.
+    pub fn validate_for_table<T: Copy + Send + Sync + 'static>(
+        &self,
+        table: &OccTable<T>,
+    ) -> Result<(), WalWriterError> {
+        table.check_wal_stream(self.stream_identity_for_table(table)?)?;
+        Ok(())
+    }
+
     pub fn commit<T: Copy + Send + Sync + 'static>(
         &mut self,
         table: &OccTable<T>,
@@ -319,50 +476,95 @@ impl<const SLOTS: usize, const SLOT_BYTES: usize> OccCommitter<SLOTS, SLOT_BYTES
     where
         T: WalDeltaCodec,
     {
-        let record = table.commit_with_record(tx)?;
-        let wal_commit = match &self.sink {
-            CommitSink::Synchronous(_) => wal_commit_from_occ_record(&record)?,
-            CommitSink::Asynchronous(ring) => {
-                let Some(async_delta_state) = self.async_delta_state.as_mut() else {
-                    return Err(WalWriterError::InvalidMode(
-                        "missing async delta state for asynchronous mode",
-                    ));
-                };
-
-                let writer_epoch = ring.writer_epoch()?;
-                if writer_epoch != async_delta_state.observed_writer_epoch {
-                    async_delta_state.observed_writer_epoch = writer_epoch;
-                    async_delta_state.rows_with_full_baseline_in_epoch.clear();
-                }
-
-                wal_commit_from_occ_record_with_policy(&record, |row_id| {
-                    let row_id = row_id as u64;
-                    if async_delta_state
-                        .rows_with_full_baseline_in_epoch
-                        .insert(row_id)
-                    {
-                        WalEncodingPolicy::ForceFull
-                    } else {
-                        WalEncodingPolicy::DeltaAllowed
+        let identity = self.stream_identity_for_table(table)?;
+        table.bind_wal_stream(identity)?;
+        let mut wal_accepted = false;
+        let accepted = &mut wal_accepted;
+        let committer = &mut *self;
+        let result = table.commit_with_record_prepared(tx, move |record| {
+            // Codec and outer frame serialization operate on an immutable copy
+            // before acquiring row/index guards. Validation below must still
+            // reject a stale record before accepting any of these bytes.
+            let mut prepared_epoch = None;
+            let wal_commit = match &committer.sink {
+                CommitSink::Synchronous(_) => wal_commit_from_occ_record(record)?,
+                CommitSink::Asynchronous(ring) => {
+                    let Some(state) = committer.async_delta_state.as_mut() else {
+                        return Err(WalWriterError::InvalidMode(
+                            "missing async delta state for asynchronous mode",
+                        ));
+                    };
+                    let writer_epoch = ring.writer_epoch()?;
+                    prepared_epoch = Some(writer_epoch);
+                    if writer_epoch != state.observed_writer_epoch {
+                        state.observed_writer_epoch = writer_epoch;
+                        state.rows_with_full_baseline_in_epoch.clear();
                     }
-                })?
+                    state.pending_full_baselines.clear();
+                    // A failed codec or enqueue must not claim that a full
+                    // baseline reached the ring. Record it only after success.
+                    wal_commit_from_occ_record_with_policy(record, |row_id| {
+                        if state
+                            .rows_with_full_baseline_in_epoch
+                            .contains(&(row_id as u64))
+                        {
+                            WalEncodingPolicy::DeltaAllowed
+                        } else {
+                            state.pending_full_baselines.push(row_id as u64);
+                            WalEncodingPolicy::ForceFull
+                        }
+                    })?
+                }
+            };
+
+            let payload = serialize_commit_record(&wal_commit)?;
+            Ok::<_, WalWriterError>(move |_record: &OccCommitRecord<T>| {
+                match &committer.sink {
+                    CommitSink::Synchronous(_) => {
+                        let Some(sync_writer) = committer.sync_writer.as_mut() else {
+                            return Err(WalWriterError::InvalidMode(
+                                "missing sync writer for synchronous mode",
+                            ));
+                        };
+                        sync_writer.append_payload_sync_with_health(
+                            payload.as_slice(),
+                            || table.check_not_poisoned().map_err(WalWriterError::from),
+                            || table.poison_after_wal_failure(),
+                        )?;
+                    }
+                    CommitSink::Asynchronous(ring) => {
+                        let writer_epoch = ring.writer_epoch()?;
+                        if prepared_epoch != Some(writer_epoch) {
+                            // Optimistic payload preparation became stale: no
+                            // bytes were accepted, so normal serialization retry
+                            // is safe after the driver aborts this transaction.
+                            // This check does not synchronize destructive ring
+                            // reset; reset still requires exclusive shutdown.
+                            return Err(WalWriterError::Occ(OccError::SerializationFailure));
+                        }
+                        ring.push_bytes_blocking(payload.as_slice())?;
+                    }
+                }
+                *accepted = true;
+                Ok(())
+            })
+        });
+        let record = match result {
+            Err(WalWriterError::Occ(err)) if wal_accepted => {
+                table.poison_after_wal_failure();
+                return Err(WalWriterError::PublicationAfterWal(err));
             }
+            result => result?,
         };
 
-        match &self.sink {
-            CommitSink::Synchronous(_) => {
-                let Some(sync_writer) = self.sync_writer.as_mut() else {
-                    return Err(WalWriterError::InvalidMode(
-                        "missing sync writer for synchronous mode",
-                    ));
-                };
-                sync_writer.append_commit(&wal_commit)?;
-            }
-            CommitSink::Asynchronous(ring) => {
-                ring.push_commit_record(&wal_commit)?;
-            }
+        // Cache membership can lag accepted full rows safely. Update it only
+        // after successful publication, outside all row/index guards. The
+        // exclusive &mut committer borrow prevents local reuse in between.
+        if let Some(state) = self.async_delta_state.as_mut() {
+            state
+                .rows_with_full_baseline_in_epoch
+                .extend(state.pending_full_baselines.drain(..));
         }
-
         Ok(record.writes.len())
     }
 
@@ -392,10 +594,20 @@ struct OccCheckpointRow<T> {
 struct OccCheckpointFrame<T> {
     version: u32,
     max_txid: u64,
+    // IDs allocated before the cut but not yet committed into its row image.
+    // They must still replay if they commit after checkpoint completion.
+    in_flight_txids: Vec<u64>,
     rows: Vec<OccCheckpointRow<T>>,
 }
 
-const OCC_CHECKPOINT_VERSION: u32 = 1;
+#[derive(Debug, Deserialize)]
+struct OccCheckpointFrameV1<T> {
+    version: u32,
+    max_txid: u64,
+    rows: Vec<OccCheckpointRow<T>>,
+}
+
+const OCC_CHECKPOINT_VERSION: u32 = 2;
 
 pub fn write_occ_checkpoint_and_truncate_wal<T: Copy + Send + Sync + 'static>(
     table: &OccTable<T>,
@@ -405,34 +617,42 @@ pub fn write_occ_checkpoint_and_truncate_wal<T: Copy + Send + Sync + 'static>(
 where
     T: Serialize,
 {
-    let snapshot_rows = table.snapshot_latest_rows()?;
-    let max_txid = table.current_global_txid().saturating_sub(1);
-
-    let rows = snapshot_rows
-        .into_iter()
-        .map(|(row_id, value)| OccCheckpointRow {
-            row_id: row_id as u64,
-            value,
-        })
-        .collect::<Vec<_>>();
-
-    let frame = OccCheckpointFrame {
-        version: OCC_CHECKPOINT_VERSION,
-        max_txid,
-        rows,
-    };
-    let bytes = bincode::serialize(&frame).map_err(|err| WalWriterError::Codec(err.to_string()))?;
-
     let checkpoint_path = checkpoint_path.as_ref();
-    let tmp_path = checkpoint_path.with_extension("tmp");
-    fs::write(&tmp_path, &bytes)?;
-    fs::rename(&tmp_path, checkpoint_path)?;
-
-    let checkpoint_file = OpenOptions::new().read(true).open(checkpoint_path)?;
-    checkpoint_file.sync_all()?;
-
-    truncate_wal_file(wal_path)?;
-    Ok(frame.rows.len())
+    let wal_path = wal_path.as_ref();
+    table.with_checkpoint_snapshot(|snapshot_rows, snapshot| {
+        let wal_file = OpenOptions::new().create(true).write(true).open(wal_path)?;
+        // Async rings cannot be drained or associated with their daemon's file
+        // through this API. Reject them rather than silently making a bad cut.
+        table.check_wal_stream(wal_file_identity(&wal_file)?)?;
+        let frame = OccCheckpointFrame {
+            version: OCC_CHECKPOINT_VERSION,
+            max_txid: snapshot.xmax.saturating_sub(1),
+            in_flight_txids: snapshot.in_flight_txids().to_vec(),
+            rows: snapshot_rows
+                .into_iter()
+                .map(|(row_id, value)| OccCheckpointRow {
+                    row_id: row_id as u64,
+                    value,
+                })
+                .collect(),
+        };
+        let bytes =
+            bincode::serialize(&frame).map_err(|err| WalWriterError::Codec(err.to_string()))?;
+        let tmp_path = checkpoint_path.with_extension("tmp");
+        let mut checkpoint_file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&tmp_path)?;
+        checkpoint_file.write_all(&bytes)?;
+        checkpoint_file.sync_all()?;
+        fs::rename(&tmp_path, checkpoint_path)?;
+        // The replacement name must survive a crash before its prerequisite WAL
+        // is discarded. Syncing only the file does not persist the rename.
+        sync_parent_directory(checkpoint_path)?;
+        truncate_wal_file(&wal_file, wal_path)?;
+        Ok(frame.rows.len())
+    })
 }
 
 pub fn recover_occ_table_from_checkpoint_and_wal<T: Copy + Send + Sync + 'static>(
@@ -458,19 +678,31 @@ where
     let checkpoint_path = checkpoint_path.as_ref();
     let mut checkpoint_applied = 0_usize;
     let mut checkpoint_max_txid = 0_u64;
+    let mut checkpoint_in_flight = HashSet::new();
 
     if checkpoint_path.exists() {
         let bytes = fs::read(checkpoint_path)?;
-        let frame: OccCheckpointFrame<T> = bincode::deserialize(bytes.as_slice())
-            .map_err(|err| WalWriterError::Codec(err.to_string()))?;
-        if frame.version != OCC_CHECKPOINT_VERSION {
-            return Err(WalWriterError::Codec(format!(
-                "unsupported OCC checkpoint version {} (expected {})",
-                frame.version, OCC_CHECKPOINT_VERSION
-            )));
-        }
-
-        checkpoint_max_txid = frame.max_txid.max(1);
+        let version = bytes
+            .get(..4)
+            .and_then(|bytes| bytes.try_into().ok())
+            .map(u32::from_le_bytes)
+            .ok_or_else(|| WalWriterError::Codec("truncated OCC checkpoint version".into()))?;
+        let frame: OccCheckpointFrame<T> = match version {
+            1 => {
+                let legacy: OccCheckpointFrameV1<T> = bincode::deserialize(&bytes)
+                    .map_err(|err| WalWriterError::Codec(err.to_string()))?;
+                debug_assert_eq!(legacy.version, 1);
+                OccCheckpointFrame { version: OCC_CHECKPOINT_VERSION, max_txid: legacy.max_txid,
+                    in_flight_txids: Vec::new(), rows: legacy.rows }
+            }
+            OCC_CHECKPOINT_VERSION => bincode::deserialize(&bytes)
+                .map_err(|err| WalWriterError::Codec(err.to_string()))?,
+            version => return Err(WalWriterError::Codec(format!(
+                "unsupported OCC checkpoint version {version} (expected 1 or {OCC_CHECKPOINT_VERSION})"
+            ))),
+        };
+        checkpoint_max_txid = frame.max_txid;
+        checkpoint_in_flight.extend(frame.in_flight_txids);
         for row in frame.rows {
             let row_id = row.row_id as usize;
             if let Some(pk_map) = pk_map {
@@ -487,7 +719,7 @@ where
                     }
                 }
             }
-            table.apply_recovered_write(row_id, checkpoint_max_txid, row.value)?;
+            table.apply_recovered_write(row_id, checkpoint_max_txid.max(1), row.value)?;
             checkpoint_applied += 1;
         }
         table.advance_global_txid_floor(checkpoint_max_txid.saturating_add(1));
@@ -499,7 +731,7 @@ where
     let mut max_txid = checkpoint_max_txid;
 
     for commit in &commits {
-        if commit.txid <= checkpoint_max_txid {
+        if commit.txid <= checkpoint_max_txid && !checkpoint_in_flight.contains(&commit.txid) {
             continue;
         }
         wal_records += 1;
@@ -650,13 +882,187 @@ fn fdatasync(fd: libc::c_int) -> io::Result<()> {
     }
 }
 
-fn truncate_wal_file(path: impl AsRef<Path>) -> io::Result<()> {
-    let path = path.as_ref();
-    let file = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(true)
-        .open(path)?;
+fn truncate_wal_file(file: &File, path: &Path) -> io::Result<()> {
+    // Acquire before truncation: OpenOptions::truncate would already destroy
+    // bytes before it could exclude a daemon flushing a complete-frame batch.
+    let _lock = WalFileLock::exclusive(file.as_raw_fd())?;
+    file.set_len(0)?;
     file.sync_all()?;
+    sync_parent_directory(path)?;
     Ok(())
+}
+
+fn wal_file_identity(file: &File) -> io::Result<[u64; 4]> {
+    let metadata = file.metadata()?;
+    Ok([1, metadata.dev(), metadata.ino(), 0])
+}
+
+fn sync_parent_directory(path: &Path) -> io::Result<()> {
+    let parent = path
+        .parent()
+        .filter(|path| !path.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    File::open(parent)?.sync_all()
+}
+
+/// Coordinates independent process/file handles. It protects WAL bytes only;
+/// transactions still use their existing partition and predicate lock sets.
+struct WalFileLock {
+    fd: libc::c_int,
+}
+
+impl WalFileLock {
+    fn exclusive(fd: libc::c_int) -> io::Result<Self> {
+        loop {
+            // SAFETY: callers keep the owning File open until this guard drops.
+            if unsafe { libc::flock(fd, libc::LOCK_EX) } == 0 {
+                return Ok(Self { fd });
+            }
+            let error = io::Error::last_os_error();
+            if error.kind() != io::ErrorKind::Interrupted {
+                return Err(error);
+            }
+        }
+    }
+}
+
+impl Drop for WalFileLock {
+    fn drop(&mut self) {
+        #[cfg(test)]
+        poison_regressions::before_file_unlock();
+        // SAFETY: this guard never outlives the File passed by its local caller.
+        unsafe { libc::flock(self.fd, libc::LOCK_UN) };
+    }
+}
+
+#[cfg(test)]
+mod poison_regressions {
+    use super::*;
+    use std::cell::RefCell;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::{mpsc, Arc};
+
+    thread_local! {
+        static CODEC_HOOK: RefCell<Option<Box<dyn FnOnce()>>> = RefCell::new(None);
+        static BEFORE_FILE_LOCK: RefCell<Option<Box<dyn FnOnce()>>> = RefCell::new(None);
+        static BEFORE_FILE_UNLOCK: RefCell<Option<Box<dyn FnOnce()>>> = RefCell::new(None);
+    }
+
+    pub(super) fn before_file_lock() {
+        let hook = BEFORE_FILE_LOCK.with(|hook| hook.borrow_mut().take());
+        if let Some(hook) = hook {
+            hook();
+        }
+    }
+
+    pub(super) fn before_file_unlock() {
+        let hook = BEFORE_FILE_UNLOCK.with(|hook| hook.borrow_mut().take());
+        if let Some(hook) = hook {
+            hook();
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+    struct CodecRow(u64);
+
+    impl Serialize for CodecRow {
+        fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            let hook = CODEC_HOOK.with(|hook| hook.borrow_mut().take());
+            if let Some(hook) = hook {
+                hook();
+            }
+            serializer.serialize_u64(self.0)
+        }
+    }
+
+    impl WalDeltaCodec for CodecRow {}
+
+    #[test]
+    fn native_commit_rejects_poison_observed_during_payload_preparation() {
+        let dir = tempfile::tempdir().unwrap();
+        let wal = dir.path().join("wal");
+        let arena = Arc::new(crate::ShmArena::new(8 << 20).unwrap());
+        let table = Arc::new(OccTable::<CodecRow>::new(Arc::clone(&arena), 1).unwrap());
+        table.seed_row(0, CodecRow(0)).unwrap();
+        let mut committer = OccCommitter::<8, 1024>::new_synchronous(&wal).unwrap();
+        let mut tx = table.begin_transaction().unwrap();
+        table.write(&mut tx, 0, CodecRow(1)).unwrap();
+        CODEC_HOOK.with(|hook| {
+            let table = Arc::clone(&table);
+            *hook.borrow_mut() = Some(Box::new(move || table.poison_after_wal_failure()));
+        });
+        let result = committer.commit(&table, &mut tx);
+        assert!(matches!(result, Err(WalWriterError::Occ(OccError::Index(_)))),
+            "poison during preparation must reject before WAL/publication: {result:?}");
+        assert_eq!(table.latest_value(0).unwrap(), Some(CodecRow(0)));
+        assert!(read_wal_file(&wal).unwrap().is_empty());
+        assert!(arena.proc_array().create_snapshot(arena.global_txid()).in_flight_txids().is_empty());
+        assert!(matches!(table.read(&mut tx, 0), Err(OccError::Index(_)) | Err(OccError::TransactionClosed)));
+    }
+
+    #[test]
+    fn managed_sync_append_rechecks_table_poison_after_waiting_for_file_lock() {
+        let dir = tempfile::tempdir().unwrap();
+        let wal = dir.path().join("wal");
+        let arena = Arc::new(crate::ShmArena::new(8 << 20).unwrap());
+        let table = Arc::new(OccTable::<u64>::new(Arc::clone(&arena), 1).unwrap());
+        table.seed_row(0, 0).unwrap();
+        let mut committer = OccCommitter::<8, 1024>::new_synchronous(&wal).unwrap();
+        let held_file = OpenOptions::new().append(true).read(true).open(&wal).unwrap();
+        let held = WalFileLock::exclusive(held_file.as_raw_fd()).unwrap();
+        let (admitted, admitted_rx) = mpsc::channel();
+        let worker = {
+            let table = Arc::clone(&table);
+            std::thread::spawn(move || {
+                let mut tx = table.begin_transaction().unwrap();
+                table.write(&mut tx, 0, 1).unwrap();
+                BEFORE_FILE_LOCK.with(|hook| {
+                    *hook.borrow_mut() = Some(Box::new(move || admitted.send(()).unwrap()));
+                });
+                committer.commit(&table, &mut tx)
+            })
+        };
+        // The writer has passed table validation and entered its acceptance
+        // callback; our independent file description still owns the flock.
+        admitted_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+        table.poison_after_wal_failure();
+        drop(held);
+        let result = worker.join().unwrap();
+        assert!(matches!(result, Err(WalWriterError::Occ(OccError::Index(_)))),
+            "managed append must recheck health inside flock: {result:?}");
+        assert_eq!(table.latest_value(0).unwrap(), Some(0));
+        assert!(read_wal_file(&wal).unwrap().is_empty());
+        assert!(arena.proc_array().create_snapshot(arena.global_txid()).in_flight_txids().is_empty());
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn detected_indeterminate_managed_append_poisons_before_file_unlock() {
+        // /dev/full supplies real ENOSPC on write and EINVAL on truncation,
+        // without mocking either failure or losing the open file's flock.
+        let arena = Arc::new(crate::ShmArena::new(8 << 20).unwrap());
+        let table = Arc::new(OccTable::<u64>::new(Arc::clone(&arena), 1).unwrap());
+        table.seed_row(0, 0).unwrap();
+        let mut committer = OccCommitter::<8, 1024>::new_synchronous("/dev/full").unwrap();
+        let mut tx = table.begin_transaction().unwrap();
+        table.write(&mut tx, 0, 1).unwrap();
+        let poisoned_before_unlock = Arc::new(AtomicBool::new(false));
+        BEFORE_FILE_UNLOCK.with(|hook| {
+            let table = Arc::clone(&table);
+            let observed = Arc::clone(&poisoned_before_unlock);
+            *hook.borrow_mut() = Some(Box::new(move || {
+                match table.begin_transaction() {
+                    Err(OccError::Index(_)) => observed.store(true, Ordering::Release),
+                    Ok(mut unexpected) => table.abort(&mut unexpected).unwrap(),
+                    Err(error) => panic!("unexpected admission error: {error}"),
+                }
+            }));
+        });
+        let result = committer.commit(&table, &mut tx);
+        assert!(matches!(result, Err(WalWriterError::Indeterminate { .. })), "{result:?}");
+        assert!(poisoned_before_unlock.load(Ordering::Acquire),
+            "detected uncertain tail must publish poison before releasing flock");
+        assert_eq!(table.latest_value(0).unwrap(), Some(0));
+        assert!(arena.proc_array().create_snapshot(arena.global_txid()).in_flight_txids().is_empty());
+    }
 }

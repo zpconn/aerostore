@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "declared_utc": "2026-09-23T17:33:49Z",
+  "purpose": "Test whether suppressing futile contended retry CAS reduces shared-lock overhead in the rejected candidate; diagnostic only",
+  "baseline": "preserved candidate-fine (optimized durability fixes, fine histogram)",
+  "candidate": "same captured source with only blocking ShmMutex retry hint: (attempts & 15) == 0 || attempts == u32::MAX || state.load(Relaxed) == 0 before existing acquire attempt; plus bounded Loom test module absent from measured builds",
+  "preserved": "Initial uncontended attempt, Acquire CAS, priority waiter checks, unlock Release, spin/yield/sleep backoff unchanged",
+  "proof_scope": "New lock implementation proposal; conditional driver theorem does not prove it. Existing actual-primitive Loom models and broken-ordering control required before diagnosis; full formal/native gates remain required before adoption.",
+  "duration_seconds": 30,
+  "pairs": 3,
+  "order": [
+    [
+      "baseline",
+      "candidate"
+    ],
+    [
+      "candidate",
+      "baseline"
+    ],
+    [
+      "baseline",
+      "candidate"
+    ]
+  ],
+  "workers": 16,
+  "rows": 50000,
+  "shm_mib": 128,
+  "minimum_median_throughput_ratio": 1.03,
+  "minimum_individual_throughput_ratio": 1.0,
+  "required": "Every exact table/index, allocation census, reclamation drain, operation failure, tail growth and retained-throughput assertion passes; existing retry/arena regression margins pass",
+  "all_results_retained": true,
+  "latency_scope": "Bounds and within-variant variation recorded; short diagnostic does not replace 120s/240s or full p99 gate",
+  "performance_acceptance": false,
+  "full_baseline_campaign_required": true,
+  "quiet_window": "No overlapping builds/tests/provers/workloads; unchanged benchmark and compiler for both copied executables",
+  "mechanism_refined_before_capture_utc": "2026-09-23T17:36:58Z",
+  "progress_boundary": "Unconditional authoritative acquisition attempt every 16 retries and on saturated retry counter; does not rely on eventual freshness of relaxed hints. Original acquire protocol and backoff remain unchanged.",
+  "source_evidence_sha256": {
+    "validation/candidate.log": "648ce31b3be8349902ba32bb70b9dc9c56d7db8dcdbd369e8dd61b4382e96bfb",
+    "validation/original-cas-priority.json": "caf604d590aae34ffad96e148a6c8fbd0e6dc557c4bed534f6a816f9501a32cc",
+    "validation/original-cas-priority.log": "1bca3c97dfbab1b74fc9a8590fab4208c082544114f833501c65be120dee10c6",
+    "validation/receipt.json": "bcb7b172e7e9741819e4b438cf7f434e41b043c2e73849d71ef51037f487a9b3",
+    "validation/relaxed_acquire_mutant.log": "c5e2f8093924f76297d5653524ec0655bb32f3212f33f0ac32964de92c7353b9",
+    "preliminary-pure-hint/shm_lock.rs": "77f29b5a51b3e1b87aa2c09cdec34a499a0c012966305440a928aa2b22b68c94",
+    "preliminary-pure-hint/ttas.patch": "bd2f7185545d8ab6ac76ed1f4fed830b424a4738a5ed721deab18011069868d9",
+    "preliminary-pure-hint/validation/candidate.log": "ccd256b45b8d97162ccbb0124c45cb6dcbe69ec26bb0ac4599486802b5b87239",
+    "preliminary-pure-hint/validation/receipt.json": "74f4de7cc27bdcf479c99187a25d3a50ce8a177db840b5389c2e41e13530bacd",
+    "preliminary-three-role-periodic/INVALID.txt": "4747cbfba11e4fcbf8cf64252ad2cb7511f2ef58d9db09994f8f74e8f3532ceb",
+    "preliminary-three-role-periodic/original-cas-shm_lock.rs": "bc4803e55c9a7088bea044f2b8714ee1e6fa811f5f4fdf968359d61e167427d7",
+    "preliminary-three-role-periodic/shm_lock.rs": "fb947a99bede1db871f67abe118fb8f16e414acfadb1fab97cd846cbf7c16885",
+    "preliminary-three-role-periodic/ttas.patch": "7ca833da7074d7b3fb25384b044c78cc21f4c3b31b229771ea47439c28ba37f5",
+    "preliminary-three-role-periodic/validation/candidate.log": "933213c432a12bc53f1627444a3302aaa48a99e5f25e56ce7c31bfc9d61b6836",
+    "preliminary-three-role-periodic/validation/original-cas-priority.json": "529069201a0988914eab8b1a93a442b9c61969e92cadf1c2abb0b90e5cd001d4",
+    "preliminary-three-role-periodic/validation/original-cas-priority.log": "6d321aa0c6aefd12c6f0b5ecdc61e9b8044102b2b0dabe0bcb5ef351fe6f51ea",
+    "preliminary-three-role-periodic/validation/receipt.json": "9e4547238df5b0cae85ef74ec2c74c8e34524dfb5b07c623645a47b742fceaf3",
+    "invalid-shared-target-two-role/INVALID.txt": "6f01047614cc89e3841652fb927e4f49c3c68b3df5aa24de06d7108a97f20cfa",
+    "invalid-shared-target-two-role/validation/candidate.log": "ab0375d6e7582e4bff09aa3f5e00e9bdb501378e07a17e0cf8e79591586d4ca2",
+    "invalid-shared-target-two-role/validation/original-cas-priority.json": "caf604d590aae34ffad96e148a6c8fbd0e6dc557c4bed534f6a816f9501a32cc",
+    "invalid-shared-target-two-role/validation/original-cas-priority.log": "1bca3c97dfbab1b74fc9a8590fab4208c082544114f833501c65be120dee10c6",
+    "invalid-shared-target-two-role/validation/receipt.json": "24ca08ae849325de318233aecc4bb1fe762d286af2a20551882f92491779305b",
+    "invalid-shared-target-two-role/validation/relaxed_acquire_mutant.log": "492f766319a04d0a4651b0eceab66354fbcba727baee22084b03463982ecf230",
+    "change.patch": "f2bd6343cbbd8c9563dbcc7ebf5ab7a27f60b1fda9dfa404dad0535ecea37784",
+    "ttas.patch": "f2bd6343cbbd8c9563dbcc7ebf5ab7a27f60b1fda9dfa404dad0535ecea37784",
+    "relaxed-acquire-mutant.patch": "afde2ba94f899a102687315d50007894433b36bf46242086072e529871c46996",
+    "run_loom_validation.py": "a1f7cc91c21debd747852363005573a5b54c8e243fc0e6f4f561b0f4ef52d174"
+  },
+  "parent_candidate_manifest_sha256": "6ca29e7f3f46f4b920edca27cece615224de2a0cb3dbbf40e0299c79c999c8ae"
+}

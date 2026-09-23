@@ -1,0 +1,25 @@
+{
+  "base_commit": "a382ce3d06d4fb690ba09632d7b3a38b8902c65a",
+  "compiler": "rustc 1.93.1 (01f6ddf75 2026-02-11)",
+  "command": [
+    "cargo",
+    "test",
+    "--offline",
+    "-p",
+    "aerostore_core",
+    "--release",
+    "--test",
+    "wal_protocol_regressions",
+    "--",
+    "--test-threads=1"
+  ],
+  "returncode": 0,
+  "sources": {
+    "aerostore_core/src/wal_writer.rs": "197ab398ab956a7d9cd11738b42027c8e9790df593b6c5786fc201c1794d2655",
+    "aerostore_core/src/wal_ring.rs": "c32500ea26baf0602777fcd3dce1c7ecd558b410197668564f747796fc4eab4c",
+    "aerostore_core/src/occ_partitioned.rs": "df18d32a2744be786b089333b85a578d418d2a15ccd016c572f1b0fe3d4179b7",
+    "aerostore_core/tests/wal_protocol_regressions.rs": "5e171958989382e19f0c3a541bd63ca372ebe5a9627c8310ccf128dbbf014fe9"
+  },
+  "source_stable": true,
+  "test_count": 19
+}

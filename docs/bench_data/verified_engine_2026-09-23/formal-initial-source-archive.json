@@ -1,0 +1,9 @@
+{
+  "archive": "/home/zpconn/code/aerostore/target/verification-next/formal-initial-source.tar",
+  "archive_sha256": "2ffe7b5128a245134a56132017b47ac0a162c198da5b336c0d5938beba846b52",
+  "formal_receipt_sha256": "7f2bca46f38e467a9d66ddc69fdadd7a55a74a2d5f15e21ac1f2a83921045162",
+  "entries": 227,
+  "member_hashes_match_receipt": true,
+  "scope": "Exact source_before files from the initially accepted conditional formal pilot; receipt unchanged",
+  "created_utc": "2026-09-23T16:32:48Z"
+}

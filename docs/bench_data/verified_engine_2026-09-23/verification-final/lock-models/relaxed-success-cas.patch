@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/shm_lock.rs
++++ b/aerostore_core/src/shm_lock.rs
+@@ -48,7 +48,7 @@
+ 
+     fn try_acquire(&self) -> Option<ShmMutexGuard<'_>> {
+         self.state
+-            .compare_exchange(0, 1, Ordering::Acquire, Ordering::Relaxed)
++            .compare_exchange(0, 1, Ordering::Relaxed, Ordering::Relaxed)
+             .ok()
+             .map(|_| ShmMutexGuard {
+                 mutex: self,

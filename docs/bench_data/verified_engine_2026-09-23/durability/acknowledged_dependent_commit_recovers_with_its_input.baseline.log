@@ -1,0 +1,20 @@
+
+running 1 test
+test acknowledged_dependent_commit_recovers_with_its_input ... FAILED
+
+failures:
+
+failures:
+    acknowledged_dependent_commit_recovers_with_its_input
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 18 filtered out; finished in 0.00s
+
+    Finished `release` profile [optimized] target(s) in 0.06s
+     Running tests/wal_protocol_regressions.rs (/home/zpconn/code/aerostore/target/verification-next/durability-baseline-build/release/deps/wal_protocol_regressions-f74165b778087bc3)
+
+thread 'acknowledged_dependent_commit_recovers_with_its_input' (3680) panicked at aerostore_core/tests/wal_protocol_regressions.rs:132:5:
+assertion `left == right` failed: acknowledged output lost its input on recovery
+  left: 3
+ right: 2
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+error: test failed, to rerun pass `-p aerostore_core --test wal_protocol_regressions`

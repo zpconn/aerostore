@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::index::{IndexCompare, IndexValue, SecondaryIndex};
-use crate::procarray::{ProcArrayError, ProcArrayRegistration};
+use crate::procarray::{ProcArrayError, ProcArrayRegistration, ProcSnapshot};
 use crate::shm::{ArenaClass, RelPtr, ShmAllocError, ShmArena, OCC_PARTITION_LOCKS};
 use crate::shm_index::ShmIndexError;
 use crate::shm_lock::{ShmMutex, ShmMutexGuard};
@@ -18,6 +18,7 @@ const INDEX_LOCK_SPIN_LIMIT: u32 = 4096;
 const RECYCLE_SHARD_PROBE_LIMIT: usize = 4;
 const MAX_VISIBLE_CHAIN_STEPS: u32 = 262_144;
 const MAX_TABLE_INDEXES: usize = 32;
+const OCC_HEADER_FORMAT: u64 = 0xAEB0_0CC0_0000_0002;
 
 #[cfg(test)]
 thread_local! {
@@ -55,6 +56,7 @@ thread_local! {
 
 #[repr(C, align(64))]
 struct OccSharedHeader {
+    format: u64,
     index_registry_lock: ShmMutex,
     index_registry_sealed: AtomicBool,
     index_count: AtomicU32,
@@ -72,12 +74,17 @@ struct OccSharedHeader {
     recycle_push_success: AtomicU64,
     recycle_push_cas_fail: AtomicU64,
     recycle_stash_starved: AtomicU64,
+    // Published once, with word zero released last. Payload words are immutable
+    // after publication. A single ordered WAL stream is required for dependency
+    // closure; changing it requires exclusive cold recovery into a new table.
+    wal_stream: [AtomicU64; 4],
 }
 
 impl OccSharedHeader {
     #[inline]
     fn new() -> Self {
         Self {
+            format: OCC_HEADER_FORMAT,
             index_registry_lock: ShmMutex::new(),
             index_registry_sealed: AtomicBool::new(false),
             index_count: AtomicU32::new(0),
@@ -95,6 +102,7 @@ impl OccSharedHeader {
             recycle_push_success: AtomicU64::new(0),
             recycle_push_cas_fail: AtomicU64::new(0),
             recycle_stash_starved: AtomicU64::new(0),
+            wal_stream: std::array::from_fn(|_| AtomicU64::new(0)),
         }
     }
 }
@@ -273,6 +281,8 @@ pub enum Error {
     IndexBindingsIncomplete,
     IndexRegistrationClosed,
     TransactionTableMismatch,
+    WalStreamMismatch,
+    WalRequired,
 }
 
 impl fmt::Display for Error {
@@ -308,6 +318,10 @@ impl fmt::Display for Error {
             Error::TransactionTableMismatch => {
                 write!(f, "transaction belongs to a different table or mapping")
             }
+            Error::WalStreamMismatch => write!(f,
+                "table is bound to another WAL stream; drain and recover exclusively before changing mode, WAL file, or ring"),
+            Error::WalRequired => write!(f,
+                "table is bound to a WAL stream; writes must use its OccCommitter"),
         }
     }
 }
@@ -365,7 +379,10 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         index_slot_offsets: Vec<u32>,
     ) -> Result<Self, Error> {
         let shared_header = RelPtr::<OccSharedHeader>::from_offset(shared_header_offset);
-        if shared_header.as_ref(shm.mmap_base()).is_none() {
+        if !shared_header
+            .as_ref(shm.mmap_base())
+            .is_some_and(|header| header.format == OCC_HEADER_FORMAT)
+        {
             return Err(Error::InvalidPointer {
                 offset: shared_header_offset,
             });
@@ -607,7 +624,24 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         Ok(())
     }
 
+    // Admission checks must also run after a potentially long preparation or
+    // lock wait. This is a health observation, not cancellation of writers
+    // already admitted on other partitions.
+    pub(crate) fn check_not_poisoned(&self) -> Result<(), Error> {
+        if self
+            .shared_header_ref()?
+            .index_poisoned
+            .load(Ordering::Acquire)
+        {
+            return Err(Error::Index(
+                "table is poisoned after failed index publication".into(),
+            ));
+        }
+        Ok(())
+    }
+
     fn ensure_unmanaged_write(&self) -> Result<(), Error> {
+        self.ensure_unlogged_write_allowed()?;
         if self
             .shared_header_ref()?
             .index_count
@@ -619,6 +653,43 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             ));
         }
         Ok(())
+    }
+
+    fn ensure_unlogged_write_allowed(&self) -> Result<(), Error> {
+        if self.shared_header_ref()?.wal_stream[0].load(Ordering::Acquire) != 0 {
+            return Err(Error::WalRequired);
+        }
+        Ok(())
+    }
+
+    pub(crate) fn check_wal_stream(&self, identity: [u64; 4]) -> Result<(), Error> {
+        let header = self.shared_header_ref()?;
+        let kind = header.wal_stream[0].load(Ordering::Acquire);
+        if kind != 0
+            && (kind != identity[0]
+                || (1..4).any(|i| header.wal_stream[i].load(Ordering::Relaxed) != identity[i]))
+        {
+            return Err(Error::WalStreamMismatch);
+        }
+        Ok(())
+    }
+
+    pub(crate) fn bind_wal_stream(&self, identity: [u64; 4]) -> Result<(), Error> {
+        let header = self.shared_header_ref()?;
+        if header.wal_stream[0].load(Ordering::Acquire) != 0 {
+            return self.check_wal_stream(identity);
+        }
+        // Only first binding needs exclusion from every publishing writer.
+        // Follow index registration's existing registry -> partition order.
+        let _registry = header.index_registry_lock.lock();
+        let _partitions = self.acquire_all_partition_locks();
+        if header.wal_stream[0].load(Ordering::Acquire) == 0 {
+            for i in 1..4 {
+                header.wal_stream[i].store(identity[i], Ordering::Relaxed);
+            }
+            header.wal_stream[0].store(identity[0], Ordering::Release);
+        }
+        self.check_wal_stream(identity)
     }
 
     fn poison_indexes(&self) {
@@ -753,26 +824,13 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
     // fails, remove just the successful additions: source postings are intact,
     // and rollback needs no allocation. A failure to undo or remove is fatal
     // and poisons the shared table and every registered index.
-    fn apply_index_changes(&self, changes: &[IndexChange]) -> Result<(), Error> {
+    fn prepare_index_destinations(&self, changes: &[IndexChange]) -> Result<Vec<usize>, Error> {
         let mut inserted = Vec::new();
         for (change_idx, change) in changes.iter().enumerate() {
             if let Some(after) = &change.after {
                 let index = &self.indexes[change.binding].index;
                 if let Err(err) = index.transactional_insert(after.clone(), change.row_id) {
-                    let mut rollback_error = None;
-                    for idx in inserted.into_iter().rev() {
-                        let previous: &IndexChange = &changes[idx];
-                        if let Err(undo) =
-                            self.indexes[previous.binding].index.transactional_remove(
-                                previous.after.as_ref().expect("inserted destination"),
-                                &previous.row_id,
-                            )
-                        {
-                            rollback_error = Some(undo.to_string());
-                        }
-                    }
-                    if let Some(undo) = rollback_error {
-                        self.poison_indexes();
+                    if let Err(undo) = self.rollback_index_destinations(changes, &inserted) {
                         return Err(Error::Index(format!("destination insertion failed ({err}); rollback failed ({undo}); table poisoned")));
                     }
                     return Err(err.into());
@@ -786,6 +844,34 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
                 });
             }
         }
+        Ok(inserted)
+    }
+
+    fn rollback_index_destinations(
+        &self,
+        changes: &[IndexChange],
+        inserted: &[usize],
+    ) -> Result<(), Error> {
+        let mut rollback_error = None;
+        for idx in inserted.iter().rev() {
+            let previous = &changes[*idx];
+            if let Err(undo) = self.indexes[previous.binding].index.transactional_remove(
+                previous.after.as_ref().expect("inserted destination"),
+                &previous.row_id,
+            ) {
+                rollback_error = Some(undo.to_string());
+            }
+        }
+        if let Some(undo) = rollback_error {
+            self.poison_indexes();
+            return Err(Error::Index(format!(
+                "destination rollback failed ({undo}); table poisoned"
+            )));
+        }
+        Ok(())
+    }
+
+    fn remove_index_sources(&self, changes: &[IndexChange]) -> Result<(), Error> {
         for change in changes {
             if let Some(before) = &change.before {
                 if let Err(err) = self.indexes[change.binding]
@@ -800,6 +886,10 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             }
         }
         Ok(())
+    }
+
+    pub(crate) fn poison_after_wal_failure(&self) {
+        self.poison_indexes();
     }
 
     fn publish_index_stamps(&self, changes: &[IndexChange]) -> Result<(), Error> {
@@ -1155,27 +1245,97 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         &self,
         tx: &mut OccTransaction<T>,
     ) -> Result<OccCommitRecord<T>, Error> {
+        self.commit_with_record_impl::<false, Error, _, _>(tx, |_| {
+            Ok(|_: &OccCommitRecord<T>| Ok(()))
+        })
+    }
+
+    /// Invoke the durability step after validation and destination allocation,
+    /// while the row and predicate locks still exclude conflicting publication.
+    /// A rejected callback leaves all rows and source postings unchanged.
+    pub(crate) fn commit_with_record_before_publish<E, F>(
+        &self,
+        tx: &mut OccTransaction<T>,
+        before_publish: F,
+    ) -> Result<OccCommitRecord<T>, E>
+    where
+        E: From<Error>,
+        F: FnOnce(&OccCommitRecord<T>) -> Result<(), E>,
+    {
+        self.commit_with_record_prepared::<E, _, F>(tx, |_| Ok(before_publish))
+    }
+
+    /// Prepare an immutable payload before taking publication locks, then
+    /// accept it after validating the unchanged transaction under those locks.
+    /// Keeping both phases inside this call prevents transaction mutation
+    /// between preparation and validation. The returned closure must not accept
+    /// WAL bytes until invoked, and receives the same record used to publish.
+    pub(crate) fn commit_with_record_prepared<E, P, F>(
+        &self,
+        tx: &mut OccTransaction<T>,
+        prepare: P,
+    ) -> Result<OccCommitRecord<T>, E>
+    where
+        E: From<Error>,
+        P: FnOnce(&OccCommitRecord<T>) -> Result<F, E>,
+        F: FnOnce(&OccCommitRecord<T>) -> Result<(), E>,
+    {
+        self.commit_with_record_impl::<true, E, P, F>(tx, prepare)
+    }
+
+    // The const parameter removes record preparation and callback handling from
+    // the ordinary in-memory commit. Both paths use the same validation and
+    // publication protocol; WAL commits reuse their prepared record allocation.
+    fn commit_with_record_impl<const WRITE_AHEAD: bool, E, P, F>(
+        &self,
+        tx: &mut OccTransaction<T>,
+        prepare: P,
+    ) -> Result<OccCommitRecord<T>, E>
+    where
+        E: From<Error>,
+        P: FnOnce(&OccCommitRecord<T>) -> Result<F, E>,
+        F: FnOnce(&OccCommitRecord<T>) -> Result<(), E>,
+    {
         self.ensure_open(tx)?;
         let final_write_indices = self.final_write_indices(tx);
         let index_changes = self.index_changes(tx, &final_write_indices)?;
         let index_keys = self.index_lock_keys(tx, &index_changes)?;
+        // Values are immutable and retained by the live transaction, just as
+        // for index_changes above. Revalidate their dependencies under locks
+        // before accepting any prepared bytes or publishing any row.
+        let prepared = if WRITE_AHEAD {
+            Some(self.prepare_before_publish(tx, &final_write_indices, prepare)?)
+        } else {
+            None
+        };
         let index_locks = match self.acquire_index_locks(&index_keys) {
             Ok(locks) => locks,
             Err(Error::SerializationFailure) => {
                 self.abort_for_serialization_failure(tx);
-                return Err(Error::SerializationFailure);
+                return Err(Error::SerializationFailure.into());
             }
-            Err(err) => return Err(err),
+            Err(err) => return Err(err.into()),
         };
         let locks = match self.acquire_partition_locks(tx) {
             Ok(locks) => locks,
             Err(Error::SerializationFailure) => {
                 drop(index_locks);
                 self.abort_for_serialization_failure(tx);
-                return Err(Error::SerializationFailure);
+                return Err(Error::SerializationFailure.into());
             }
-            Err(err) => return Err(err),
+            Err(err) => return Err(err.into()),
         };
+
+        if !WRITE_AHEAD && !final_write_indices.is_empty() {
+            self.ensure_unlogged_write_allowed()?;
+        }
+
+        if let Err(err) = self.check_not_poisoned() {
+            drop(locks);
+            drop(index_locks);
+            self.abort_preparation(tx)?;
+            return Err(err.into());
+        }
 
         if self.index_read_conflict(tx)?
             || self.has_row_lock_conflict(tx)?
@@ -1185,14 +1345,28 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             drop(locks);
             drop(index_locks);
             self.abort_for_serialization_failure(tx);
-            return Err(Error::SerializationFailure);
+            return Err(Error::SerializationFailure.into());
         }
 
         // All index destinations are allocated before any source is removed;
         // no table version is published until that preparation has succeeded.
         // Readers of affected predicates reject the held bucket latches.
-        self.apply_index_changes(&index_changes)?;
-        let writes = match self.publish_write_set(tx, &final_write_indices) {
+        let inserted = self.prepare_index_destinations(&index_changes)?;
+        let prepared = match prepared {
+            Some((record, before_publish)) => {
+                self.invoke_before_publish(tx, &index_changes, &inserted, &record, before_publish)?;
+                Some(record)
+            }
+            None => None,
+        };
+        self.remove_index_sources(&index_changes)?;
+        let publication = match prepared {
+            Some(record) => self
+                .publish_prepared_write_set(&record)
+                .map(|()| record.writes),
+            None => self.publish_write_set(tx, &final_write_indices),
+        };
+        let writes = match publication {
             Ok(writes) => writes,
             Err(err) => {
                 // Pointer/CAS failure after validation indicates corruption.
@@ -1205,7 +1379,8 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
                 let _ = self.finish_transaction(tx);
                 return Err(Error::Index(format!(
                     "row publication failed after index preparation ({err}); table poisoned"
-                )));
+                ))
+                .into());
             }
         };
         #[cfg(test)]
@@ -1222,7 +1397,7 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             self.poison_indexes();
             tx.write_set.clear();
             let _ = self.finish_transaction(tx);
-            return Err(err);
+            return Err(err.into());
         }
         tx.read_set.clear();
         tx.index_reads.clear();
@@ -1230,18 +1405,164 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         tx.write_set.clear();
         tx.savepoints.clear();
         let _ = self.shm.flush_local_recycle_caches();
-        if let Err(err) = self
-            .finish_transaction(tx)
-            .and_then(|()| self.publish_index_stamps(&index_changes))
-        {
+        let finish = match self.finish_transaction(tx) {
+            Ok(()) => self.publish_index_stamps(&index_changes),
+            Err(err) => Err(err),
+        };
+        if let Err(err) = finish {
             self.poison_indexes();
-            return Err(err);
+            return Err(err.into());
         }
         // Keep both row partition locks and index predicate latches until the
         // complete transaction is visible and its publication stamps exist.
         drop(locks);
         drop(index_locks);
         Ok(commit_record)
+    }
+
+    fn prepare_before_publish<E, P, F>(
+        &self,
+        tx: &mut OccTransaction<T>,
+        final_write_indices: &[usize],
+        prepare: P,
+    ) -> Result<(OccCommitRecord<T>, F), E>
+    where
+        E: From<Error>,
+        P: FnOnce(&OccCommitRecord<T>) -> Result<F, E>,
+    {
+        let record = match self.prepare_commit_record(tx, final_write_indices) {
+            Ok(record) => record,
+            Err(err) => {
+                self.abort_preparation(tx)?;
+                return Err(err.into());
+            }
+        };
+        // Application codecs may unwind. At this point there are no prepared
+        // destinations to undo, but private versions and registration still
+        // require cleanup before returning or resuming the panic.
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| prepare(&record))) {
+            Ok(Ok(before_publish)) => Ok((record, before_publish)),
+            Ok(Err(err)) => {
+                self.abort_preparation(tx)?;
+                Err(err)
+            }
+            Err(panic) => {
+                let _ = self.abort_preparation(tx);
+                std::panic::resume_unwind(panic)
+            }
+        }
+    }
+
+    fn abort_preparation(&self, tx: &mut OccTransaction<T>) -> Result<(), Error> {
+        let abort = self.abort(tx);
+        if abort.is_err() {
+            self.poison_indexes();
+        }
+        abort
+    }
+
+    fn invoke_before_publish<E, F>(
+        &self,
+        tx: &mut OccTransaction<T>,
+        changes: &[IndexChange],
+        inserted: &[usize],
+        record: &OccCommitRecord<T>,
+        before_publish: F,
+    ) -> Result<(), E>
+    where
+        E: From<Error>,
+        F: FnOnce(&OccCommitRecord<T>) -> Result<(), E>,
+    {
+        // Codecs can be application code. Even an unwinding codec must not leave
+        // an unlogged destination posting or a registered abandoned transaction.
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| before_publish(record))) {
+            Ok(Ok(())) => Ok(()),
+            Ok(Err(err)) => {
+                self.rollback_prepared_commit(tx, changes, inserted)?;
+                Err(err)
+            }
+            Err(panic) => {
+                let _ = self.rollback_prepared_commit(tx, changes, inserted);
+                std::panic::resume_unwind(panic)
+            }
+        }
+    }
+
+    fn rollback_prepared_commit(
+        &self,
+        tx: &mut OccTransaction<T>,
+        changes: &[IndexChange],
+        inserted: &[usize],
+    ) -> Result<(), Error> {
+        let rollback = self.rollback_index_destinations(changes, inserted);
+        let abort = self.abort(tx);
+        if abort.is_err() {
+            self.poison_indexes();
+        }
+        rollback?;
+        abort
+    }
+
+    fn prepare_commit_record(
+        &self,
+        tx: &OccTransaction<T>,
+        final_write_indices: &[usize],
+    ) -> Result<OccCommitRecord<T>, Error> {
+        let mut writes = Vec::with_capacity(final_write_indices.len());
+        for idx in final_write_indices {
+            let write = &tx.write_set[*idx];
+            let base_offset = write.base_ptr.load(Ordering::Acquire);
+            let new_offset = write.new_ptr.load(Ordering::Acquire);
+            let new_row = self.resolve_row_ptr(&write.new_ptr)?;
+            let base_value = if base_offset == EMPTY_PTR {
+                new_row.value
+            } else {
+                self.resolve_row_ptr(&write.base_ptr)?.value
+            };
+            writes.push(OccCommittedWrite {
+                row_id: write.row_id,
+                base_offset,
+                new_offset,
+                base_value,
+                value: new_row.value,
+                dirty_columns_bitmask: write.dirty_columns_bitmask,
+            });
+        }
+        Ok(OccCommitRecord {
+            txid: tx.txid,
+            writes,
+        })
+    }
+
+    fn publish_prepared_write_set(&self, record: &OccCommitRecord<T>) -> Result<(), Error> {
+        for write in &record.writes {
+            let slot = self.slot_ref(write.row_id)?;
+            if write.base_offset != EMPTY_PTR {
+                let base_row = self.resolve_row_ptr(&RelPtr::from_offset(write.base_offset))?;
+                if base_row
+                    .xmax
+                    .compare_exchange(0, record.txid, Ordering::AcqRel, Ordering::Acquire)
+                    .is_err()
+                {
+                    return Err(Error::SerializationFailure);
+                }
+            }
+            let new_row = self.resolve_row_ptr(&RelPtr::from_offset(write.new_offset))?;
+            new_row.next.store(write.base_offset, Ordering::Release);
+            if slot
+                .head
+                .compare_exchange(
+                    write.base_offset,
+                    write.new_offset,
+                    Ordering::AcqRel,
+                    Ordering::Acquire,
+                )
+                .is_err()
+            {
+                return Err(Error::SerializationFailure);
+            }
+        }
+        Ok(())
     }
 
     fn publish_write_set(
@@ -2056,6 +2377,25 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
 
     pub fn snapshot_latest_rows(&self) -> Result<Vec<(usize, T)>, Error> {
         let _lock = self.acquire_all_partition_locks();
+        self.snapshot_latest_rows_locked()
+    }
+
+    /// Keep commit publication excluded until the durable checkpoint and WAL
+    /// cut finish. The active set distinguishes old-starting transactions which
+    /// can publish only after this checkpoint from already captured commits.
+    pub(crate) fn with_checkpoint_snapshot<R, E, F>(&self, checkpoint: F) -> Result<R, E>
+    where
+        E: From<Error>,
+        F: FnOnce(Vec<(usize, T)>, ProcSnapshot) -> Result<R, E>,
+    {
+        let _lock = self.acquire_all_partition_locks();
+        self.validate_index_bindings()?;
+        let rows = self.snapshot_latest_rows_locked()?;
+        let snapshot = self.shm.create_snapshot();
+        checkpoint(rows, snapshot)
+    }
+
+    fn snapshot_latest_rows_locked(&self) -> Result<Vec<(usize, T)>, Error> {
         let mut rows = Vec::with_capacity(self.capacity());
 
         for row_id in 0..self.capacity() {
@@ -2584,6 +2924,166 @@ mod transactional_publication_tests {
         assert!(table.index_read_conflict(&reader).unwrap());
         assert_eq!(table.commit(&mut reader), Err(Error::SerializationFailure));
         assert_eq!(crate::run_vacuum_pass(&table).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn preencoded_record_is_revalidated_before_its_acceptance() {
+        let arena = Arc::new(ShmArena::new(8 << 20).unwrap());
+        let mut table = OccTable::new(Arc::clone(&arena), 1).unwrap();
+        table.seed_row(0, 10).unwrap();
+        let index = SecondaryIndex::new_in_shared("key", Arc::clone(&arena));
+        index.try_insert(IndexValue::U64(10), 0).unwrap();
+        table.bind_index(index.clone(), key).unwrap();
+        let mut tx = table.begin_transaction().unwrap();
+        table.write(&mut tx, 0, 19).unwrap();
+        table.write(&mut tx, 0, 20).unwrap();
+        let accepted = std::cell::Cell::new(false);
+        let result = table.commit_with_record_prepared::<Error, _, _>(&mut tx, |record| {
+            assert_eq!(record.writes.len(), 1);
+            assert_eq!(record.writes[0].base_value, 10);
+            assert_eq!(record.writes[0].value, 20);
+            // This indexed conflicting commit can succeed only if neither
+            // class of publication guards is held during payload preparation.
+            let mut competing = table.begin_transaction().unwrap();
+            table.write(&mut competing, 0, 30).unwrap();
+            table.commit(&mut competing).unwrap();
+            let accepted = &accepted;
+            Ok(move |_: &OccCommitRecord<u64>| {
+                accepted.set(true);
+                Ok(())
+            })
+        });
+        assert!(matches!(result, Err(Error::SerializationFailure)));
+        assert!(!accepted.get());
+        assert!(tx.registration.is_none());
+        assert!(arena.create_snapshot().in_flight_txids().is_empty());
+        assert_eq!(table.snapshot_latest_rows().unwrap(), vec![(0, 30)]);
+        assert_eq!(index.try_entries().unwrap(), vec![(IndexValue::U64(30), 0)]);
+    }
+
+    #[test]
+    fn accepted_preencoded_record_is_the_record_published() {
+        let arena = Arc::new(ShmArena::new(8 << 20).unwrap());
+        let table = OccTable::new(arena, 2).unwrap();
+        table.seed_row(0, 0).unwrap();
+        table.seed_row(1, 1).unwrap();
+        let mut tx = table.begin_transaction().unwrap();
+        table.write(&mut tx, 0, 19).unwrap();
+        table.write(&mut tx, 0, 20).unwrap();
+        table.write(&mut tx, 1, 21).unwrap();
+        let accepted = std::cell::Cell::new(false);
+        let returned = table
+            .commit_with_record_prepared::<Error, _, _>(&mut tx, |record| {
+                let payload = record
+                    .writes
+                    .iter()
+                    .map(|w| (w.row_id, w.base_offset, w.new_offset, w.base_value, w.value))
+                    .collect::<Vec<_>>();
+                let txid = record.txid;
+                let accepted = &accepted;
+                let table = &table;
+                Ok(move |record: &OccCommitRecord<u64>| {
+                    assert_eq!(record.txid, txid);
+                    assert_eq!(record.writes.len(), payload.len());
+                    for (write, copied) in record.writes.iter().zip(&payload) {
+                        assert_eq!(
+                            (
+                                write.row_id,
+                                write.base_offset,
+                                write.new_offset,
+                                write.base_value,
+                                write.value
+                            ),
+                            *copied
+                        );
+                        assert_eq!(
+                            table.latest_value(write.row_id).unwrap(),
+                            Some(write.base_value)
+                        );
+                    }
+                    accepted.set(true);
+                    Ok(())
+                })
+            })
+            .unwrap();
+        assert!(accepted.get());
+        assert_eq!(returned.writes.len(), 2);
+        for write in returned.writes {
+            assert_eq!(table.latest_value(write.row_id).unwrap(), Some(write.value));
+        }
+        assert!(tx.registration.is_none());
+    }
+
+    #[test]
+    fn rejected_or_panicking_durability_step_rolls_back_all_destinations_and_closes_transaction() {
+        for panics in [false, true] {
+            let arena = Arc::new(ShmArena::new(8 << 20).unwrap());
+            let mut table = OccTable::new(Arc::clone(&arena), 2).unwrap();
+            let first = SecondaryIndex::new_in_shared("first", Arc::clone(&arena));
+            let second = SecondaryIndex::new_in_shared("second", Arc::clone(&arena));
+            for row_id in 0..2 {
+                table.seed_row(row_id, 10 + row_id as u64).unwrap();
+                for index in [&first, &second] {
+                    index
+                        .try_insert(IndexValue::U64(10 + row_id as u64), row_id)
+                        .unwrap();
+                }
+            }
+            for index in [&first, &second] {
+                table.bind_index(index.clone(), key).unwrap();
+            }
+            let mut tx = table.begin_transaction().unwrap();
+            table.write(&mut tx, 0, 19).unwrap();
+            table.write(&mut tx, 0, 20).unwrap();
+            table.write(&mut tx, 1, 21).unwrap();
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                table.commit_with_record_before_publish::<Error, _>(&mut tx, |record| {
+                    assert_eq!(record.writes.len(), 2);
+                    for (row_id, write) in record.writes.iter().enumerate() {
+                        assert_eq!(write.row_id, row_id);
+                        assert_eq!(write.base_value, 10 + row_id as u64);
+                        assert_eq!(write.value, 20 + row_id as u64);
+                        assert_eq!(table.latest_value(row_id).unwrap(), Some(write.base_value));
+                    }
+                    if panics {
+                        panic!("codec panic before WAL acceptance");
+                    }
+                    Err(Error::Index("codec rejected commit".into()))
+                })
+            }));
+            if panics {
+                assert!(result.is_err());
+            } else {
+                assert!(matches!(result.unwrap(), Err(Error::Index(_))));
+            }
+            assert!(tx.registration.is_none());
+            assert!(arena.create_snapshot().in_flight_txids().is_empty());
+            for index in [&first, &second] {
+                assert_eq!(
+                    index.try_entries().unwrap(),
+                    vec![(IndexValue::U64(10), 0), (IndexValue::U64(11), 1),]
+                );
+            }
+            assert_eq!(
+                table.snapshot_latest_rows().unwrap(),
+                vec![(0, 10), (1, 11)]
+            );
+            // The rollback leaves an operational table and recyclable private
+            // versions, rather than merely hiding the failed transaction.
+            let mut retry = table.begin_transaction().unwrap();
+            table.write(&mut retry, 0, 30).unwrap();
+            table
+                .commit_with_record_before_publish::<Error, _>(&mut retry, |_| Ok(()))
+                .unwrap();
+            let mut reader = table.begin_transaction().unwrap();
+            assert_eq!(
+                table
+                    .index_lookup(&mut reader, &first, &IndexCompare::Eq(IndexValue::U64(30)))
+                    .unwrap(),
+                vec![0]
+            );
+            table.commit(&mut reader).unwrap();
+        }
     }
 
     #[test]

@@ -1,0 +1,6 @@
+{
+  "source_archive": "target/verification-next/candidate-aligned/source.tar",
+  "sha256": "42bee7f96675a54e53aad030cb1e9129e40edb896f54017a59bb6c711b8f4998",
+  "files": 116,
+  "manifest_sha256": "4a65b0c49a8fd48a53f2d78b16d378f1d38740e268066d707922efbca4bd219f"
+}

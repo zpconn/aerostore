@@ -1,0 +1,6 @@
+{
+  "source_archive": "target/verification-next/candidate-short-spin/source.tar",
+  "sha256": "d9c83b5487f3880927fd2622eddf59921aed4c938dfef379fa4c2cd547d0c4ac",
+  "files": 116,
+  "manifest_sha256": "03fff4e8f8b5aea3ea0f26b63cc8d001b415111b1827f25579c264d1cc9b4c8a"
+}

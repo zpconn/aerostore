@@ -1,0 +1,22 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "--offline",
+    "--locked",
+    "-p",
+    "aerostore_core",
+    "--release",
+    "--manifest-path",
+    "/home/zpconn/code/aerostore/target/verification-next/candidate-ttas/original-cas-source/Cargo.toml",
+    "--target-dir",
+    "/home/zpconn/code/aerostore/target/verification-next/candidate-ttas/loom-build",
+    "--test",
+    "shm_mutation_model",
+    "registered_priority_waiter_precedes_ordinary_contender",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 20.254194207998808
+}

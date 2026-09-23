@@ -1,0 +1,19 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running tests/wal_protocol_regressions.rs (/home/zpconn/code/aerostore/target/verification-next/lock-scope-baseline-build/debug/deps/wal_protocol_regressions-0361cf5b705ce594)
+
+running 1 test
+
+thread 'async_epoch_change_during_preparation_retries_without_accepting_stale_bytes' (3414) panicked at aerostore_core/tests/wal_protocol_regressions.rs:779:5:
+assertion failed: matches!(committer.commit(&table, &mut stale),
+    Err(aerostore_core::WalWriterError::Occ(aerostore_core::OccError::SerializationFailure)))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test async_epoch_change_during_preparation_retries_without_accepting_stale_bytes ... FAILED
+
+failures:
+
+failures:
+    async_epoch_change_during_preparation_retries_without_accepting_stale_bytes
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 22 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p aerostore_core --test wal_protocol_regressions`

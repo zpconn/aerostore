@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "declared_utc": "2026-09-23T17:53:36Z",
+  "purpose": "Test a narrower hypothesis addressing periodic-hint tail regression: reduce only initial short-spin RMW contention while restoring original acquisition behavior for long-waiting contenders",
+  "baseline": "preserved candidate-fine (optimized durability fixes, fine histogram)",
+  "candidate": "same captured source except blocking ShmMutex held-state hint on attempts1..15 only; unconditional original acquisition attempt at0 and every attempt>=16; same focused bounded Loom tests absent from measured builds",
+  "preserved": "All acquisition CAS ordering, priority checks, Release unlock, and spin/yield/sleep backoff unchanged. Unlike periodic hint, no held-state suppression after the initial short-spin phase.",
+  "proof_scope": "New lock implementation proposal, outside the conditional driver theorem. Actual-primitive bounded models and rebuilt weakened-acquire negative control required before timing. Full native/formal/performance gates required before adoption.",
+  "duration_seconds": 30,
+  "pairs": 3,
+  "order": [
+    [
+      "baseline",
+      "candidate"
+    ],
+    [
+      "candidate",
+      "baseline"
+    ],
+    [
+      "baseline",
+      "candidate"
+    ]
+  ],
+  "workers": 16,
+  "rows": 50000,
+  "shm_mib": 128,
+  "minimum_median_throughput_ratio": 1.03,
+  "minimum_individual_throughput_ratio": 1.0,
+  "maximum_median_p99_ratio": 1.1,
+  "maximum_individual_p99_ratio": 1.25,
+  "maximum_within_variant_relative_range": 0.1,
+  "p99_comparison": "Exact integer inclusive interval ratios; entire ratio bound must satisfy threshold; overlapping thresholds or excess noise prevents diagnostic approval",
+  "required": "Every correctness/GC/allocation/stability gate and unchanged retry/arena margins pass",
+  "all_results_retained": true,
+  "performance_acceptance": false,
+  "full_baseline_campaign_required": true,
+  "quiet_window": "No overlapping builds/tests/provers/workloads; identical benchmark and compiler for both preserved binaries",
+  "source_evidence_sha256": {
+    "validation/case-1.log": "0f4f402a3dc369c809294b1cf326d3e0104e9599a57e37fe2bb51b12774a4102",
+    "validation/case-2.log": "c76c695ca818141d6d17c2b6b89a1a6545a8ec483157e3e2c49fd849df5304be",
+    "validation/case-3.log": "0d69e11689bcf135c64d69b7dfccecc2ecd2341ee203fc074f68ed7542f42a51",
+    "validation/case-4.log": "72ac2dca332dbaa8b1d5a12960ba36efdf3e0776333783655289071a0e2697f2",
+    "validation/case-5.log": "a0d3c6c263426fc9efeaec4300960b2bfd4c5c60804075eafcd45cdee973eca2",
+    "validation/case-6.log": "a0d223fe2ed346963dcc1bcb2b8eb8b0846f0e8bf7b46c7c7f9c3de5bc5fd164",
+    "validation/case-7.log": "88d5fc49614efcede70ca41b7192b816e8950e1980c81b46037fa4605f578768",
+    "validation/check_lock_models.py": "19a2838e32bcd3aaf04bc01161bfd711383716eba74741f5955d0d089ea5606e",
+    "validation/mutant-build.log": "5ca6c126223e6fe83a3243a59b1abbe27ec30646811f43b75ebb1ba2ae778b98",
+    "validation/mutant-list.log": "775abc8ac6dff4b6083e6f867ad6dd00c6ef18c9fa8fe3e7e50bb96c042c342a",
+    "validation/production-build.log": "78a78e5165f50a2b977d507743f051a17814b6086cd913a01aaebf542fc55bf0",
+    "validation/production-list.log": "775abc8ac6dff4b6083e6f867ad6dd00c6ef18c9fa8fe3e7e50bb96c042c342a",
+    "validation/production-shm_lock.rs": "33f9bd176080a92b2b276723d96c562b71304d1e932517245377ca3b348255b3",
+    "validation/production-shm_mutation_model.rs": "4906f6eb71a5d19088c0228a17425cfd111a25407a72ccf9f871b9aaa504049b",
+    "validation/receipt.json": "6b60e7b2a4f2a6749b1f3982e00fa8ab9e6948d88334de08bccbcb4a146fc2d9",
+    "validation/relaxed-success-cas.log": "1ed77335699178cd63313f625b84d41aca342915c95ec369c1792db1ab21b924",
+    "validation/relaxed-success-cas.patch": "afde2ba94f899a102687315d50007894433b36bf46242086072e529871c46996",
+    "change.patch": "325d6410d2e7ebca2e5a7c858c12a2146f2a701c02aaa5cf3b1198d3bdef6d43"
+  },
+  "parent_candidate_manifest_sha256": "6ca29e7f3f46f4b920edca27cece615224de2a0cb3dbbf40e0299c79c999c8ae"
+}

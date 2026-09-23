@@ -1,0 +1,14 @@
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/aerostore_core)
+    Finished `release` profile [optimized] target(s) in 1.76s
+     Running tests/shm_shared_memory.rs (target/verification-next/workspace-tests/release/deps/shm_shared_memory-de7abf31ee418bc6)
+
+running 6 tests
+test relptr_validates_null_bounds_and_alignment ... ok
+test forked_primary_key_map_updates_are_cross_process_visible ... ok
+test shared_chunked_arena_enforces_alignment_and_reports_oom ... ok
+test forked_mpsc_ring_producers_preserve_message_integrity ... ok
+test forked_children_cas_contention_reaches_exact_total ... ok
+test forked_occ_recycle_free_list_stress_is_safe_and_bounded ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+

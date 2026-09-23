@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "declared_utc": "2026-09-23T17:21:47Z",
+  "purpose": "Test whether isolating immutable WAL stream identity from hot recycler counters improves the rejected candidate; diagnostic only",
+  "baseline": "preserved candidate-fine (optimized durability fixes, fine histogram)",
+  "candidate": "same captured source except aligned WAL identity wrapper plus necessary cold-format version changes; exact patch/compiler offset receipt retained separately",
+  "duration_seconds": 30,
+  "pairs": 3,
+  "order": [
+    [
+      "baseline",
+      "candidate"
+    ],
+    [
+      "candidate",
+      "baseline"
+    ],
+    [
+      "baseline",
+      "candidate"
+    ]
+  ],
+  "workers": 16,
+  "rows": 50000,
+  "shm_mib": 128,
+  "minimum_median_throughput_ratio": 1.03,
+  "minimum_individual_throughput_ratio": 1.0,
+  "required": "Every exact table/index, allocation census, reclamation drain, operation failure, tail growth and retained-throughput assertion passes; existing retry/arena regression margins pass",
+  "all_results_retained": true,
+  "latency_scope": "Bounds and within-variant variation recorded; short diagnostic does not replace 120s/240s or full p99 gate",
+  "performance_acceptance": false,
+  "full_baseline_campaign_required": true,
+  "quiet_window": "No overlapping builds/tests/provers/workloads; unchanged benchmark and compiler for both copied executables",
+  "layout_evidence_sha256": {
+    "layout.patch": "47070bf2fe13507d913754626f35978ebc1a13ded955eeef91e45e16f3268a81",
+    "layout-patch-manifest.json": "d23ef9b7a233f638d66d3029f1ae19de3e7c6a47b8a294ee7fbd9684279ef7fa",
+    "layout-before.json": "d958bc8ed195ba8a3f0bbd0fe3f08f3dac720397a44e5fe5000e65f7cb84d636",
+    "layout-before.log": "290ea95d2673b531ebf089177cd226352f5a2a64308f93f7b84a16ef04c361fa",
+    "layout-after.json": "19360cb3a5ad0c217e67ca52d4ffc6f289eaf2b76997aafea0b631a0bd9d19bc",
+    "layout-after.log": "a1e5469cfa8c1299d5c277c3f8eb55147db039e83b8b46e1239baa0be9dc3a1f"
+  },
+  "parent_candidate_manifest_sha256": "6ca29e7f3f46f4b920edca27cece615224de2a0cb3dbbf40e0299c79c999c8ae"
+}

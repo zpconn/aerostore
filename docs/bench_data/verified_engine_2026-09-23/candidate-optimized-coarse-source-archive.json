@@ -1,0 +1,9 @@
+{
+  "archive": "/home/zpconn/code/aerostore/target/verification-next/candidate-optimized-coarse/source.tar",
+  "archive_sha256": "78be19b954d18c87138b51aee7a46771164fae80305582bd6c6b694c002cd1d7",
+  "capture_manifest_sha256": "b15505ca819cf0b911a5ef3045af438ce99b0c5d809a204c261a66a5fdd65562",
+  "entries": 114,
+  "member_hashes_match_capture": true,
+  "scope": "Optimized native/WAL implementation before benchmark-only histogram instrumentation",
+  "created_utc": "2026-09-23T16:39:24Z"
+}

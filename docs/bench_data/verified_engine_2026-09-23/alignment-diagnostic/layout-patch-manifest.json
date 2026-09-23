@@ -1,0 +1,77 @@
+{
+  "status": "source_ready_for_capture",
+  "parent_archive_sha256": "db49fb321d943ef192c41690d014f75a57b30f11da8f118082c6fda891a04257",
+  "patch_sha256": "47070bf2fe13507d913754626f35978ebc1a13ded955eeef91e45e16f3268a81",
+  "files": {
+    "aerostore_core/src/occ_partitioned.rs": {
+      "before": "6192f7736ce645b02b1664e2e4783aa926e255ecbf5c35280736d4a1b72bb0fd",
+      "after": "79aced44c6c2321eb73485b242fbb7a1f0e6561d24df52026f2a425dd531b777"
+    },
+    "aerostore_core/src/shm.rs": {
+      "before": "434964bde214af5b9ca4c4828447e995edc9074f117d61ee1173fa0ae0418884",
+      "after": "eaa9dce3c723996314dda2a6db0826eaba7da09e98be2b247f635c0f4c03c330"
+    },
+    "aerostore_core/src/bootloader.rs": {
+      "before": "6c29c8fd5ead2aadb61f4fb77342a0705985110b5b0b3f5354e39d1a78e3e890",
+      "after": "1908447303cb7f88c7cec9f3a82eb14ebfba37194f8201e5a084859cf863b7b1"
+    }
+  },
+  "versions": {
+    "OCC_HEADER_FORMAT": [
+      "0xAEB0_0CC0_0000_0002",
+      "0xAEB0_0CC0_0000_0003"
+    ],
+    "SHM_LAYOUT_VERSION": [
+      5,
+      6
+    ],
+    "BOOT_LAYOUT_VERSION": [
+      7,
+      8
+    ]
+  },
+  "predeclared_diagnostic": {
+    "workload": "original128MiBchurn",
+    "duration_seconds": 30,
+    "pairs": 3,
+    "order": [
+      "AB",
+      "BA",
+      "AB"
+    ],
+    "minimum_median_throughput_ratio": 1.03,
+    "minimum_every_pair_throughput_ratio": 1.0,
+    "correctness_and_resources_must_pass": true,
+    "full_performance_gate_required_before_claim": true
+  },
+  "compiler_confirmed_header_size_unchanged": true,
+  "compiler_confirmed_other_field_offsets_unchanged": {
+    "format": true,
+    "index_count": true,
+    "index_offsets": true,
+    "index_poisoned": true,
+    "index_registry_lock": true,
+    "index_registry_sealed": true,
+    "recycle_alloc_fresh": true,
+    "recycle_alloc_from_primary": true,
+    "recycle_alloc_from_probe": true,
+    "recycle_alloc_from_starved": true,
+    "recycle_locks": true,
+    "recycle_pop_cas_fail": true,
+    "recycle_pop_empty": true,
+    "recycle_push_cas_fail": true,
+    "recycle_push_success": true,
+    "recycle_stash_starved": true,
+    "recycled_heads": true,
+    "vacuum_requested": true
+  },
+  "compiler_confirmed_wal_offset_before": 12520,
+  "compiler_confirmed_wal_offset_after": 12544,
+  "actual_changed_files": [
+    "aerostore_core/src/bootloader.rs",
+    "aerostore_core/src/occ_partitioned.rs",
+    "aerostore_core/src/shm.rs"
+  ],
+  "temporary_receipt_module_removed": true,
+  "main_source_files_unchanged": true
+}

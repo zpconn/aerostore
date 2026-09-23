@@ -1,0 +1,19 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-next/formal-optimized/concurrent/omit_prepare_error_abort.rs:149:17
+    |
+149 |           ensures safe_release(final(self).events()),
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+159 | /     { let record = match self . prepare_commit_record ( tx , final_write_indices ) {
+160 | |     Ok ( record ) => record , Err ( err ) => {
+161 | |         self . abort_preparation ( tx ) ? ;
+162 | |         return Err ( err . into ( ) ) ;
+...   |
+174 | | } }
+    | |___- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

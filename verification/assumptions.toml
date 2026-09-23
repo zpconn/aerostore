@@ -26,6 +26,11 @@ scope = "Initial performance experiment"
 statement = "The experiment changes only the declared safe kernel. Atomic orderings, arena authority, callers, indexing semantics, and persistence are outside the proof slice and frozen by source fingerprints. Their safety is an open engine obligation."
 
 [[assumptions]]
+id = "CONCURRENT-PRIMITIVE-CONTRACTS"
+scope = "Native commit control-flow proof"
+statement = "Source-bound commit and callback cleanup bodies are proved parametrically over explicit event contracts. Actual row/index contents, lock coverage, atomic memory order, arena ownership, WAL durability, callback behavior and machine-clock no-wrap remain unproved native obligations; the operation proof establishes ordering conditional on those contracts."
+
+[[assumptions]]
 id = "PLATFORM"
 scope = "Integration evidence"
 statement = "Current target is x86_64 Linux/WSL2 with process-shared mappings. Integration tests are bounded evidence and do not prove OS, filesystem, crash, or mmap guarantees."

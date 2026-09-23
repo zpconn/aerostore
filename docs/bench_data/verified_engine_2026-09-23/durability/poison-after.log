@@ -1,0 +1,11 @@
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/aerostore_core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.62s
+     Running unittests src/lib.rs (target/verification-next/workspace-tests/debug/deps/aerostore_core-458b83ba28fefdf8)
+
+running 3 tests
+test wal_writer::poison_regressions::detected_indeterminate_managed_append_poisons_before_file_unlock ... ok
+test wal_writer::poison_regressions::native_commit_rejects_poison_observed_during_payload_preparation ... ok
+test wal_writer::poison_regressions::managed_sync_append_rechecks_table_poison_after_waiting_for_file_lock ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 191 filtered out; finished in 0.01s
+

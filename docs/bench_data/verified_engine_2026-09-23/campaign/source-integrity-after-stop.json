@@ -1,0 +1,18 @@
+{
+  "checked_utc": "2026-09-23T16:32:48Z",
+  "captures": [
+    {
+      "variant": "baseline",
+      "manifest_sha256": "db1b7ed16f02ccea75527366dfb2050d7573f38e3df1f24867331d5e6caf9a77",
+      "source_and_binary_hashes_match": true
+    },
+    {
+      "variant": "candidate",
+      "manifest_sha256": "60134945100fc83c52158e9f06dbef110420f7de7c512554d6245d2d32a763e0",
+      "source_and_binary_hashes_match": true
+    }
+  ],
+  "runner_hash_matches_campaign": true,
+  "campaign_complete": false,
+  "stop_reason": "WAL libtest prefix rejected by strict parser; all workload source remained unchanged"
+}

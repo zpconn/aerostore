@@ -1,0 +1,20 @@
+
+running 1 test
+test synchronous_acknowledgement_cannot_lose_an_async_dependency ... FAILED
+
+failures:
+
+failures:
+    synchronous_acknowledgement_cannot_lose_an_async_dependency
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 18 filtered out; finished in 0.00s
+
+    Finished `release` profile [optimized] target(s) in 0.06s
+     Running tests/wal_protocol_regressions.rs (/home/zpconn/code/aerostore/target/verification-next/durability-baseline-build/release/deps/wal_protocol_regressions-f74165b778087bc3)
+
+thread 'synchronous_acknowledgement_cannot_lose_an_async_dependency' (3718) panicked at aerostore_core/tests/wal_protocol_regressions.rs:368:5:
+assertion `left == right` failed: synchronous acknowledgement omitted its pending asynchronous input
+  left: 3
+ right: 2
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+error: test failed, to rerun pass `-p aerostore_core --test wal_protocol_regressions`

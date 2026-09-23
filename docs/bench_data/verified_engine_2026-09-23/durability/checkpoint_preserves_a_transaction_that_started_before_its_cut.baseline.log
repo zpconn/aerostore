@@ -1,0 +1,20 @@
+
+running 1 test
+test checkpoint_preserves_a_transaction_that_started_before_its_cut ... FAILED
+
+failures:
+
+failures:
+    checkpoint_preserves_a_transaction_that_started_before_its_cut
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 18 filtered out; finished in 0.02s
+
+    Finished `release` profile [optimized] target(s) in 0.06s
+     Running tests/wal_protocol_regressions.rs (/home/zpconn/code/aerostore/target/verification-next/durability-baseline-build/release/deps/wal_protocol_regressions-f74165b778087bc3)
+
+thread 'checkpoint_preserves_a_transaction_that_started_before_its_cut' (3692) panicked at aerostore_core/tests/wal_protocol_regressions.rs:156:5:
+assertion `left == right` failed: checkpoint start-ID cutoff must not discard a later durable commit
+  left: Some(0)
+ right: Some(7)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+error: test failed, to rerun pass `-p aerostore_core --test wal_protocol_regressions`

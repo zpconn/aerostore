@@ -1,0 +1,29 @@
+Gnuplot not found, using plotters backend
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=5.009 interval_secs=5.009 interval_tps=348870.38 total_ops=1747504 arena_head_bytes=35509256 fresh_bytes=15348552 reclaimed_nodes=1395757 retired_backlog=2387 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=5.009 general_bytes=0 row_version_bytes=11828432 skip_node_bytes=2493920 skip_posting_bytes=793520 skip_tower_bytes=232680 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=10.015 interval_secs=5.006 interval_tps=313567.62 total_ops=3317207 arena_head_bytes=35541912 fresh_bytes=32656 reclaimed_nodes=1258055 retired_backlog=95 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=10.015 general_bytes=0 row_version_bytes=32472 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=184 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=15.029 interval_secs=5.014 interval_tps=330911.15 total_ops=4976436 arena_head_bytes=35720376 fresh_bytes=178464 reclaimed_nodes=1318811 retired_backlog=8673 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=15.029 general_bytes=0 row_version_bytes=178464 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=0 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=20.043 interval_secs=5.014 interval_tps=340264.80 total_ops=6682440 arena_head_bytes=35849648 fresh_bytes=129272 reclaimed_nodes=1369106 retired_backlog=4340 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=20.043 general_bytes=0 row_version_bytes=129272 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=0 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=25.056 interval_secs=5.013 interval_tps=330833.64 total_ops=8341011 arena_head_bytes=36243888 fresh_bytes=394240 reclaimed_nodes=1329277 retired_backlog=1967 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=25.056 general_bytes=0 row_version_bytes=394240 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=0 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=30.112 interval_secs=5.056 interval_tps=301398.20 total_ops=9864831 arena_head_bytes=36248640 fresh_bytes=4752 reclaimed_nodes=1221005 retired_backlog=0 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=30.112 general_bytes=0 row_version_bytes=4752 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=0 spill_bytes=0
+hyperfeed_crucible_correctness: profile=diagnostic table_rows=50000 index_postings=50000 exact_match=true
+hyperfeed_crucible_stability: profile=diagnostic tail_fresh_bytes=528264 fresh_growth_budget_bytes=20160704 early_interval_tps=331116.38 late_interval_tps=324165.55 retained_tps=0.9790 arena_head_bytes=36248640
+hyperfeed_crucible_gc_drain: profile=diagnostic retired_backlog=0 gc_recycle_errors=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_allocation_class: profile=diagnostic class=nodes allocated=64171 reachable=50001 retired=0 reusable=14170
+hyperfeed_crucible_allocation_class: profile=diagnostic class=postings allocated=64170 reachable=50000 retired=0 reusable=14170
+hyperfeed_crucible_allocation_class: profile=diagnostic class=towers allocated=64176 reachable=50001 retired=0 reusable=14175
+hyperfeed_crucible_allocation_class: profile=diagnostic class=tower_lanes allocated=129682 reachable=99879 retired=0 reusable=29803
+hyperfeed_crucible_allocation_audit: profile=diagnostic status=pass
+hyperfeed_crucible_retry: profile=diagnostic max_insert_attempts=1 pressure_state=0 retry_alloc=0 gc_recycle_errors=0
+hyperfeed_crucible_latency_bounds: profile=diagnostic engine=aerostore histogram_subdivisions=64 samples=9864831 p99_lower_ns=761856 p99_upper_ns=770047
+hyperfeed_crucible_config: profile=diagnostic mode=aerostore_only aerostore_shm_bytes=134217728 workers=16
+| Engine | TPS | Total Ops | p50 upper (us) | p90 upper (us) | p99 upper (us) | Upserts | Scans | Hot Upserts | Conflicts | Index Remove Fail | Index Insert Fail |
+| aerostore | 328758.10 | 9864831 | 10.49 | 26.11 | 770.05 | 7892011 | 1972820 | 394607 | 99403 | 0 | 0 |
+hyperfeed_crucible_engine_timing: profile=diagnostic aerostore_elapsed_secs=30.006 operation_failures=0
+hyperfeed_crucible_reclaim: profile=diagnostic vacuum_reclaimed_rows=7892011 index_retired_nodes=7892011 index_reclaimed_nodes=7892011 free_list_pushes=0 free_list_pops=0
+hyperfeed_crucible_occ: profile=diagnostic alloc_fresh=142814 reused=7848600

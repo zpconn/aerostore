@@ -1,0 +1,9 @@
+{
+  "archive": "/home/zpconn/code/aerostore/target/verification-next/candidate/source.tar",
+  "archive_sha256": "b560cfd34db00c4cf28f7dabe8bd11c97982dfd90d6f4c46fe12b27007075668",
+  "capture_manifest_sha256": "60134945100fc83c52158e9f06dbef110420f7de7c512554d6245d2d32a763e0",
+  "entries": 114,
+  "scope": "Every file named by the original candidate source_sha256 map; parent manifest remains unchanged",
+  "member_hashes_match_capture": true,
+  "created_utc": "2026-09-23T16:27:35Z"
+}

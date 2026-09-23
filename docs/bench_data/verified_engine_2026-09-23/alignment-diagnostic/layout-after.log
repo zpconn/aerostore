@@ -1,0 +1,10 @@
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/target/verification-next/candidate-aligned/source/aerostore_core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.44s
+     Running unittests src/lib.rs (/home/zpconn/code/aerostore/target/verification-next/candidate-aligned/layout-build/debug/deps/aerostore_core-458b83ba28fefdf8)
+
+running 1 test
+OCC_WAL_LAYOUT {"fields":{"format":0,"index_count":20,"index_offsets":24,"index_poisoned":152,"index_registry_lock":8,"index_registry_sealed":16,"recycle_alloc_fresh":12472,"recycle_alloc_from_primary":12456,"recycle_alloc_from_probe":12464,"recycle_alloc_from_starved":12448,"recycle_locks":4252,"recycle_pop_cas_fail":12488,"recycle_pop_empty":12480,"recycle_push_cas_fail":12504,"recycle_push_success":12496,"recycle_stash_starved":12512,"recycled_heads":156,"vacuum_requested":12444,"wal_stream":12544},"header_align":64,"header_size":12608,"wal_align":64,"wal_size":64}
+test occ_partitioned::wal_identity_layout_receipt::print_compiler_layout ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 191 filtered out; finished in 0.00s
+

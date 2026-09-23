@@ -1,0 +1,11 @@
+.................
+----------------------------------------------------------------------
+Ran 17 tests in 0.439s
+
+OK
+Report: /tmp/tmp9sby4bgn/target/report.json
+Profile pilot: INCOMPLETE/FAIL; whole engine: UNPROVED
+Report: /tmp/tmpe1dqj9oq/target/report.json
+Profile full: INCOMPLETE/FAIL; whole engine: UNPROVED
+Report: /tmp/tmp3xnuvbho/target/report.json
+Profile models: PASS; whole engine: UNPROVED

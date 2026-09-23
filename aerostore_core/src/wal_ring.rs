@@ -1,5 +1,5 @@
 use std::fmt;
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
 use rkyv::{
@@ -185,6 +185,10 @@ pub struct WalRing<const SLOTS: usize, const SLOT_BYTES: usize> {
     tail: AtomicU64,
     closed: AtomicU32,
     writer_epoch: AtomicU64,
+    writer_claimed: AtomicBool,
+    writer_file_bound: AtomicBool,
+    writer_file_dev: AtomicU64,
+    writer_file_ino: AtomicU64,
     slots: [WalRingSlot<SLOT_BYTES>; SLOTS],
 }
 
@@ -196,6 +200,10 @@ impl<const SLOTS: usize, const SLOT_BYTES: usize> WalRing<SLOTS, SLOT_BYTES> {
             tail: AtomicU64::new(0),
             closed: AtomicU32::new(0),
             writer_epoch: AtomicU64::new(0),
+            writer_claimed: AtomicBool::new(false),
+            writer_file_bound: AtomicBool::new(false),
+            writer_file_dev: AtomicU64::new(0),
+            writer_file_ino: AtomicU64::new(0),
             slots: std::array::from_fn(|idx| WalRingSlot::new(idx as u64)),
         }
     }
@@ -318,6 +326,9 @@ impl<const SLOTS: usize, const SLOT_BYTES: usize> WalRing<SLOTS, SLOT_BYTES> {
     }
 
     pub fn reset_for_restart(&self) {
+        // Exclusive restart only, after all previous producers and daemon have
+        // stopped. A normal daemon replacement must first join the old owner.
+        self.writer_claimed.store(false, Ordering::Release);
         self.head.store(0, Ordering::Release);
         self.tail.store(0, Ordering::Release);
         self.closed.store(0, Ordering::Release);
@@ -363,6 +374,47 @@ impl<const SLOTS: usize, const SLOT_BYTES: usize> SharedWalRing<SLOTS, SLOT_BYTE
     #[inline]
     pub fn ring_ptr(&self) -> RelPtr<WalRing<SLOTS, SLOT_BYTES>> {
         self.ring_ptr.clone()
+    }
+
+    /// Local mapping authority used to bind a table to one shared WAL stream.
+    #[inline]
+    pub(crate) fn shared_arena(&self) -> &Arc<ShmArena> {
+        &self.shm
+    }
+
+    pub(crate) fn claim_writer(&self, dev: u64, ino: u64) -> Result<(), WalRingError> {
+        let ring = self.ring_ref()?;
+        if ring
+            .writer_claimed
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_err()
+        {
+            return Err(WalRingError::InvalidConfiguration(
+                "WAL ring already has a writer; join it before replacement",
+            ));
+        }
+        if ring.writer_file_bound.load(Ordering::Acquire) {
+            if ring.writer_file_dev.load(Ordering::Relaxed) != dev
+                || ring.writer_file_ino.load(Ordering::Relaxed) != ino
+            {
+                ring.writer_claimed.store(false, Ordering::Release);
+                return Err(WalRingError::InvalidConfiguration(
+                    "WAL ring is bound to a different file; cold recovery required",
+                ));
+            }
+        } else {
+            ring.writer_file_dev.store(dev, Ordering::Relaxed);
+            ring.writer_file_ino.store(ino, Ordering::Relaxed);
+            ring.writer_file_bound.store(true, Ordering::Release);
+        }
+        Ok(())
+    }
+
+    pub(crate) fn release_writer_after_join(&self) -> Result<(), WalRingError> {
+        self.ring_ref()?
+            .writer_claimed
+            .store(false, Ordering::Release);
+        Ok(())
     }
 
     #[inline]

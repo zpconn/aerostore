@@ -11,6 +11,21 @@ use crate::{RetryBackoff, RetryPolicy};
 const EMPTY_OFFSET: u32 = 0;
 const PK_INLINE_BYTES: usize = 64;
 
+#[cfg(test)]
+thread_local! {
+    static PK_ABSENCE_OBSERVED_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(test)]
+fn pk_absence_observed_hook() {
+    PK_ABSENCE_OBSERVED_HOOK.with(|hook| {
+        if let Some(hook) = hook.borrow_mut().take() {
+            hook();
+        }
+    });
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SnapshotExecutionMode {
     StrictSnapshot,
@@ -241,7 +256,8 @@ impl ShmPrimaryKeyMap {
 
         let hash = hash_key(key_bytes);
         let bucket = self.bucket_ref_for_hash(hash)?;
-        let row_id = self.find_in_bucket(bucket, key_bytes, hash)?;
+        let head = bucket.head.load(AtomicOrdering::Acquire);
+        let row_id = self.find_from_head(head, key_bytes, hash)?;
         Ok(row_id.map(|id| id as usize))
     }
 
@@ -266,37 +282,39 @@ impl ShmPrimaryKeyMap {
             });
         }
 
-        if let Some(existing) = self.get(key)? {
-            return Ok(existing);
-        }
-
         let hash = hash_key(key_bytes);
         let bucket = self.bucket_ref_for_hash(hash)?;
+        let mut head = bucket.head.load(AtomicOrdering::Acquire);
+        if let Some(existing) = self.find_from_head(head, key_bytes, hash)? {
+            return Ok(existing as usize);
+        }
+        #[cfg(test)]
+        pk_absence_observed_hook();
+
         let entry_offset = self.allocate_entry(hash, key_bytes, row_id_u32)?;
 
         loop {
-            let head = bucket.head.load(AtomicOrdering::Acquire);
             let entry = self.entry_ref(entry_offset)?;
             entry.next.store(head, AtomicOrdering::Release);
 
-            if bucket
-                .head
-                .compare_exchange(
-                    head,
-                    entry_offset,
-                    AtomicOrdering::AcqRel,
-                    AtomicOrdering::Acquire,
-                )
-                .is_ok()
-            {
-                self.bump_next_row_id(row_id_u32.saturating_add(1))?;
-                header
-                    .distinct_key_count
-                    .fetch_add(1, AtomicOrdering::AcqRel);
-                return Ok(row_id_u32 as usize);
+            match bucket.head.compare_exchange(
+                head,
+                entry_offset,
+                AtomicOrdering::AcqRel,
+                AtomicOrdering::Acquire,
+            ) {
+                Ok(_) => {
+                    self.bump_next_row_id(row_id_u32.saturating_add(1))?;
+                    header
+                        .distinct_key_count
+                        .fetch_add(1, AtomicOrdering::AcqRel);
+                    return Ok(row_id_u32 as usize);
+                }
+                Err(observed) => head = observed,
             }
 
-            if let Some(existing) = self.find_in_bucket(bucket, key_bytes, hash)? {
+            if let Some(existing) = self.find_from_head(head, key_bytes, hash)? {
+                self.recycle_unpublished_entry(entry_offset)?;
                 return Ok(existing as usize);
             }
 
@@ -319,37 +337,39 @@ impl ShmPrimaryKeyMap {
             });
         }
 
-        if let Some(existing) = self.get(key)? {
-            return Ok(existing);
-        }
-
-        let reserved_row_id = self.reserve_row_id()?;
         let hash = hash_key(key_bytes);
         let bucket = self.bucket_ref_for_hash(hash)?;
+        let mut head = bucket.head.load(AtomicOrdering::Acquire);
+        if let Some(existing) = self.find_from_head(head, key_bytes, hash)? {
+            return Ok(existing as usize);
+        }
+        #[cfg(test)]
+        pk_absence_observed_hook();
+
+        let reserved_row_id = self.reserve_row_id()?;
         let entry_offset = self.allocate_entry(hash, key_bytes, reserved_row_id)?;
 
         loop {
-            let head = bucket.head.load(AtomicOrdering::Acquire);
             let entry = self.entry_ref(entry_offset)?;
             entry.next.store(head, AtomicOrdering::Release);
 
-            if bucket
-                .head
-                .compare_exchange(
-                    head,
-                    entry_offset,
-                    AtomicOrdering::AcqRel,
-                    AtomicOrdering::Acquire,
-                )
-                .is_ok()
-            {
-                self.header_ref()?
-                    .distinct_key_count
-                    .fetch_add(1, AtomicOrdering::AcqRel);
-                return Ok(reserved_row_id as usize);
+            match bucket.head.compare_exchange(
+                head,
+                entry_offset,
+                AtomicOrdering::AcqRel,
+                AtomicOrdering::Acquire,
+            ) {
+                Ok(_) => {
+                    self.header_ref()?
+                        .distinct_key_count
+                        .fetch_add(1, AtomicOrdering::AcqRel);
+                    return Ok(reserved_row_id as usize);
+                }
+                Err(observed) => head = observed,
             }
 
-            if let Some(existing) = self.find_in_bucket(bucket, key_bytes, hash)? {
+            if let Some(existing) = self.find_from_head(head, key_bytes, hash)? {
+                self.recycle_unpublished_entry(entry_offset)?;
                 return Ok(existing as usize);
             }
 
@@ -421,13 +441,27 @@ impl ShmPrimaryKeyMap {
             .load(AtomicOrdering::Acquire))
     }
 
-    fn find_in_bucket(
+    fn recycle_unpublished_entry(&self, offset: u32) -> Result<(), PrimaryKeyMapError> {
+        // This candidate never won a head CAS, so no shared reader can hold it.
+        // PkEntry owns only inline bytes/atomics and needs no destructor.
+        self.shm.chunked_arena().recycle_raw(
+            offset,
+            std::mem::size_of::<PkEntry>(),
+            std::mem::align_of::<PkEntry>(),
+        )?;
+        Ok(())
+    }
+
+    // Published entries are immutable and never removed. Absence is therefore
+    // stable for this exact head, but not for a later head loaded before CAS.
+    // Every insert must either publish against the searched head or search the
+    // head returned by a failed CAS before retrying.
+    fn find_from_head(
         &self,
-        bucket: &PkBucket,
+        mut curr: u32,
         key: &[u8],
         hash: u64,
     ) -> Result<Option<u32>, PrimaryKeyMapError> {
-        let mut curr = bucket.head.load(AtomicOrdering::Acquire);
         while curr != EMPTY_OFFSET {
             let entry = self.entry_ref(curr)?;
             if entry.key_equals(key, hash) {
@@ -754,6 +788,112 @@ mod tests {
         let second = map.get_or_insert("UAL123").expect("second");
         assert_eq!(first, second);
         assert_eq!(map.distinct_key_count(), 1);
+    }
+
+    fn race_primary_key_publication(
+        paused_row: Option<usize>,
+        winning_row: Option<usize>,
+        winning_key: &str,
+    ) {
+        use std::sync::mpsc;
+        use std::time::Duration;
+
+        let shm = Arc::new(ShmArena::new(8 << 20).expect("shm"));
+        // One bucket includes an unrelated predecessor in every searched chain.
+        let map = Arc::new(ShmPrimaryKeyMap::new_in_shared(shm, 1, 128).expect("pk map"));
+        map.insert_existing("COLLISION", 7).expect("seed collision");
+        let (observed_tx, observed_rx) = mpsc::channel();
+        let (resume_tx, resume_rx) = mpsc::channel();
+        let paused_map = Arc::clone(&map);
+        let paused = std::thread::spawn(move || {
+            super::PK_ABSENCE_OBSERVED_HOOK.with(|hook| {
+                *hook.borrow_mut() = Some(Box::new(move || {
+                    observed_tx.send(()).expect("announce absence");
+                    resume_rx
+                        .recv_timeout(Duration::from_secs(5))
+                        .expect("resume insert");
+                }));
+            });
+            match paused_row {
+                Some(row) => paused_map.insert_existing("SAME", row),
+                None => paused_map.get_or_insert("SAME"),
+            }
+            .expect("paused insertion")
+        });
+        observed_rx
+            .recv_timeout(Duration::from_secs(5))
+            .expect("absence observed");
+        let winner = match winning_row {
+            Some(row) => map.insert_existing(winning_key, row),
+            None => map.get_or_insert(winning_key),
+        }
+        .expect("winning insertion");
+        resume_tx.send(()).expect("resume loser");
+        let loser = paused.join().expect("insertion worker");
+        assert_eq!(map.get("SAME").expect("paused lookup"), Some(loser));
+        assert_eq!(map.get(winning_key).expect("winning lookup"), Some(winner));
+        assert_eq!(map.get("COLLISION").expect("lookup collision"), Some(7));
+        if winning_key == "SAME" {
+            assert_eq!(
+                loser, winner,
+                "a checked-absent key was published before the paused CAS"
+            );
+            assert_eq!(map.distinct_key_count(), 2, "one entry per key");
+            assert_eq!(
+                map.shm.free_list_depth_estimate(4),
+                (1, false),
+                "the unpublished candidate must be recycled"
+            );
+            let allocated_before = map.shm.fresh_allocation_bytes();
+            map.get_or_insert("AFTER").expect("reuse candidate storage");
+            assert_eq!(
+                map.shm.fresh_allocation_bytes(),
+                allocated_before,
+                "a subsequent insertion should reuse the losing candidate"
+            );
+        } else {
+            assert_ne!(loser, winner, "different keys must retain their chosen IDs");
+            assert_eq!(
+                map.distinct_key_count(),
+                3,
+                "both colliding inserts survive"
+            );
+            assert_eq!(
+                map.shm.free_list_depth_estimate(4),
+                (0, false),
+                "a CAS retry should reuse its still-private candidate"
+            );
+        }
+    }
+
+    #[test]
+    fn pk_map_racing_get_or_insert_returns_existing_winner() {
+        race_primary_key_publication(None, None, "SAME");
+    }
+
+    #[test]
+    fn pk_map_racing_insert_existing_returns_existing_winner() {
+        race_primary_key_publication(Some(11), Some(23), "SAME");
+    }
+
+    #[test]
+    fn pk_map_racing_get_or_insert_observes_explicit_winner() {
+        race_primary_key_publication(None, Some(23), "SAME");
+    }
+
+    #[test]
+    fn pk_map_racing_insert_existing_observes_allocated_winner() {
+        race_primary_key_publication(Some(11), None, "SAME");
+    }
+
+    #[test]
+    fn pk_map_get_or_insert_retries_after_an_unrelated_collision() {
+        race_primary_key_publication(None, Some(23), "OTHER");
+    }
+
+    #[test]
+    fn pk_map_insert_existing_retries_after_an_unrelated_collision() {
+        race_primary_key_publication(Some(11), Some(23), "OTHER");
     }
 
     #[test]

@@ -606,15 +606,12 @@ impl SharedFlightDb {
             )?
         };
 
+        let committer = initial_wal_committer(&table, &wal_path, &ring)
+            .map_err(|err| format!("failed to initialize a compatible WAL committer: {}", err))?;
         let wal_daemon = spawn_wal_writer_daemon(ring.clone(), &wal_path)
             .map_err(|err| format!("failed to spawn WAL writer daemon: {}", err))?;
-        let committer =
-            aerostore_core::OccCommitter::<WAL_RING_SLOTS, WAL_RING_SLOT_BYTES>::new_synchronous(
-                &wal_path,
-            )
-            .map_err(|err| format!("failed to initialize synchronous committer: {}", err))?;
         let wal_runtime = WalRuntime {
-            configured_mode: SynchronousCommit::On,
+            configured_mode: committer.mode(),
             committer,
             ring,
             _wal_daemon: wal_daemon,
@@ -849,10 +846,13 @@ impl SharedFlightDb {
             .map_err(|_| "wal runtime lock poisoned".to_string())?;
 
         if runtime.configured_mode == mode {
-            return Ok(());
+            return runtime
+                .committer
+                .validate_for_table(&self.table)
+                .map_err(|err| format!("WAL mode is incompatible with this table: {}", err));
         }
 
-        runtime.committer = match mode {
+        let committer = match mode {
             SynchronousCommit::On => aerostore_core::OccCommitter::<
                 WAL_RING_SLOTS,
                 WAL_RING_SLOT_BYTES,
@@ -863,6 +863,10 @@ impl SharedFlightDb {
                 WAL_RING_SLOT_BYTES,
             >::new_asynchronous(runtime.ring.clone()),
         };
+        committer
+            .validate_for_table(&self.table)
+            .map_err(|err| format!("cannot change WAL mode: {}", err))?;
+        runtime.committer = committer;
         runtime.configured_mode = mode;
         Ok(())
     }
@@ -902,7 +906,7 @@ impl SharedFlightDb {
 
         if runtime.configured_mode == SynchronousCommit::Off {
             return Err(
-                "checkpoint requires synchronous_commit=on (set aerostore.synchronous_commit first)"
+                "checkpoint requires a table using the synchronous WAL stream; changing an established stream requires exclusive cold recovery"
                     .to_string(),
             );
         }
@@ -1168,8 +1172,29 @@ impl SharedFlightDb {
     }
 }
 
-/// Native OCC has already published rows and their bound indexes together.
-/// A subsequent WAL failure is fatal and must never retry the committed work.
+// A fresh table defaults to synchronous commits. A warm table must resume its
+// existing stream, rather than advertise a mode which will reject every write.
+fn initial_wal_committer<
+    T: Copy + Send + Sync + 'static,
+    const SLOTS: usize,
+    const SLOT_BYTES: usize,
+>(
+    table: &OccTable<T>,
+    wal_path: &Path,
+    ring: &SharedWalRing<SLOTS, SLOT_BYTES>,
+) -> Result<aerostore_core::OccCommitter<SLOTS, SLOT_BYTES>, WalWriterError> {
+    let synchronous = aerostore_core::OccCommitter::new_synchronous(wal_path)?;
+    if synchronous.validate_for_table(table).is_ok() {
+        return Ok(synchronous);
+    }
+    let asynchronous = aerostore_core::OccCommitter::new_asynchronous(ring.clone());
+    asynchronous.validate_for_table(table)?;
+    Ok(asynchronous)
+}
+
+/// Only a validation conflict can be retried automatically. WAL rejection now
+/// precedes publication; an error after WAL acceptance can still recover as a
+/// commit and must remain a fatal, explicitly indeterminate outcome.
 fn finish_batch_commit(
     commit_result: Result<usize, WalWriterError>,
 ) -> Result<(), BatchRetryError> {
@@ -1181,8 +1206,14 @@ fn finish_batch_commit(
         Err(err @ WalWriterError::Occ(_)) => {
             Err(BatchRetryError::Fatal(format!("commit failed: {}", err)))
         }
+        Err(
+            err @ (WalWriterError::Indeterminate { .. } | WalWriterError::PublicationAfterWal(_)),
+        ) => Err(BatchRetryError::Fatal(format!(
+            "commit outcome is indeterminate: {}",
+            err
+        ))),
         Err(err) => Err(BatchRetryError::Fatal(format!(
-            "rows and indexes committed atomically, but WAL failed: {}",
+            "commit rejected before row publication: {}",
             err
         ))),
     }
@@ -1825,7 +1856,50 @@ mod tests {
     }
 
     #[test]
-    fn wal_failure_after_atomic_publication_keeps_indexes_and_is_not_retryable() {
+    fn warm_table_committer_resumes_its_bound_stream() {
+        for asynchronous in [false, true] {
+            let temporary = tempfile::tempdir().unwrap();
+            let wal_path = temporary.path().join("wal");
+            let shm = Arc::new(ShmArena::new(16 << 20).unwrap());
+            let table = OccTable::new(Arc::clone(&shm), 1).unwrap();
+            let before = make_state("UAL123", 37.6, -122.4, 32000, 450, 100);
+            table.seed_row(0, before).unwrap();
+            let ring = SharedWalRing::<8, 1024>::create(Arc::clone(&shm)).unwrap();
+            assert_eq!(
+                initial_wal_committer(&table, &wal_path, &ring)
+                    .unwrap()
+                    .mode(),
+                SynchronousCommit::On
+            );
+            let mut committer = if asynchronous {
+                aerostore_core::OccCommitter::new_asynchronous(ring.clone())
+            } else {
+                aerostore_core::OccCommitter::new_synchronous(&wal_path).unwrap()
+            };
+            let mut after = before;
+            after.gs = 455;
+            let mut tx = table.begin_transaction().unwrap();
+            table.write(&mut tx, 0, after).unwrap();
+            committer.commit(&table, &mut tx).unwrap();
+            let attached = OccTable::<FlightState>::from_existing(
+                shm,
+                table.shared_header_offset(),
+                table.index_slot_offsets(),
+            )
+            .unwrap();
+            let resumed = initial_wal_committer(&attached, &wal_path, &ring).unwrap();
+            assert_eq!(resumed.mode(), committer.mode());
+            let incompatible = if asynchronous {
+                aerostore_core::OccCommitter::new_synchronous(&wal_path).unwrap()
+            } else {
+                aerostore_core::OccCommitter::new_asynchronous(ring.clone())
+            };
+            assert!(incompatible.validate_for_table(&attached).is_err());
+        }
+    }
+
+    #[test]
+    fn wal_rejection_preserves_rows_and_indexes_and_is_not_automatically_retryable() {
         let shm = Arc::new(ShmArena::new(16 << 20).unwrap());
         let mut table = OccTable::new(Arc::clone(&shm), 1).unwrap();
         let indexes = FlightIndexes::new(Arc::clone(&shm));
@@ -1848,20 +1922,34 @@ mod tests {
             &commit_result,
             Err(WalWriterError::Ring(aerostore_core::WalRingError::Closed))
         ));
-        assert_eq!(table.snapshot_latest_rows().unwrap(), vec![(0, after)]);
+        assert_eq!(table.snapshot_latest_rows().unwrap(), vec![(0, before)]);
         let error = finish_batch_commit(commit_result);
         match error {
             Err(BatchRetryError::Fatal(message)) => {
                 assert!(message.contains("wal ring is closed"));
-                assert!(message.contains("rows and indexes committed atomically"));
+                assert!(message.contains("rejected before row publication"));
             }
-            _ => panic!("a postcommit WAL failure must be fatal, never retryable"),
+            _ => panic!("a closed WAL ring needs intervention, not an automatic retry"),
         }
-        assert_eq!(indexes.gs.traverse(), vec![(IndexValue::I64(455), vec![0])]);
+        assert_eq!(indexes.gs.traverse(), vec![(IndexValue::I64(450), vec![0])]);
         assert_eq!(
             indexes.updated_at.traverse(),
-            vec![(IndexValue::I64(101), vec![0])]
+            vec![(IndexValue::I64(100), vec![0])]
         );
+    }
+
+    #[test]
+    fn publication_failure_after_wal_acceptance_is_never_a_serialization_retry() {
+        let error = finish_batch_commit(Err(WalWriterError::PublicationAfterWal(
+            OccError::SerializationFailure,
+        )));
+        match error {
+            Err(BatchRetryError::Fatal(message)) => {
+                assert!(message.contains("indeterminate"));
+                assert!(message.contains("recovery required"));
+            }
+            _ => panic!("WAL-accepted work must never be retried as an aborted transaction"),
+        }
     }
 
     fn make_state(

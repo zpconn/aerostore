@@ -1,0 +1,103 @@
+{
+  "commit": "a382ce3d06d4fb690ba09632d7b3a38b8902c65a",
+  "compiler": "rustc 1.93.1 (01f6ddf75 2026-02-11)",
+  "archive_sha256": "d9e29f288f93ec90824f6c97f9d3972e55e2f31aa2a43a7ac6393811e9e5609d",
+  "test_source_sha256": "5e171958989382e19f0c3a541bd63ca372ebe5a9627c8310ccf128dbbf014fe9",
+  "cases": [
+    {
+      "name": "failed_wal_encoding_does_not_publish_a_transaction",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "-p",
+        "aerostore_core",
+        "--release",
+        "--test",
+        "wal_protocol_regressions",
+        "failed_wal_encoding_does_not_publish_a_transaction",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "returncode": 101,
+      "log": "failed_wal_encoding_does_not_publish_a_transaction.baseline.log"
+    },
+    {
+      "name": "acknowledged_dependent_commit_recovers_with_its_input",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "-p",
+        "aerostore_core",
+        "--release",
+        "--test",
+        "wal_protocol_regressions",
+        "acknowledged_dependent_commit_recovers_with_its_input",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "returncode": 101,
+      "log": "acknowledged_dependent_commit_recovers_with_its_input.baseline.log"
+    },
+    {
+      "name": "checkpoint_preserves_a_transaction_that_started_before_its_cut",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "-p",
+        "aerostore_core",
+        "--release",
+        "--test",
+        "wal_protocol_regressions",
+        "checkpoint_preserves_a_transaction_that_started_before_its_cut",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "returncode": 101,
+      "log": "checkpoint_preserves_a_transaction_that_started_before_its_cut.baseline.log"
+    },
+    {
+      "name": "checkpoint_cannot_truncate_a_commit_missing_from_its_snapshot",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "-p",
+        "aerostore_core",
+        "--release",
+        "--test",
+        "wal_protocol_regressions",
+        "checkpoint_cannot_truncate_a_commit_missing_from_its_snapshot",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "returncode": 101,
+      "log": "checkpoint_cannot_truncate_a_commit_missing_from_its_snapshot.baseline.log"
+    },
+    {
+      "name": "synchronous_acknowledgement_cannot_lose_an_async_dependency",
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "-p",
+        "aerostore_core",
+        "--release",
+        "--test",
+        "wal_protocol_regressions",
+        "synchronous_acknowledgement_cannot_lose_an_async_dependency",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "returncode": 101,
+      "log": "synchronous_acknowledgement_cannot_lose_an_async_dependency.baseline.log"
+    }
+  ]
+}

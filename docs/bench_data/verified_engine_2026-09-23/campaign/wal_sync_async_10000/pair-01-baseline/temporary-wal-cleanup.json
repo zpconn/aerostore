@@ -1,0 +1,15 @@
+{
+  "reason": "Removed disposable benchmark WAL payloads left by the archived incomplete comparison; retain test output, result and payload identities. No application data.",
+  "removed": [
+    {
+      "path": "tmp/aerostore_wal_ring_benchmark/sync_mode.wal",
+      "size": 1000000,
+      "sha256": "324f0fbe579e48dc8f94345b6a922c9f6468c8174b0d8404499670a78411c575"
+    },
+    {
+      "path": "tmp/aerostore_wal_ring_benchmark/async_mode.wal",
+      "size": 1000000,
+      "sha256": "570663037838721796a599563e4f8b66df6c5ad9a5a3228ca1a4cbb1cbcf5f85"
+    }
+  ]
+}

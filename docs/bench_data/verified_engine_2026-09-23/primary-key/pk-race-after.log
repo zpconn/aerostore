@@ -1,0 +1,17 @@
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/aerostore_core)
+    Finished `release` profile [optimized] target(s) in 3.76s
+     Running unittests src/lib.rs (target/verification-next/workspace-tests/release/deps/aerostore_core-749fc51d62723f0b)
+
+running 9 tests
+test execution::tests::pk_map_capacity_exceeded_is_reported ... ok
+test execution::tests::pk_map_get_or_insert_is_idempotent_for_same_key ... ok
+test execution::tests::pk_map_get_or_insert_retries_after_an_unrelated_collision ... ok
+test execution::tests::pk_map_insert_existing_bumps_next_row_id_floor ... ok
+test execution::tests::pk_map_insert_existing_retries_after_an_unrelated_collision ... ok
+test execution::tests::pk_map_racing_get_or_insert_observes_explicit_winner ... ok
+test execution::tests::pk_map_racing_get_or_insert_returns_existing_winner ... ok
+test execution::tests::pk_map_racing_insert_existing_observes_allocated_winner ... ok
+test execution::tests::pk_map_racing_insert_existing_returns_existing_winner ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 180 filtered out; finished in 0.00s
+

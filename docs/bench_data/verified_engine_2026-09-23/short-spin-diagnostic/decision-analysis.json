@@ -1,0 +1,27 @@
+{
+  "scope": "Rejected short diagnostic; no runtime patch adopted and no full performance acceptance",
+  "all_six_correctness_checks_passed": true,
+  "disposable_benchmark_tmp_removed": true,
+  "post_run_source_and_binary_validation_passed": true,
+  "throughput_median_ratio": 0.9783785891541673,
+  "throughput_pair_ratios": [
+    0.9773817519496861,
+    1.0441385288419611,
+    0.9783785891541673
+  ],
+  "median_throughput_at_least_1_03": false,
+  "every_throughput_pair_at_least_1_0": false,
+  "conservative_median_p99_ratio_interval": [
+    1.6562626362810995,
+    1.6850316806102361
+  ],
+  "median_p99_upper_bound_at_most_1_10": false,
+  "every_p99_upper_bound_at_most_1_25": false,
+  "noise": [
+    "throughput varies beyond the fixed noise bound",
+    "p99 interval spread exceeds the fixed noise bound"
+  ],
+  "retry_margin_passed": true,
+  "arena_margin_passed": true,
+  "performance_acceptance": false
+}

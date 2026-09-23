@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "repetitions": 100,
+  "test": "forked_primary_key_map_updates_are_cross_process_visible",
+  "elapsed_seconds": 0.12461304099997506,
+  "binary": "target/verification-next/workspace-tests/release/deps/shm_shared_memory-de7abf31ee418bc6",
+  "binary_sha256": "9625c5e8cb4c1b09e2214fb420d3fe0d68b6004a8686f3d087a9e541c72d0f7a",
+  "source_sha256": "85d32e3d42c8629c052ba36b769ce625148b297e02c5231504efc9f5cd73d9ce",
+  "limitation": "Repeated regression evidence, not a proof of all interleavings.",
+  "required_test_result": "1 passed; 0 failed",
+  "test_presence_checked_each_run": true
+}

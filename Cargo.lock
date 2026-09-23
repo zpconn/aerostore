@@ -49,6 +49,7 @@ dependencies = [
  "crossbeam-skiplist",
  "serde",
  "tcl",
+ "tempfile",
  "tokio",
 ]
 

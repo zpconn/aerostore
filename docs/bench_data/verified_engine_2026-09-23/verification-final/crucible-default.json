@@ -1,0 +1,912 @@
+{
+  "format_version": 1,
+  "config": {
+    "engine": "aerostore",
+    "mode": "all",
+    "families": 8,
+    "cycles": 1,
+    "workers": 4,
+    "seed": 20260922,
+    "shm_mib": 128,
+    "output": "/home/zpconn/code/aerostore/target/verification-next/formal-poison-lock/crucible-default.json"
+  },
+  "trace_fingerprint": "fnv1a64:afb31f4aff1d7672",
+  "scope": [
+    "Synthetic single-host model; no proprietary HyperFeed code or measured production mix",
+    "Identical phased trace, full returned rows and per-phase state/output parity against serial reference",
+    "One process per worker, rotating assignments; distinct events ordered per family, duplicate deliveries compete",
+    "128 preallocated typed slots/family; native guards before Aerostore snapshot, PostgreSQL FOR UPDATE at transaction start",
+    "Aerostore native transactional indexes protect empty predicates and publish with rows; stale indexed snapshots retry explicitly",
+    "Aerostore direct shared memory vs PostgreSQL local client/server; not equal transport overhead",
+    "WAL enabled, asynchronous acknowledgement in both; clean WAL drain checked, crash durability untested",
+    "Native contract probes supply no predicate lock and determine overall compatibility status",
+    "No speedup claim: rates include process dispatch/barriers and bounded fixture coordination"
+  ],
+  "contracts": [
+    {
+      "engine": "aerostore",
+      "cases": [
+        {
+          "name": "serializable_absent_candidate_creation",
+          "passed": true,
+          "details": "Expected one commit and one serialization rejection after overlapping empty candidate searches activate different slots for the same key. Observed initial counts=0/0, committed=1, rejected=1, matching_rows=1, matching_index_postings=1. Native predicate dependencies and automatic index maintenance; no caller-supplied locks."
+        },
+        {
+          "name": "committed_row_and_index_visibility",
+          "passed": true,
+          "details": "Expected staged writes to remain invisible, and native commit to publish row and index together. Before commit row=Some(10), new_key=[]; immediately after commit row=Some(20), new_key=[0], fresh_reader_committed=true, overlapping_reader_committed=false, raw_old_postings=[], raw_new_postings=[0]."
+        },
+        {
+          "name": "index_candidates_respect_transaction_snapshot",
+          "passed": true,
+          "details": "Expected the old snapshot's row to remain discoverable after a key move, or explicit serialization rejection. Independent witness sees row=Some(10); old_key_candidates=[], rejected_at_lookup=true, candidate_reader_committed=false. Operational errors are not accepted as serialization protection."
+        },
+        {
+          "name": "savepoint_and_whole_message_rollback",
+          "passed": true,
+          "details": "Expected rollback to preserve pre-savepoint multirow writes [90,60,0], discard nested candidate writes, and leave the committed transfer unchanged after a later whole-message abort. Observed restored=[Some(90), Some(60), Some(0)], committed=true, committed_rows=[(0, 90), (1, 60), (2, 0)], after_abort=[(0, 90), (1, 60), (2, 0)]. This probe covers native table state; it makes no claim about an external index overlay."
+        },
+        {
+          "name": "multirow_table_snapshot_visibility",
+          "passed": true,
+          "details": "Expected a reader spanning a two-row transfer to retain [100,50] in its snapshot, and a new reader to observe [90,60]. Observed old_reader=[Some(100),Some(50)], writer_committed=true, new_reader=[Some(90), Some(60)], new_reader_committed=true. Both views must conserve total=150."
+        },
+        {
+          "name": "concrete_read_dependency_write_skew",
+          "passed": true,
+          "details": "Expected one serialization rejection when overlapping transactions read both active records and each deactivates a different record. Observed committed=1, rejected=1, remaining_active=1, final_rows=[(0, 0), (1, 1)]. This contrasts concrete row-read dependencies with the separate empty-candidate probe."
+        }
+      ]
+    }
+  ],
+  "replays": [
+    {
+      "engine": "aerostore",
+      "passed": true,
+      "error": null,
+      "phases": [
+        {
+          "name": "cycle-000-plan-or-adhoc",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 6,
+          "outputs": 8,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 8,
+            "updated_views": 8,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.00082006,
+          "state_fingerprint": "fnv1a64:6ede0e6dd65a4dd1",
+          "arena_high_water_bytes": 1723288,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 8,
+            "active_positions": 2,
+            "active_events": 8,
+            "active_outputs": 8,
+            "active_dedup": 8,
+            "provenance_checked": 26
+          }
+        },
+        {
+          "name": "cycle-000-position-source-1",
+          "messages": 32,
+          "committed_messages": 32,
+          "retries": 7,
+          "outputs": 8,
+          "outcome_counts": {
+            "duplicates": 24,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 8,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.000617792,
+          "state_fingerprint": "fnv1a64:1faeb81b6d603f89",
+          "arena_high_water_bytes": 1734344,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 8,
+            "active_positions": 10,
+            "active_events": 8,
+            "active_outputs": 16,
+            "active_dedup": 16,
+            "provenance_checked": 42
+          }
+        },
+        {
+          "name": "cycle-000-duplicate-position",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 0,
+          "outputs": 0,
+          "outcome_counts": {
+            "duplicates": 8,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 0,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.00008257,
+          "state_fingerprint": "fnv1a64:1faeb81b6d603f89",
+          "arena_high_water_bytes": 1734344,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 8,
+            "active_positions": 10,
+            "active_events": 8,
+            "active_outputs": 16,
+            "active_dedup": 16,
+            "provenance_checked": 42
+          }
+        },
+        {
+          "name": "cycle-000-delayed-position",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 0,
+          "outputs": 0,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 0,
+            "ignored_stale_observations": 8,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.000129141,
+          "state_fingerprint": "fnv1a64:e420bcfc4c2857a5",
+          "arena_high_water_bytes": 1737088,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 8,
+            "active_positions": 10,
+            "active_events": 8,
+            "active_outputs": 16,
+            "active_dedup": 24,
+            "provenance_checked": 42
+          }
+        },
+        {
+          "name": "cycle-000-second-provenance",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 4,
+          "outputs": 16,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 16,
+            "updated_views": 16,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.000553925,
+          "state_fingerprint": "fnv1a64:9b4f0e708a9317f3",
+          "arena_high_water_bytes": 1760976,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 24,
+            "active_positions": 10,
+            "active_events": 24,
+            "active_outputs": 32,
+            "active_dedup": 32,
+            "provenance_checked": 90
+          }
+        },
+        {
+          "name": "cycle-000-position-source-2",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 6,
+          "outputs": 16,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 16,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.000798492,
+          "state_fingerprint": "fnv1a64:203fbf43fccca08d",
+          "arena_high_water_bytes": 1780576,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 24,
+            "active_positions": 26,
+            "active_events": 24,
+            "active_outputs": 48,
+            "active_dedup": 40,
+            "provenance_checked": 122
+          }
+        },
+        {
+          "name": "cycle-000-failed-fork-savepoint",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 0,
+          "outputs": 0,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 8,
+            "created_views": 0,
+            "updated_views": 0,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.00014429,
+          "state_fingerprint": "fnv1a64:4a9fe361e5f750d3",
+          "arena_high_water_bytes": 1786440,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 24,
+            "active_positions": 26,
+            "active_events": 24,
+            "active_outputs": 48,
+            "active_dedup": 48,
+            "provenance_checked": 122
+          }
+        },
+        {
+          "name": "cycle-000-position-after-failed-fork",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 6,
+          "outputs": 16,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 16,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.000860188,
+          "state_fingerprint": "fnv1a64:391a060819985377",
+          "arena_high_water_bytes": 1808328,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 24,
+            "active_positions": 42,
+            "active_events": 24,
+            "active_outputs": 64,
+            "active_dedup": 56,
+            "provenance_checked": 154
+          }
+        },
+        {
+          "name": "cycle-000-third-provenance",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 6,
+          "outputs": 32,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 32,
+            "updated_views": 32,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.000934208,
+          "state_fingerprint": "fnv1a64:48b1a510f1a88a81",
+          "arena_high_water_bytes": 1850832,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 42,
+            "active_events": 56,
+            "active_outputs": 80,
+            "active_dedup": 64,
+            "provenance_checked": 234
+          }
+        },
+        {
+          "name": "cycle-000-position-source-4",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 6,
+          "outputs": 32,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 32,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.000983705,
+          "state_fingerprint": "fnv1a64:c49838cc372ebff6",
+          "arena_high_water_bytes": 1885808,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 74,
+            "active_events": 56,
+            "active_outputs": 96,
+            "active_dedup": 72,
+            "provenance_checked": 282
+          }
+        },
+        {
+          "name": "cycle-000-invalid-position",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 0,
+          "outputs": 0,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 8,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 0,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.000095646,
+          "state_fingerprint": "fnv1a64:c2fbd8d572092c44",
+          "arena_high_water_bytes": 1888344,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 74,
+            "active_events": 56,
+            "active_outputs": 96,
+            "active_dedup": 80,
+            "provenance_checked": 282
+          }
+        },
+        {
+          "name": "cycle-000-whole-message-abort",
+          "messages": 8,
+          "committed_messages": 0,
+          "retries": 0,
+          "outputs": 0,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 8,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 0,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.000163724,
+          "state_fingerprint": "fnv1a64:c2fbd8d572092c44",
+          "arena_high_water_bytes": 1904984,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 74,
+            "active_events": 56,
+            "active_outputs": 96,
+            "active_dedup": 80,
+            "provenance_checked": 282
+          }
+        },
+        {
+          "name": "cycle-000-reschedule",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 6,
+          "outputs": 32,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 32,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.00098681,
+          "state_fingerprint": "fnv1a64:ed0ad1574b120b52",
+          "arena_high_water_bytes": 1934184,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 106,
+            "active_events": 56,
+            "active_outputs": 128,
+            "active_dedup": 88,
+            "provenance_checked": 346
+          }
+        },
+        {
+          "name": "cycle-000-project-due",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 0,
+          "outputs": 56,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 0,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.000416534,
+          "state_fingerprint": "fnv1a64:85373ddcd1605629",
+          "arena_high_water_bytes": 1965536,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 106,
+            "active_events": 56,
+            "active_outputs": 144,
+            "active_dedup": 96,
+            "provenance_checked": 362
+          }
+        },
+        {
+          "name": "cycle-000-diversion",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 6,
+          "outputs": 32,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 32,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.000995879,
+          "state_fingerprint": "fnv1a64:e0270bebfd800c33",
+          "arena_high_water_bytes": 1995888,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 106,
+            "active_events": 56,
+            "active_outputs": 152,
+            "active_dedup": 104,
+            "provenance_checked": 370
+          }
+        },
+        {
+          "name": "cycle-000-position-after-diversion",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 6,
+          "outputs": 32,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 32,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.001007334,
+          "state_fingerprint": "fnv1a64:7f1997f4dcf26492",
+          "arena_high_water_bytes": 2037168,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 138,
+            "active_events": 56,
+            "active_outputs": 184,
+            "active_dedup": 112,
+            "provenance_checked": 434
+          }
+        },
+        {
+          "name": "cycle-000-position-refresh",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 6,
+          "outputs": 32,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 32,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.001051909,
+          "state_fingerprint": "fnv1a64:70f3f6bd9d2fcbda",
+          "arena_high_water_bytes": 2078048,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 168,
+            "active_events": 56,
+            "active_outputs": 200,
+            "active_dedup": 120,
+            "provenance_checked": 480
+          }
+        },
+        {
+          "name": "cycle-000-project-again",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 1,
+          "outputs": 56,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 0,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.000726724,
+          "state_fingerprint": "fnv1a64:ff7925f7eeea4278",
+          "arena_high_water_bytes": 2080416,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 168,
+            "active_events": 56,
+            "active_outputs": 216,
+            "active_dedup": 128,
+            "provenance_checked": 496
+          }
+        },
+        {
+          "name": "cycle-000-terminal-source-1",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 6,
+          "outputs": 32,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 32,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.000951844,
+          "state_fingerprint": "fnv1a64:b1671b340c545f4b",
+          "arena_high_water_bytes": 2081256,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 168,
+            "active_events": 24,
+            "active_outputs": 216,
+            "active_dedup": 136,
+            "provenance_checked": 464
+          }
+        },
+        {
+          "name": "cycle-000-terminal-source-2",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 6,
+          "outputs": 32,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 32,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.00099849,
+          "state_fingerprint": "fnv1a64:946513544a24ef9a",
+          "arena_high_water_bytes": 2083656,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 168,
+            "active_events": 8,
+            "active_outputs": 240,
+            "active_dedup": 144,
+            "provenance_checked": 472
+          }
+        },
+        {
+          "name": "cycle-000-terminal-source-4",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 6,
+          "outputs": 32,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 32,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.000910516,
+          "state_fingerprint": "fnv1a64:ac8024cbdc22c7db",
+          "arena_high_water_bytes": 2084328,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 168,
+            "active_events": 0,
+            "active_outputs": 240,
+            "active_dedup": 152,
+            "provenance_checked": 464
+          }
+        },
+        {
+          "name": "cycle-000-cancelled-projections",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 0,
+          "outputs": 0,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 0,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.00021807,
+          "state_fingerprint": "fnv1a64:df5296c8a8ea30fb",
+          "arena_high_water_bytes": 2085168,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 168,
+            "active_events": 0,
+            "active_outputs": 240,
+            "active_dedup": 160,
+            "provenance_checked": 464
+          }
+        },
+        {
+          "name": "cycle-000-position-after-terminal",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 0,
+          "outputs": 0,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 0,
+            "ignored_stale_observations": 32,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.000184026,
+          "state_fingerprint": "fnv1a64:367dd98c41036af3",
+          "arena_high_water_bytes": 2085808,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 168,
+            "active_events": 0,
+            "active_outputs": 240,
+            "active_dedup": 168,
+            "provenance_checked": 464
+          }
+        },
+        {
+          "name": "cycle-000-housekeeping",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 0,
+          "outputs": 0,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 0,
+            "ignored_stale_observations": 0,
+            "expired_records": 232
+          },
+          "elapsed_seconds": 0.000330798,
+          "state_fingerprint": "fnv1a64:1eb892d5fe05d389",
+          "arena_high_water_bytes": 2088328,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 64,
+            "active_events": 0,
+            "active_outputs": 208,
+            "active_dedup": 80,
+            "provenance_checked": 328
+          }
+        },
+        {
+          "name": "cycle-000-duplicate-terminal",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 0,
+          "outputs": 0,
+          "outcome_counts": {
+            "duplicates": 8,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 0,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.000069959,
+          "state_fingerprint": "fnv1a64:1eb892d5fe05d389",
+          "arena_high_water_bytes": 2088328,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 64,
+            "active_events": 0,
+            "active_outputs": 208,
+            "active_dedup": 80,
+            "provenance_checked": 328
+          }
+        },
+        {
+          "name": "cycle-000-project-after-housekeeping",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 0,
+          "outputs": 0,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 0,
+            "ignored_stale_observations": 0,
+            "expired_records": 0
+          },
+          "elapsed_seconds": 0.000160316,
+          "state_fingerprint": "fnv1a64:a8eba3ff8a6a75e5",
+          "arena_high_water_bytes": 2089376,
+          "invariants": {
+            "active_families": 8,
+            "active_flights": 56,
+            "active_positions": 64,
+            "active_events": 0,
+            "active_outputs": 208,
+            "active_dedup": 88,
+            "provenance_checked": 328
+          }
+        },
+        {
+          "name": "cycle-000-expire-family",
+          "messages": 8,
+          "committed_messages": 8,
+          "retries": 0,
+          "outputs": 0,
+          "outcome_counts": {
+            "duplicates": 0,
+            "rejected_inputs": 0,
+            "deliberate_aborts": 0,
+            "savepoint_rollbacks": 0,
+            "created_views": 0,
+            "updated_views": 0,
+            "ignored_stale_observations": 0,
+            "expired_records": 416
+          },
+          "elapsed_seconds": 0.000472142,
+          "state_fingerprint": "fnv1a64:0f3f2dec1996625f",
+          "arena_high_water_bytes": 2115584,
+          "invariants": {
+            "active_families": 0,
+            "active_flights": 0,
+            "active_positions": 0,
+            "active_events": 0,
+            "active_outputs": 0,
+            "active_dedup": 0,
+            "provenance_checked": 0
+          }
+        }
+      ],
+      "messages": 240,
+      "committed_messages": 232,
+      "retries": 84,
+      "message_wall_seconds": 0.015665092,
+      "committed_messages_per_second": 14809.999200770731,
+      "latency_p50_us": 56.395,
+      "latency_p99_us": 883.006,
+      "metrics": {
+        "begins": 324,
+        "commits": 232,
+        "aborts": 85,
+        "reads": 41290,
+        "queries": 860,
+        "returned_rows": 7740,
+        "writes": 3469,
+        "savepoints": 220,
+        "savepoint_rollbacks": 8,
+        "index_mutations": 4186
+      },
+      "index_audit": {
+        "arena_high_water_bytes": 2115584,
+        "indexes": [
+          {
+            "index": "callsign",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 3, postings: 56, towers: 3, tower_lanes: 36 }, reachable: ShmSkipAllocationCounts { nodes: 1, postings: 0, towers: 1, tower_lanes: 32 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 2, postings: 56, towers: 2, tower_lanes: 4 } }",
+            "postings": 0,
+            "retired_postings": 0
+          },
+          {
+            "index": "tail",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 9, postings: 56, towers: 9, tower_lanes: 45 }, reachable: ShmSkipAllocationCounts { nodes: 1, postings: 0, towers: 1, tower_lanes: 32 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 8, postings: 56, towers: 8, tower_lanes: 13 } }",
+            "postings": 0,
+            "retired_postings": 0
+          },
+          {
+            "index": "family",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 9, postings: 704, towers: 9, tower_lanes: 44 }, reachable: ShmSkipAllocationCounts { nodes: 1, postings: 0, towers: 1, tower_lanes: 32 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 8, postings: 704, towers: 8, tower_lanes: 12 } }",
+            "postings": 0,
+            "retired_postings": 0
+          },
+          {
+            "index": "due",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 13, postings: 312, towers: 13, tower_lanes: 54 }, reachable: ShmSkipAllocationCounts { nodes: 1, postings: 0, towers: 1, tower_lanes: 32 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 12, postings: 312, towers: 12, tower_lanes: 22 } }",
+            "postings": 0,
+            "retired_postings": 0
+          },
+          {
+            "index": "event_time",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 24, postings: 1114, towers: 24, tower_lanes: 75 }, reachable: ShmSkipAllocationCounts { nodes: 1, postings: 0, towers: 1, tower_lanes: 32 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 23, postings: 1114, towers: 23, tower_lanes: 43 } }",
+            "postings": 0,
+            "retired_postings": 0
+          }
+        ]
+      }
+    }
+  ],
+  "completed": true,
+  "operational_errors": [],
+  "postgres_configuration": null,
+  "passed": true
+}

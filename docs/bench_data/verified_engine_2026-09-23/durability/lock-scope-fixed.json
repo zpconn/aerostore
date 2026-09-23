@@ -1,0 +1,44 @@
+{
+  "phase": "fixed",
+  "source": "/home/zpconn/code/aerostore",
+  "source_sha256": {
+    "aerostore_core/src/wal_writer.rs": "1d55e3a6fd4367a4284bc968518151940c2f0916b2d3a92d85251e406594ad75",
+    "aerostore_core/src/occ_partitioned.rs": "dabed48b3ccabc4efb22cac1332efc41f190ad3f8928e9e7c4a838d4a6d4d12b",
+    "aerostore_core/tests/wal_protocol_regressions.rs": "f13bba67b98c9faebcdf72eebe2ba1bbf2715e768a8b94dff4f08131b85b031b"
+  },
+  "archive_sha256": null,
+  "rustc": "rustc 1.93.1 (01f6ddf75 2026-02-11)\nbinary: rustc\ncommit-hash: 01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf\ncommit-date: 2026-02-11\nhost: x86_64-unknown-linux-gnu\nrelease: 1.93.1\nLLVM version: 21.1.8\n",
+  "commands": [
+    {
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--manifest-path",
+        "/home/zpconn/code/aerostore/Cargo.toml",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-next/workspace-tests",
+        "-p",
+        "aerostore_core",
+        "--test",
+        "wal_protocol_regressions",
+        "--test",
+        "wal_writer_lifecycle",
+        "--test",
+        "wal_delta_codec",
+        "--test",
+        "wal_delta_recovery_pk_map",
+        "--test",
+        "wal_crash_recovery",
+        "--test",
+        "occ_checkpoint_benchmark",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "log": "docs/bench_data/verified_engine_2026-09-23/durability/lock-scope-fixed-focused.log"
+    }
+  ],
+  "source_stable": true
+}

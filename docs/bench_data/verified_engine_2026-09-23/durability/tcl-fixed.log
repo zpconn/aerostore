@@ -1,0 +1,57 @@
+
+running 18 tests
+test tests::append_stapi_option_wraps_values_in_braces ... ok
+test tests::decode_fixed_ascii_stops_at_first_nul ... ok
+test tests::fixed_ascii_round_trip_and_overflow_rejection ... ok
+test tests::flight_state_delta_codec_round_trips_changed_fields ... ok
+test tests::format_decode_error_includes_line_column_and_message ... ok
+test tests::native_commit_updates_only_changed_indexes ... ok
+test tests::native_delete_then_reinsert_restores_full_index_state ... ok
+test tests::publication_failure_after_wal_acceptance_is_never_a_serialization_retry ... ok
+test tests::resolve_scan_mode_honors_chunked_configuration ... ok
+test tests::resolve_scan_mode_invalid_chunk_rows_falls_back_to_defaults ... ok
+test tests::resolve_shm_path_honors_environment_override ... ok
+test tests::scale_coord_rounds_to_microdegrees ... ok
+test tests::wal_rejection_preserves_rows_and_indexes_and_is_not_automatically_retryable ... ok
+test tests::warm_table_committer_resumes_its_bound_stream ... ok
+test vacuum_index_cleanup_tests::savepoint_and_abort_do_not_publish_rolled_back_index_keys ... ok
+test vacuum_index_cleanup_tests::vacuum_after_delete_never_recreates_or_removes_another_live_posting ... ok
+test vacuum_index_cleanup_tests::vacuum_keeps_current_postings_when_key_returns_to_reclaimed_value ... ok
+test vacuum_index_cleanup_tests::warm_attachment_rebinds_all_six_indexes_before_writing ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+
+running 4 tests
+test benchmark_tcl_synchronous_commit_modes ... tcl_sync_benchmark mode=on txns=1200 tps=196.33507853403142
+tcl_sync_benchmark mode=off txns=1200 tps=41379.31034482759
+ok
+test bound_mode_transition_is_rejected_without_changing_config_or_rows ... rejected_transition_ok
+warm_bound_mode_ok
+ok
+test periodic_checkpointer_creates_checkpoint_and_shrinks_wal ... periodic_ok before=156 after=0 checkpoint_bytes=2064412
+ok
+test synchronous_checkpoint_and_wal_recovers_all_rows ... phase1_ok checkpoint rows=32768
+phase2_ok
+ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 21.70s
+
+
+running 1 test
+test tcl_search_uses_stapi_path_for_list_and_raw_compare_inputs ... bridge_ok
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.04s
+
+   Compiling aerostore_tcl v0.1.0 (/home/zpconn/code/aerostore/aerostore_tcl)
+    Finished `release` profile [optimized] target(s) in 0.29s
+     Running unittests src/lib.rs (target/verification-next/tcl-tests/release/deps/aerostore_tcl-1d4537ea47c71201)
+     Running tests/config_checkpoint_integration.rs (target/verification-next/tcl-tests/release/deps/config_checkpoint_integration-26741ad5e9389fd0)
+    Finished `release` profile [optimized] target(s) in 0.05s
+tcl_sync_benchmark on_tps=196.33507853403142 off_tps=41379.31034482759 ratio=210.75862068965517
+    Finished `release` profile [optimized] target(s) in 0.05s
+    Finished `release` profile [optimized] target(s) in 0.04s
+    Finished `release` profile [optimized] target(s) in 0.04s
+     Running tests/search_stapi_bridge.rs (target/verification-next/tcl-tests/release/deps/search_stapi_bridge-58748136d2367524)
+    Finished `release` profile [optimized] target(s) in 0.04s

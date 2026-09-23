@@ -494,22 +494,21 @@ fn attached_table_cannot_begin_without_complete_registered_index_set() {
 }
 
 #[test]
-fn postcommit_wal_error_leaves_row_and_managed_index_consistent() {
+fn rejected_wal_frame_preserves_row_and_managed_index() {
     let (arena, table, index) = fixture(&[Row::live(10)]);
     // The entire serialized commit cannot fit this intentionally tiny slot.
-    // The writer currently reports WAL errors after native row commit; that
-    // error must never reopen the former row/index visibility gap.
+    // Rejection must roll back prepared destinations before row publication.
     let ring = SharedWalRing::<2, 32>::create(Arc::clone(&arena)).unwrap();
     let mut committer = OccCommitter::new_asynchronous(ring);
     let mut tx = table.begin_transaction().unwrap();
     table.write(&mut tx, 0, Row::live(20)).unwrap();
     let result = committer.commit(&table, &mut tx);
     assert!(matches!(result, Err(WalWriterError::Ring(_))));
-    assert_eq!(table.latest_value(0).unwrap(), Some(Row::live(20)));
-    assert_eq!(index.try_entries().unwrap(), vec![(IndexValue::I64(20), 0)]);
+    assert_eq!(table.latest_value(0).unwrap(), Some(Row::live(10)));
+    assert_eq!(index.try_entries().unwrap(), vec![(IndexValue::I64(10), 0)]);
     let mut reader = table.begin_transaction().unwrap();
-    assert_eq!(scan(&table, &mut reader, &index, &eq(20)), vec![0]);
-    assert!(scan(&table, &mut reader, &index, &eq(10)).is_empty());
+    assert_eq!(scan(&table, &mut reader, &index, &eq(10)), vec![0]);
+    assert!(scan(&table, &mut reader, &index, &eq(20)).is_empty());
     table.commit(&mut reader).unwrap();
 }
 

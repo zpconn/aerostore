@@ -1,0 +1,123 @@
+{
+  "performance_acceptance": false,
+  "scope": "Single instrumented profiles, common functions only; inclusive CPU columns overlap and must not be added",
+  "summary_commands": [
+    [
+      "gprofng",
+      "display",
+      "text",
+      "-limit",
+      "70",
+      "-metric_list",
+      "-experiment_list",
+      "-overview",
+      "-statistics",
+      "-functions",
+      "target/verification-next/profile/baseline/cpu.er"
+    ],
+    [
+      "gprofng",
+      "display",
+      "text",
+      "-limit",
+      "70",
+      "-metric_list",
+      "-experiment_list",
+      "-overview",
+      "-statistics",
+      "-functions",
+      "target/verification-next/profile/candidate/cpu.er"
+    ],
+    [
+      "gprofng",
+      "display",
+      "text",
+      "-limit",
+      "100",
+      "-csingle",
+      "aerostore_core::shm_lock::ShmMutex::lock",
+      "-csingle",
+      "aerostore_core::shm_index::SecondaryIndex<RowId>::transactional_remove",
+      "-csingle",
+      "aerostore_core::shm_index::SecondaryIndex<RowId>::transactional_insert",
+      "target/verification-next/profile/baseline/cpu.er"
+    ],
+    [
+      "gprofng",
+      "display",
+      "text",
+      "-limit",
+      "100",
+      "-csingle",
+      "aerostore_core::shm_lock::ShmMutex::lock",
+      "-csingle",
+      "aerostore_core::shm_index::SecondaryIndex<RowId>::transactional_remove",
+      "-csingle",
+      "aerostore_core::shm_index::SecondaryIndex<RowId>::transactional_insert",
+      "target/verification-next/profile/candidate/cpu.er"
+    ]
+  ],
+  "measurements": {
+    "baseline": {
+      "operations": 9535120,
+      "functions": {
+        "<Total>": {
+          "exclusive_cpu_seconds": 178.82,
+          "inclusive_cpu_seconds": 178.82,
+          "inclusive_cpu_microseconds_per_operation": 18.753827953921924
+        },
+        "sched_yield": {
+          "exclusive_cpu_seconds": 78.43,
+          "inclusive_cpu_seconds": 78.43,
+          "inclusive_cpu_microseconds_per_operation": 8.225381536886793
+        },
+        "aerostore_core::shm_lock::ShmMutex::lock": {
+          "exclusive_cpu_seconds": 33.51,
+          "inclusive_cpu_seconds": 112.08,
+          "inclusive_cpu_microseconds_per_operation": 11.75444042654943
+        },
+        "aerostore_core::shm_index::SecondaryIndex<RowId>::transactional_insert": {
+          "exclusive_cpu_seconds": 2.63,
+          "inclusive_cpu_seconds": 65.04,
+          "inclusive_cpu_microseconds_per_operation": 6.821099262515837
+        },
+        "aerostore_core::shm_index::SecondaryIndex<RowId>::transactional_remove": {
+          "exclusive_cpu_seconds": 0.98,
+          "inclusive_cpu_seconds": 56.46,
+          "inclusive_cpu_microseconds_per_operation": 5.9212679022393
+        }
+      }
+    },
+    "candidate": {
+      "operations": 9199663,
+      "functions": {
+        "<Total>": {
+          "exclusive_cpu_seconds": 206.67,
+          "inclusive_cpu_seconds": 206.67,
+          "inclusive_cpu_microseconds_per_operation": 22.46495333579067
+        },
+        "sched_yield": {
+          "exclusive_cpu_seconds": 98.88,
+          "inclusive_cpu_seconds": 98.88,
+          "inclusive_cpu_microseconds_per_operation": 10.748219798920895
+        },
+        "aerostore_core::shm_lock::ShmMutex::lock": {
+          "exclusive_cpu_seconds": 42.28,
+          "inclusive_cpu_seconds": 140.95,
+          "inclusive_cpu_microseconds_per_operation": 15.32121339662116
+        },
+        "aerostore_core::shm_index::SecondaryIndex<RowId>::transactional_insert": {
+          "exclusive_cpu_seconds": 2.64,
+          "inclusive_cpu_seconds": 70.08,
+          "inclusive_cpu_microseconds_per_operation": 7.617670342924518
+        },
+        "aerostore_core::shm_index::SecondaryIndex<RowId>::transactional_remove": {
+          "exclusive_cpu_seconds": 1.16,
+          "inclusive_cpu_seconds": 79.14,
+          "inclusive_cpu_microseconds_per_operation": 8.60248902595671
+        }
+      }
+    }
+  },
+  "interpretation": "Extra sampled CPU is concentrated in shared mutation-lock acquisition, especially removal. This identifies a diagnostic target, not a demonstrated cause of the 120-second regression. No direct WAL queue or flush latency traces were collected."
+}

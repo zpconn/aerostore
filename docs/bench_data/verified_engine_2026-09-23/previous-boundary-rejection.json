@@ -1,0 +1,39 @@
+{
+  "expected": "engine protocol changes require a new reviewed boundary, not old-boundary optimization approval",
+  "returncode": 1,
+  "report": {
+    "passed": false,
+    "errors": [
+      "frozen boundary path set changed; review new/deleted engine or contract files",
+      "frozen boundary changed: Cargo.lock",
+      "frozen boundary changed: aerostore_core/src/bootloader.rs",
+      "frozen boundary changed: aerostore_core/src/occ_partitioned.rs",
+      "frozen boundary changed: aerostore_core/src/shm.rs",
+      "frozen boundary changed: aerostore_core/src/wal_ring.rs",
+      "frozen boundary changed: aerostore_core/src/wal_writer.rs",
+      "frozen boundary changed: aerostore_core/tests/occ_transactional_index.rs",
+      "frozen boundary changed: aerostore_tcl/Cargo.toml",
+      "frozen boundary changed: aerostore_tcl/src/lib.rs",
+      "frozen boundary changed: aerostore_tcl/tests/config_checkpoint_integration.rs",
+      "frozen boundary changed: aerostore_tcl/tests/search_stapi_bridge.rs",
+      "frozen boundary changed: scripts/check_formal_coverage.py",
+      "frozen boundary changed: scripts/test_formal_gate.py",
+      "frozen boundary changed: scripts/verify_formal.py",
+      "frozen boundary changed: verification/assumptions.toml",
+      "frozen boundary changed: verification/claims.toml",
+      "frozen boundary changed: verification/tla/campaign.json"
+    ],
+    "scope": "change detection only; not a whole-engine refinement proof",
+    "checked_files": 163,
+    "baseline_ref": "a382ce3d06d4fb690ba09632d7b3a38b8902c65a",
+    "anchoring": "independent_git_baseline",
+    "open_claims": [
+      "TX-HISTORY-IMPLEMENTATION",
+      "MEMORY-OWNERSHIP",
+      "MEMORY-PROGRESS",
+      "WEAK-MEMORY-MMAP",
+      "DURABILITY-IMPLEMENTATION",
+      "QUERY-APPLICATION"
+    ]
+  }
+}

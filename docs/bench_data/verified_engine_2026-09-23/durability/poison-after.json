@@ -1,0 +1,25 @@
+{
+  "phase": "after",
+  "command": [
+    "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+    "test",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/home/zpconn/code/aerostore/target/verification-next/workspace-tests",
+    "-p",
+    "aerostore_core",
+    "--lib",
+    "wal_writer::poison_regressions",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "rustc": "rustc 1.93.1 (01f6ddf75 2026-02-11)\nbinary: rustc\ncommit-hash: 01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf\ncommit-date: 2026-02-11\nhost: x86_64-unknown-linux-gnu\nrelease: 1.93.1\nLLVM version: 21.1.8\n",
+  "source_sha256": {
+    "aerostore_core/src/wal_writer.rs": "619be861775b8b1942750f427d6ecef55abc5e208fb165e5dd4c6cf5d123a70a",
+    "aerostore_core/src/occ_partitioned.rs": "08e6a8038a1655671355780930bf96b10992d1f206e9094ee83fc29c631ce14f"
+  },
+  "source_stable": true,
+  "log": "docs/bench_data/verified_engine_2026-09-23/durability/poison-after.log"
+}

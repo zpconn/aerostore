@@ -18,6 +18,7 @@ import subprocess
 import sys
 import time
 import tomllib
+import check_lock_models
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -63,7 +64,10 @@ def collect_claim_evidence(claims: list[dict], checks: list[dict], directory: Pa
     passed = {check["name"] for check in checks if check["passed"]}
     lean = json.loads((directory / "lean.json").read_text()) if "lean" in passed else {}
     verus = json.loads((directory / "verus/receipt.json").read_text()) if "verus" in passed else {}
+    concurrent = json.loads((directory / "concurrent/receipt.json").read_text()) if "concurrent" in passed else {}
     tla = json.loads((directory / "tla/report.json").read_text()) if "tla" in passed else {}
+    if "lock-models" in passed:
+        check_lock_models.validate_receipt(directory / "lock-models/receipt.json", ROOT)
     lean_mutations = {mutation["name"] for mutation in lean.get("mutation_checks", []) if mutation.get("rejected")}
     required_mutations = {"stamp_accepts_equal", "bitmap_drops_membership", "bitmap_accepts_equal_bound",
                           "sort_writes_wrong_bucket", "sort_accepts_equal_bound"}
@@ -73,15 +77,32 @@ def collect_claim_evidence(claims: list[dict], checks: list[dict], directory: Pa
         raise RuntimeError("Lean command did not produce complete required evidence")
     if "verus" in passed and not (verus.get("passed") and verus.get("status") == "passed"):
         raise RuntimeError("Verus command did not produce complete required evidence")
+    concurrent_mutations = {"skip_predicate_validation", "omit_partial_publication_poison",
+                            "skip_write_ahead_callback", "omit_callback_error_rollback",
+                            "omit_callback_unwind_rollback", "stamp_before_deregister", "skip_wal_binding_check",
+                            "omit_record_prepare_error_abort", "omit_prepare_error_abort",
+                            "omit_prepare_unwind_abort", "accept_before_validation",
+                            "skip_guarded_health_check", "omit_health_failure_abort"}
+    rejected_concurrent = {check["name"] for check in concurrent.get("checks", [])
+                          if check.get("expected_failure") and check.get("exit_code") != 0
+                          and (check.get("errors") or 0) > 0}
+    if "concurrent" in passed and not (concurrent.get("passed") and concurrent.get("status") == "passed"
+            and concurrent.get("native_primitive_refinement_proved") is False
+            and concurrent.get("transaction_history_refinement_proved") is False
+            and concurrent_mutations <= rejected_concurrent):
+        raise RuntimeError("Concurrent command did not produce complete conditional proof evidence")
     if "tla" in passed and not (tla.get("passed") and tla.get("completed") and tla.get("complete_campaign")):
         raise RuntimeError("TLA command did not finish the full declared campaign")
     lean_roots = {root["name"] for root in lean.get("required_roots", [])}
     verus_roots = {root["name"] for root in verus.get("required_roots", [])}
+    concurrent_roots = set(concurrent.get("required_roots", []))
     results = []
     for claim in claims:
         required = set(claim["required_checks"])
         has_evidence = bool(required) and required <= passed
-        missing_roots = (set(claim.get("lean_roots", [])) - lean_roots) | (set(claim.get("verus_roots", [])) - verus_roots)
+        missing_roots = ((set(claim.get("lean_roots", [])) - lean_roots)
+                         | (set(claim.get("verus_roots", [])) - verus_roots)
+                         | (set(claim.get("concurrent_roots", [])) - concurrent_roots))
         has_evidence = has_evidence and not missing_roots
         results.append({"id": claim["id"], "scope": claim["scope"],
                         "declared_status": claim["status"],
@@ -89,7 +110,8 @@ def collect_claim_evidence(claims: list[dict], checks: list[dict], directory: Pa
                         "required_checks": sorted(required),
                         "missing_roots": sorted(missing_roots),
                         "lean_roots": claim.get("lean_roots", []),
-                        "verus_roots": claim.get("verus_roots", [])})
+                        "verus_roots": claim.get("verus_roots", []),
+                        "concurrent_roots": claim.get("concurrent_roots", [])})
         if required <= passed and required and missing_roots:
             raise RuntimeError(f"{claim['id']}: missing declared proof roots {sorted(missing_roots)}")
     return results
@@ -186,12 +208,22 @@ def main() -> int:
             commands += [("gate-tests", [sys.executable, "scripts/test_formal_gate.py"]),
                          ("adapter-tests", [sys.executable, "verification/verus/test_generate.py"]),
                          ("verus", [sys.executable, "verification/verus/run.py", "--output", str(directory / "verus")]),
+                         ("concurrent-adapter-tests", [sys.executable, "verification/concurrent/test_generate.py"]),
+                         ("concurrent", [sys.executable, "verification/concurrent/run.py", "--output", str(directory / "concurrent")]),
                          ("lean", [sys.executable, "scripts/check_lean.py", "--output", str(directory / "lean.json")]),
                          ("kernel-tests", ["cargo", "test", "--offline", "-p", "aerostore_verified"])]
         if args.profile != "proofs":
             commands.append(("tla-runner-tests", [sys.executable, "scripts/test_tla_runner.py"]))
             commands.append(("tla", [sys.executable, "scripts/check_tla.py", "--output", str(directory / "tla")]))
         if args.profile in {"pilot", "full"}:
+            commands += [("lock-models", [sys.executable, "scripts/check_lock_models.py",
+                                         "--output", str(directory / "lock-models")]),
+                         ("performance-gate-tests", [sys.executable, "scripts/test_compare_engine_performance.py"]),
+                         ("core-regressions", ["cargo", "test", "--offline", "--locked", "-p", "aerostore_core",
+                             "--release", "--lib", "--test", "wal_protocol_regressions", "--test", "wal_delta_recovery_pk_map",
+                             "--test", "wal_writer_lifecycle", "--test", "wal_crash_recovery", "--test", "shm_shared_memory",
+                             "--test", "crucible_latency_histogram",
+                             "--", "--test-threads=1"])]
             for feature in ["default", "verified-buckets-sort", "verified-buckets-bitmap"]:
                 command = ["cargo", "test", "--offline", "-p", "aerostore_core", "--release"]
                 if feature != "default":

@@ -1,0 +1,1 @@
+The original-CAS run compiled and is valid. Candidate and mutant switched workspace roots while sharing a Cargo target and reused that binary without compilation. Their results are invalid and are not accepted evidence. Final validation uses separate fresh target directories and checks compiler-artifact freshness, source path and executable hash.

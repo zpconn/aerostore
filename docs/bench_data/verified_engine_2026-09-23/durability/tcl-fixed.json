@@ -1,0 +1,31 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/home/zpconn/code/aerostore/target/verification-next/tcl-tests",
+    "-p",
+    "aerostore_tcl",
+    "--release",
+    "--lib",
+    "--test",
+    "config_checkpoint_integration",
+    "--test",
+    "search_stapi_bridge",
+    "--",
+    "--test-threads=1",
+    "--nocapture"
+  ],
+  "compiler": "rustc 1.93.1 (01f6ddf75 2026-02-11)",
+  "returncode": 0,
+  "sources": {
+    "aerostore_tcl/src/lib.rs": "eea972d05b27edaae37503ad4738e898faadffea8fb61a659beebbc4fffc092c",
+    "aerostore_tcl/Cargo.toml": "04e6e3cc44be7bac624003efd253ae0aa404b00fceca2511879f1e7856ebb322",
+    "aerostore_tcl/tests/config_checkpoint_integration.rs": "84e8e2f7c844f7e88e80a40cac3617bea7e456c9da55bf44d6648942e95bdec6",
+    "aerostore_tcl/tests/search_stapi_bridge.rs": "4c8238afce4be2b1924190d93742ff9a1830ab40e1c56724b9a6a15253073ed4"
+  },
+  "source_stable": true,
+  "test_count": 23
+}

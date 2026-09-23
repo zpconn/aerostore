@@ -1,0 +1,60 @@
+Callers and callees sorted by metric: Attributed Total CPU Time
+
+Attr. Total     Name
+CPU
+  sec.      %
+=============== Callers
+56.240  50.18   aerostore_core::shm_index::SecondaryIndex<RowId>::transactional_insert
+39.970  35.66   aerostore_core::shm_index::SecondaryIndex<RowId>::transactional_remove
+14.830  13.23   aerostore_core::shm_index::SecondaryIndex<RowId>::try_scan_count_with_limit
+ 0.630   0.56   hyperfeed_crucible::run_aerostore_worker
+ 0.340   0.30   aerostore_core::occ_partitioned::OccTable<T>::allocate_row
+ 0.070   0.06   aerostore_core::occ_partitioned::OccTable<T>::recycle_row_ptr
+
+=============== Stack Fragment
+33.510  29.90   aerostore_core::shm_lock::ShmMutex::lock
+
+=============== Callees
+75.890  67.71   sched_yield
+ 2.680   2.39   nanosleep
+
+Callers and callees sorted by metric: Attributed Total CPU Time
+
+Attr. Total     Name
+CPU
+  sec.      %
+=============== Callers
+56.460 100.00   aerostore_core::occ_partitioned::OccTable<T>::apply_index_changes
+
+=============== Stack Fragment
+ 0.980   1.74   aerostore_core::shm_index::SecondaryIndex<RowId>::transactional_remove
+
+=============== Callees
+39.970  70.79   aerostore_core::shm_lock::ShmMutex::lock
+11.020  19.52   aerostore_core::shm_skiplist::ShmSkipList<K>::find
+ 3.680   6.52   aerostore_core::shm_skiplist::ShmSkipList<K>::unlink_node
+ 0.570   1.01   aerostore_core::procarray::ProcArray::begin_transaction
+ 0.240   0.43   <aerostore_core::shm_skiplist::ProcArrayEpochGuard as core::ops::drop::Drop>::drop
+
+Callers and callees sorted by metric: Attributed Total CPU Time
+
+Attr. Total     Name
+CPU
+  sec.      %
+=============== Callers
+65.010  99.95   aerostore_core::occ_partitioned::OccTable<T>::apply_index_changes
+ 0.030   0.05   hyperfeed_crucible::run_aerostore_crucible
+
+=============== Stack Fragment
+ 2.630   4.04   aerostore_core::shm_index::SecondaryIndex<RowId>::transactional_insert
+
+=============== Callees
+56.240  86.47   aerostore_core::shm_lock::ShmMutex::lock
+ 3.550   5.46   aerostore_core::shm_skiplist::ShmSkipList<K>::find_readonly_exact
+ 1.280   1.97   aerostore_core::shm_skiplist::ShmSkipList<K>::find
+ 0.880   1.35   aerostore_core::procarray::ProcArray::begin_transaction
+ 0.350   0.54   <aerostore_core::shm_skiplist::ProcArrayEpochGuard as core::ops::drop::Drop>::drop
+ 0.050   0.08   aerostore_core::shm_skiplist::ShmSkipList<K>::update_pressure_state
+ 0.030   0.05   <static>@0x188341 (<libc.so.6>)
+ 0.030   0.05   aerostore_core::shm_skiplist::ShmSkipList<K>::pop_recycled_tower_at_least
+

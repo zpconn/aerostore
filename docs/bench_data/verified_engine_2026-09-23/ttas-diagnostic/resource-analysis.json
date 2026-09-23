@@ -1,0 +1,150 @@
+{
+  "scope": "Existing diagnostic only; maxima are from 5-second samples, not continuous peaks. No per-interval latency histograms, lock-wait, WAL queue, or flush measurements were collected.",
+  "runs": [
+    {
+      "pair": 1,
+      "variant": "baseline",
+      "throughput": 308654.96,
+      "p99_interval_ns": [
+        118784,
+        119807
+      ],
+      "retained_tps": 0.9998,
+      "arena_high_water_bytes": 34733152,
+      "tail_fresh_bytes": 481656,
+      "fresh_growth_budget_bytes": 20160704,
+      "retry_rate": 0.008640415168364142,
+      "sampled_max_retired_backlog": 7442,
+      "sampled_max_retired_postings": 0,
+      "pressure_max": 0,
+      "allocation_failures": 0,
+      "retry_alloc": 0,
+      "max_insert_attempts": 1,
+      "gc_recycle_errors": 0,
+      "gc_nodes_examined": 18188397,
+      "gc_nodes_requeued": 10778965,
+      "all_correctness_checks_passed": true
+    },
+    {
+      "pair": 1,
+      "variant": "candidate",
+      "throughput": 348770.4,
+      "p99_interval_ns": [
+        311296,
+        315391
+      ],
+      "retained_tps": 0.9886,
+      "arena_high_water_bytes": 35804640,
+      "tail_fresh_bytes": 218184,
+      "fresh_growth_budget_bytes": 20160704,
+      "retry_rate": 0.009490614787646108,
+      "sampled_max_retired_backlog": 7836,
+      "sampled_max_retired_postings": 0,
+      "pressure_max": 0,
+      "allocation_failures": 0,
+      "retry_alloc": 0,
+      "max_insert_attempts": 1,
+      "gc_recycle_errors": 0,
+      "gc_nodes_examined": 20300812,
+      "gc_nodes_requeued": 11928987,
+      "all_correctness_checks_passed": true
+    },
+    {
+      "pair": 2,
+      "variant": "candidate",
+      "throughput": 340949.05,
+      "p99_interval_ns": [
+        589824,
+        598015
+      ],
+      "retained_tps": 0.9515,
+      "arena_high_water_bytes": 35673784,
+      "tail_fresh_bytes": 374440,
+      "fresh_growth_budget_bytes": 20160704,
+      "retry_rate": 0.00970598124191209,
+      "sampled_max_retired_backlog": 7029,
+      "sampled_max_retired_postings": 0,
+      "pressure_max": 0,
+      "allocation_failures": 0,
+      "retry_alloc": 0,
+      "max_insert_attempts": 1,
+      "gc_recycle_errors": 0,
+      "gc_nodes_examined": 19720618,
+      "gc_nodes_requeued": 11535428,
+      "all_correctness_checks_passed": true
+    },
+    {
+      "pair": 2,
+      "variant": "baseline",
+      "throughput": 290201.68,
+      "p99_interval_ns": [
+        151552,
+        153599
+      ],
+      "retained_tps": 0.9722,
+      "arena_high_water_bytes": 33714032,
+      "tail_fresh_bytes": 245608,
+      "fresh_growth_budget_bytes": 20160704,
+      "retry_rate": 0.00914982664580269,
+      "sampled_max_retired_backlog": 4875,
+      "sampled_max_retired_postings": 0,
+      "pressure_max": 0,
+      "allocation_failures": 0,
+      "retry_alloc": 0,
+      "max_insert_attempts": 1,
+      "gc_recycle_errors": 0,
+      "gc_nodes_examined": 17122359,
+      "gc_nodes_requeued": 10155426,
+      "all_correctness_checks_passed": true
+    },
+    {
+      "pair": 3,
+      "variant": "baseline",
+      "throughput": 283133.39,
+      "p99_interval_ns": [
+        235520,
+        237567
+      ],
+      "retained_tps": 1.0287,
+      "arena_high_water_bytes": 35513576,
+      "tail_fresh_bytes": 152728,
+      "fresh_growth_budget_bytes": 20160704,
+      "retry_rate": 0.00945645176838826,
+      "sampled_max_retired_backlog": 4229,
+      "sampled_max_retired_postings": 0,
+      "pressure_max": 0,
+      "allocation_failures": 0,
+      "retry_alloc": 0,
+      "max_insert_attempts": 1,
+      "gc_recycle_errors": 0,
+      "gc_nodes_examined": 16811714,
+      "gc_nodes_requeued": 10014966,
+      "all_correctness_checks_passed": true
+    },
+    {
+      "pair": 3,
+      "variant": "candidate",
+      "throughput": 328758.1,
+      "p99_interval_ns": [
+        761856,
+        770047
+      ],
+      "retained_tps": 0.979,
+      "arena_high_water_bytes": 36248640,
+      "tail_fresh_bytes": 528264,
+      "fresh_growth_budget_bytes": 20160704,
+      "retry_rate": 0.010076503084543465,
+      "sampled_max_retired_backlog": 8684,
+      "sampled_max_retired_postings": 0,
+      "pressure_max": 0,
+      "allocation_failures": 0,
+      "retry_alloc": 0,
+      "max_insert_attempts": 1,
+      "gc_recycle_errors": 0,
+      "gc_nodes_examined": 19124769,
+      "gc_nodes_requeued": 11232758,
+      "all_correctness_checks_passed": true
+    }
+  ],
+  "interpretation": "Every diagnostic passes growth/GC/correctness gates; paired p99 is worse in all three TTAS runs. Throughput hypothesis support does not authorize performance acceptance."
+}

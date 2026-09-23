@@ -1,0 +1,113 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -18,7 +18,7 @@
+ const RECYCLE_SHARD_PROBE_LIMIT: usize = 4;
+ const MAX_VISIBLE_CHAIN_STEPS: u32 = 262_144;
+ const MAX_TABLE_INDEXES: usize = 32;
+-const OCC_HEADER_FORMAT: u64 = 0xAEB0_0CC0_0000_0002;
++const OCC_HEADER_FORMAT: u64 = 0xAEB0_0CC0_0000_0003;
+ 
+ #[cfg(test)]
+ thread_local! {
+@@ -52,6 +52,13 @@
+ 
+ thread_local! {
+     static STARVED_RECYCLE_SLOT: std::cell::Cell<Option<StarvedRecycleEntry>> = const { std::cell::Cell::new(None) };
++}
++
++// Immutable after first binding. Keep frequent identity reads off the cache
++// line containing recycle telemetry written by workers and vacuum.
++#[repr(C, align(64))]
++struct WalStreamIdentity {
++    words: [AtomicU64; 4],
+ }
+ 
+ #[repr(C, align(64))]
+@@ -77,7 +84,7 @@
+     // Published once, with word zero released last. Payload words are immutable
+     // after publication. A single ordered WAL stream is required for dependency
+     // closure; changing it requires exclusive cold recovery into a new table.
+-    wal_stream: [AtomicU64; 4],
++    wal_stream: WalStreamIdentity,
+ }
+ 
+ impl OccSharedHeader {
+@@ -102,7 +109,9 @@
+             recycle_push_success: AtomicU64::new(0),
+             recycle_push_cas_fail: AtomicU64::new(0),
+             recycle_stash_starved: AtomicU64::new(0),
+-            wal_stream: std::array::from_fn(|_| AtomicU64::new(0)),
++            wal_stream: WalStreamIdentity {
++                words: std::array::from_fn(|_| AtomicU64::new(0)),
++            },
+         }
+     }
+ }
+@@ -640,7 +649,7 @@
+     }
+ 
+     fn ensure_unlogged_write_allowed(&self) -> Result<(), Error> {
+-        if self.shared_header_ref()?.wal_stream[0].load(Ordering::Acquire) != 0 {
++        if self.shared_header_ref()?.wal_stream.words[0].load(Ordering::Acquire) != 0 {
+             return Err(Error::WalRequired);
+         }
+         Ok(())
+@@ -648,10 +657,10 @@
+ 
+     pub(crate) fn check_wal_stream(&self, identity: [u64; 4]) -> Result<(), Error> {
+         let header = self.shared_header_ref()?;
+-        let kind = header.wal_stream[0].load(Ordering::Acquire);
++        let kind = header.wal_stream.words[0].load(Ordering::Acquire);
+         if kind != 0
+             && (kind != identity[0]
+-                || (1..4).any(|i| header.wal_stream[i].load(Ordering::Relaxed) != identity[i]))
++                || (1..4).any(|i| header.wal_stream.words[i].load(Ordering::Relaxed) != identity[i]))
+         {
+             return Err(Error::WalStreamMismatch);
+         }
+@@ -660,18 +669,18 @@
+ 
+     pub(crate) fn bind_wal_stream(&self, identity: [u64; 4]) -> Result<(), Error> {
+         let header = self.shared_header_ref()?;
+-        if header.wal_stream[0].load(Ordering::Acquire) != 0 {
++        if header.wal_stream.words[0].load(Ordering::Acquire) != 0 {
+             return self.check_wal_stream(identity);
+         }
+         // Only first binding needs exclusion from every publishing writer.
+         // Follow index registration's existing registry -> partition order.
+         let _registry = header.index_registry_lock.lock();
+         let _partitions = self.acquire_all_partition_locks();
+-        if header.wal_stream[0].load(Ordering::Acquire) == 0 {
++        if header.wal_stream.words[0].load(Ordering::Acquire) == 0 {
+             for i in 1..4 {
+-                header.wal_stream[i].store(identity[i], Ordering::Relaxed);
+-            }
+-            header.wal_stream[0].store(identity[0], Ordering::Release);
++                header.wal_stream.words[i].store(identity[i], Ordering::Relaxed);
++            }
++            header.wal_stream.words[0].store(identity[0], Ordering::Release);
+         }
+         self.check_wal_stream(identity)
+     }
+--- a/aerostore_core/src/shm.rs
++++ b/aerostore_core/src/shm.rs
+@@ -18,7 +18,7 @@
+ };
+ 
+ const SHM_HEADER_MAGIC: u32 = 0xAEB0_B007;
+-const SHM_LAYOUT_VERSION: u32 = 5;
++const SHM_LAYOUT_VERSION: u32 = 6;
+ const SHM_HEADER_ALIGN: u32 = 64;
+ pub(crate) const OCC_PARTITION_LOCKS: usize = 1024;
+ const FREE_LIST_NODE_MAGIC: u32 = 0xAEB0_F1E5;
+--- a/aerostore_core/src/bootloader.rs
++++ b/aerostore_core/src/bootloader.rs
+@@ -6,7 +6,7 @@
+ use crate::{RelPtr, ShmAllocError, ShmArena, ShmError};
+ 
+ pub const BOOT_LAYOUT_MAGIC: u32 = 0xAEB0_4C59;
+-pub const BOOT_LAYOUT_VERSION: u32 = 7;
++pub const BOOT_LAYOUT_VERSION: u32 = 8;
+ pub const BOOT_LAYOUT_MAX_INDEXES: usize = 8;
+ 
+ #[derive(Clone, Copy, Debug, PartialEq, Eq)]

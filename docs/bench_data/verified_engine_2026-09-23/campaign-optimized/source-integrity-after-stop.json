@@ -1,0 +1,45 @@
+{
+  "checked_utc": "2026-09-23T17:18:54Z",
+  "captures": [
+    {
+      "variant": "baseline",
+      "manifest_sha256": "71c409f5c40147b6a5b3a189f424b7ff8b1e07d2ef5ff1ac6ea9caca017819d0",
+      "source_and_binary_hashes_match": true
+    },
+    {
+      "variant": "candidate",
+      "manifest_sha256": "6ca29e7f3f46f4b920edca27cece615224de2a0cb3dbbf40e0299c79c999c8ae",
+      "source_and_binary_hashes_match": true
+    }
+  ],
+  "campaign_complete": false,
+  "stop_reason": "Parent-directed early stop after all three 120-second churn pairs: throughput median ratio 0.9295914950148418 failed the unchanged 0.95 gate, independently of noisy p99. Stopped during first baseline 240-second run; do not count partial run as evidence.",
+  "process_session": 71480,
+  "session_exit_code": 130,
+  "child_cleanup": "Runner run_one catches BaseException, SIGKILLs child process group, and waits before propagating interruption.",
+  "runner_hash_matches_campaign": true,
+  "throughput_failure": {
+    "baseline": [
+      318437.24,
+      303320.46,
+      309014.37
+    ],
+    "candidate": [
+      296016.55,
+      281291.13,
+      304893.32
+    ],
+    "paired_ratios": [
+      0.9295914950148418,
+      0.9273727528963921,
+      0.9866638888023234
+    ],
+    "median_paired_ratio": 0.9295914950148418,
+    "relative_range": {
+      "baseline": 0.048919343136048885,
+      "candidate": 0.07973267035238403
+    },
+    "status": "regression"
+  },
+  "aggregate_churn_status": "inconclusive_noise"
+}

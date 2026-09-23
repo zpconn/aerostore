@@ -1,0 +1,20 @@
+{
+  "correctness_passed": true,
+  "integer_bounds_and_sample_count_match": true,
+  "performance_acceptance": false,
+  "scope": "Five-second instrumentation/allocation smoke only, run while other builds/tests may be active",
+  "command": [
+    "/home/zpconn/code/aerostore/target/verification-next/baseline-fine/hyperfeed_crucible",
+    "--noplot"
+  ],
+  "binary_sha256": "ff0ea616cf8f486ca91cd8cf9d1385d4d65d27aa24ba8661e647b17115758a0a",
+  "bounds": {
+    "profile": "diagnostic",
+    "engine": "aerostore",
+    "histogram_subdivisions": "64",
+    "samples": "1595580",
+    "p99_lower_ns": "131072",
+    "p99_upper_ns": "133119"
+  },
+  "output_sha256": "fef7e6ecef6cdb56be8f39ba9a20d8cbf40b197baac34c1a57bd2be300da0a70"
+}

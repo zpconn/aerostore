@@ -1,0 +1,6 @@
+{
+  "source_archive": "target/verification-next/candidate-ttas/source.tar",
+  "sha256": "cda8cb124f86d456d9279fd2422656a0d1c9b494c49a48eb02c7f87c2772418a",
+  "files": 116,
+  "manifest_sha256": "425f4ed2970ac31be26f7a6849bdb52d0dca86b63526f295cd1164090dec20fc"
+}

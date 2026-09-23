@@ -1,0 +1,79 @@
+{
+  "phase": "baseline",
+  "source": "/home/zpconn/code/aerostore/target/verification-next/lock-scope-baseline-source",
+  "source_sha256": {
+    "aerostore_core/src/wal_writer.rs": "197ab398ab956a7d9cd11738b42027c8e9790df593b6c5786fc201c1794d2655",
+    "aerostore_core/src/occ_partitioned.rs": "df18d32a2744be786b089333b85a578d418d2a15ccd016c572f1b0fe3d4179b7",
+    "aerostore_core/tests/wal_protocol_regressions.rs": "f13bba67b98c9faebcdf72eebe2ba1bbf2715e768a8b94dff4f08131b85b031b"
+  },
+  "archive_sha256": "b560cfd34db00c4cf28f7dabe8bd11c97982dfd90d6f4c46fe12b27007075668",
+  "rustc": "rustc 1.93.1 (01f6ddf75 2026-02-11)\nbinary: rustc\ncommit-hash: 01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf\ncommit-date: 2026-02-11\nhost: x86_64-unknown-linux-gnu\nrelease: 1.93.1\nLLVM version: 21.1.8\n",
+  "commands": [
+    {
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--manifest-path",
+        "/home/zpconn/code/aerostore/target/verification-next/lock-scope-baseline-source/Cargo.toml",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-next/lock-scope-baseline-build",
+        "-p",
+        "aerostore_core",
+        "--test",
+        "wal_protocol_regressions",
+        "encoding_runs_outside_commit_guards_and_revalidates",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 101,
+      "log": "docs/bench_data/verified_engine_2026-09-23/durability/lock-scope-baseline-encoding.log"
+    },
+    {
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--manifest-path",
+        "/home/zpconn/code/aerostore/target/verification-next/lock-scope-baseline-source/Cargo.toml",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-next/lock-scope-baseline-build",
+        "-p",
+        "aerostore_core",
+        "--test",
+        "wal_protocol_regressions",
+        "async_epoch_change_during_preparation_retries_without_accepting_stale_bytes",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "exit_code": 101,
+      "log": "docs/bench_data/verified_engine_2026-09-23/durability/lock-scope-baseline-epoch.log"
+    },
+    {
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--manifest-path",
+        "/home/zpconn/code/aerostore/target/verification-next/lock-scope-baseline-source/Cargo.toml",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-next/lock-scope-baseline-build",
+        "-p",
+        "aerostore_core",
+        "--test",
+        "wal_protocol_regressions",
+        "panicking_prepared_codec_aborts_without_rows_indexes_wal_or_registration",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "log": "docs/bench_data/verified_engine_2026-09-23/durability/lock-scope-baseline-panic.log"
+    }
+  ],
+  "source_stable": true
+}

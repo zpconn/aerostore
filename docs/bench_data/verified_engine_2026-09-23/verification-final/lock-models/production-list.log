@@ -1,0 +1,9 @@
+failed_prepublication_allocations_are_returned_before_unlock: test
+insertion_deletion_reader_and_gc_preserve_reachability_and_ownership: test
+model_detects_missing_row_guard_even_with_serialized_index_moves: test
+model_detects_the_original_unprotected_predecessor_race: test
+row_guard_preserves_commit_and_index_order: test
+shm_lock::loom_tests::contended_handoff_publishes_protected_non_atomic_value: test
+shm_lock::loom_tests::registered_priority_waiter_precedes_ordinary_contender: test
+
+7 tests, 0 benchmarks

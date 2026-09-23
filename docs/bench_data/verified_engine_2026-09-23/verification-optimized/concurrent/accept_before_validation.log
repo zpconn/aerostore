@@ -1,0 +1,30 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-next/formal-optimized/concurrent/accept_before_validation.rs:294:1
+    |
+294 | / pub fn commit_with_record_impl<T, D: CommitPrimitives<T>, const WRITE_AHEAD: bool, P, F>(driver: &mut D, tx: &mut OccTransaction<...
+295 | |  -> (result: Result<OccCommitRecord<T>, Error>)
+    | |______________________________________________^
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-next/formal-optimized/concurrent/accept_before_validation.rs:297:10
+    |
+297 |  ensures safe_release(final(driver).events()),
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+341 | if driver . index_read_conflict ( tx ) ? || driver . has_row_lock_conflict ( tx ) ? || driver . has_serialization_conflict ( tx ) ?...
+    |                                        - at this exit
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-next/formal-optimized/concurrent/accept_before_validation.rs:332:16
+    |
+192 |         requires held(old(self).events()), validated(old(self).events()),
+    |                                            ----------------------------- failed precondition
+...
+332 | let inserted = driver . prepare_index_destinations ( & index_changes ) ? ;
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

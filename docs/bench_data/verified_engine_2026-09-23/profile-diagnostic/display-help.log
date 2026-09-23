@@ -1,0 +1,139 @@
+(x86_64-linux-gnu-gp-display-text) An alternate spelling for a command is shown in [], where applicable.
+
+Those commands followed by a * may appear in .rc files.
+
+Those commands followed by a $ can only appear in .rc files.
+
+ 
+Commands controlling the function list:
+     functions                                       display functions with current metrics
+     metrics metric_spec                             set a new list of metrics
+     sort metric_spec                                sort tables by the specified metric
+     fsummary                                        display summary metrics for each function
+     fsingle function_name #                         display the summary metrics for specified function
+ 
+Commands controlling the callers-callees and calltree lists:
+     callers-callees[gprof]                          display the callers-callees for each function
+     csingle function_name #                         display the callers-callees for the specified function
+     cprepend function_name #                        add specified function to the head of the callstack fragment
+     cappend function_name #                         add specified function to the end of the callstack fragment
+     crmfirst                                        remove the first function from the callstack fragment
+     crmlast                                         remove the last function from the callstack fragment
+     calltree[ctree]                                 display the tree of function calls
+ 
+Commands controlling the leak and allocation lists:
+     leaks                                           display memory leaks, aggregated by callstack
+     allocs                                          display allocations, aggregated by callstack
+     heap                                            display memory allocations and leaks, aggregated by callstack
+     heapstat                                        display heap statistics report
+ 
+Command controlling the I/O activity report:
+     ioactivity                                      display I/O activity report, aggregated by file name
+     iodetail                                        display I/O activity report, aggregated by file descriptor
+     iocallstack                                     display I/O activity report, aggregated by callstack
+     iostat                                          display I/O statistics report
+ 
+Commands controlling the source and disassembly listings:
+     pcs                                             display hot PC's with current metrics
+     psummary                                        display summary metrics for each hot PC
+     lines                                           display hot lines with current metrics
+     lsummary                                        display summary metrics for each hot line
+     source func/file #                              display annotated source for function/file
+     disasm func/file #                              display annotated disassembly for function/file
+     scc com_spec                                    set compiler commentary classes for source *
+     sthresh value                                   set highlight threshold for source *
+     dcc com_spec                                    set compiler commentary classes for disasm *
+     cc com_spec                                     set compiler commentary classes for both source and disasm *
+     dthresh value                                   set highlight threshold for disasm *
+     setpath path_list                               set search path for annotated src/dis
+     addpath path_list                               add search path for annotated src/dis *
+     pathmap old_prefix new_prefix                   remap path prefix for annotated src/dis *
+     preload_libdirs                                 remap path prefix for annotated src/dis *
+ 
+Commands controlling the index objects:
+     indxobj type                                    display index objects of a specified type with current metrics
+     indxobj_list                                    display list of index objects
+     indxobj_define type "index-expr"                define a new index object type *
+ 
+Commands controlling the deadlock events lists:
+     deadlocks                                       display deadlock events
+     dsummary {deadlock_id|all}                      display summary for the deadlock event
+ 
+Commands listing experiments, samples and threads:
+     experiment_list[exp_list]                       display the existing experiments
+     sample_list                                     display the list of existing samples
+     lwp_list                                        display the list of existing LWPs
+     thread_list                                     display the list of existing threads
+     cpu_list                                        display the list of CPUs
+ 
+Commands controlling filters:
+     filters filter-specification                    define a filter
+     describe                                        describe recorded data and tokens available for filtering data
+ 
+Commands controlling old-style filters/selection:
+     sample_select sample_spec                       set a new list of samples
+     lwp_select lwp_spec                             set a new list of LWPs
+     thread_select thread_spec                       set a new list of threads
+     cpu_select cpu_spec                             set a new list of CPUs
+ 
+Commands controlling load object selection:
+     object_list                                     display load objects, functions-shown flag
+     object_show obj1,...                            set load objects to show all functions *
+     object_hide obj1,...                            set load objects to hide functions *
+     object_api obj1,...                             set load objects to show API (entry point) only *
+                                                       the special object name `all' refers to all load objects
+     objects_default                                 reset load objects show to defaults
+     object_select obj1,...                          set list of load objects whose functions are shown
+ 
+Commands that list metrics:
+     metric_list                                     display the available metrics and dmetrics keywords
+     cmetric_list[gmetric_list]                      display the available callers-callees metrics
+     indx_metric_list                                display the available index object metrics
+ 
+Commands that control output:
+     outfile filename                                open filename for subsequent output
+     appendfile filename                             open filename for subsequent appended output
+     limit n                                         limit output to the first n entries (n=0 for no limit)
+     name {long|short|mangled}[:{soname|nosoname}]   set long/short/mangled names for functions *
+     viewmode {user|expert|machine}                  set viewmode user|expert|machine *
+     compare {on|off|delta|ratio}                    enable comparison mode for experiments *
+     printmode string                                set the mode for printing tables *
+ 
+Commands that print other displays:
+     header exp_id                                   display information about the experiment
+     objects                                         display object list with errors or warnings
+     overview                                        display the overview of all loaded experiments
+     sample_detail exp_id                            display the current sample list with data
+     statistics exp_id                               display the execution statistics data
+ 
+Commands for experiments (scripts and interactive mode only):
+     open_exp experiment                             open experiment or group (drops all loaded experiments first)
+     add_exp experiment                              add experiment or group
+     drop_exp experiment                             drop experiment
+ 
+Default-setting commands:
+     dmetrics metric_spec                            set default function list metrics $
+     dsort metric_spec                               set default function list sort metric $
+     en_desc {on|off|=<regex>}                       enable descendant processes on|off|regex matches lineage or program name $
+ 
+Default-setting commands that only affect gprofng GUI
+     tlmode tl_mode                                  set default timeline mode, align, depth $
+     tldata tl_data                                  set default timeline visible data $
+     tabs tablist                                    set default visible tabs $
+     callflame                                       request calltree flame chart -- not a command, but used in the tabs command
+     timeline                                        request timeline -- not a command, but used in the tabs command
+     dsrc                                            request dualsource tab -- not a command, but used in the tabs command
+     srcdis                                          request source/disassembly tab -- not a command, but used in the tabs command
+ 
+Miscellaneous commands:
+     <type>                                          equivalent to "memobj type", or "indxobj type"
+                                                       where type is a memory object or index object type
+     ifreq                                           display instruction-frequency report
+     procstats                                       display processing statistics
+     script file                                     read er_print commands from script file
+     version                                         display the current release version
+     quit[exit]                                      terminate processing and exit
+ 
+Help command:
+     help                                            display the list of available commands
+(x86_64-linux-gnu-gp-display-text) 

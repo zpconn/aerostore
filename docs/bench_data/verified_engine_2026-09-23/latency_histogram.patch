@@ -1,0 +1,609 @@
+--- a/aerostore_core/benches/hyperfeed_crucible.rs
++++ b/aerostore_core/benches/hyperfeed_crucible.rs
+@@ -24,6 +24,12 @@
+ use testcontainers::core::WaitFor;
+ use testcontainers::GenericImage;
+ 
++#[path = "support/latency_histogram.rs"]
++mod latency_histogram;
++use latency_histogram::{
++    latency_bucket, merge_histograms, percentile_bounds, HIST_BUCKETS, SUBDIVISIONS,
++};
++
+ const WORKERS: usize = 16;
+ const TOTAL_KEYS: usize = 50_000;
+ const HOT_KEY_COUNT: usize = 256;
+@@ -32,7 +38,6 @@
+ const HOT_UPSERT_EVERY: u64 = 20; // 5% of upserts
+ const SCAN_LIMIT: i64 = 64;
+ const SCAN_TAIL_WINDOW: i64 = 4_096;
+-const HIST_BUCKETS: usize = 64;
+ const RING_SLOTS: usize = 2048;
+ const RING_SLOT_BYTES: usize = 256;
+ const SHM_BYTES_METRICS: usize = 16 << 20;
+@@ -102,10 +107,15 @@
+ }
+ 
+ impl Histogram {
+-    fn new() -> Self {
+-        Self {
+-            samples: AtomicU64::new(0),
+-            buckets: std::array::from_fn(|_| AtomicU64::new(0)),
++    // SAFETY: `out` is aligned, uniquely owned storage for one Histogram. The
++    // caller must not publish it until this function has initialized every field.
++    unsafe fn initialize_at(out: *mut Self) {
++        unsafe {
++            std::ptr::addr_of_mut!((*out).samples).write(AtomicU64::new(0));
++            let buckets = std::ptr::addr_of_mut!((*out).buckets).cast::<AtomicU64>();
++            for idx in 0..HIST_BUCKETS {
++                buckets.add(idx).write(AtomicU64::new(0));
++            }
+         }
+     }
+ 
+@@ -141,20 +151,21 @@
+ }
+ 
+ impl WorkerStats {
+-    fn new() -> Self {
+-        Self {
+-            total_ops: AtomicU64::new(0),
+-            upsert_ops: AtomicU64::new(0),
+-            scan_ops: AtomicU64::new(0),
+-            hot_upserts: AtomicU64::new(0),
+-            conflicts: AtomicU64::new(0),
+-            operation_failures: AtomicU64::new(0),
+-            index_remove_failures: AtomicU64::new(0),
+-            index_insert_failures: AtomicU64::new(0),
+-            total_latency: Histogram::new(),
+-            upsert_latency: Histogram::new(),
+-            scan_latency: Histogram::new(),
+-            scan_server_exec_latency: Histogram::new(),
++    // SAFETY: same initialization contract as Histogram::initialize_at.
++    unsafe fn initialize_at(out: *mut Self) {
++        unsafe {
++            std::ptr::addr_of_mut!((*out).total_ops).write(AtomicU64::new(0));
++            std::ptr::addr_of_mut!((*out).upsert_ops).write(AtomicU64::new(0));
++            std::ptr::addr_of_mut!((*out).scan_ops).write(AtomicU64::new(0));
++            std::ptr::addr_of_mut!((*out).hot_upserts).write(AtomicU64::new(0));
++            std::ptr::addr_of_mut!((*out).conflicts).write(AtomicU64::new(0));
++            std::ptr::addr_of_mut!((*out).operation_failures).write(AtomicU64::new(0));
++            std::ptr::addr_of_mut!((*out).index_remove_failures).write(AtomicU64::new(0));
++            std::ptr::addr_of_mut!((*out).index_insert_failures).write(AtomicU64::new(0));
++            Histogram::initialize_at(std::ptr::addr_of_mut!((*out).total_latency));
++            Histogram::initialize_at(std::ptr::addr_of_mut!((*out).upsert_latency));
++            Histogram::initialize_at(std::ptr::addr_of_mut!((*out).scan_latency));
++            Histogram::initialize_at(std::ptr::addr_of_mut!((*out).scan_server_exec_latency));
+         }
+     }
+ }
+@@ -170,20 +181,38 @@
+ }
+ 
+ impl RunState {
+-    fn new(initial_event_ts: i64) -> Self {
+-        Self {
+-            ready: AtomicU32::new(0),
+-            go: AtomicU32::new(0),
+-            stop: AtomicU32::new(0),
+-            _pad: [0_u32; 13],
+-            global_event_ts: AtomicI64::new(initial_event_ts),
+-            workers: std::array::from_fn(|_| WorkerStats::new()),
+-        }
+-    }
+-}
+-
+-#[derive(Clone, Copy, Debug)]
++    fn allocate(shm: &ShmArena, initial_event_ts: i64) -> Result<RelPtr<Self>, String> {
++        // Use the same tracked General-class allocation as ChunkedArena::alloc,
++        // but initialize in place: this state is now about 1.85 MiB and must not
++        // be constructed or copied as a large stack temporary.
++        let offset = shm
++            .chunked_arena()
++            .alloc_raw(std::mem::size_of::<Self>(), std::mem::align_of::<Self>())
++            .map_err(|err| err.to_string())?;
++        // SAFETY: alloc_raw reserves a unique, aligned region inside this mapped
++        // arena. Initialize fields with raw pointers, without forming a reference
++        // to the partially initialized state. No workers exist yet; returning
++        // the offset is the first publication of this fully initialized value.
++        unsafe {
++            let out = shm.mmap_base().as_ptr().add(offset as usize).cast::<Self>();
++            std::ptr::addr_of_mut!((*out).ready).write(AtomicU32::new(0));
++            std::ptr::addr_of_mut!((*out).go).write(AtomicU32::new(0));
++            std::ptr::addr_of_mut!((*out).stop).write(AtomicU32::new(0));
++            std::ptr::addr_of_mut!((*out)._pad).write([0; 13]);
++            std::ptr::addr_of_mut!((*out).global_event_ts).write(AtomicI64::new(initial_event_ts));
++            let workers = std::ptr::addr_of_mut!((*out).workers).cast::<WorkerStats>();
++            for idx in 0..WORKERS {
++                WorkerStats::initialize_at(workers.add(idx));
++            }
++        }
++        Ok(RelPtr::from_offset(offset))
++    }
++}
++
++#[derive(Clone, Copy, Debug, Default)]
+ struct LatencySummary {
++    samples: u64,
++    p99_lower_ns: u64,
+     p50_ns: u64,
+     p90_ns: u64,
+     p99_ns: u64,
+@@ -474,9 +503,10 @@
+ }
+ 
+ fn print_aerostore_diagnostic(result: &EngineRunResult, profile: CrucibleProfile) {
++    print_total_latency_bounds(result, profile);
+     println!("hyperfeed_crucible_config: profile={} mode=aerostore_only aerostore_shm_bytes={} workers={}",
+         profile.label, profile.aerostore_shm_bytes, WORKERS);
+-    println!("| Engine | TPS | Total Ops | p50 (us) | p90 (us) | p99 (us) | Upserts | Scans | Hot Upserts | Conflicts | Index Remove Fail | Index Insert Fail |");
++    println!("| Engine | TPS | Total Ops | p50 upper (us) | p90 upper (us) | p99 upper (us) | Upserts | Scans | Hot Upserts | Conflicts | Index Remove Fail | Index Insert Fail |");
+     println!(
+         "| aerostore | {:.2} | {} | {:.2} | {:.2} | {:.2} | {} | {} | {} | {} | {} | {} |",
+         result.tps,
+@@ -539,9 +569,9 @@
+     for result in &results {
+         let tps_ratio = result.aerostore.tps / result.postgres.tps.max(f64::EPSILON);
+         let p99_ratio = result.aerostore.total_latency.p99_ns as f64
+-            / (result.postgres.total_latency.p99_ns.max(1) as f64);
++            / (result.postgres.total_latency.p99_lower_ns.max(1) as f64);
+         let tps_label = format!("{}_aerostore_vs_postgres_tps_ratio", result.profile.label);
+-        let p99_label = format!("{}_aerostore_vs_postgres_p99_ratio", result.profile.label);
++        let p99_label = format!("{}_aerostore_vs_postgres_p99_ratio_upper", result.profile.label);
+ 
+         group.bench_function(tps_label, |b| b.iter(|| black_box(tps_ratio)));
+         group.bench_function(p99_label, |b| b.iter(|| black_box(p99_ratio)));
+@@ -811,10 +841,7 @@
+         .map_err(|err| err.to_string())?;
+     let table = Arc::new(table);
+ 
+-    let state_ptr = shm
+-        .chunked_arena()
+-        .alloc(RunState::new(TOTAL_KEYS as i64))
+-        .map_err(|err| err.to_string())?;
++    let state_ptr = RunState::allocate(shm.as_ref(), TOTAL_KEYS as i64)?;
+     let state_offset = state_ptr.load(Ordering::Acquire);
+ 
+     // Open optional output before launching children, so a path error cannot
+@@ -1508,10 +1535,7 @@
+     verify_postgres_index_plan(&mut admin)?;
+ 
+     let metrics_shm = Arc::new(ShmArena::new(SHM_BYTES_METRICS).map_err(|err| err.to_string())?);
+-    let state_ptr = metrics_shm
+-        .chunked_arena()
+-        .alloc(RunState::new(TOTAL_KEYS as i64))
+-        .map_err(|err| err.to_string())?;
++    let state_ptr = RunState::allocate(metrics_shm.as_ref(), TOTAL_KEYS as i64)?;
+     let state_offset = state_ptr.load(Ordering::Acquire);
+ 
+     let mut pids = Vec::with_capacity(WORKERS);
+@@ -2052,16 +2076,14 @@
+ fn print_results(result: &ProfileRunResult, duration: Duration) {
+     let aerostore = &result.aerostore;
+     let postgres = &result.postgres;
++    print_total_latency_bounds(aerostore, result.profile);
++    print_total_latency_bounds(postgres, result.profile);
+ 
+     let tps_ratio = aerostore.tps / postgres.tps.max(f64::EPSILON);
+     let total_p99_ratio =
+-        aerostore.total_latency.p99_ns as f64 / (postgres.total_latency.p99_ns.max(1) as f64);
+-
+-    let pg_scan_server = postgres.scan_server_exec_latency.unwrap_or(LatencySummary {
+-        p50_ns: 0,
+-        p90_ns: 0,
+-        p99_ns: 0,
+-    });
++        aerostore.total_latency.p99_ns as f64 / (postgres.total_latency.p99_lower_ns.max(1) as f64);
++
++    let pg_scan_server = postgres.scan_server_exec_latency.unwrap_or_default();
+ 
+     let pg_overhead_p50 = postgres
+         .scan_latency
+@@ -2089,7 +2111,7 @@
+     );
+ 
+     println!(
+-        "| Engine | TPS | Total Ops | p50 (us) | p90 (us) | p99 (us) | Upserts | Scans | Hot Upserts | Conflicts | Index Remove Fail | Index Insert Fail |"
++        "| Engine | TPS | Total Ops | p50 upper (us) | p90 upper (us) | p99 upper (us) | Upserts | Scans | Hot Upserts | Conflicts | Index Remove Fail | Index Insert Fail |"
+     );
+     println!("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+     println!(
+@@ -2246,7 +2268,7 @@
+     }
+ 
+     println!(
+-        "| Postgres Scan Breakdown | Client RTT p50 (us) | Server Exec p50 (us) | IPC/Protocol p50 (us) | Client RTT p90 (us) | Server Exec p90 (us) | IPC/Protocol p90 (us) | Client RTT p99 (us) | Server Exec p99 (us) | IPC/Protocol p99 (us) |"
++        "| Postgres Scan Breakdown | Client RTT p50 upper (us) | Server Exec p50 upper (us) | p50 endpoint difference (us) | Client RTT p90 upper (us) | Server Exec p90 upper (us) | p90 endpoint difference (us) | Client RTT p99 upper (us) | Server Exec p99 upper (us) | p99 endpoint difference (us) |"
+     );
+     println!("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+     println!(
+@@ -2262,7 +2284,7 @@
+         ns_to_us(pg_overhead_p99),
+     );
+ 
+-    println!("| Aerostore Raw Scan | p50 (us) | p90 (us) | p99 (us) |",);
++    println!("| Aerostore Raw Scan | p50 upper (us) | p90 upper (us) | p99 upper (us) |",);
+     println!("|---|---:|---:|---:|");
+     println!(
+         "| aerostore_scan | {:.2} | {:.2} | {:.2} |",
+@@ -2272,7 +2294,7 @@
+     );
+ 
+     println!(
+-        "hyperfeed_crucible_summary: profile={} tps_ratio_aerostore_vs_postgres={:.2}x total_p99_ratio={:.3}",
++        "hyperfeed_crucible_summary: profile={} tps_ratio_aerostore_vs_postgres={:.2}x total_p99_ratio_upper={:.3}",
+         result.profile.label,
+         tps_ratio,
+         total_p99_ratio,
+@@ -2327,11 +2349,7 @@
+ }
+ 
+ fn assert_postgres_config_and_overhead(postgres: &EngineRunResult, profile_label: &str) {
+-    let server = postgres.scan_server_exec_latency.unwrap_or(LatencySummary {
+-        p50_ns: 0,
+-        p90_ns: 0,
+-        p99_ns: 0,
+-    });
++    let server = postgres.scan_server_exec_latency.unwrap_or_default();
+ 
+     assert!(
+         server.p50_ns > 0,
+@@ -2348,9 +2366,13 @@
+ }
+ 
+ fn assert_performance_gates(result: &ProfileRunResult) {
++    assert!(
++        result.postgres.total_latency.p99_lower_ns > 0,
++        "PostgreSQL p99 lower bound must be positive for a ratio gate"
++    );
+     let tps_ratio = result.aerostore.tps / result.postgres.tps.max(f64::EPSILON);
+     let p99_ratio = result.aerostore.total_latency.p99_ns as f64
+-        / (result.postgres.total_latency.p99_ns.max(1) as f64);
++        / (result.postgres.total_latency.p99_lower_ns.max(1) as f64);
+ 
+     assert!(
+         tps_ratio >= REQUIRED_TPS_RATIO,
+@@ -2361,59 +2383,36 @@
+     );
+     assert!(
+         p99_ratio <= REQUIRED_P99_RATIO,
+-        "{} Aerostore p99 gate failed: observed {:.3}, required <= {:.3}",
++        "{} Aerostore p99 gate failed: conservative upper ratio {:.3}, required <= {:.3}",
+         result.profile.label,
+         p99_ratio,
+         REQUIRED_P99_RATIO
+     );
+ }
+ 
+-fn merge_histograms(dst: &mut [u64; HIST_BUCKETS], src: &[u64; HIST_BUCKETS]) {
+-    for (d, s) in dst.iter_mut().zip(src.iter()) {
+-        *d = d.saturating_add(*s);
+-    }
+-}
+-
+ fn latency_summary(hist: &[u64; HIST_BUCKETS], total_samples: u64) -> LatencySummary {
++    let p99 = percentile_bounds(hist, total_samples, 99);
+     LatencySummary {
+-        p50_ns: percentile_ns(hist, total_samples, 0.50),
+-        p90_ns: percentile_ns(hist, total_samples, 0.90),
+-        p99_ns: percentile_ns(hist, total_samples, 0.99),
+-    }
+-}
+-
+-fn percentile_ns(hist: &[u64; HIST_BUCKETS], total_samples: u64, quantile: f64) -> u64 {
+-    if total_samples == 0 {
+-        return 0;
+-    }
+-
+-    let target = ((total_samples as f64) * quantile).ceil() as u64;
+-    let mut cumulative = 0_u64;
+-
+-    for (idx, count) in hist.iter().enumerate() {
+-        cumulative = cumulative.saturating_add(*count);
+-        if cumulative >= target {
+-            return bucket_upper_bound_ns(idx);
+-        }
+-    }
+-
+-    bucket_upper_bound_ns(HIST_BUCKETS - 1)
+-}
+-
+-#[inline]
+-fn bucket_upper_bound_ns(bucket_idx: usize) -> u64 {
+-    if bucket_idx >= 63 {
+-        u64::MAX
+-    } else {
+-        1_u64 << bucket_idx
+-    }
+-}
+-
+-#[inline]
+-fn latency_bucket(latency_ns: u64) -> usize {
+-    let val = latency_ns.max(1);
+-    let idx = (63_u32.saturating_sub(val.leading_zeros())) as usize;
+-    idx.min(HIST_BUCKETS - 1)
++        samples: total_samples,
++        p50_ns: percentile_bounds(hist, total_samples, 50).upper_ns,
++        p90_ns: percentile_bounds(hist, total_samples, 90).upper_ns,
++        p99_ns: p99.upper_ns,
++        p99_lower_ns: p99.lower_ns,
++    }
++}
++
++// Human-facing microseconds are rounded; this line preserves exact inclusive
++// nanosecond bounds for conservative comparisons against another engine/run.
++fn print_total_latency_bounds(result: &EngineRunResult, profile: CrucibleProfile) {
++    println!(
++        "hyperfeed_crucible_latency_bounds: profile={} engine={} histogram_subdivisions={} samples={} p99_lower_ns={} p99_upper_ns={}",
++        profile.label,
++        result.label,
++        SUBDIVISIONS,
++        result.total_latency.samples,
++        result.total_latency.p99_lower_ns,
++        result.total_latency.p99_ns,
++    );
+ }
+ 
+ #[inline]
+--- /dev/null
++++ b/aerostore_core/benches/support/latency_histogram.rs
+@@ -0,0 +1,80 @@
++//! Bounded latency measurement shared by the Crucible and its ordinary tests.
++//!
++//! There are 64 subdivisions per power of two, with exact buckets below 128 ns.
++//! Every reported interval is inclusive and contains its nearest-rank quantile;
++//! its upper endpoint is at most 1 + 1/64 times its positive lower endpoint.
++//! This module measures observations; it does not verify the database engine.
++
++pub const SUBDIVISIONS: usize = 64;
++const SUBDIVISION_BITS: u32 = 6;
++pub const HIST_BUCKETS: usize = SUBDIVISIONS * (65 - SUBDIVISION_BITS as usize);
++
++#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
++pub struct LatencyBounds {
++    pub lower_ns: u64,
++    pub upper_ns: u64,
++}
++
++#[inline]
++pub fn latency_bucket(latency_ns: u64) -> usize {
++    if latency_ns < SUBDIVISIONS as u64 {
++        return latency_ns as usize;
++    }
++    let exponent = 63 - latency_ns.leading_zeros();
++    let shift = exponent - SUBDIVISION_BITS;
++    let subdivision = (latency_ns >> shift) as usize - SUBDIVISIONS;
++    SUBDIVISIONS + shift as usize * SUBDIVISIONS + subdivision
++}
++
++pub fn bucket_bounds(bucket: usize) -> LatencyBounds {
++    assert!(bucket < HIST_BUCKETS, "latency bucket out of range");
++    if bucket < SUBDIVISIONS {
++        return LatencyBounds {
++            lower_ns: bucket as u64,
++            upper_ns: bucket as u64,
++        };
++    }
++    let relative = bucket - SUBDIVISIONS;
++    let shift = relative / SUBDIVISIONS;
++    let subdivision = relative % SUBDIVISIONS;
++    let lower_ns = (SUBDIVISIONS as u64 + subdivision as u64) << shift;
++    // The final bucket ends at u64::MAX without overflowing this addition.
++    let upper_ns = lower_ns + ((1_u64 << shift) - 1);
++    LatencyBounds { lower_ns, upper_ns }
++}
++
++pub fn merge_histograms(dst: &mut [u64; HIST_BUCKETS], src: &[u64; HIST_BUCKETS]) {
++    for (dst, src) in dst.iter_mut().zip(src) {
++        *dst = dst
++            .checked_add(*src)
++            .expect("latency sample count overflow");
++    }
++}
++
++/// Inclusive bounds for ceil(total_samples * percentile / 100), without float
++/// rounding or intermediate u64 overflow. Call only after writers have stopped.
++pub fn percentile_bounds(
++    hist: &[u64; HIST_BUCKETS],
++    total_samples: u64,
++    percentile: u32,
++) -> LatencyBounds {
++    assert!((1..=100).contains(&percentile));
++    let observed: u128 = hist.iter().map(|count| u128::from(*count)).sum();
++    assert_eq!(
++        observed,
++        u128::from(total_samples),
++        "inconsistent latency histogram"
++    );
++    if total_samples == 0 {
++        return LatencyBounds::default();
++    }
++    let rank = (u128::from(total_samples) * u128::from(percentile)).div_ceil(100);
++    let mut cumulative = 0_u128;
++    for (idx, count) in hist.iter().enumerate() {
++        cumulative += u128::from(*count);
++        if cumulative >= rank {
++            return bucket_bounds(idx);
++        }
++    }
++    unreachable!("validated histogram contains the requested rank")
++}
+--- /dev/null
++++ b/aerostore_core/tests/crucible_latency_histogram.rs
+@@ -0,0 +1,176 @@
++#[path = "../benches/support/latency_histogram.rs"]
++mod latency_histogram;
++
++use latency_histogram::{
++    bucket_bounds, latency_bucket, merge_histograms, percentile_bounds, LatencyBounds,
++    HIST_BUCKETS, SUBDIVISIONS,
++};
++
++fn histogram(samples: &[u64]) -> [u64; HIST_BUCKETS] {
++    let mut counts = [0; HIST_BUCKETS];
++    for sample in samples {
++        counts[latency_bucket(*sample)] += 1;
++    }
++    counts
++}
++
++#[test]
++fn every_bucket_covers_exactly_its_inclusive_interval() {
++    assert_eq!(HIST_BUCKETS, 3_776);
++    assert_eq!(
++        bucket_bounds(0),
++        LatencyBounds {
++            lower_ns: 0,
++            upper_ns: 0
++        }
++    );
++    assert_eq!(bucket_bounds(HIST_BUCKETS - 1).upper_ns, u64::MAX);
++    for bucket in 0..HIST_BUCKETS {
++        let bounds = bucket_bounds(bucket);
++        assert!(bounds.lower_ns <= bounds.upper_ns);
++        assert_eq!(latency_bucket(bounds.lower_ns), bucket);
++        assert_eq!(latency_bucket(bounds.upper_ns), bucket);
++        let midpoint = bounds.lower_ns + (bounds.upper_ns - bounds.lower_ns) / 2;
++        assert_eq!(latency_bucket(midpoint), bucket);
++        if bucket > 0 {
++            assert_eq!(latency_bucket(bounds.lower_ns - 1), bucket - 1);
++            assert_eq!(bucket_bounds(bucket - 1).upper_ns + 1, bounds.lower_ns);
++        }
++        if bucket + 1 < HIST_BUCKETS {
++            assert_eq!(latency_bucket(bounds.upper_ns + 1), bucket + 1);
++        }
++        assert!(
++            u128::from(bounds.upper_ns - bounds.lower_ns) * SUBDIVISIONS as u128
++                <= u128::from(bounds.lower_ns)
++        );
++    }
++}
++
++#[test]
++fn small_values_and_power_of_two_edges_are_not_rounded_outside_their_bucket() {
++    for value in 0..128 {
++        assert_eq!(
++            bucket_bounds(latency_bucket(value)),
++            LatencyBounds {
++                lower_ns: value,
++                upper_ns: value,
++            }
++        );
++    }
++    for exponent in 0..64 {
++        let power = 1_u64 << exponent;
++        for value in [power - 1, power, power + 1] {
++            let bounds = bucket_bounds(latency_bucket(value));
++            assert!(bounds.lower_ns <= value && value <= bounds.upper_ns);
++        }
++        assert_eq!(bucket_bounds(latency_bucket(power)).lower_ns, power);
++    }
++    assert_eq!(latency_bucket(u64::MAX), HIST_BUCKETS - 1);
++}
++
++#[test]
++fn nearest_rank_handles_empty_and_small_sample_count_boundaries() {
++    assert_eq!(
++        percentile_bounds(&[0; HIST_BUCKETS], 0, 99),
++        LatencyBounds::default()
++    );
++    for count in [1, 2, 3, 99, 100, 101, 199, 200, 201] {
++        let samples: Vec<u64> = (0..count).collect();
++        let counts = histogram(&samples);
++        for percentile in [1, 50, 90, 99, 100] {
++            let rank = (count * u64::from(percentile)).div_ceil(100);
++            let exact = samples[(rank - 1) as usize];
++            let bounds = percentile_bounds(&counts, count, percentile);
++            assert!(
++                bounds.lower_ns <= exact && exact <= bounds.upper_ns,
++                "count={count}, percentile={percentile}, exact={exact}, bounds={bounds:?}"
++            );
++        }
++    }
++}
++
++#[test]
++fn nearest_rank_remains_exact_above_float_precision_and_at_u64_max() {
++    for total in [(1_u64 << 53) + 1, u64::MAX] {
++        for percentile in [1, 50, 90, 99, 100] {
++            let rank = (u128::from(total) * u128::from(percentile)).div_ceil(100) as u64;
++            let mut counts = [0; HIST_BUCKETS];
++            counts[10] = rank - 1;
++            counts[20] = total - (rank - 1);
++            assert_eq!(
++                percentile_bounds(&counts, total, percentile),
++                LatencyBounds {
++                    lower_ns: 20,
++                    upper_ns: 20,
++                }
++            );
++            counts[10] += 1;
++            counts[20] -= 1;
++            assert_eq!(
++                percentile_bounds(&counts, total, percentile),
++                LatencyBounds {
++                    lower_ns: 10,
++                    upper_ns: 10,
++                }
++            );
++        }
++    }
++}
++
++#[test]
++fn merged_quantiles_contain_sorted_oracle_for_samples_across_every_bucket() {
++    let mut samples = vec![0, 0, u64::MAX, u64::MAX];
++    for bucket in 0..HIST_BUCKETS {
++        let bounds = bucket_bounds(bucket);
++        samples.extend([bounds.lower_ns, bounds.upper_ns]);
++        if bounds.lower_ns > 0 {
++            samples.push(bounds.lower_ns - 1);
++        }
++        if bounds.upper_ns < u64::MAX {
++            samples.push(bounds.upper_ns + 1);
++        }
++    }
++    let mut shards = [[0; HIST_BUCKETS]; 3];
++    for (idx, sample) in samples.iter().enumerate() {
++        shards[idx % 3][latency_bucket(*sample)] += 1;
++    }
++    let mut merged = [0; HIST_BUCKETS];
++    for shard in shards {
++        merge_histograms(&mut merged, &shard);
++    }
++    assert_eq!(merged, histogram(&samples));
++    samples.sort_unstable();
++    for percentile in 1..=100 {
++        let rank = (samples.len() * percentile as usize).div_ceil(100);
++        let exact = samples[rank - 1];
++        let bounds = percentile_bounds(&merged, samples.len() as u64, percentile);
++        assert!(
++            bounds.lower_ns <= exact && exact <= bounds.upper_ns,
++            "percentile={percentile}, exact={exact}, bounds={bounds:?}"
++        );
++    }
++}
++
++#[test]
++fn former_same_bucket_near_doubling_is_now_distinguishable() {
++    let baseline = percentile_bounds(&histogram(&[524_288; 100]), 100, 99);
++    let candidate = percentile_bounds(&histogram(&[1_000_000; 100]), 100, 99);
++    // Even the most favorable endpoints prove a regression beyond 10%.
++    assert!(u128::from(candidate.lower_ns) * 10 > u128::from(baseline.upper_ns) * 11);
++}
++
++#[test]
++#[should_panic(expected = "inconsistent latency histogram")]
++fn rejects_inconsistent_sample_total_instead_of_returning_a_fake_tail() {
++    percentile_bounds(&histogram(&[1, 2, 3]), 4, 99);
++}
++
++#[test]
++#[should_panic(expected = "latency sample count overflow")]
++fn rejects_counter_overflow_instead_of_saturating_silently() {
++    let mut destination = [0; HIST_BUCKETS];
++    let mut source = [0; HIST_BUCKETS];
++    destination[0] = u64::MAX;
++    source[0] = 1;
++    merge_histograms(&mut destination, &source);
++}

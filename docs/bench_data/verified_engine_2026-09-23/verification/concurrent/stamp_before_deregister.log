@@ -1,0 +1,30 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-next/formal-final/concurrent/stamp_before_deregister.rs:230:1
+    |
+230 | / pub fn commit_with_record_impl<T, P: CommitPrimitives<T>, const WRITE_AHEAD: bool, F>(driver: &mut P, tx: &mut OccTransaction<T>,...
+231 | |  -> (result: Result<OccCommitRecord<T>, Error>)
+    | |______________________________________________^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-next/formal-final/concurrent/stamp_before_deregister.rs:310:20
+    |
+214 |         requires held(old(self).events()), old(self).events().rows_published, old(self).events().deregistered,
+    |                                                                               ------------------------------- failed precondition
+...
+310 | let finish = match driver . publish_index_stamps ( & index_changes ) {
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-next/formal-final/concurrent/stamp_before_deregister.rs:311:19
+    |
+214 |         requires held(old(self).events()), old(self).events().rows_published, old(self).events().deregistered,
+    |                                                                               ------------------------------- failed precondition
+...
+311 |     Ok ( ( ) ) => driver . publish_index_stamps ( & index_changes ) , Err ( err ) => Err ( err ) ,
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

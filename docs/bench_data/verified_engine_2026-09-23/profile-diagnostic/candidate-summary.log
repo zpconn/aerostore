@@ -1,0 +1,806 @@
+Current metrics: e.%totalcpu:i.%totalcpu:name
+Current Sort Metric: Exclusive Total CPU Time ( e.%totalcpu )
+Available metrics:
+Exclusive Total CPU Time: e.%totalcpu
+Inclusive Total CPU Time: i.%totalcpu
+                    Size: size
+              PC Address: address
+                    Name: name
+
+ID Sel PID Experiment 
+== === === ========================================================= 
+ 1 yes  45 target/verification-next/profile/candidate/cpu.er 
+ 2 yes  49 target/verification-next/profile/candidate/cpu.er/_f1.er 
+ 3 yes  50 target/verification-next/profile/candidate/cpu.er/_f2.er 
+ 4 yes  51 target/verification-next/profile/candidate/cpu.er/_f3.er 
+ 5 yes  52 target/verification-next/profile/candidate/cpu.er/_f4.er 
+ 6 yes  53 target/verification-next/profile/candidate/cpu.er/_f5.er 
+ 7 yes  54 target/verification-next/profile/candidate/cpu.er/_f6.er 
+ 8 yes  55 target/verification-next/profile/candidate/cpu.er/_f7.er 
+ 9 yes  56 target/verification-next/profile/candidate/cpu.er/_f8.er 
+10 yes  57 target/verification-next/profile/candidate/cpu.er/_f9.er 
+11 yes  58 target/verification-next/profile/candidate/cpu.er/_f10.er 
+12 yes  59 target/verification-next/profile/candidate/cpu.er/_f11.er 
+13 yes  60 target/verification-next/profile/candidate/cpu.er/_f12.er 
+14 yes  61 target/verification-next/profile/candidate/cpu.er/_f13.er 
+15 yes  62 target/verification-next/profile/candidate/cpu.er/_f14.er 
+16 yes  63 target/verification-next/profile/candidate/cpu.er/_f15.er 
+17 yes  64 target/verification-next/profile/candidate/cpu.er/_f16.er 
+18 yes  65 target/verification-next/profile/candidate/cpu.er/_f17.er 
+Experiment(s):
+
+Experiment      :target/verification-next/profile/candidate/cpu.er (plus 17 more)
+  Target        : '/home/zpconn/code/aerostore/target/verification-next/candidate-fine/hyperfeed_crucible --noplot'
+  Host          : HomePC (x86_64, Linux 6.6.87.2-microsoft-standard-WSL2)
+  Start Time    : Wed Sep 23 12:28:44 2026
+  Duration      : 31.159 Seconds
+
+Metrics:
+
+  Experiment Duration (Seconds): [31.159]
+  Clock Profiling
+    [X]Total CPU Time - totalcpu (Seconds): [*206.670]
+
+Notes: '*' indicates hot metrics, '[X]' indicates currently enabled metrics.
+       The metrics command can be used to change selections. The metric_list command lists all available metrics.
+<Sum across selected experiments>
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.): N/A
+                                   End Time (sec.): N/A
+                                   Duration (sec.): 556.118
+                          Total Thread Time (sec.): 560.971
+                         Average number of Threads:   1.009
+
+                              Process Times (sec.):
+                                          User CPU: 130.569 ( 23.3%)
+                                        System CPU:  84.706 ( 15.1%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep: 345.696 ( 61.6%)
+
+                                 Minor Page Faults:   58438
+                                 Major Page Faults:      72
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks: 1449920
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches: 1902320
+                      Involuntary context switches:     151
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+
+Experiment: target/verification-next/profile/candidate/cpu.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  31.159
+                                   Duration (sec.):  31.159
+                          Total Thread Time (sec.):  36.012
+                         Average number of Threads:   1.156
+
+                              Process Times (sec.):
+                                          User CPU:   9.330 ( 25.9%)
+                                        System CPU:   1.777 (  4.9%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  24.906 ( 69.2%)
+
+                                 Minor Page Faults:   15984
+                                 Major Page Faults:       4
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks:     176
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:  139772
+                      Involuntary context switches:      14
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Experiment: target/verification-next/profile/candidate/cpu.er/_f1.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  30.990
+                                   Duration (sec.):  30.990
+                          Total Thread Time (sec.):  30.990
+                         Average number of Threads:   1.000
+
+                              Process Times (sec.):
+                                          User CPU:   1.429 (  4.6%)
+                                        System CPU:   1.626 (  5.2%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  27.935 ( 90.1%)
+
+                                 Minor Page Faults:     342
+                                 Major Page Faults:       2
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks: 1445984
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:  252335
+                      Involuntary context switches:      13
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Experiment: target/verification-next/profile/candidate/cpu.er/_f2.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  30.873
+                                   Duration (sec.):  30.873
+                          Total Thread Time (sec.):  30.873
+                         Average number of Threads:   1.000
+
+                              Process Times (sec.):
+                                          User CPU:   7.383 ( 23.9%)
+                                        System CPU:   5.142 ( 16.7%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  18.348 ( 59.4%)
+
+                                 Minor Page Faults:    2298
+                                 Major Page Faults:       4
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks:     232
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:   98152
+                      Involuntary context switches:       5
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Experiment: target/verification-next/profile/candidate/cpu.er/_f3.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  30.873
+                                   Duration (sec.):  30.873
+                          Total Thread Time (sec.):  30.873
+                         Average number of Threads:   1.000
+
+                              Process Times (sec.):
+                                          User CPU:   7.693 ( 24.9%)
+                                        System CPU:   5.040 ( 16.3%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  18.140 ( 58.8%)
+
+                                 Minor Page Faults:    2800
+                                 Major Page Faults:       4
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks:     240
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:   97645
+                      Involuntary context switches:       8
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Experiment: target/verification-next/profile/candidate/cpu.er/_f4.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  30.882
+                                   Duration (sec.):  30.882
+                          Total Thread Time (sec.):  30.882
+                         Average number of Threads:   1.000
+
+                              Process Times (sec.):
+                                          User CPU:   7.705 ( 25.0%)
+                                        System CPU:   4.985 ( 16.1%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  18.192 ( 58.9%)
+
+                                 Minor Page Faults:    2934
+                                 Major Page Faults:       4
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks:     240
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:   92550
+                      Involuntary context switches:       7
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Experiment: target/verification-next/profile/candidate/cpu.er/_f5.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  30.872
+                                   Duration (sec.):  30.872
+                          Total Thread Time (sec.):  30.872
+                         Average number of Threads:   1.000
+
+                              Process Times (sec.):
+                                          User CPU:   7.468 ( 24.2%)
+                                        System CPU:   5.141 ( 16.7%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  18.263 ( 59.2%)
+
+                                 Minor Page Faults:    2607
+                                 Major Page Faults:       4
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks:     240
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:   94319
+                      Involuntary context switches:      10
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Experiment: target/verification-next/profile/candidate/cpu.er/_f6.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  30.873
+                                   Duration (sec.):  30.873
+                          Total Thread Time (sec.):  30.873
+                         Average number of Threads:   1.000
+
+                              Process Times (sec.):
+                                          User CPU:   7.388 ( 23.9%)
+                                        System CPU:   5.083 ( 16.5%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  18.402 ( 59.6%)
+
+                                 Minor Page Faults:    2310
+                                 Major Page Faults:       4
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks:     232
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:   92772
+                      Involuntary context switches:       8
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Experiment: target/verification-next/profile/candidate/cpu.er/_f7.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  30.874
+                                   Duration (sec.):  30.874
+                          Total Thread Time (sec.):  30.874
+                         Average number of Threads:   1.000
+
+                              Process Times (sec.):
+                                          User CPU:   7.531 ( 24.4%)
+                                        System CPU:   4.998 ( 16.2%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  18.346 ( 59.4%)
+
+                                 Minor Page Faults:    2852
+                                 Major Page Faults:       4
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks:     232
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:   94041
+                      Involuntary context switches:       7
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Experiment: target/verification-next/profile/candidate/cpu.er/_f8.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  30.871
+                                   Duration (sec.):  30.871
+                          Total Thread Time (sec.):  30.871
+                         Average number of Threads:   1.000
+
+                              Process Times (sec.):
+                                          User CPU:   7.631 ( 24.7%)
+                                        System CPU:   5.131 ( 16.6%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  18.109 ( 58.7%)
+
+                                 Minor Page Faults:    2351
+                                 Major Page Faults:       4
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks:     240
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:   92032
+                      Involuntary context switches:      10
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Experiment: target/verification-next/profile/candidate/cpu.er/_f9.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  30.871
+                                   Duration (sec.):  30.871
+                          Total Thread Time (sec.):  30.871
+                         Average number of Threads:   1.000
+
+                              Process Times (sec.):
+                                          User CPU:   7.350 ( 23.8%)
+                                        System CPU:   5.034 ( 16.3%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  18.488 ( 59.9%)
+
+                                 Minor Page Faults:    2846
+                                 Major Page Faults:       4
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks:     232
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:   94119
+                      Involuntary context switches:       5
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Experiment: target/verification-next/profile/candidate/cpu.er/_f10.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  30.871
+                                   Duration (sec.):  30.871
+                          Total Thread Time (sec.):  30.871
+                         Average number of Threads:   1.000
+
+                              Process Times (sec.):
+                                          User CPU:   7.536 ( 24.4%)
+                                        System CPU:   4.953 ( 16.0%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  18.382 ( 59.5%)
+
+                                 Minor Page Faults:    2681
+                                 Major Page Faults:       4
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks:     232
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:   97724
+                      Involuntary context switches:      10
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Experiment: target/verification-next/profile/candidate/cpu.er/_f11.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  30.871
+                                   Duration (sec.):  30.871
+                          Total Thread Time (sec.):  30.871
+                         Average number of Threads:   1.000
+
+                              Process Times (sec.):
+                                          User CPU:   7.409 ( 24.0%)
+                                        System CPU:   4.929 ( 16.0%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  18.534 ( 60.0%)
+
+                                 Minor Page Faults:    2429
+                                 Major Page Faults:       5
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks:     232
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:   95692
+                      Involuntary context switches:       6
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Experiment: target/verification-next/profile/candidate/cpu.er/_f12.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  30.872
+                                   Duration (sec.):  30.872
+                          Total Thread Time (sec.):  30.872
+                         Average number of Threads:   1.000
+
+                              Process Times (sec.):
+                                          User CPU:   7.477 ( 24.2%)
+                                        System CPU:   5.307 ( 17.2%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  18.087 ( 58.6%)
+
+                                 Minor Page Faults:    2848
+                                 Major Page Faults:       5
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks:     240
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:   96459
+                      Involuntary context switches:       5
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Experiment: target/verification-next/profile/candidate/cpu.er/_f13.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  30.872
+                                   Duration (sec.):  30.872
+                          Total Thread Time (sec.):  30.872
+                         Average number of Threads:   1.000
+
+                              Process Times (sec.):
+                                          User CPU:   7.583 ( 24.6%)
+                                        System CPU:   5.181 ( 16.8%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  18.108 ( 58.7%)
+
+                                 Minor Page Faults:    2740
+                                 Major Page Faults:       4
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks:     240
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:   93509
+                      Involuntary context switches:      10
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Experiment: target/verification-next/profile/candidate/cpu.er/_f14.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  30.871
+                                   Duration (sec.):  30.871
+                          Total Thread Time (sec.):  30.871
+                         Average number of Threads:   1.000
+
+                              Process Times (sec.):
+                                          User CPU:   7.490 ( 24.3%)
+                                        System CPU:   5.041 ( 16.3%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  18.340 ( 59.4%)
+
+                                 Minor Page Faults:    2724
+                                 Major Page Faults:       4
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks:     232
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:   95149
+                      Involuntary context switches:      10
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Experiment: target/verification-next/profile/candidate/cpu.er/_f15.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  30.871
+                                   Duration (sec.):  30.871
+                          Total Thread Time (sec.):  30.871
+                         Average number of Threads:   1.000
+
+                              Process Times (sec.):
+                                          User CPU:   7.201 ( 23.3%)
+                                        System CPU:   5.270 ( 17.1%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  18.399 ( 59.6%)
+
+                                 Minor Page Faults:    2435
+                                 Major Page Faults:       4
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks:     224
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:   89893
+                      Involuntary context switches:       8
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Experiment: target/verification-next/profile/candidate/cpu.er/_f16.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  30.881
+                                   Duration (sec.):  30.881
+                          Total Thread Time (sec.):  30.881
+                         Average number of Threads:   1.000
+
+                              Process Times (sec.):
+                                          User CPU:   7.287 ( 23.6%)
+                                        System CPU:   5.037 ( 16.3%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  18.557 ( 60.1%)
+
+                                 Minor Page Faults:    2688
+                                 Major Page Faults:       4
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks:     232
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:   94958
+                      Involuntary context switches:       6
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Experiment: target/verification-next/profile/candidate/cpu.er/_f17.er
+        Aggregated statistics for selected samples
+
+                                       Start Label: Total
+                                         End Label: Total
+                                 Start Time (sec.):   0.000
+                                   End Time (sec.):  30.870
+                                   Duration (sec.):  30.870
+                          Total Thread Time (sec.):  30.870
+                         Average number of Threads:   1.000
+
+                              Process Times (sec.):
+                                          User CPU:   7.678 ( 24.9%)
+                                        System CPU:   5.031 ( 16.3%)
+                                          Trap CPU:   0.    (  0. %)
+                                         User Lock:   0.    (  0. %)
+                                   Data Page Fault:   0.    (  0. %)
+                                   Text Page Fault:   0.    (  0. %)
+                                 Kernel Page Fault:   0.    (  0. %)
+                                           Stopped:   0.    (  0. %)
+                                          Wait CPU:   0.    (  0. %)
+                                             Sleep:  18.162 ( 58.8%)
+
+                                 Minor Page Faults:    2569
+                                 Major Page Faults:       4
+                                     Process swaps:       0
+                                      Input blocks:       0
+                                     Output blocks:     240
+                                     Messages sent:       0
+                                 Messages received:       0
+                                   Signals handled:       0
+                        Voluntary context switches:   91199
+                      Involuntary context switches:       9
+                                      System calls:       0
+                                 Characters of I/O:       0
+
+Functions sorted by metric: Exclusive Total CPU Time
+
+Excl. Total     Incl. Total      Name
+CPU             CPU
+   sec.      %     sec.      %
+206.670 100.00  206.670 100.00   <Total>
+ 98.880  47.84   98.880  47.84   sched_yield
+ 42.280  20.46  140.950  68.20   aerostore_core::shm_lock::ShmMutex::lock
+ 13.960   6.75   14.040   6.79   aerostore_core::shm_skiplist::ShmSkipList<K>::find
+  6.400   3.10    8.030   3.89   aerostore_core::occ_partitioned::OccTable<T>::try_acquire_lock_indices
+  6.390   3.09  168.100  81.34   aerostore_core::occ_partitioned::OccTable<T>::commit_with_record_impl
+  4.460   2.16    4.460   2.16   aerostore_core::shm_skiplist::ShmSkipList<K>::find_readonly_exact
+  3.150   1.52    3.270   1.58   clock_nanosleep
+  2.860   1.38    3.080   1.49   aerostore_core::occ_partitioned::OccTable<T>::invoke_before_publish
+  2.640   1.28   70.080  33.91   aerostore_core::shm_index::SecondaryIndex<RowId>::transactional_insert
+  2.600   1.26   18.040   8.73   aerostore_core::shm_index::SecondaryIndex<RowId>::try_scan_count_with_limit
+  1.870   0.90    2.200   1.06   aerostore_core::procarray::ProcArray::begin_transaction
+  1.780   0.86    1.780   0.86   <static>@0x188341 (<libc.so.6>)
+  1.740   0.84    2.880   1.39   std::sys::backtrace::__rust_begin_short_backtrace
+  1.730   0.84  194.580  94.15   hyperfeed_crucible::run_aerostore_worker
+  1.240   0.60    1.440   0.70   aerostore_core::wal_delta::compute_dirty_mask
+  1.160   0.56   79.140  38.29   aerostore_core::shm_index::SecondaryIndex<RowId>::transactional_remove
+  1.080   0.52    1.600   0.77   <static>@0xaab1b (<libc.so.6>)
+  0.940   0.45    1.410   0.68   aerostore_core::occ_partitioned::OccTable<T>::allocate_row
+  0.900   0.44    0.900   0.44   aerostore_core::occ_partitioned::OccTable<T>::find_visible_row_ptr
+  0.790   0.38    1.110   0.54   aerostore_core::procarray::ProcArray::create_transaction_snapshot
+  0.730   0.35    0.730   0.35   malloc
+  0.610   0.30    0.610   0.30   aerostore_core::shm_skiplist::ShmSkipList<K>::retire_node
+  0.590   0.29    2.580   1.25   aerostore_core::wal_ring::serialize_commit_record
+  0.550   0.27    0.610   0.30   aerostore_core::occ_partitioned::OccTable<T>::publish_index_stamps
+  0.540   0.26    1.350   0.65   free
+  0.540   0.26    0.540   0.26   write
+  0.460   0.22    2.500   1.21   aerostore_core::wal_delta::build_update_record
+  0.450   0.22    0.450   0.22   <static>@0xa8e24 (<libc.so.6>)
+  0.450   0.22    0.560   0.27   bincode::internal::serialize
+  0.300   0.15    0.330   0.16   aerostore_core::procarray::ProcArray::end_transaction
+  0.290   0.14    0.810   0.39   calloc
+  0.280   0.14    2.450   1.19   aerostore_core::wal_writer::wal_writer_daemon_loop
+  0.270   0.13    0.540   0.26   realloc
+  0.260   0.13    0.360   0.17   aerostore_core::wal_delta::pack_delta_bytes
+  0.250   0.12    0.400   0.19   <aerostore_core::shm_skiplist::ProcArrayEpochGuard as core::ops::drop::Drop>::drop
+  0.200   0.10    0.200   0.10   serde_core::de::SeqAccess::next_element
+  0.190   0.09    0.890   0.43   rkyv::util::aligned_vec::AlignedVec::do_reserve
+  0.170   0.08    0.170   0.08   aerostore_core::occ_partitioned::OccTable<T>::publish_prepared_write_set
+  0.140   0.07    0.360   0.17   aerostore_core::wal_ring::deserialize_commit_record
+  0.130   0.06    0.130   0.06   __vdso_clock_gettime
+  0.130   0.06    3.350   1.62   aerostore_core::shm_skiplist::ShmSkipList<K>::unlink_node
+  0.130   0.06    0.240   0.12   aerostore_core::wal_delta::apply_delta_bytes
+  0.120   0.06    0.120   0.06   <static>@0x98628 (<libc.so.6>)
+  0.120   0.06    0.190   0.09   aerostore_core::occ_partitioned::OccTable<T>::recycle_row_ptr
+  0.120   0.06    0.200   0.10   bincode::internal::serialize
+  0.110   0.05    0.480   0.23   clock_gettime
+  0.100   0.05    0.100   0.05   aerostore_core::occ_partitioned::OccTable<T>::validate_index_bindings
+  0.080   0.04    0.110   0.05   aerostore_core::occ_partitioned::OccTable<T>::has_row_lock_conflict
+  0.080   0.04    0.150   0.07   alloc::collections::btree::map::IntoIter<K,V,A>::dying_next
+  0.070   0.03    0.070   0.03   aerostore_core::shm_skiplist::ShmSkipList<K>::update_pressure_state
+  0.070   0.03    0.070   0.03   core::ptr::drop_in_place<aerostore_core::occ_partitioned::PartitionLockGuard>
+  0.060   0.03    0.060   0.03   __rustc::__rust_alloc
+  0.060   0.03    0.060   0.03   alloc::collections::btree::map::BTreeMap<K,V,A>::insert
+  0.060   0.03    0.160   0.08   alloc::raw_vec::RawVec<T,A>::grow_one
+  0.050   0.02   70.190  33.96   aerostore_core::occ_partitioned::OccTable<T>::prepare_index_destinations
+  0.050   0.02    0.090   0.04   alloc::raw_vec::RawVecInner<A>::finish_grow
+  0.050   0.02    3.310   1.60   nanosleep
+  0.050   0.02    0.700   0.34   std::thread::functions::sleep
+  0.040   0.02    0.040   0.02   __vdso_clock_gettime
+  0.040   0.02    0.040   0.02   __vdso_clock_gettime
+  0.040   0.02    0.040   0.02   __vdso_clock_gettime
+  0.040   0.02    0.100   0.05   alloc::raw_vec::RawVecInner<A>::finish_grow
+  0.040   0.02    0.090   0.04   posix_memalign
+  0.040   0.02    0.040   0.02   std::sys::pal::unix::time::Timespec::sub_timespec
+  0.040   0.02    0.310   0.15   std::time::Instant::elapsed
+  0.030   0.01    0.030   0.01   __vdso_clock_gettime
+  0.030   0.01    0.030   0.01   aerostore_core::occ_partitioned::OccTable<T>::has_serialization_conflict
+  0.030   0.01    0.060   0.03   alloc::collections::btree::map::IntoIter<K,V,A>::dying_next
+  0.030   0.01    0.030   0.01   alloc::raw_vec::RawVecInner<A>::finish_grow
+

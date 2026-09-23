@@ -1,0 +1,37 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-next/formal-optimized/concurrent/omit_partial_publication_poison.rs:297:10
+    |
+297 |  ensures safe_release(final(driver).events()),
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+358 |         return Err ( Error :: Index . into ( ) ) ;
+    |         ---------------------------------------- at this exit
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-next/formal-optimized/concurrent/omit_partial_publication_poison.rs:299:4
+    |
+299 |    result.is_err() && final(driver).events().rows_published ==> final(driver).events().poisoned,
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+358 |         return Err ( Error :: Index . into ( ) ) ;
+    |         ---------------------------------------- at this exit
+
+error: function body check: Resource limit (rlimit) exceeded; consider rerunning with --profile for more details
+   --> /home/zpconn/code/aerostore/target/verification-next/formal-optimized/concurrent/omit_partial_publication_poison.rs:294:1
+    |
+294 | / pub fn commit_with_record_impl<T, D: CommitPrimitives<T>, const WRITE_AHEAD: bool, P, F>(driver: &mut D, tx: &mut OccTransaction<...
+295 | |  -> (result: Result<OccCommitRecord<T>, Error>)
+    | |______________________________________________^
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-next/formal-optimized/concurrent/omit_partial_publication_poison.rs:294:1
+    |
+294 | / pub fn commit_with_record_impl<T, D: CommitPrimitives<T>, const WRITE_AHEAD: bool, P, F>(driver: &mut D, tx: &mut OccTransaction<...
+295 | |  -> (result: Result<OccCommitRecord<T>, Error>)
+    | |______________________________________________^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 3 previous errors
+

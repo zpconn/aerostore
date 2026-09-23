@@ -1,0 +1,1 @@
+The original-CAS priority run compiled freshly and exhausted the branch bound. The following periodic-candidate run reused that original binary in the shared Cargo target, so it is invalid as candidate evidence. Final validation uses separate fresh targets and checks compiler-artifact provenance. The earlier preliminary-pure-hint run was freshly built and separately retained.

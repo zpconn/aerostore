@@ -1,0 +1,775 @@
+{
+  "schema_version": 1,
+  "completed": true,
+  "hypothesis_supported": false,
+  "performance_acceptance": false,
+  "speedup_claim": false,
+  "scope": "Scratch-only layout diagnostic against the rejected candidate, not original-baseline acceptance",
+  "started_utc": "2026-09-23T17:23:49Z",
+  "plan_sha256": "6ad664da0c46a8879cfdb30c9e51691bd7d8c254dd2a8c3386d0f87aa4382237",
+  "runner_sha256": "712a57422a5a00ffb6749414b3e2c651fe1b7cc563b828e32ea781931aae79fd",
+  "comparison_library_sha256": "c828c61bed2d1d93e04e2921e428c2eefc55541bacad7ddc276bd6d2acf1a843",
+  "manifest_sha256": {
+    "baseline": "6ca29e7f3f46f4b920edca27cece615224de2a0cb3dbbf40e0299c79c999c8ae",
+    "candidate": "4a65b0c49a8fd48a53f2d78b16d378f1d38740e268066d707922efbca4bd219f"
+  },
+  "runs": [
+    {
+      "variant": "baseline",
+      "workload": "churn_128m_30s",
+      "pair": 1,
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-next/candidate-fine/hyperfeed_crucible",
+        "--noplot"
+      ],
+      "binary_sha256": "bd01701b51aebdd85b862a8c179f7f4b0041c0975e4b85853a9fe1513ad9f844",
+      "environment_before": {
+        "utc": "2026-09-23T17:23:49Z",
+        "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+        "cpu_affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "loadavg": [
+          1.56298828125,
+          3.0517578125,
+          3.95166015625
+        ],
+        "memory": "MemTotal:       49328260 kB\nMemFree:        29333768 kB\nMemAvailable:   47535744 kB\nBuffers:         1183440 kB\nCached:         16648812 kB\nSwapCached:        80792 kB\nActive:         10970108 kB\nInactive:        7433992 kB\nActive(anon):     219280 kB\nInactive(anon):   355916 kB\nActive(file):   10750828 kB\nInactive(file):  7078076 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:      25165824 kB\nSwapFree:       24702492 kB\nDirty:              6860 kB\nWriteback:           324 kB\nAnonPages:        560112 kB\nMapped:           174076 kB\nShmem:              2928 kB\nKReclaimable:     882796 kB\nSlab:            1121284 kB\nSReclaimable:     882796 kB\nSUnreclaim:       238488 kB\nKernelStack:       12080 kB\nPageTables:        13020 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    49829952 kB\nCommitted_AS:    3822688 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      120744 kB\nVmallocChunk:          0 kB\nPercpu:            12672 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      179200 kB\nDirectMap2M:    17645568 kB\nDirectMap1G:    41943040 kB\n"
+      },
+      "workload_environment": {
+        "TMPDIR": "/home/zpconn/code/aerostore/docs/bench_data/verified_engine_2026-09-23/alignment-diagnostic/churn_128m_30s/pair-01-baseline/tmp",
+        "AEROSTORE_CRUCIBLE_AEROSTORE_ONLY": "1",
+        "AEROSTORE_CRUCIBLE_PROFILE_FILTER": "profile_2g",
+        "AEROSTORE_CRUCIBLE_SHM_MIB": "128",
+        "AEROSTORE_CRUCIBLE_DURATION_SECS": "30",
+        "AEROSTORE_CRUCIBLE_ALLOC_TELEMETRY_PATH": "/home/zpconn/code/aerostore/docs/bench_data/verified_engine_2026-09-23/alignment-diagnostic/churn_128m_30s/pair-01-baseline/allocation.csv",
+        "AEROSTORE_CRUCIBLE_SAMPLE_INTERVAL_MS": "5000"
+      },
+      "completed": true,
+      "passed": true,
+      "exit_code": 0,
+      "elapsed_wall_seconds": 30.27317292200314,
+      "environment_after": {
+        "utc": "2026-09-23T17:24:20Z",
+        "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+        "cpu_affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "loadavg": [
+          4.1396484375,
+          3.52783203125,
+          4.08203125
+        ],
+        "memory": "MemTotal:       49328260 kB\nMemFree:        29338264 kB\nMemAvailable:   47539684 kB\nBuffers:         1183444 kB\nCached:         16648204 kB\nSwapCached:        80792 kB\nActive:         10970032 kB\nInactive:        7433672 kB\nActive(anon):     218676 kB\nInactive(anon):   356112 kB\nActive(file):   10751356 kB\nInactive(file):  7077560 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:      25165824 kB\nSwapFree:       24702492 kB\nDirty:               196 kB\nWriteback:           336 kB\nAnonPages:        560268 kB\nMapped:           174016 kB\nShmem:              2732 kB\nKReclaimable:     882228 kB\nSlab:            1119800 kB\nSReclaimable:     882228 kB\nSUnreclaim:       237572 kB\nKernelStack:       11776 kB\nPageTables:        13728 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    49829952 kB\nCommitted_AS:    3724520 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      120728 kB\nVmallocChunk:          0 kB\nPercpu:            12672 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      179200 kB\nDirectMap2M:    17645568 kB\nDirectMap1G:    41943040 kB\n"
+      },
+      "metrics": {
+        "throughput": 301243.81,
+        "operations": 9042885,
+        "p50_us": 15.87,
+        "p90_us": 43.52,
+        "p99_us": 137.22,
+        "p99_interval_ns": [
+          135168,
+          137215
+        ],
+        "p99_precision": "integer_64_subdivisions",
+        "retry_rate": 0.00881964107693507,
+        "retries": 79755,
+        "arena_high_water_bytes": 34307432,
+        "tail_fresh_bytes": 570848,
+        "fresh_growth_budget_bytes": 20160704,
+        "retained_tps": 0.9854,
+        "measured_seconds": 30.018
+      },
+      "output_sha256": "2f71414d9cd758ee14ae7c77d4f1edd47a38859617c9930cbcdd0c33b5dc845f"
+    },
+    {
+      "variant": "candidate",
+      "workload": "churn_128m_30s",
+      "pair": 1,
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-next/candidate-aligned/hyperfeed_crucible",
+        "--noplot"
+      ],
+      "binary_sha256": "5b4a159fadd2b482e2e03547165c72aac39ac380a0eb23c56c7ea54f7b393334",
+      "environment_before": {
+        "utc": "2026-09-23T17:24:20Z",
+        "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+        "cpu_affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "loadavg": [
+          4.1396484375,
+          3.52783203125,
+          4.08203125
+        ],
+        "memory": "MemTotal:       49328260 kB\nMemFree:        29338264 kB\nMemAvailable:   47539684 kB\nBuffers:         1183444 kB\nCached:         16648204 kB\nSwapCached:        80792 kB\nActive:         10970032 kB\nInactive:        7433672 kB\nActive(anon):     218676 kB\nInactive(anon):   356112 kB\nActive(file):   10751356 kB\nInactive(file):  7077560 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:      25165824 kB\nSwapFree:       24702492 kB\nDirty:               196 kB\nWriteback:           320 kB\nAnonPages:        560268 kB\nMapped:           174016 kB\nShmem:              2732 kB\nKReclaimable:     882228 kB\nSlab:            1119800 kB\nSReclaimable:     882228 kB\nSUnreclaim:       237572 kB\nKernelStack:       11776 kB\nPageTables:        13728 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    49829952 kB\nCommitted_AS:    3724520 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      120728 kB\nVmallocChunk:          0 kB\nPercpu:            12672 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      179200 kB\nDirectMap2M:    17645568 kB\nDirectMap1G:    41943040 kB\n"
+      },
+      "workload_environment": {
+        "TMPDIR": "/home/zpconn/code/aerostore/docs/bench_data/verified_engine_2026-09-23/alignment-diagnostic/churn_128m_30s/pair-01-candidate/tmp",
+        "AEROSTORE_CRUCIBLE_AEROSTORE_ONLY": "1",
+        "AEROSTORE_CRUCIBLE_PROFILE_FILTER": "profile_2g",
+        "AEROSTORE_CRUCIBLE_SHM_MIB": "128",
+        "AEROSTORE_CRUCIBLE_DURATION_SECS": "30",
+        "AEROSTORE_CRUCIBLE_ALLOC_TELEMETRY_PATH": "/home/zpconn/code/aerostore/docs/bench_data/verified_engine_2026-09-23/alignment-diagnostic/churn_128m_30s/pair-01-candidate/allocation.csv",
+        "AEROSTORE_CRUCIBLE_SAMPLE_INTERVAL_MS": "5000"
+      },
+      "completed": true,
+      "passed": true,
+      "exit_code": 0,
+      "elapsed_wall_seconds": 30.27137726199726,
+      "environment_after": {
+        "utc": "2026-09-23T17:24:51Z",
+        "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+        "cpu_affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "loadavg": [
+          5.45166015625,
+          3.908203125,
+          4.1923828125
+        ],
+        "memory": "MemTotal:       49328260 kB\nMemFree:        29335500 kB\nMemAvailable:   47533488 kB\nBuffers:         1183456 kB\nCached:         16647088 kB\nSwapCached:        80792 kB\nActive:         10968668 kB\nInactive:        7431016 kB\nActive(anon):     217628 kB\nInactive(anon):   355296 kB\nActive(file):   10751040 kB\nInactive(file):  7075720 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:      25165824 kB\nSwapFree:       24702492 kB\nDirty:                 0 kB\nWriteback:           116 kB\nAnonPages:        559508 kB\nMapped:           175072 kB\nShmem:              1692 kB\nKReclaimable:     880952 kB\nSlab:            1119360 kB\nSReclaimable:     880952 kB\nSUnreclaim:       238408 kB\nKernelStack:       12040 kB\nPageTables:        15108 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    49829952 kB\nCommitted_AS:    3787152 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      120808 kB\nVmallocChunk:          0 kB\nPercpu:            12672 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      179200 kB\nDirectMap2M:    17645568 kB\nDirectMap1G:    41943040 kB\n"
+      },
+      "metrics": {
+        "throughput": 302869.77,
+        "operations": 9087376,
+        "p50_us": 15.74,
+        "p90_us": 43.52,
+        "p99_us": 135.17,
+        "p99_interval_ns": [
+          133120,
+          135167
+        ],
+        "p99_precision": "integer_64_subdivisions",
+        "retry_rate": 0.00873882625743669,
+        "retries": 79413,
+        "arena_high_water_bytes": 35238816,
+        "tail_fresh_bytes": 920448,
+        "fresh_growth_budget_bytes": 20160704,
+        "retained_tps": 0.9762,
+        "measured_seconds": 30.004
+      },
+      "output_sha256": "5c269df83de78379d05a7312bdb48175fd71c8abe564d3afeda60c1b9f2b6a79"
+    },
+    {
+      "variant": "candidate",
+      "workload": "churn_128m_30s",
+      "pair": 2,
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-next/candidate-aligned/hyperfeed_crucible",
+        "--noplot"
+      ],
+      "binary_sha256": "5b4a159fadd2b482e2e03547165c72aac39ac380a0eb23c56c7ea54f7b393334",
+      "environment_before": {
+        "utc": "2026-09-23T17:24:51Z",
+        "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+        "cpu_affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "loadavg": [
+          5.45166015625,
+          3.908203125,
+          4.1923828125
+        ],
+        "memory": "MemTotal:       49328260 kB\nMemFree:        29335500 kB\nMemAvailable:   47533488 kB\nBuffers:         1183456 kB\nCached:         16647088 kB\nSwapCached:        80792 kB\nActive:         10968668 kB\nInactive:        7431016 kB\nActive(anon):     217628 kB\nInactive(anon):   355296 kB\nActive(file):   10751040 kB\nInactive(file):  7075720 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:      25165824 kB\nSwapFree:       24702492 kB\nDirty:                 0 kB\nWriteback:           116 kB\nAnonPages:        559508 kB\nMapped:           175072 kB\nShmem:              1692 kB\nKReclaimable:     880952 kB\nSlab:            1119360 kB\nSReclaimable:     880952 kB\nSUnreclaim:       238408 kB\nKernelStack:       12040 kB\nPageTables:        15108 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    49829952 kB\nCommitted_AS:    3787152 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      120808 kB\nVmallocChunk:          0 kB\nPercpu:            12672 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      179200 kB\nDirectMap2M:    17645568 kB\nDirectMap1G:    41943040 kB\n"
+      },
+      "workload_environment": {
+        "TMPDIR": "/home/zpconn/code/aerostore/docs/bench_data/verified_engine_2026-09-23/alignment-diagnostic/churn_128m_30s/pair-02-candidate/tmp",
+        "AEROSTORE_CRUCIBLE_AEROSTORE_ONLY": "1",
+        "AEROSTORE_CRUCIBLE_PROFILE_FILTER": "profile_2g",
+        "AEROSTORE_CRUCIBLE_SHM_MIB": "128",
+        "AEROSTORE_CRUCIBLE_DURATION_SECS": "30",
+        "AEROSTORE_CRUCIBLE_ALLOC_TELEMETRY_PATH": "/home/zpconn/code/aerostore/docs/bench_data/verified_engine_2026-09-23/alignment-diagnostic/churn_128m_30s/pair-02-candidate/allocation.csv",
+        "AEROSTORE_CRUCIBLE_SAMPLE_INTERVAL_MS": "5000"
+      },
+      "completed": true,
+      "passed": true,
+      "exit_code": 0,
+      "elapsed_wall_seconds": 30.273857884996687,
+      "environment_after": {
+        "utc": "2026-09-23T17:25:22Z",
+        "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+        "cpu_affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "loadavg": [
+          6.2138671875,
+          4.23779296875,
+          4.29345703125
+        ],
+        "memory": "MemTotal:       49328260 kB\nMemFree:        29330876 kB\nMemAvailable:   47533020 kB\nBuffers:         1183476 kB\nCached:         16648300 kB\nSwapCached:        80824 kB\nActive:         10969924 kB\nInactive:        7438464 kB\nActive(anon):     218376 kB\nInactive(anon):   361044 kB\nActive(file):   10751548 kB\nInactive(file):  7077420 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:      25165824 kB\nSwapFree:       24702492 kB\nDirty:               580 kB\nWriteback:             0 kB\nAnonPages:        565372 kB\nMapped:           174628 kB\nShmem:              3104 kB\nKReclaimable:     882900 kB\nSlab:            1120572 kB\nSReclaimable:     882900 kB\nSUnreclaim:       237672 kB\nKernelStack:       11824 kB\nPageTables:        14392 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    49829952 kB\nCommitted_AS:    3801860 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      120872 kB\nVmallocChunk:          0 kB\nPercpu:            12672 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      179200 kB\nDirectMap2M:    17645568 kB\nDirectMap1G:    41943040 kB\n"
+      },
+      "metrics": {
+        "throughput": 307941.96,
+        "operations": 9241450,
+        "p50_us": 14.85,
+        "p90_us": 40.96,
+        "p99_us": 130.05,
+        "p99_interval_ns": [
+          129024,
+          130047
+        ],
+        "p99_precision": "integer_64_subdivisions",
+        "retry_rate": 0.008860406105102555,
+        "retries": 81883,
+        "arena_high_water_bytes": 35402488,
+        "tail_fresh_bytes": 195976,
+        "fresh_growth_budget_bytes": 20160704,
+        "retained_tps": 0.9876,
+        "measured_seconds": 30.01
+      },
+      "output_sha256": "aae9ceef51b8208c6458240e917a83ec9eb811aa3a297f65cc26941b863c815b"
+    },
+    {
+      "variant": "baseline",
+      "workload": "churn_128m_30s",
+      "pair": 2,
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-next/candidate-fine/hyperfeed_crucible",
+        "--noplot"
+      ],
+      "binary_sha256": "bd01701b51aebdd85b862a8c179f7f4b0041c0975e4b85853a9fe1513ad9f844",
+      "environment_before": {
+        "utc": "2026-09-23T17:25:22Z",
+        "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+        "cpu_affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "loadavg": [
+          6.2138671875,
+          4.23779296875,
+          4.29345703125
+        ],
+        "memory": "MemTotal:       49328260 kB\nMemFree:        29330876 kB\nMemAvailable:   47533020 kB\nBuffers:         1183476 kB\nCached:         16648300 kB\nSwapCached:        80824 kB\nActive:         10969924 kB\nInactive:        7438464 kB\nActive(anon):     218376 kB\nInactive(anon):   361044 kB\nActive(file):   10751548 kB\nInactive(file):  7077420 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:      25165824 kB\nSwapFree:       24702492 kB\nDirty:               580 kB\nWriteback:             0 kB\nAnonPages:        565372 kB\nMapped:           174628 kB\nShmem:              3104 kB\nKReclaimable:     882900 kB\nSlab:            1120572 kB\nSReclaimable:     882900 kB\nSUnreclaim:       237672 kB\nKernelStack:       11824 kB\nPageTables:        14392 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    49829952 kB\nCommitted_AS:    3801860 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      120872 kB\nVmallocChunk:          0 kB\nPercpu:            12672 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      179200 kB\nDirectMap2M:    17645568 kB\nDirectMap1G:    41943040 kB\n"
+      },
+      "workload_environment": {
+        "TMPDIR": "/home/zpconn/code/aerostore/docs/bench_data/verified_engine_2026-09-23/alignment-diagnostic/churn_128m_30s/pair-02-baseline/tmp",
+        "AEROSTORE_CRUCIBLE_AEROSTORE_ONLY": "1",
+        "AEROSTORE_CRUCIBLE_PROFILE_FILTER": "profile_2g",
+        "AEROSTORE_CRUCIBLE_SHM_MIB": "128",
+        "AEROSTORE_CRUCIBLE_DURATION_SECS": "30",
+        "AEROSTORE_CRUCIBLE_ALLOC_TELEMETRY_PATH": "/home/zpconn/code/aerostore/docs/bench_data/verified_engine_2026-09-23/alignment-diagnostic/churn_128m_30s/pair-02-baseline/allocation.csv",
+        "AEROSTORE_CRUCIBLE_SAMPLE_INTERVAL_MS": "5000"
+      },
+      "completed": true,
+      "passed": true,
+      "exit_code": 0,
+      "elapsed_wall_seconds": 30.276051322995045,
+      "environment_after": {
+        "utc": "2026-09-23T17:25:53Z",
+        "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+        "cpu_affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "loadavg": [
+          7.06396484375,
+          4.64404296875,
+          4.42822265625
+        ],
+        "memory": "MemTotal:       49328260 kB\nMemFree:        29333456 kB\nMemAvailable:   47532764 kB\nBuffers:         1183476 kB\nCached:         16646620 kB\nSwapCached:        80824 kB\nActive:         10968592 kB\nInactive:        7433164 kB\nActive(anon):     217024 kB\nInactive(anon):   357028 kB\nActive(file):   10751568 kB\nInactive(file):  7076136 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:      25165824 kB\nSwapFree:       24702492 kB\nDirty:                 0 kB\nWriteback:           432 kB\nAnonPages:        561540 kB\nMapped:           174220 kB\nShmem:              2756 kB\nKReclaimable:     881328 kB\nSlab:            1119784 kB\nSReclaimable:     881328 kB\nSUnreclaim:       238456 kB\nKernelStack:       12008 kB\nPageTables:        15124 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    49829952 kB\nCommitted_AS:    3803916 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      120888 kB\nVmallocChunk:          0 kB\nPercpu:            12672 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      179200 kB\nDirectMap2M:    17645568 kB\nDirectMap1G:    41943040 kB\n"
+      },
+      "metrics": {
+        "throughput": 306652.03,
+        "operations": 9200868,
+        "p50_us": 15.1,
+        "p90_us": 41.47,
+        "p99_us": 130.05,
+        "p99_interval_ns": [
+          129024,
+          130047
+        ],
+        "p99_precision": "integer_64_subdivisions",
+        "retry_rate": 0.00880166958160904,
+        "retries": 80983,
+        "arena_high_water_bytes": 35456064,
+        "tail_fresh_bytes": 607656,
+        "fresh_growth_budget_bytes": 20160704,
+        "retained_tps": 0.9822,
+        "measured_seconds": 30.004
+      },
+      "output_sha256": "3e126049185448d1b6a009b7bf14a5aef64bcc6a120dcfa7e3dd230b3bcdb7b2"
+    },
+    {
+      "variant": "baseline",
+      "workload": "churn_128m_30s",
+      "pair": 3,
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-next/candidate-fine/hyperfeed_crucible",
+        "--noplot"
+      ],
+      "binary_sha256": "bd01701b51aebdd85b862a8c179f7f4b0041c0975e4b85853a9fe1513ad9f844",
+      "environment_before": {
+        "utc": "2026-09-23T17:25:53Z",
+        "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+        "cpu_affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "loadavg": [
+          7.06396484375,
+          4.64404296875,
+          4.42822265625
+        ],
+        "memory": "MemTotal:       49328260 kB\nMemFree:        29334668 kB\nMemAvailable:   47533976 kB\nBuffers:         1183476 kB\nCached:         16646620 kB\nSwapCached:        80824 kB\nActive:         10968592 kB\nInactive:        7433164 kB\nActive(anon):     217024 kB\nInactive(anon):   357028 kB\nActive(file):   10751568 kB\nInactive(file):  7076136 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:      25165824 kB\nSwapFree:       24702492 kB\nDirty:                 0 kB\nWriteback:           432 kB\nAnonPages:        561540 kB\nMapped:           174220 kB\nShmem:              2756 kB\nKReclaimable:     881328 kB\nSlab:            1119784 kB\nSReclaimable:     881328 kB\nSUnreclaim:       238456 kB\nKernelStack:       12008 kB\nPageTables:        15124 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    49829952 kB\nCommitted_AS:    3803916 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      120872 kB\nVmallocChunk:          0 kB\nPercpu:            12672 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      179200 kB\nDirectMap2M:    17645568 kB\nDirectMap1G:    41943040 kB\n"
+      },
+      "workload_environment": {
+        "TMPDIR": "/home/zpconn/code/aerostore/docs/bench_data/verified_engine_2026-09-23/alignment-diagnostic/churn_128m_30s/pair-03-baseline/tmp",
+        "AEROSTORE_CRUCIBLE_AEROSTORE_ONLY": "1",
+        "AEROSTORE_CRUCIBLE_PROFILE_FILTER": "profile_2g",
+        "AEROSTORE_CRUCIBLE_SHM_MIB": "128",
+        "AEROSTORE_CRUCIBLE_DURATION_SECS": "30",
+        "AEROSTORE_CRUCIBLE_ALLOC_TELEMETRY_PATH": "/home/zpconn/code/aerostore/docs/bench_data/verified_engine_2026-09-23/alignment-diagnostic/churn_128m_30s/pair-03-baseline/allocation.csv",
+        "AEROSTORE_CRUCIBLE_SAMPLE_INTERVAL_MS": "5000"
+      },
+      "completed": true,
+      "passed": true,
+      "exit_code": 0,
+      "elapsed_wall_seconds": 30.275835477004875,
+      "environment_after": {
+        "utc": "2026-09-23T17:26:25Z",
+        "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+        "cpu_affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "loadavg": [
+          7.13330078125,
+          4.8876953125,
+          4.51611328125
+        ],
+        "memory": "MemTotal:       49328260 kB\nMemFree:        29323584 kB\nMemAvailable:   47532068 kB\nBuffers:         1183484 kB\nCached:         16654776 kB\nSwapCached:        80824 kB\nActive:         10970444 kB\nInactive:        7440640 kB\nActive(anon):     218836 kB\nInactive(anon):   356868 kB\nActive(file):   10751608 kB\nInactive(file):  7083772 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:      25165824 kB\nSwapFree:       24702492 kB\nDirty:               236 kB\nWriteback:             0 kB\nAnonPages:        560772 kB\nMapped:           179656 kB\nShmem:              2880 kB\nKReclaimable:     882828 kB\nSlab:            1120656 kB\nSReclaimable:     882828 kB\nSUnreclaim:       237828 kB\nKernelStack:       11944 kB\nPageTables:        14536 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    49829952 kB\nCommitted_AS:    3787576 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      120840 kB\nVmallocChunk:          0 kB\nPercpu:            12672 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      179200 kB\nDirectMap2M:    17645568 kB\nDirectMap1G:    41943040 kB\n"
+      },
+      "metrics": {
+        "throughput": 301927.07,
+        "operations": 9061613,
+        "p50_us": 15.74,
+        "p90_us": 43.52,
+        "p99_us": 135.17,
+        "p99_interval_ns": [
+          133120,
+          135167
+        ],
+        "p99_precision": "integer_64_subdivisions",
+        "retry_rate": 0.008780666311836535,
+        "retries": 79567,
+        "arena_high_water_bytes": 34336880,
+        "tail_fresh_bytes": 28520,
+        "fresh_growth_budget_bytes": 20160704,
+        "retained_tps": 0.9759,
+        "measured_seconds": 30.013
+      },
+      "output_sha256": "b7f3e2f3297ebaeaab0ef28bbd604ba0f8fd5b03783cbbe26521e04e3e10a077"
+    },
+    {
+      "variant": "candidate",
+      "workload": "churn_128m_30s",
+      "pair": 3,
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-next/candidate-aligned/hyperfeed_crucible",
+        "--noplot"
+      ],
+      "binary_sha256": "5b4a159fadd2b482e2e03547165c72aac39ac380a0eb23c56c7ea54f7b393334",
+      "environment_before": {
+        "utc": "2026-09-23T17:26:25Z",
+        "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+        "cpu_affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "loadavg": [
+          7.13330078125,
+          4.8876953125,
+          4.51611328125
+        ],
+        "memory": "MemTotal:       49328260 kB\nMemFree:        29327636 kB\nMemAvailable:   47536120 kB\nBuffers:         1183484 kB\nCached:         16654776 kB\nSwapCached:        80824 kB\nActive:         10970444 kB\nInactive:        7440640 kB\nActive(anon):     218836 kB\nInactive(anon):   356868 kB\nActive(file):   10751608 kB\nInactive(file):  7083772 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:      25165824 kB\nSwapFree:       24702492 kB\nDirty:               236 kB\nWriteback:             0 kB\nAnonPages:        560772 kB\nMapped:           179656 kB\nShmem:              2880 kB\nKReclaimable:     882828 kB\nSlab:            1120656 kB\nSReclaimable:     882828 kB\nSUnreclaim:       237828 kB\nKernelStack:       11944 kB\nPageTables:        14536 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    49829952 kB\nCommitted_AS:    3787576 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      120824 kB\nVmallocChunk:          0 kB\nPercpu:            12672 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      179200 kB\nDirectMap2M:    17645568 kB\nDirectMap1G:    41943040 kB\n"
+      },
+      "workload_environment": {
+        "TMPDIR": "/home/zpconn/code/aerostore/docs/bench_data/verified_engine_2026-09-23/alignment-diagnostic/churn_128m_30s/pair-03-candidate/tmp",
+        "AEROSTORE_CRUCIBLE_AEROSTORE_ONLY": "1",
+        "AEROSTORE_CRUCIBLE_PROFILE_FILTER": "profile_2g",
+        "AEROSTORE_CRUCIBLE_SHM_MIB": "128",
+        "AEROSTORE_CRUCIBLE_DURATION_SECS": "30",
+        "AEROSTORE_CRUCIBLE_ALLOC_TELEMETRY_PATH": "/home/zpconn/code/aerostore/docs/bench_data/verified_engine_2026-09-23/alignment-diagnostic/churn_128m_30s/pair-03-candidate/allocation.csv",
+        "AEROSTORE_CRUCIBLE_SAMPLE_INTERVAL_MS": "5000"
+      },
+      "completed": true,
+      "passed": true,
+      "exit_code": 0,
+      "elapsed_wall_seconds": 30.27506692300085,
+      "environment_after": {
+        "utc": "2026-09-23T17:26:56Z",
+        "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+        "cpu_affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23
+        ],
+        "loadavg": [
+          7.2041015625,
+          5.13427734375,
+          4.611328125
+        ],
+        "memory": "MemTotal:       49328260 kB\nMemFree:        29327912 kB\nMemAvailable:   47534044 kB\nBuffers:         1183500 kB\nCached:         16653416 kB\nSwapCached:        80824 kB\nActive:         10970396 kB\nInactive:        7439232 kB\nActive(anon):     217556 kB\nInactive(anon):   357940 kB\nActive(file):   10752840 kB\nInactive(file):  7081292 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:      25165824 kB\nSwapFree:       24702492 kB\nDirty:                 0 kB\nWriteback:           360 kB\nAnonPages:        560716 kB\nMapped:           179732 kB\nShmem:              2660 kB\nKReclaimable:     881724 kB\nSlab:            1120212 kB\nSReclaimable:     881724 kB\nSUnreclaim:       238488 kB\nKernelStack:       12016 kB\nPageTables:        14860 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    49829952 kB\nCommitted_AS:    3789768 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      120888 kB\nVmallocChunk:          0 kB\nPercpu:            12672 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      179200 kB\nDirectMap2M:    17645568 kB\nDirectMap1G:    41943040 kB\n"
+      },
+      "metrics": {
+        "throughput": 308128.88,
+        "operations": 9247050,
+        "p50_us": 14.72,
+        "p90_us": 40.96,
+        "p99_us": 133.12,
+        "p99_interval_ns": [
+          131072,
+          133119
+        ],
+        "p99_precision": "integer_64_subdivisions",
+        "retry_rate": 0.008881643334901402,
+        "retries": 82129,
+        "arena_high_water_bytes": 33976912,
+        "tail_fresh_bytes": 654568,
+        "fresh_growth_budget_bytes": 20160704,
+        "retained_tps": 0.9853,
+        "measured_seconds": 30.01
+      },
+      "output_sha256": "afc7719cc18c890c83c51f395abf372667737b7d978cb6c359319b806081d967"
+    }
+  ],
+  "exact_layout_patch_transition_verified": true,
+  "comparison": {
+    "status": "pass",
+    "reasons": [],
+    "noise": [],
+    "resolution": [],
+    "metrics": {
+      "throughput": {
+        "baseline": [
+          301243.81,
+          306652.03,
+          301927.07
+        ],
+        "candidate": [
+          302869.77,
+          307941.96,
+          308128.88
+        ],
+        "paired_ratios": [
+          1.005397488499432,
+          1.0042064942469155,
+          1.0205407550902938
+        ],
+        "median_paired_ratio": 1.005397488499432,
+        "relative_range": {
+          "baseline": 0.017912338896939682,
+          "candidate": 0.0170782507197135
+        },
+        "status": "not_evaluated"
+      },
+      "p99_us": {
+        "baseline": [
+          137.22,
+          130.05,
+          135.17
+        ],
+        "candidate": [
+          135.17,
+          130.05,
+          133.12
+        ],
+        "paired_ratios": [
+          0.9850604868095029,
+          1.0,
+          0.9848339128504847
+        ],
+        "median_paired_ratio": 0.9850604868095029,
+        "relative_range": {
+          "baseline": 0.053044314566841666,
+          "candidate": 0.03846153846153828
+        },
+        "status": "not_evaluated"
+      },
+      "resources": {
+        "baseline_retry_rate": 0.00880166958160904,
+        "candidate_retry_rate": 0.008860406105102555,
+        "retry_limit": 0.02880166958160904,
+        "baseline_arena_bytes": 34336880,
+        "candidate_arena_bytes": 35238816
+      }
+    },
+    "timing_acceptance": false,
+    "speedup_claim": false
+  },
+  "correctness_and_resources_pass": true,
+  "source_stable": true,
+  "finished_utc": "2026-09-23T17:26:56Z"
+}
