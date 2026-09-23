@@ -77,6 +77,51 @@ required_checks = ["lean"]
 lean_roots = ["AerostoreProofs.predicate_history_monotone", "AerostoreProofs.predicate_history_covers_events", "AerostoreProofs.accepted_read_excludes_later_publication", "AerostoreProofs.own_write_predicate_complete", "AerostoreProofs.dependency_rejects_changed", "AerostoreProofs.dependency_rejects_recent"]
 
 [[claims]]
+id = "TX-LIFECYCLE-NATIVE-VERUS"
+contract = "verification/lifecycle/README.md"
+implementation = ["aerostore_core/src/procarray.rs", "aerostore_core/src/shm.rs", "aerostore_core/src/occ_partitioned.rs", "verification/lifecycle/contracts.rs"]
+scope = "Source-bound registration, snapshot scans, horizon publication, deregistration and shared-clock reservation under operation-local acquired-input projections. Active coverage and freshness derived from clock history; blocking-acquisition interference, native atomics/RAII and exhaustion handling remain open"
+status = "partial"
+required_checks = ["lifecycle", "lifecycle-adapter-tests", "core-regressions"]
+refinement_roots = { lifecycle = ["begin_transaction", "end_transaction", "snapshot_locked", "create_transaction_snapshot", "oldest_snapshot_xmin", "reservation_after_reader", "deregister_then_reserve"] }
+
+[[claims]]
+id = "TX-GUARD-IDENTITY-VERUS"
+contract = "verification/guards/README.md"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "aerostore_core/src/shm_index.rs", "verification/guards/contracts.rs"]
+scope = "Actual bucket selection, bounded retry and acquisition collection preserve physical arena/index/bucket identity and exact requested coverage. Mutex exclusion, native ownership/Drop and subsequent lifetime remain primitive obligations"
+status = "partial"
+required_checks = ["guards", "guards-adapter-tests", "concurrent"]
+refinement_roots = { guards = ["transactional_try_lock_bucket", "acquire_index_bucket", "acquire_index_locks", "acquired_guards_cover_keys"] }
+
+[[claims]]
+id = "TX-LIFECYCLE-PREDICATE-JOIN"
+contract = "verification/publication_slice/README.md"
+implementation = ["verification/publication_slice/slice.rs", "aerostore_core/src/occ_partitioned.rs", "aerostore_core/src/procarray.rs"]
+scope = "Actual key generation followed by guard acquisition establishes coverage under explicit inverse registry/common-arena correspondence. Shared reservation-history freshness and actual publication relation feed native validator rejection without a numeric stamp premise. Native guard lifetime and concurrent-history correspondence remain open"
+status = "partial"
+required_checks = ["publication-slice", "publication-slice-adapter-tests", "guards", "lifecycle", "predicate"]
+refinement_roots = { publication-slice = ["acquire_required_guards", "registry_agreement_is_injective", "lifecycle_publication_invalidates_read", "validate_after_lifecycle_publication"] }
+
+[[claims]]
+id = "TX-LIFECYCLE-SHARED-CLOCK-SCENARIO"
+contract = "verification/lifecycle_scenario/README.md"
+implementation = ["verification/lifecycle_scenario/scenario.rs", "aerostore_core/src/occ_partitioned.rs", "aerostore_core/src/procarray.rs"]
+scope = "Controlled scenario calls source-bound reader registration, snapshot and dependency capture, writer deregistration, publication and validation through one checked clock adapter; derives reader identity and fresh publication label from those calls. Acquired-input framing excludes unmodeled metadata transitions while waiting; raw candidates, MVCC and cross-actor guard ownership remain outside this result"
+status = "partial"
+required_checks = ["lifecycle-scenario", "lifecycle-scenario-adapter-tests", "lifecycle", "predicate", "predicate-capture", "core-regressions"]
+refinement_roots = { lifecycle-scenario = ["registered_reader_then_writer_publication"] }
+
+[[claims]]
+id = "TX-LIFECYCLE-HISTORY-LEAN"
+contract = "verification/lean/AerostoreProofs/Lifecycle.lean"
+implementation = ["verification/lean/AerostoreProofs/Lifecycle.lean", "verification/tla/LifecyclePublication.tla"]
+scope = "Inductive finite abstract histories derive later publication-label freshness and read rejection; explicit machine no-wrap condition and old-writer witness. Reservation order differs from physical store order; no extraction or arbitrary native-history refinement is claimed"
+status = "partial"
+required_checks = ["lean", "tla"]
+lean_roots = ["AerostoreProofs.lifecycle_step_preserves", "AerostoreProofs.lifecycle_late_publication", "AerostoreProofs.lifecycle_publication_chronology", "AerostoreProofs.lifecycle_machine_reservation", "AerostoreProofs.lifecycle_observed_publication_rejected", "AerostoreProofs.lifecycle_older_writer_witness"]
+
+[[claims]]
 id = "DURABILITY-REGRESSIONS"
 contract = "verification/contracts/durability.md"
 implementation = ["aerostore_core/src/wal_writer.rs", "aerostore_core/src/occ_partitioned.rs", "aerostore_core/tests/wal_protocol_regressions.rs"]

@@ -147,15 +147,16 @@ def render(source: str, helper: str | None = None) -> str:
             ri = ri + 1;
         }
     """)
-    publish = ["proof { stamp_unchanged(initial.stamps, initial.clock); }", *publish]
+    publish = ["proof { stamp_unchanged(initial.stamps, initial.reserved_stamp); }", *publish]
     publish = unroll_keys(publish)
     publish = loop(publish, "for change in changes", """
         let mut ci: usize = 0;
         while ci < changes.len()
             invariant ci <= changes.len(), initial == old(driver).state(),
                 changes_valid(initial, changes@),
-                driver.state() == (State { clock: (initial.clock + 1) as u64, ..initial }),
-                initial.deregistered, initial.clock < u64::MAX, stamp == initial.clock,
+                driver.state() == (State { clock: (stamp + 1) as u64, reserved_stamp: stamp,
+                    reservations: initial.reservations.push(stamp), ..initial }),
+                initial.deregistered, initial.clock < u64::MAX, initial.clock <= stamp < u64::MAX,
                 touched.contents() == change_keys(initial, changes@, ci as int),
                 change_keys(initial, changes@, changes.len() as int).subset_of(initial.held),
                 changes.len() > 0,
@@ -176,12 +177,14 @@ def render(source: str, helper: str | None = None) -> str:
             invariant pi <= ordered.len(), initial == old(driver).state(),
                 changes_valid(initial, changes@),
                 driver.state().binding_count == initial.binding_count,
+                driver.state().arena == initial.arena,
                 canonical(ordered@, change_keys(initial, changes@, changes.len() as int)),
                 driver.state().bindings == initial.bindings, driver.state().held == initial.held,
                 driver.state().key_buckets == initial.key_buckets,
                 driver.state().deregistered == initial.deregistered,
-                driver.state().clock == initial.clock + 1,
-                initial.deregistered, initial.clock < u64::MAX, stamp == initial.clock,
+                driver.state().clock == stamp + 1, driver.state().reserved_stamp == stamp,
+                driver.state().reservations == initial.reservations.push(stamp),
+                initial.deregistered, initial.clock < u64::MAX, initial.clock <= stamp < u64::MAX,
                 changes.len() > 0,
                 change_keys(initial, changes@, changes.len() as int).subset_of(initial.held),
                 stamp_relation(initial.stamps, driver.state().stamps, ordered@.take(pi as int).to_set(), stamp),

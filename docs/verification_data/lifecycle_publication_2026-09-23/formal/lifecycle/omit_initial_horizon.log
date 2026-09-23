@@ -1,0 +1,41 @@
+note: verifying root module (selected functions)
+
+note: while loop: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/lifecycle/omit_initial_horizon.rs:289:9
+    |
+289 |         while slot_idx < PROCARRAY_SLOTS
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/lifecycle/omit_initial_horizon.rs:265:13
+    |
+265 |       ensures well_formed(final(driver).state()), final(driver).state().lifecycle_held,
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+299 | /     return Ok ( ProcArrayRegistration {
+300 | |         slot_idx : slot_idx as u16 , txid ,
+301 | |     }
+302 | |     ) ;
+    | |_____- at this exit
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/lifecycle/omit_initial_horizon.rs:268:9
+    |
+268 | /         result.is_ok() ==> {
+269 | |             let r = result.unwrap();
+270 | |             r.slot_idx < PROCARRAY_SLOTS && r.txid >= old(driver).state().clock
+271 | |             && final(driver).state().reservations == old(driver).state().reservations.push(r.txid)
+...   |
+274 | |                 Slot { txid: r.txid, snapshot_xmin: r.txid })
+275 | |         },
+    | |_________^ failed this postcondition
+...
+299 | /     return Ok ( ProcArrayRegistration {
+300 | |         slot_idx : slot_idx as u16 , txid ,
+301 | |     }
+302 | |     ) ;
+    | |_____- at this exit
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

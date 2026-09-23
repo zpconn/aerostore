@@ -1,0 +1,28 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/publication-slice/omit_native_key_generation.rs:1118:1
+     |
+1118 | / pub fn acquire_required_guards<P: predicate::Primitives, C: predicate::PairSet, G: guards::Primitives>(
+1119 | |     driver: &P, locks: &G, tx: &predicate::OccTransaction, changes: &Vec<predicate::IndexChange>)
+1120 | |     -> (result: Result<Locked, Error>)
+     | |_____________________________________^
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/publication-slice/omit_native_key_generation.rs:1133:13
+     |
+1095 |         predicate::all_reads_bound(s, tx.index_reads@, tx.index_reads.len() as int),
+     |         --------------------------------------------------------------------------- failed precondition
+...
+1133 |     proof { native_keys_are_valid(driver.state(), *tx, changes@, locks.registry(), keys@); }
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/publication-slice/omit_native_key_generation.rs:1142:20
+     |
+1142 |             assert(keys@.contains(key));
+     |                    ^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

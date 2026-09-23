@@ -1,0 +1,49 @@
+{
+  "acquisition_interference_refinement_proved": false,
+  "additional_concurrent_mutations": [
+    "release_predicates_before_finish"
+  ],
+  "checks": 37,
+  "core_regression_tests": 262,
+  "full_P1_complete": false,
+  "input_files": 340,
+  "lean_roots": 26,
+  "lean_semantic_controls": 13,
+  "native_mutants": 5,
+  "native_positive_selections": 3,
+  "new_campaigns": {
+    "guards": {
+      "mutations": 6,
+      "roots": 5
+    },
+    "lifecycle": {
+      "mutations": 17,
+      "roots": 20
+    },
+    "lifecycle-scenario": {
+      "mutations": 13,
+      "roots": 13
+    },
+    "publication-slice": {
+      "mutations": 6,
+      "roots": 7
+    }
+  },
+  "new_verus_roots": 45,
+  "new_verus_semantic_mutations": 42,
+  "parent_commit": "c5d27d280630d901b3221f836bbacccaf8c11349",
+  "passed": true,
+  "performance_claim": "No new timing claim; accepted production implementation unchanged",
+  "production_inputs_checked": 118,
+  "production_runtime_changed": false,
+  "promotion_eligible": false,
+  "scope": "Conditional lifecycle/snapshot/guard/capture/publication composition; remaining native and history obligations open",
+  "tla_cases": 94,
+  "tla_outcomes": {
+    "completed_finite_search": 35,
+    "intended_counterexample": 29,
+    "intended_liveness_counterexample": 3,
+    "reachable_witness": 27
+  },
+  "whole_engine_verified": false
+}

@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/procarray.rs
++++ b/aerostore_core/src/procarray.rs
+@@ -164,7 +164,7 @@
+         let mut in_flight_len = 0_u16;
+ 
+         for slot in self.slots.iter() {
+-            let txid = slot.load(Ordering::Relaxed);
++            let txid = EMPTY_SLOT;
+             if txid == EMPTY_SLOT {
+                 continue;
+             }

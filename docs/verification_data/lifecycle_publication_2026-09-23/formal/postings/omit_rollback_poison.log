@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/postings/omit_rollback_poison.rs:216:9
+    |
+216 |         result.is_err() ==> final(driver).state().poisoned,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+247 |     return Err ( Error :: Index ) ;
+    |     ----------------------------- at this exit
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

@@ -1,0 +1,15 @@
+note: verifying root module (selected functions)
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/predicate-composition/skip_native_capture.rs:677:13
+    |
+607 |       requires translated_reads(before, after), capture::captured(before, offset, bucket, stamp),
+    |                                                 ------------------------------------------------ failed precondition
+...
+677 | /             captured_read_survives_translation(tx.index_reads@, validated.index_reads@,
+678 | |                 index.offset(), buckets[b], index.stamps()[buckets[b]]);
+    | |_______________________________________________________________________^
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

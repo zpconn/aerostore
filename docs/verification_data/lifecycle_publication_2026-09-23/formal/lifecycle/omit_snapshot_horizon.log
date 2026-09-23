@@ -1,0 +1,26 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/lifecycle/omit_snapshot_horizon.rs:425:9
+    |
+425 | /         result.is_ok() ==> {
+426 | |             let snap = result->Ok_0;
+427 | |             registration.slot_idx < PROCARRAY_SLOTS
+428 | |             && old(driver).state().slots[registration.slot_idx as int].txid == registration.txid
+...   |
+431 | |                 Slot { snapshot_xmin: snap.xmin, ..old(driver).state().slots[registration.slot_idx as int] })
+432 | |         },
+    | |_________^ failed this postcondition
+...
+436 | / {
+437 | |     let ghost initial = driver.state(); driver . lock_lifecycle ( ) ;
+438 | | let slot = checked_slot ( registration . slot_idx ) ? ;
+439 | | let observed = driver . slot_txid ( slot ) ;
+...   |
+447 | | let ghost snapshot_state = driver.state(); proof { snapshot_scan_bounds(snapshot_state, PROCARRAY_SLOTS as int); snapshot_minimum...
+448 | | }
+    | |_- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

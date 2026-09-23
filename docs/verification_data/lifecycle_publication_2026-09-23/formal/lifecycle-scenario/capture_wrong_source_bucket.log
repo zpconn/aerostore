@@ -1,0 +1,32 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/lifecycle-scenario/capture_wrong_source_bucket.rs:1107:5
+     |
+1107 |     fn transactional_stamp(&self, bucket: usize) -> (r: Result<u64, capture::Error>) {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/lifecycle-scenario/capture_wrong_source_bucket.rs:976:17
+     |
+ 976 |           ensures r.is_ok() ==> r.unwrap() == self.stamps()[bucket],
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+1108 | /         match self.index.load_stamp(self.binding, 0) {
+1109 | |             Ok(stamp) => Ok(stamp),
+1110 | |             Err(_) => Err(capture::Error::Index),
+1111 | |         }
+     | |_________- at the end of the function body
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/lifecycle-scenario/capture_wrong_source_bucket.rs:1108:15
+     |
+1082 |         requires self.projection().held.contains((binding, bucket)), binding < self.projection().binding_count,
+     |                  -------------------------------------------------- failed precondition
+...
+1108 |         match self.index.load_stamp(self.binding, 0) {
+     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

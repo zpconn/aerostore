@@ -1,0 +1,13 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -1409,8 +1409,8 @@
+         tx.write_set.clear();
+         tx.savepoints.clear();
+         let _ = self.shm.flush_local_recycle_caches();
+-        let finish = match self.finish_transaction(tx) {
+-            Ok(()) => self.publish_index_stamps(&index_changes),
++        let finish = match self.publish_index_stamps(&index_changes) {
++            Ok(()) => self.finish_transaction(tx),
+             Err(err) => Err(err),
+         };
+         if let Err(err) = finish {

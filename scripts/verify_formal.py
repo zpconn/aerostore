@@ -68,14 +68,17 @@ def collect_claim_evidence(claims: list[dict], checks: list[dict], directory: Pa
     concurrent = json.loads((directory / "concurrent/receipt.json").read_text()) if "concurrent" in passed else {}
     tla = json.loads((directory / "tla/report.json").read_text()) if "tla" in passed else {}
     refinements = {name: check_refinement_evidence.validate_receipt(directory / name / "receipt.json", name, ROOT)
-                   for name in ["predicate", "predicate-capture", "predicate-composition", "skiplist-detach", "postings"] if name in passed}
+                   for name in ["predicate", "predicate-capture", "predicate-composition", "skiplist-detach", "postings",
+                                "guards", "lifecycle", "publication-slice", "lifecycle-scenario"] if name in passed}
     if "lock-models" in passed:
         check_lock_models.validate_receipt(directory / "lock-models/receipt.json", ROOT)
     lean_mutations = {mutation["name"] for mutation in lean.get("mutation_checks", []) if mutation.get("rejected")}
     required_mutations = {"stamp_accepts_equal", "bitmap_drops_membership", "bitmap_accepts_equal_bound",
                           "sort_writes_wrong_bucket", "sort_accepts_equal_bound",
                           "predicate_ignores_changed_stamp", "predicate_accepts_equal_start",
-                          "predicate_drops_publication", "predicate_omits_own_candidates"}
+                          "predicate_drops_publication", "predicate_omits_own_candidates",
+                          "lifecycle_reservation_does_not_advance", "lifecycle_uses_writer_start_stamp",
+                          "lifecycle_publishes_before_end", "lifecycle_allows_wrapping_reservation"}
     if "lean" in passed and not (lean.get("passed") and lean.get("completed") and
                                 lean.get("kernel_recheck_passed") and lean.get("forged_theorem_rejected") and
                                 required_mutations <= lean_mutations):
@@ -87,7 +90,7 @@ def collect_claim_evidence(claims: list[dict], checks: list[dict], directory: Pa
                             "omit_callback_unwind_rollback", "stamp_before_deregister", "skip_wal_binding_check",
                             "omit_record_prepare_error_abort", "omit_prepare_error_abort",
                             "omit_prepare_unwind_abort", "accept_before_validation",
-                            "skip_guarded_health_check", "omit_health_failure_abort"}
+                            "skip_guarded_health_check", "omit_health_failure_abort", "release_predicates_before_finish"}
     rejected_concurrent = {check["name"] for check in concurrent.get("checks", [])
                           if check.get("expected_failure") and check.get("exit_code") != 0
                           and (check.get("errors") or 0) > 0}
@@ -229,6 +232,14 @@ def main() -> int:
                          ("skiplist-detach", [sys.executable, "verification/skiplist_detach/run.py", "--output", str(directory / "skiplist-detach")]),
                          ("postings-adapter-tests", [sys.executable, "verification/postings/test_generate.py"]),
                          ("postings", [sys.executable, "verification/postings/run.py", "--output", str(directory / "postings")]),
+                         ("guards-adapter-tests", [sys.executable, "verification/guards/test_generate.py"]),
+                         ("guards", [sys.executable, "verification/guards/run.py", "--output", str(directory / "guards")]),
+                         ("lifecycle-adapter-tests", [sys.executable, "verification/lifecycle/test_generate.py"]),
+                         ("lifecycle", [sys.executable, "verification/lifecycle/run.py", "--output", str(directory / "lifecycle")]),
+                         ("publication-slice-adapter-tests", [sys.executable, "verification/publication_slice/test_generate.py"]),
+                         ("publication-slice", [sys.executable, "verification/publication_slice/run.py", "--output", str(directory / "publication-slice")]),
+                         ("lifecycle-scenario-adapter-tests", [sys.executable, "verification/lifecycle_scenario/test_generate.py"]),
+                         ("lifecycle-scenario", [sys.executable, "verification/lifecycle_scenario/run.py", "--output", str(directory / "lifecycle-scenario")]),
                          ("lean", [sys.executable, "scripts/check_lean.py", "--output", str(directory / "lean.json")]),
                          ("kernel-tests", ["cargo", "test", "--offline", "-p", "aerostore_verified"])]
         if args.profile != "proofs":

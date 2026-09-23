@@ -127,6 +127,19 @@ def main() -> int:
         path = output / "accept_before_validation.rs"
         path.write_text(generate.render(mutant))
         invoke("accept_before_validation", path, negative=True, required_root="commit_with_record_impl")
+        # Preserve the real guard variable and all drop counts, but release the
+        # predicate guards before deregistration/stamping. This must fail the
+        # proved release precondition, not parsing or a moved-value diagnostic.
+        early_release = source.replace(
+            "        drop(locks);\n        drop(index_locks);\n        Ok(commit_record)",
+            "        drop(locks);\n        Ok(commit_record)", 1)
+        marker = "        let finish = match self.finish_transaction(tx)"
+        if early_release.count(marker) != 1 or early_release == source:
+            raise RuntimeError("guard-lifetime mutation no longer identifies successful finish")
+        early_release = early_release.replace(marker, "        drop(index_locks);\n" + marker, 1)
+        path = output / "release_predicates_before_finish.rs"
+        path.write_text(generate.render(early_release))
+        invoke("release_predicates_before_finish", path, negative=True, required_root="commit_with_record_impl")
         for path in inputs:
             if digest(path) != fingerprints[str(path.relative_to(ROOT))]:
                 raise RuntimeError("proof source changed during verification: " + str(path))

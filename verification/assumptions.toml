@@ -33,7 +33,22 @@ statement = "Source-bound commit and callback cleanup bodies are proved parametr
 [[assumptions]]
 id = "PREDICATE-DATA-PRIMITIVES"
 scope = "Native predicate dependency capture and publication algorithms"
-statement = "Restricted source adapters preserve selected executable operations while lowering standard iteration and projecting data representations. Native registry and binding validity, key-to-bucket correspondence, canonical collections, held-guard stamp visibility and allocation success remain explicit primitive contracts. Publication state is an operation-local guarded projection and one allocator reservation step, not a claim that concurrent global state is frozen. Initial dependency uniqueness and valid change bindings must be established by callers. Clock freshness, no wraparound, raw-index completeness, MVCC ownership and actual process-shared interference remain open. No Lean or TLA theorem is imported unchecked into Verus."
+statement = "Restricted source adapters preserve selected executable operations while lowering standard iteration and projecting data representations. Native registry and binding validity, key-to-bucket correspondence, canonical collections, held-guard stamp visibility and allocation success remain explicit primitive contracts. Publication state is an operation-local guarded projection; the reserved stamp may exceed the previous clock observation because other allocators can intervene. Reservation history and physical arena identity are explicit fields. Initial dependency uniqueness and valid change bindings must be established by callers. Controlled shared-clock composition derives freshness from native calls; arbitrary concurrent-history correspondence, no wraparound, raw-index completeness and MVCC ownership remain open. No Lean or TLA theorem is imported unchecked into Verus."
+
+[[assumptions]]
+id = "LIFECYCLE-ACQUIRED-INPUT"
+scope = "Native ProcArray component proofs and controlled shared-clock scenario"
+statement = "The modeled function input is an operation-local projection selected at lifecycle acquisition. Framing slots/history across lock_lifecycle is an additional modeling assumption, not a consequence of mutual exclusion and not an API-entry/return guarantee across a blocking wait. The controlled scenario excludes unmodeled slot transitions between its operations and while acquiring metadata exclusion. General refinement must introduce acquired-state and ownership/interference witnesses. Slot atomic projection, native mutex/RAII release, allocation, stable header identity and same-arena shared-clock correspondence remain unproved. Relaxed clock loads may lag the represented current counter; snapshot xmax uses the actual maximum-active compensation. Every represented reservation must remain below u64::MAX, including intervening allocations; the proof harness capacity branch is not a production exhaustion check."
+
+[[assumptions]]
+id = "GUARD-IDENTITY-OBSERVATION"
+scope = "Native guard acquisition and predicate permission joins"
+statement = "Registry ordinals and shared header offsets must be inverse mappings within the same physical arena. The actual acquisition loops prove which primitive guard is requested and retained in the returned vector. A successful lowest-level try_lock grants ownership of that exact mutex; native pointer validity, guard lifetime/Drop and Acquire/Release visibility must justify guarded stamp observations. Numeric guard records alone do not mint ownership. Existing commit event ordering does not by itself instantiate every data/ownership contract for arbitrary executions."
+
+[[assumptions]]
+id = "PUBLICATION-LABEL-ORDER"
+scope = "Lean/TLA publication histories and native temporal composition"
+statement = "Publication-label chronology is the shared allocator reservation order. Physical stores to disjoint guarded buckets may occur in another order, and a reader may start after reservation but before storage. Connecting globally fresh abstract publication histories to native stores requires a commuting-disjoint-updates or corresponding history argument; it is not supplied by the finite models or stamp comparison theorem."
 
 [[assumptions]]
 id = "GUARDED-SKIPLIST-LANES"

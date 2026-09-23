@@ -1,0 +1,11 @@
+note: verifying root module (selected functions)
+
+error: invariant not satisfied before loop
+   --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/predicate/ignore_sticky_conflict.rs:242:51
+    |
+242 |             invariant ri <= tx.index_reads.len(), !tx.index_conflict,
+    |                                                   ^^^^^^^^^^^^^^^^^^
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

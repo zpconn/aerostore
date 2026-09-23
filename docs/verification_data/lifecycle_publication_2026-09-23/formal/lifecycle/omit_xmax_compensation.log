@@ -1,0 +1,16 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/lifecycle/omit_xmax_compensation.rs:359:9
+    |
+359 |           coherent_snapshot(final(driver).state(), result),
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+401 | / ProcSnapshot {
+402 | |     xmin , xmax , in_flight , in_flight_len ,
+403 | | }
+    | |_- at the end of the function body
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

@@ -14,7 +14,27 @@ TLC runs in a fresh temporary working directory containing only checksum-matched
 
 `python3 scripts/test_tla_runner.py` exercises fail-closed evidence classification without Java or network access. It checks complete-search markers and an exactly empty queue, the pinned TLC invariant/temporal exit codes (12/13), named properties, real trace/lasso markers, timeout/signal handling, unrelated failures, and environment override rejection that clears stale success reports. It also reclassifies every retained campaign log. These are tests of the evidence runner, not proofs of TLC.
 
-The [retained campaign report](evidence/report.json) records all 74 cases: twenty-nine completed finite searches (four also check conditional liveness), twenty-three intended safety counterexamples, three intended liveness counterexamples, and nineteen positive reachability witnesses. Safety counterexamples and witnesses stop when the named invariant fails; they are **not completed safety searches**. Liveness failures retain a cyclic or stuttering behavior violating the exact named temporal property. Individual logs retain the actual state traces. The runner rejects syntax errors, other properties, unexpected errors, timeouts, and stale tool/source identities. It also clears a stale success report before starting. Each case has a 120-second limit, 512 MiB Java heap, one worker, fixed fingerprint index and random seed. There are no depth/state constraints or symmetry reductions. TLC's finite-state fingerprinting remains part of the model-checking evidence, not a deductive proof.
+The [retained campaign report](evidence/report.json) records all 94 cases: thirty-five completed finite searches (four also check conditional liveness), twenty-nine intended safety counterexamples, three intended liveness counterexamples, and twenty-seven positive reachability witnesses. Safety counterexamples and witnesses stop when the named invariant fails; they are **not completed safety searches**. Liveness failures retain a cyclic or stuttering behavior violating the exact named temporal property. Individual logs retain the actual state traces. The runner rejects syntax errors, other properties, unexpected errors, timeouts, and stale tool/source identities. It also clears a stale success report before starting. Each case has a 120-second limit, 512 MiB Java heap, one worker, fixed fingerprint index and random seed. There are no depth/state constraints or symmetry reductions. TLC's finite-state fingerprinting remains part of the model-checking evidence, not a deductive proof.
+
+## Lifecycle and publication chronology
+
+[LifecyclePublication.tla](LifecyclePublication.tla) adds split reservation and
+registration under metadata exclusion, snapshot active-set capture, writer
+deregistration, a separate publication-label reservation, and later bucket
+stores while predicate guards remain held. Twenty new cases cover empty creation,
+key movement and disjoint work with one/two buckets. Six completed searches,
+six intended safety counterexamples and eight witnesses are reported separately.
+The broken protocols omit lifecycle exclusion, use the writer's old start label,
+reserve publication before ending, unlock early, omit old-key coverage, or skip
+predicate validation.
+
+Witnesses include a reader starting between deregistration and reservation, a
+reader starting between reservation and storage who can validly succeed, and
+disjoint writers storing their labels out of reservation order. A physical stamp
+store occurring later does not by itself imply a larger label than every reader
+that started earlier. The model abstracts safe row visibility and bounded
+participants; it does not establish native mutex, ProcArray slot, allocator,
+weak-memory or arbitrary transaction-history refinement.
 
 ## Publication and predicate model
 

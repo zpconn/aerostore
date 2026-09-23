@@ -1,0 +1,23 @@
+note: verifying root module (selected functions)
+
+note: while loop: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/guards/acquire_wrong_bucket.rs:101:5
+    |
+101 |     while pos < keys.len()
+    |     ^^^^^^^^^^^^^^^^^^^^^^
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/guards/acquire_wrong_bucket.rs:104:13
+    |
+104 |             forall|i: int| 0 <= i < pos ==> guards[i].physical == physical(driver.registry(), keys[i]),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/guards/acquire_wrong_bucket.rs:106:13
+    |
+106 |             forall|i: int| 0 <= i < pos ==> keys[i].1 < driver.bucket_count(),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

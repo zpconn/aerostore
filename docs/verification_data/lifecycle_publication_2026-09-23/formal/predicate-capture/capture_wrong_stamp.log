@@ -1,0 +1,25 @@
+note: verifying root module (selected functions)
+
+note: while loop: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+  --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/predicate-capture/capture_wrong_stamp.rs:97:5
+   |
+97 |     while bucket_pos < buckets.len()
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/predicate-capture/capture_wrong_stamp.rs:101:13
+    |
+101 |             permitted_additions(initial_reads, tx.index_reads@, index.offset(), buckets@, index.stamps()),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/predicate-capture/capture_wrong_stamp.rs:107:13
+    |
+107 | /             forall|j: int| 0 <= j < bucket_pos ==>
+108 | |                 captured(tx.index_reads@, index.offset(), buckets[j], index.stamps()[buckets[j]])
+109 | |                     && index.stamps()[buckets[j]] < tx.txid,
+    | |___________________________________________________________^
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

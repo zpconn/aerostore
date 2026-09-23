@@ -1,0 +1,10 @@
+--- a/aerostore_core/src/procarray.rs
++++ b/aerostore_core/src/procarray.rs
+@@ -55,7 +55,6 @@
+         &self,
+         global_txid: &AtomicU64,
+     ) -> Result<ProcArrayRegistration, ProcArrayError> {
+-        let _lifecycle = self.lifecycle.lock();
+         let txid = global_txid.fetch_add(1, Ordering::AcqRel);
+         #[cfg(test)]
+         REGISTRATION_RESERVED_HOOK.with(|hook| {

@@ -1,0 +1,165 @@
+TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 9686] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-1cznj06p/LifecyclePublication.tla
+Parsing file /tmp/tlc-6483976547011847371/Integers.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /tmp/tlc-6483976547011847371/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-6483976547011847371/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-6483976547011847371/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module LifecyclePublication
+Linting of module LifecyclePublication
+Starting... (2026-09-23 16:59:17)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-09-23 16:59:17.
+Error: Invariant LookupComplete is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ active = {}
+/\ beganBetweenReserveAndStore = {}
+/\ snapshotActive = <<{}, {}>>
+/\ dependencies = <<(0 :> -1 @@ 1 :> -1), (0 :> -1 @@ 1 :> -1)>>
+/\ rejected = {}
+/\ snapRows = <<<<1, 0>>, <<1, 0>>>>
+/\ snapshotXmax = <<0, 0>>
+/\ willWrite = <<FALSE, FALSE>>
+/\ pc = <<"Start", "Start">>
+/\ publicationStamp = <<0, 0>>
+/\ captured = <<{}, {}>>
+/\ nextId = 1
+/\ answers = <<[rows |-> {}, afterMove |-> FALSE], [rows |-> {}, afterMove |-> FALSE]>>
+/\ snapshotEnded = <<{}, {}>>
+/\ lifecycle = 0
+/\ committed = {}
+/\ txid = <<0, 0>>
+/\ rowHeads = <<1, 0>>
+/\ postings = {<<1, 1>>}
+/\ answered = {}
+/\ snapped = {}
+/\ logicalRows = <<1, 0>>
+/\ stamps = (0 :> 0 @@ 1 :> 0)
+/\ owner = (0 :> 0 @@ 1 :> 0)
+/\ ended = {}
+
+State 2: <StartLock(1) line 59, col 5 to line 64, col 98 of module LifecyclePublication>
+/\ pc = <<"Reserve", "Start">>
+/\ lifecycle = 1
+
+State 3: <Reserve(1) line 66, col 5 to line 73, col 83 of module LifecyclePublication>
+/\ pc = <<"Register", "Start">>
+/\ nextId = 2
+/\ txid = <<1, 0>>
+
+State 4: <Register(1) line 75, col 5 to line 79, col 83 of module LifecyclePublication>
+/\ active = {1}
+/\ pc = <<"BeginUnlock", "Start">>
+
+State 5: <BeginUnlock(1) line 81, col 5 to line 85, col 83 of module LifecyclePublication>
+/\ pc = <<"SnapshotLock", "Start">>
+/\ lifecycle = 0
+
+State 6: <SnapshotLock(1) line 87, col 5 to line 91, col 83 of module LifecyclePublication>
+/\ pc = <<"Snapshot", "Start">>
+/\ lifecycle = 1
+
+State 7: <Snapshot(1) line 93, col 5 to line 103, col 91 of module LifecyclePublication>
+/\ snapshotActive = <<{1}, {}>>
+/\ snapshotXmax = <<2, 0>>
+/\ willWrite = <<TRUE, FALSE>>
+/\ pc = <<"Acquire", "Start">>
+/\ lifecycle = 0
+/\ snapped = {1}
+
+State 8: <AcquireOne(1) line 143, col 5 to line 150, col 51 of module LifecyclePublication>
+/\ owner = (0 :> 1 @@ 1 :> 0)
+
+State 9: <AcquireOne(1) line 143, col 5 to line 150, col 51 of module LifecyclePublication>
+/\ owner = (0 :> 1 @@ 1 :> 1)
+
+State 10: <Acquired(1) line 153, col 5 to line 157, col 61 of module LifecyclePublication>
+/\ pc = <<"Validate", "Start">>
+
+State 11: <Validate(1) line 160, col 5 to line 168, col 61 of module LifecyclePublication>
+/\ pc = <<"Prepare", "Start">>
+
+State 12: <Prepare(1) line 171, col 5 to line 176, col 51 of module LifecyclePublication>
+/\ pc = <<"RemoveSource", "Start">>
+/\ postings = {<<1, 1>>, <<2, 1>>}
+
+State 13: <RemoveSource(1) line 179, col 5 to line 184, col 51 of module LifecyclePublication>
+/\ pc = <<"PublishRow", "Start">>
+/\ postings = {<<2, 1>>}
+
+State 14: <PublishRow(1) line 187, col 5 to line 193, col 51 of module LifecyclePublication>
+/\ pc = <<"EndLock", "Start">>
+/\ rowHeads = <<2, 0>>
+/\ owner = (0 :> 0 @@ 1 :> 0)
+
+State 15: <StartLock(2) line 59, col 5 to line 64, col 98 of module LifecyclePublication>
+/\ pc = <<"EndLock", "Reserve">>
+/\ lifecycle = 2
+
+State 16: <Reserve(2) line 66, col 5 to line 73, col 83 of module LifecyclePublication>
+/\ pc = <<"EndLock", "Register">>
+/\ nextId = 3
+/\ txid = <<1, 2>>
+
+State 17: <Register(2) line 75, col 5 to line 79, col 83 of module LifecyclePublication>
+/\ active = {1, 2}
+/\ pc = <<"EndLock", "BeginUnlock">>
+
+State 18: <BeginUnlock(2) line 81, col 5 to line 85, col 83 of module LifecyclePublication>
+/\ pc = <<"EndLock", "SnapshotLock">>
+/\ lifecycle = 0
+
+State 19: <SnapshotLock(2) line 87, col 5 to line 91, col 83 of module LifecyclePublication>
+/\ pc = <<"EndLock", "Snapshot">>
+/\ lifecycle = 2
+
+State 20: <Snapshot(2) line 93, col 5 to line 103, col 91 of module LifecyclePublication>
+/\ snapshotActive = <<{1}, {1, 2}>>
+/\ snapshotXmax = <<2, 3>>
+/\ pc = <<"EndLock", "LookupLock">>
+/\ lifecycle = 0
+/\ snapped = {1, 2}
+
+State 21: <LookupLock(2) line 106, col 5 to line 111, col 51 of module LifecyclePublication>
+/\ pc = <<"EndLock", "Capture">>
+/\ owner = (0 :> 0 @@ 1 :> 2)
+
+State 22: <Capture(2) line 114, col 5 to line 124, col 78 of module LifecyclePublication>
+/\ dependencies = <<(0 :> -1 @@ 1 :> -1), (0 :> -1 @@ 1 :> 0)>>
+/\ pc = <<"EndLock", "Materialize">>
+
+State 23: <Materialize(2) line 127, col 5 to line 135, col 79 of module LifecyclePublication>
+/\ active = {1, 2}
+/\ beganBetweenReserveAndStore = {}
+/\ snapshotActive = <<{1}, {1, 2}>>
+/\ dependencies = <<(0 :> -1 @@ 1 :> -1), (0 :> -1 @@ 1 :> 0)>>
+/\ rejected = {}
+/\ snapRows = <<<<1, 0>>, <<1, 0>>>>
+/\ snapshotXmax = <<2, 3>>
+/\ willWrite = <<TRUE, FALSE>>
+/\ pc = <<"EndLock", "Acquire">>
+/\ publicationStamp = <<0, 0>>
+/\ captured = <<{}, {}>>
+/\ nextId = 3
+/\ answers = <<[rows |-> {}, afterMove |-> FALSE], [rows |-> {}, afterMove |-> FALSE]>>
+/\ snapshotEnded = <<{}, {}>>
+/\ lifecycle = 0
+/\ committed = {}
+/\ txid = <<1, 2>>
+/\ rowHeads = <<2, 0>>
+/\ postings = {<<2, 1>>}
+/\ answered = {2}
+/\ snapped = {1, 2}
+/\ logicalRows = <<1, 0>>
+/\ stamps = (0 :> 0 @@ 1 :> 0)
+/\ owner = (0 :> 0 @@ 1 :> 0)
+/\ ended = {}
+
+365 states generated, 239 distinct states found, 28 states left on queue.
+The depth of the complete state graph search is 23.
+Finished in 00s at (2026-09-23 16:59:17)

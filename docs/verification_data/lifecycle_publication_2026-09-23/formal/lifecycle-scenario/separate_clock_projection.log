@@ -1,0 +1,39 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/lifecycle-scenario/separate_clock_projection.rs:1197:5
+     |
+1197 |     fn reserve_stamp(&mut self) -> (stamp: u64) {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/lifecycle-scenario/separate_clock_projection.rs:641:17
+     |
+ 641 |         ensures old(self).state().clock <= stamp < u64::MAX,
+     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+1200 |         stamp
+     |         ----- at the end of the function body
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/lifecycle-scenario/separate_clock_projection.rs:642:13
+     |
+ 642 | /             final(self).state() == (State { clock: (stamp + 1) as u64, reserved_stamp: stamp,
+ 643 | |                 reservations: old(self).state().reservations.push(stamp), ..old(self).state() });
+     | |________________________________________________________________________________________________^ failed this postcondition
+...
+1200 |           stamp
+     |           ----- at the end of the function body
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/lifecycle-scenario/separate_clock_projection.rs:1198:21
+     |
+ 491 |     requires well_formed(old(driver).state()), old(driver).state().clock < u64::MAX,
+     |                                                ------------------------------------ failed precondition
+...
+1198 |         let stamp = lifecycle::reserve_publication_clock(&mut self.lifecycle);
+     |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 3 previous errors
+

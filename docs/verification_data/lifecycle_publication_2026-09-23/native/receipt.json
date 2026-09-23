@@ -1,0 +1,260 @@
+{
+  "schema": 1,
+  "scope": "native_lifecycle_schedule_regressions",
+  "formal_refinement_proved": false,
+  "passed": true,
+  "status": "passed",
+  "checks": [
+    {
+      "name": "current_lifecycle_cuts",
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-lifecycle/native/current/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "predicate_lifecycle_",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-lifecycle/native/current/source",
+      "exit_code": 0,
+      "elapsed_seconds": 11.866758867996396,
+      "expected_assertion_failure": false,
+      "required_assertion": null,
+      "passed": true,
+      "log": "target/verification-lifecycle/native/current_lifecycle_cuts.log",
+      "log_sha256": "62f56c79cc926ed992e53b4c814b80f7fbdf2bde1d0cbc2de2fc06956bae8fd2",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "e0a196b397f5f6979f48e77558df65ae18f3b72ccfaae31efc7d2385256b0731",
+        "aerostore_core/src/procarray.rs": "91bc87cf5df62626d8abd716f71daa784fd10b8231f17c8b580e9a80efd2f61d"
+      }
+    },
+    {
+      "name": "current_reserved_id_gap",
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-lifecycle/native/current/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "snapshot_cannot_mistake_reserved_unpublished_txid_for_a_commit",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-lifecycle/native/current/source",
+      "exit_code": 0,
+      "elapsed_seconds": 0.10475259700615425,
+      "expected_assertion_failure": false,
+      "required_assertion": null,
+      "passed": true,
+      "log": "target/verification-lifecycle/native/current_reserved_id_gap.log",
+      "log_sha256": "a418a3fccf93343ed7b1cacca51bd01632b8fa0565b4441fd9941a20571a9e36",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "e0a196b397f5f6979f48e77558df65ae18f3b72ccfaae31efc7d2385256b0731",
+        "aerostore_core/src/procarray.rs": "91bc87cf5df62626d8abd716f71daa784fd10b8231f17c8b580e9a80efd2f61d"
+      }
+    },
+    {
+      "name": "current_old_writer_after_newer_writer",
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-lifecycle/native/current/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--test",
+        "occ_transactional_index",
+        "older_writer_committing_after_newer_writer_invalidates_later_snapshot",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-lifecycle/native/current/source",
+      "exit_code": 0,
+      "elapsed_seconds": 2.2699405290040886,
+      "expected_assertion_failure": false,
+      "required_assertion": null,
+      "passed": true,
+      "log": "target/verification-lifecycle/native/current_old_writer_after_newer_writer.log",
+      "log_sha256": "9bbcd2343918124d546099c3ec8dfb599f24691641476d924b80021c150c9f98",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "e0a196b397f5f6979f48e77558df65ae18f3b72ccfaae31efc7d2385256b0731",
+        "aerostore_core/src/procarray.rs": "91bc87cf5df62626d8abd716f71daa784fd10b8231f17c8b580e9a80efd2f61d"
+      }
+    },
+    {
+      "name": "missing_registration_lifecycle_lock",
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-lifecycle/native/missing_registration_lifecycle_lock/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "snapshot_cannot_mistake_reserved_unpublished_txid_for_a_commit",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-lifecycle/native/missing_registration_lifecycle_lock/source",
+      "exit_code": 101,
+      "elapsed_seconds": 11.639342285008752,
+      "expected_assertion_failure": true,
+      "required_assertion": "reservation must hold snapshot metadata latch",
+      "passed": true,
+      "log": "target/verification-lifecycle/native/missing_registration_lifecycle_lock.log",
+      "log_sha256": "14b2248166513b27fe1d17d63235e29ede117dc514ae82e081814923e076b7d7",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "e0a196b397f5f6979f48e77558df65ae18f3b72ccfaae31efc7d2385256b0731",
+        "aerostore_core/src/procarray.rs": "3997eb465ddf0702c6f7c6002ac77f32e2138bf05d6b2bff640796301c0af6d9"
+      }
+    },
+    {
+      "name": "snapshot_omits_active_writers",
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-lifecycle/native/snapshot_omits_active_writers/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "predicate_lifecycle_key_move_guards_both_deregistration_stamp_cuts",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-lifecycle/native/snapshot_omits_active_writers/source",
+      "exit_code": 101,
+      "elapsed_seconds": 11.778456051004468,
+      "expected_assertion_failure": true,
+      "required_assertion": "assertion `left == right` failed",
+      "passed": true,
+      "log": "target/verification-lifecycle/native/snapshot_omits_active_writers.log",
+      "log_sha256": "8834707a296561c6a6c6839f0044e2009e662d1847ff1ac2f8a32b345bab3f08",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "e0a196b397f5f6979f48e77558df65ae18f3b72ccfaae31efc7d2385256b0731",
+        "aerostore_core/src/procarray.rs": "9e61c7dc7a74df6ace92793dd54a2b3f1ce94037b14306410e27874bf5f88146"
+      }
+    },
+    {
+      "name": "stamp_before_deregistration",
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-lifecycle/native/stamp_before_deregistration/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "predicate_lifecycle_key_move_guards_both_deregistration_stamp_cuts",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-lifecycle/native/stamp_before_deregistration/source",
+      "exit_code": 101,
+      "elapsed_seconds": 11.561263175011845,
+      "expected_assertion_failure": true,
+      "required_assertion": "stale stamps could hide the moved old key",
+      "passed": true,
+      "log": "target/verification-lifecycle/native/stamp_before_deregistration.log",
+      "log_sha256": "02c08b712ad8d22e37fe49735528763b99ecb8451b87bf620cc61d1c1e2829b2",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "23bf3e6c1c3fb866725fcf26653ae26ce0a32c477abf35d8fb3c53281dde7c9d",
+        "aerostore_core/src/procarray.rs": "91bc87cf5df62626d8abd716f71daa784fd10b8231f17c8b580e9a80efd2f61d"
+      }
+    },
+    {
+      "name": "reuse_writer_txid_as_stamp",
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-lifecycle/native/reuse_writer_txid_as_stamp/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "predicate_lifecycle_key_move_guards_both_deregistration_stamp_cuts",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-lifecycle/native/reuse_writer_txid_as_stamp/source",
+      "exit_code": 101,
+      "elapsed_seconds": 11.41650247698999,
+      "expected_assertion_failure": true,
+      "required_assertion": "stale stamps could hide the moved old key",
+      "passed": true,
+      "log": "target/verification-lifecycle/native/reuse_writer_txid_as_stamp.log",
+      "log_sha256": "c97f55ada69a80ca216bb0ac6844e94d91adcf17893fe0a67e8eb5239fd57a3b",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "c6b80a6292c7560cb56f012eed9a6c63d8abd18fdc1e84bbf39b8be88f2fa0ad",
+        "aerostore_core/src/procarray.rs": "91bc87cf5df62626d8abd716f71daa784fd10b8231f17c8b580e9a80efd2f61d"
+      }
+    },
+    {
+      "name": "release_predicate_guards_before_deregistration",
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-lifecycle/native/release_predicate_guards_before_deregistration/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "predicate_lifecycle_key_move_guards_both_deregistration_stamp_cuts",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-lifecycle/native/release_predicate_guards_before_deregistration/source",
+      "exit_code": 101,
+      "elapsed_seconds": 11.395471791998716,
+      "expected_assertion_failure": true,
+      "required_assertion": "lookup must encounter the held predicate guard",
+      "passed": true,
+      "log": "target/verification-lifecycle/native/release_predicate_guards_before_deregistration.log",
+      "log_sha256": "4ef2b4ded8312c781f85e2493154d9d626dd6294e2e2c766a348e2227f61f791",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "d5e1852a8ca2d7da084f8b4975bd8b4498450a4e2647167df76f34c277fb1e44",
+        "aerostore_core/src/procarray.rs": "91bc87cf5df62626d8abd716f71daa784fd10b8231f17c8b580e9a80efd2f61d"
+      }
+    }
+  ],
+  "input_sha256": {
+    "aerostore_core/src/occ_partitioned.rs": "e0a196b397f5f6979f48e77558df65ae18f3b72ccfaae31efc7d2385256b0731",
+    "aerostore_core/src/procarray.rs": "91bc87cf5df62626d8abd716f71daa784fd10b8231f17c8b580e9a80efd2f61d",
+    "verification/lifecycle_native/run.py": "5e7850717e2745c7fee0714227f3c24dec013c7e4a7ceeebf9f929dccf0a5f16"
+  },
+  "parent_commit": "c5d27d280630d901b3221f836bbacccaf8c11349",
+  "parent_archive_sha256": "64aec61fefaf1c32d6b54fac527a732b9476ea96a0dd2d799df8dd9d2ae50754",
+  "rustc": "rustc 1.93.1 (01f6ddf75 2026-02-11)\nbinary: rustc\ncommit-hash: 01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf\ncommit-date: 2026-02-11\nhost: x86_64-unknown-linux-gnu\nrelease: 1.93.1\nLLVM version: 21.1.8\n",
+  "tool_sha256": {
+    "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo": "6bbe4f5601b419b69ec2001b5e64c997770f620e1493ad7007b78e505457796f",
+    "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc": "bd1875234c27f9f0c9f9c700ade69f7e83d25e368f38407d32b4b0e2cbc2426d"
+  },
+  "final_input_sha256": {
+    "aerostore_core/src/occ_partitioned.rs": "e0a196b397f5f6979f48e77558df65ae18f3b72ccfaae31efc7d2385256b0731",
+    "aerostore_core/src/procarray.rs": "91bc87cf5df62626d8abd716f71daa784fd10b8231f17c8b580e9a80efd2f61d",
+    "verification/lifecycle_native/run.py": "5e7850717e2745c7fee0714227f3c24dec013c7e4a7ceeebf9f929dccf0a5f16"
+  },
+  "source_stable": true
+}

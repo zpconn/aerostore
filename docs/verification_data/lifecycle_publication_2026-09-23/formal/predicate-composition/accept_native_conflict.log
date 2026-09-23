@@ -1,0 +1,16 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/predicate-composition/accept_native_conflict.rs:628:13
+    |
+628 |       ensures result == ReadResult::Checked(false) ==>
+    |  _____________^
+629 | |         !has_late_publication(later.state(), index.offset(), buckets@, old(tx).txid),
+    | |____________________________________________________________________________________^ failed this postcondition
+...
+687 |       ReadResult::Checked(false)
+    |       -------------------------- at the end of the function body
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

@@ -1,0 +1,92 @@
+{
+  "current_fixture": {
+    "changes": {
+      "aerostore_core/src/occ_partitioned.rs": {
+        "after_sha256": "e0a196b397f5f6979f48e77558df65ae18f3b72ccfaae31efc7d2385256b0731",
+        "before_sha256": "11860b77fbe05ff510eaac66de195abeafa65f1736e1841797f887dd0576e324"
+      },
+      "aerostore_core/src/procarray.rs": {
+        "after_sha256": "91bc87cf5df62626d8abd716f71daa784fd10b8231f17c8b580e9a80efd2f61d",
+        "before_sha256": "0caadc64e22c4b8144ba97128b3fb54cdc680cd8afb076b790802e6a334eec71"
+      }
+    },
+    "patch": "current-fixture.patch",
+    "patch_sha256": "ee64c686614bc235e432dd89d3527c2cfd26acec2fa519ef8b53f454a7597f0c"
+  },
+  "mutations": [
+    {
+      "changes": {
+        "aerostore_core/src/procarray.rs": {
+          "after_sha256": "3997eb465ddf0702c6f7c6002ac77f32e2138bf05d6b2bff640796301c0af6d9",
+          "before_sha256": "91bc87cf5df62626d8abd716f71daa784fd10b8231f17c8b580e9a80efd2f61d"
+        }
+      },
+      "name": "missing_registration_lifecycle_lock",
+      "patch": "missing_registration_lifecycle_lock.patch",
+      "patch_sha256": "8641b501c835ce09edef72eeb21aac1e5d10eff930db547fa21e6649152f53d4",
+      "source_tree_sha256": "0632c2c6f9a2a1aa5dc947f3531e002450f09a9a05efbe84f9828eacd7dce696"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/procarray.rs": {
+          "after_sha256": "9e61c7dc7a74df6ace92793dd54a2b3f1ce94037b14306410e27874bf5f88146",
+          "before_sha256": "91bc87cf5df62626d8abd716f71daa784fd10b8231f17c8b580e9a80efd2f61d"
+        }
+      },
+      "name": "snapshot_omits_active_writers",
+      "patch": "snapshot_omits_active_writers.patch",
+      "patch_sha256": "c6306a453c52338f33add71f9e2974c17af39db87f38e4e856924ae53b86c8ca",
+      "source_tree_sha256": "d418f4bfdbd7c03905d8384af94b692f58a8e98da46e27b553e247475693d619"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "23bf3e6c1c3fb866725fcf26653ae26ce0a32c477abf35d8fb3c53281dde7c9d",
+          "before_sha256": "e0a196b397f5f6979f48e77558df65ae18f3b72ccfaae31efc7d2385256b0731"
+        }
+      },
+      "name": "stamp_before_deregistration",
+      "patch": "stamp_before_deregistration.patch",
+      "patch_sha256": "a3c03b481348521b6f55bff73dc32ce5f53fcf5668ba4a5defb5475ed25d2795",
+      "source_tree_sha256": "45a6554a33369df9a4cde3b19e596ece844d189c2b5eec2c7e8e8d78f9dbc018"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "c6b80a6292c7560cb56f012eed9a6c63d8abd18fdc1e84bbf39b8be88f2fa0ad",
+          "before_sha256": "e0a196b397f5f6979f48e77558df65ae18f3b72ccfaae31efc7d2385256b0731"
+        }
+      },
+      "name": "reuse_writer_txid_as_stamp",
+      "patch": "reuse_writer_txid_as_stamp.patch",
+      "patch_sha256": "9ed9b29a2f72baf43c17f46867dcd0da066afdf97747675711d80a4277db5b01",
+      "source_tree_sha256": "e55171df8c449b46d00126727383912e76854575be719ffdc1809ecd6e6621eb"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "d5e1852a8ca2d7da084f8b4975bd8b4498450a4e2647167df76f34c277fb1e44",
+          "before_sha256": "e0a196b397f5f6979f48e77558df65ae18f3b72ccfaae31efc7d2385256b0731"
+        }
+      },
+      "name": "release_predicate_guards_before_deregistration",
+      "patch": "release_predicate_guards_before_deregistration.patch",
+      "patch_sha256": "8c5ee043149aeb19f0ed96954175cfb0b482de8b1acf45174ad09f844510ac38",
+      "source_tree_sha256": "788b06f7b38e44829835391f760edd8828fd733c9b6b65e19843262f656979ad"
+    }
+  ],
+  "parent_archive_command": [
+    "git",
+    "archive",
+    "c5d27d280630d901b3221f836bbacccaf8c11349",
+    "Cargo.toml",
+    "Cargo.lock",
+    "aerostore_core",
+    "aerostore_verified",
+    "aerostore_macros",
+    "aerostore_tcl"
+  ],
+  "parent_archive_sha256": "64aec61fefaf1c32d6b54fac527a732b9476ea96a0dd2d799df8dd9d2ae50754",
+  "parent_commit": "c5d27d280630d901b3221f836bbacccaf8c11349",
+  "scope": "Optional native diagnostic, not a formal refinement or mandatory pilot component"
+}

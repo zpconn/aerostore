@@ -1,0 +1,22 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+  --> /home/zpconn/code/aerostore/target/verification-lifecycle/final/guards/lock_wrong_bucket.rs:56:13
+   |
+56 |       ensures result.is_ok() && result.unwrap().is_some() ==>
+   |  _____________^
+57 | |         result.unwrap().unwrap().physical == physical(driver.registry(), (binding, bucket))
+58 | |             && result.unwrap().unwrap().arena == driver.arena() && bucket < driver.bucket_count(),
+   | |_________________________________________________________________________________________________^ failed this postcondition
+59 | / {
+60 | |     let header = driver . publication_header ( binding ) ? ;
+61 | | if driver . poisoned ( header ) {
+62 | |     return Err ( Error :: Poisoned ) ;
+...  |
+65 | | Ok ( driver . try_lock ( (bucket.0, 0) ) )
+66 | | }
+   | |_- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

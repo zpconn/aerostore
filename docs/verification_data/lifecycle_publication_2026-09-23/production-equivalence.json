@@ -1,0 +1,602 @@
+{
+  "baseline": "c5d27d280630d901b3221f836bbacccaf8c11349",
+  "passed": true,
+  "checked_files": 118,
+  "changed_native_files": [
+    "aerostore_core/src/occ_partitioned.rs",
+    "aerostore_core/src/procarray.rs"
+  ],
+  "comparison": "Native Rust/Cargo inputs unchanged after excluding complete balanced cfg(test) modules and the exact two new cfg(test) hook declarations/calls. Production items after test modules retain identical tokens; other production regions compare byte-for-byte. No production synchronization, allocator, atomic or algorithm change.",
+  "files": {
+    "Cargo.lock": {
+      "baseline_sha256": "6c0d2df18dbfba1408aaedf361cd480eb20ea629bdc6b185ce6b02fa9f31ab2d",
+      "current_sha256": "6c0d2df18dbfba1408aaedf361cd480eb20ea629bdc6b185ce6b02fa9f31ab2d",
+      "production_projection_sha256": "6c0d2df18dbfba1408aaedf361cd480eb20ea629bdc6b185ce6b02fa9f31ab2d"
+    },
+    "Cargo.toml": {
+      "baseline_sha256": "8f8878e016d2781884975dc980c2e97372d003b077f7f266d2940631fef535d0",
+      "current_sha256": "8f8878e016d2781884975dc980c2e97372d003b077f7f266d2940631fef535d0",
+      "production_projection_sha256": "8f8878e016d2781884975dc980c2e97372d003b077f7f266d2940631fef535d0"
+    },
+    "aerostore_core/Cargo.toml": {
+      "baseline_sha256": "a28270cdb506bef5d80d2cb379d3d28cef02cdde80b3470a802b6d7674c0918b",
+      "current_sha256": "a28270cdb506bef5d80d2cb379d3d28cef02cdde80b3470a802b6d7674c0918b",
+      "production_projection_sha256": "a28270cdb506bef5d80d2cb379d3d28cef02cdde80b3470a802b6d7674c0918b"
+    },
+    "aerostore_core/benches/extended_crucible/aerostore.rs": {
+      "baseline_sha256": "5e626f5953784e59b8f3ed42ff32f3e39d8b65c780f5cc5055cc17f6756fde10",
+      "current_sha256": "5e626f5953784e59b8f3ed42ff32f3e39d8b65c780f5cc5055cc17f6756fde10",
+      "production_projection_sha256": "5e626f5953784e59b8f3ed42ff32f3e39d8b65c780f5cc5055cc17f6756fde10"
+    },
+    "aerostore_core/benches/extended_crucible/contracts.rs": {
+      "baseline_sha256": "f3480f7271e3585f1231e43a3e7716728fe5016deb6f7ad245a9643bad74facf",
+      "current_sha256": "f3480f7271e3585f1231e43a3e7716728fe5016deb6f7ad245a9643bad74facf",
+      "production_projection_sha256": "f3480f7271e3585f1231e43a3e7716728fe5016deb6f7ad245a9643bad74facf"
+    },
+    "aerostore_core/benches/extended_crucible/metrics.rs": {
+      "baseline_sha256": "0974e0d10ed2072182a3b3c0b8b5d4d4bdec86726faa31108163da395170f42f",
+      "current_sha256": "0974e0d10ed2072182a3b3c0b8b5d4d4bdec86726faa31108163da395170f42f",
+      "production_projection_sha256": "0974e0d10ed2072182a3b3c0b8b5d4d4bdec86726faa31108163da395170f42f"
+    },
+    "aerostore_core/benches/extended_crucible/mod.rs": {
+      "baseline_sha256": "eef78817af9947f49fa3d164e39a22a4fbf746fb371b4d8b54a4c7b6cd562ff9",
+      "current_sha256": "eef78817af9947f49fa3d164e39a22a4fbf746fb371b4d8b54a4c7b6cd562ff9",
+      "production_projection_sha256": "eef78817af9947f49fa3d164e39a22a4fbf746fb371b4d8b54a4c7b6cd562ff9"
+    },
+    "aerostore_core/benches/extended_crucible/model.rs": {
+      "baseline_sha256": "7ac59bbc4be37689968bd00b2a7081b842afabd04357bcbbd42ebed424c37234",
+      "current_sha256": "7ac59bbc4be37689968bd00b2a7081b842afabd04357bcbbd42ebed424c37234",
+      "production_projection_sha256": "7ac59bbc4be37689968bd00b2a7081b842afabd04357bcbbd42ebed424c37234"
+    },
+    "aerostore_core/benches/extended_crucible/postgres.rs": {
+      "baseline_sha256": "39f3fc071cca8e7d040b00d7f5a2908eeb44ad1ae9a12b2e61ec63f1cff17b6e",
+      "current_sha256": "39f3fc071cca8e7d040b00d7f5a2908eeb44ad1ae9a12b2e61ec63f1cff17b6e",
+      "production_projection_sha256": "39f3fc071cca8e7d040b00d7f5a2908eeb44ad1ae9a12b2e61ec63f1cff17b6e"
+    },
+    "aerostore_core/benches/extended_crucible/runner.rs": {
+      "baseline_sha256": "3801a92c0418b4a250fe84cc3e787c9f6a89954a59615394de7dca3573ea8fc9",
+      "current_sha256": "3801a92c0418b4a250fe84cc3e787c9f6a89954a59615394de7dca3573ea8fc9",
+      "production_projection_sha256": "3801a92c0418b4a250fe84cc3e787c9f6a89954a59615394de7dca3573ea8fc9"
+    },
+    "aerostore_core/benches/hyperfeed_crucible.rs": {
+      "baseline_sha256": "d8ab08776c2666cd517cb48cbe20c7b30dd0ac3dc8f42b72a3c189e3b6e3e092",
+      "current_sha256": "d8ab08776c2666cd517cb48cbe20c7b30dd0ac3dc8f42b72a3c189e3b6e3e092",
+      "production_projection_sha256": "d8ab08776c2666cd517cb48cbe20c7b30dd0ac3dc8f42b72a3c189e3b6e3e092"
+    },
+    "aerostore_core/benches/hyperfeed_extended_crucible.rs": {
+      "baseline_sha256": "402d65ed26a990fcfd663a8afc6074bcb6ebae8dc4953b9f7731da7aee66e028",
+      "current_sha256": "402d65ed26a990fcfd663a8afc6074bcb6ebae8dc4953b9f7731da7aee66e028",
+      "production_projection_sha256": "402d65ed26a990fcfd663a8afc6074bcb6ebae8dc4953b9f7731da7aee66e028"
+    },
+    "aerostore_core/benches/procarray_snapshot.rs": {
+      "baseline_sha256": "58a99f8738cd50b9cf25351ddb0be86d3176c81ef2330bfbfdec4953e416955f",
+      "current_sha256": "58a99f8738cd50b9cf25351ddb0be86d3176c81ef2330bfbfdec4953e416955f",
+      "production_projection_sha256": "58a99f8738cd50b9cf25351ddb0be86d3176c81ef2330bfbfdec4953e416955f"
+    },
+    "aerostore_core/benches/shm_skiplist_adversarial.rs": {
+      "baseline_sha256": "1a4b073e005a552ede210670dfe5f20a938ead249c6cb7f523edd58270db27fb",
+      "current_sha256": "1a4b073e005a552ede210670dfe5f20a938ead249c6cb7f523edd58270db27fb",
+      "production_projection_sha256": "1a4b073e005a552ede210670dfe5f20a938ead249c6cb7f523edd58270db27fb"
+    },
+    "aerostore_core/benches/shm_skiplist_seek_bounds.rs": {
+      "baseline_sha256": "570742cced22d3ac663ee4de4ec2c5fc0da651dc0a8143d3fae73704f56b537c",
+      "current_sha256": "570742cced22d3ac663ee4de4ec2c5fc0da651dc0a8143d3fae73704f56b537c",
+      "production_projection_sha256": "570742cced22d3ac663ee4de4ec2c5fc0da651dc0a8143d3fae73704f56b537c"
+    },
+    "aerostore_core/benches/support/crucible_seed.rs": {
+      "baseline_sha256": "7039d9d0fe7210cf1afccf870d78b796a8ad15b3cced8dbf5d4d72cc924161ee",
+      "current_sha256": "7039d9d0fe7210cf1afccf870d78b796a8ad15b3cced8dbf5d4d72cc924161ee",
+      "production_projection_sha256": "7039d9d0fe7210cf1afccf870d78b796a8ad15b3cced8dbf5d4d72cc924161ee"
+    },
+    "aerostore_core/benches/support/latency_histogram.rs": {
+      "baseline_sha256": "114878f08890782b17a3bec7bda47ae2ff0e2185cc207662ecd9019c2bbf0dd3",
+      "current_sha256": "114878f08890782b17a3bec7bda47ae2ff0e2185cc207662ecd9019c2bbf0dd3",
+      "production_projection_sha256": "114878f08890782b17a3bec7bda47ae2ff0e2185cc207662ecd9019c2bbf0dd3"
+    },
+    "aerostore_core/benches/tmpfs_warm_restart.rs": {
+      "baseline_sha256": "5ec0b8d4bd6b0f6265ba8957572c7e421ba07eb0e00554937ae216854823259e",
+      "current_sha256": "5ec0b8d4bd6b0f6265ba8957572c7e421ba07eb0e00554937ae216854823259e",
+      "production_projection_sha256": "5ec0b8d4bd6b0f6265ba8957572c7e421ba07eb0e00554937ae216854823259e"
+    },
+    "aerostore_core/benches/verified_bucket_allocations.rs": {
+      "baseline_sha256": "a32ca3cdaf470a28e99d15603a4727426ecdf215895e0feab81e26973403506e",
+      "current_sha256": "a32ca3cdaf470a28e99d15603a4727426ecdf215895e0feab81e26973403506e",
+      "production_projection_sha256": "a32ca3cdaf470a28e99d15603a4727426ecdf215895e0feab81e26973403506e"
+    },
+    "aerostore_core/benches/verified_bucket_sets.rs": {
+      "baseline_sha256": "806c7bc23c8930735f74fddd12980a0f13aef073c6ff0fc1eab60836d2ef05e7",
+      "current_sha256": "806c7bc23c8930735f74fddd12980a0f13aef073c6ff0fc1eab60836d2ef05e7",
+      "production_projection_sha256": "806c7bc23c8930735f74fddd12980a0f13aef073c6ff0fc1eab60836d2ef05e7"
+    },
+    "aerostore_core/benches/wal_delta_throughput.rs": {
+      "baseline_sha256": "48c5b934a05d637b74ea88e4f8b7fef133571a3a36c96b12055bc752720a049d",
+      "current_sha256": "48c5b934a05d637b74ea88e4f8b7fef133571a3a36c96b12055bc752720a049d",
+      "production_projection_sha256": "48c5b934a05d637b74ea88e4f8b7fef133571a3a36c96b12055bc752720a049d"
+    },
+    "aerostore_core/src/arena.rs": {
+      "baseline_sha256": "f8e1d90fef5fef613ecf3c7af5efece382a0eb2f1c91cf5b4c80de16cb50822f",
+      "current_sha256": "f8e1d90fef5fef613ecf3c7af5efece382a0eb2f1c91cf5b4c80de16cb50822f",
+      "production_projection_sha256": "f8e1d90fef5fef613ecf3c7af5efece382a0eb2f1c91cf5b4c80de16cb50822f"
+    },
+    "aerostore_core/src/bootloader.rs": {
+      "baseline_sha256": "6c29c8fd5ead2aadb61f4fb77342a0705985110b5b0b3f5354e39d1a78e3e890",
+      "current_sha256": "6c29c8fd5ead2aadb61f4fb77342a0705985110b5b0b3f5354e39d1a78e3e890",
+      "production_projection_sha256": "6c29c8fd5ead2aadb61f4fb77342a0705985110b5b0b3f5354e39d1a78e3e890"
+    },
+    "aerostore_core/src/execution.rs": {
+      "baseline_sha256": "85d32e3d42c8629c052ba36b769ce625148b297e02c5231504efc9f5cd73d9ce",
+      "current_sha256": "85d32e3d42c8629c052ba36b769ce625148b297e02c5231504efc9f5cd73d9ce",
+      "production_projection_sha256": "85d32e3d42c8629c052ba36b769ce625148b297e02c5231504efc9f5cd73d9ce"
+    },
+    "aerostore_core/src/filters.rs": {
+      "baseline_sha256": "862b925c524f002daaca0f2524695908e0537a44c996c165789d16678bb5c8ac",
+      "current_sha256": "862b925c524f002daaca0f2524695908e0537a44c996c165789d16678bb5c8ac",
+      "production_projection_sha256": "862b925c524f002daaca0f2524695908e0537a44c996c165789d16678bb5c8ac"
+    },
+    "aerostore_core/src/index.rs": {
+      "baseline_sha256": "3df81efcc90a842e96ec744661abcd93dee5175d03663a8c5894554e1e541e1f",
+      "current_sha256": "3df81efcc90a842e96ec744661abcd93dee5175d03663a8c5894554e1e541e1f",
+      "production_projection_sha256": "3df81efcc90a842e96ec744661abcd93dee5175d03663a8c5894554e1e541e1f"
+    },
+    "aerostore_core/src/ingest.rs": {
+      "baseline_sha256": "8f4cc44d1352ee807e26fb1ed62e73d3f1a9177bc5334e3a403e733f7a04dd32",
+      "current_sha256": "8f4cc44d1352ee807e26fb1ed62e73d3f1a9177bc5334e3a403e733f7a04dd32",
+      "production_projection_sha256": "8f4cc44d1352ee807e26fb1ed62e73d3f1a9177bc5334e3a403e733f7a04dd32"
+    },
+    "aerostore_core/src/lib.rs": {
+      "baseline_sha256": "5dd1dd237df07e2bd055a702af67a2fcf47825de356877cd12f2b42d49f59fad",
+      "current_sha256": "5dd1dd237df07e2bd055a702af67a2fcf47825de356877cd12f2b42d49f59fad",
+      "production_projection_sha256": "5dd1dd237df07e2bd055a702af67a2fcf47825de356877cd12f2b42d49f59fad"
+    },
+    "aerostore_core/src/mvcc.rs": {
+      "baseline_sha256": "0b888ad0889fd5d0aaf3d1fe28974fa1257d55a8a87d4e3533f4f1630f3e9f59",
+      "current_sha256": "0b888ad0889fd5d0aaf3d1fe28974fa1257d55a8a87d4e3533f4f1630f3e9f59",
+      "production_projection_sha256": "0b888ad0889fd5d0aaf3d1fe28974fa1257d55a8a87d4e3533f4f1630f3e9f59"
+    },
+    "aerostore_core/src/occ.rs": {
+      "baseline_sha256": "933c5ff6524da35ac806d8e7b03108ac09094d4a07a6784b6c130b676dc32cac",
+      "current_sha256": "933c5ff6524da35ac806d8e7b03108ac09094d4a07a6784b6c130b676dc32cac",
+      "production_projection_sha256": "933c5ff6524da35ac806d8e7b03108ac09094d4a07a6784b6c130b676dc32cac"
+    },
+    "aerostore_core/src/occ_legacy.rs": {
+      "baseline_sha256": "506151b69538c42e3541cf12cc40e7f0b4a7353331e6bab4bd8236092892fadd",
+      "current_sha256": "506151b69538c42e3541cf12cc40e7f0b4a7353331e6bab4bd8236092892fadd",
+      "production_projection_sha256": "506151b69538c42e3541cf12cc40e7f0b4a7353331e6bab4bd8236092892fadd"
+    },
+    "aerostore_core/src/occ_partitioned.rs": {
+      "baseline_sha256": "11860b77fbe05ff510eaac66de195abeafa65f1736e1841797f887dd0576e324",
+      "current_sha256": "e0a196b397f5f6979f48e77558df65ae18f3b72ccfaae31efc7d2385256b0731",
+      "production_projection_sha256": "acac1c34335a4f56b1b81c9a929bf9857377654831420e63974dc60cb82b2114"
+    },
+    "aerostore_core/src/planner_cardinality.rs": {
+      "baseline_sha256": "d277fe3551d1fc76813df83fa6288a5afa312738d37d417c0a930ad24dd4c546",
+      "current_sha256": "d277fe3551d1fc76813df83fa6288a5afa312738d37d417c0a930ad24dd4c546",
+      "production_projection_sha256": "d277fe3551d1fc76813df83fa6288a5afa312738d37d417c0a930ad24dd4c546"
+    },
+    "aerostore_core/src/procarray.rs": {
+      "baseline_sha256": "0caadc64e22c4b8144ba97128b3fb54cdc680cd8afb076b790802e6a334eec71",
+      "current_sha256": "91bc87cf5df62626d8abd716f71daa784fd10b8231f17c8b580e9a80efd2f61d",
+      "production_projection_sha256": "51c2a066a9a54dc5fa51245df44620b1e3bc1d842850839b3e6e38d1bea7cb3c"
+    },
+    "aerostore_core/src/query.rs": {
+      "baseline_sha256": "e47567fff036e9fd13d277ee2b26692d477e2da92d107ace40ae55500d3d9685",
+      "current_sha256": "e47567fff036e9fd13d277ee2b26692d477e2da92d107ace40ae55500d3d9685",
+      "production_projection_sha256": "e47567fff036e9fd13d277ee2b26692d477e2da92d107ace40ae55500d3d9685"
+    },
+    "aerostore_core/src/rbo_planner.rs": {
+      "baseline_sha256": "1c91ab46417bf12825c1b04ece6a163d3af3138ebd2bf8ab6ee71773e2b4d186",
+      "current_sha256": "1c91ab46417bf12825c1b04ece6a163d3af3138ebd2bf8ab6ee71773e2b4d186",
+      "production_projection_sha256": "1c91ab46417bf12825c1b04ece6a163d3af3138ebd2bf8ab6ee71773e2b4d186"
+    },
+    "aerostore_core/src/recovery.rs": {
+      "baseline_sha256": "45177cd588058fe73b0aa5c5a1bdbb1cc9c2c7302014a38ae01657b6b1a84b50",
+      "current_sha256": "45177cd588058fe73b0aa5c5a1bdbb1cc9c2c7302014a38ae01657b6b1a84b50",
+      "production_projection_sha256": "45177cd588058fe73b0aa5c5a1bdbb1cc9c2c7302014a38ae01657b6b1a84b50"
+    },
+    "aerostore_core/src/recovery_delta.rs": {
+      "baseline_sha256": "b7985430386d2468eb64fe9c3651fa11405e7edb326472bbc6425ccef1e7be26",
+      "current_sha256": "b7985430386d2468eb64fe9c3651fa11405e7edb326472bbc6425ccef1e7be26",
+      "production_projection_sha256": "b7985430386d2468eb64fe9c3651fa11405e7edb326472bbc6425ccef1e7be26"
+    },
+    "aerostore_core/src/retry.rs": {
+      "baseline_sha256": "010a40c9e58560bbb9a1d2a9cceb858ebd290bdf25e401bacf6597d6d20b4e98",
+      "current_sha256": "010a40c9e58560bbb9a1d2a9cceb858ebd290bdf25e401bacf6597d6d20b4e98",
+      "production_projection_sha256": "010a40c9e58560bbb9a1d2a9cceb858ebd290bdf25e401bacf6597d6d20b4e98"
+    },
+    "aerostore_core/src/shm.rs": {
+      "baseline_sha256": "434964bde214af5b9ca4c4828447e995edc9074f117d61ee1173fa0ae0418884",
+      "current_sha256": "434964bde214af5b9ca4c4828447e995edc9074f117d61ee1173fa0ae0418884",
+      "production_projection_sha256": "434964bde214af5b9ca4c4828447e995edc9074f117d61ee1173fa0ae0418884"
+    },
+    "aerostore_core/src/shm_index.rs": {
+      "baseline_sha256": "3ee2c2b8bb1f29e50e1f7177b238c794a12558b03fb8f948ac26c8ed6714c151",
+      "current_sha256": "3ee2c2b8bb1f29e50e1f7177b238c794a12558b03fb8f948ac26c8ed6714c151",
+      "production_projection_sha256": "3ee2c2b8bb1f29e50e1f7177b238c794a12558b03fb8f948ac26c8ed6714c151"
+    },
+    "aerostore_core/src/shm_lock.rs": {
+      "baseline_sha256": "60c189fef3e17644f8470c2baf7e148c7096c06fc062ef280e315b21eb165fa2",
+      "current_sha256": "60c189fef3e17644f8470c2baf7e148c7096c06fc062ef280e315b21eb165fa2",
+      "production_projection_sha256": "60c189fef3e17644f8470c2baf7e148c7096c06fc062ef280e315b21eb165fa2"
+    },
+    "aerostore_core/src/shm_skiplist.rs": {
+      "baseline_sha256": "a3b8862e481cb9a95345d9eafc88d8f2bdb102b28f001d70c7e01fd581f7c184",
+      "current_sha256": "a3b8862e481cb9a95345d9eafc88d8f2bdb102b28f001d70c7e01fd581f7c184",
+      "production_projection_sha256": "a3b8862e481cb9a95345d9eafc88d8f2bdb102b28f001d70c7e01fd581f7c184"
+    },
+    "aerostore_core/src/shm_tmpfs.rs": {
+      "baseline_sha256": "08b0db51eef49a71f00ac75f16b4503927d9d52d406af0bd04b088382dbb2e74",
+      "current_sha256": "08b0db51eef49a71f00ac75f16b4503927d9d52d406af0bd04b088382dbb2e74",
+      "production_projection_sha256": "08b0db51eef49a71f00ac75f16b4503927d9d52d406af0bd04b088382dbb2e74"
+    },
+    "aerostore_core/src/stapi_parser.rs": {
+      "baseline_sha256": "e786daafa895225bcabe5c73f6fc13e50a59805b98532cd1e3036a34520e49b2",
+      "current_sha256": "e786daafa895225bcabe5c73f6fc13e50a59805b98532cd1e3036a34520e49b2",
+      "production_projection_sha256": "e786daafa895225bcabe5c73f6fc13e50a59805b98532cd1e3036a34520e49b2"
+    },
+    "aerostore_core/src/txn.rs": {
+      "baseline_sha256": "c5deae698fd360e6277af2148a301539f22379389338555877cf388434467e8f",
+      "current_sha256": "c5deae698fd360e6277af2148a301539f22379389338555877cf388434467e8f",
+      "production_projection_sha256": "c5deae698fd360e6277af2148a301539f22379389338555877cf388434467e8f"
+    },
+    "aerostore_core/src/vacuum.rs": {
+      "baseline_sha256": "2ea3c64b95ce212f891c6c11fa949253f69bfe1bbbc69f46af8c100b0d1a6ca9",
+      "current_sha256": "2ea3c64b95ce212f891c6c11fa949253f69bfe1bbbc69f46af8c100b0d1a6ca9",
+      "production_projection_sha256": "2ea3c64b95ce212f891c6c11fa949253f69bfe1bbbc69f46af8c100b0d1a6ca9"
+    },
+    "aerostore_core/src/wal.rs": {
+      "baseline_sha256": "1037e7db135439718b1e7733039e80eed027fc17891677fffaee6c45ecf409e9",
+      "current_sha256": "1037e7db135439718b1e7733039e80eed027fc17891677fffaee6c45ecf409e9",
+      "production_projection_sha256": "1037e7db135439718b1e7733039e80eed027fc17891677fffaee6c45ecf409e9"
+    },
+    "aerostore_core/src/wal_delta.rs": {
+      "baseline_sha256": "72175f6a106b5880208c65f29cd2a5758819ecf93af6507a054b95889a67365e",
+      "current_sha256": "72175f6a106b5880208c65f29cd2a5758819ecf93af6507a054b95889a67365e",
+      "production_projection_sha256": "72175f6a106b5880208c65f29cd2a5758819ecf93af6507a054b95889a67365e"
+    },
+    "aerostore_core/src/wal_logical.rs": {
+      "baseline_sha256": "f96011096de4b5da3af3306527b70c9bdcf1ceda7991bfb85e4117eab5cbe09d",
+      "current_sha256": "f96011096de4b5da3af3306527b70c9bdcf1ceda7991bfb85e4117eab5cbe09d",
+      "production_projection_sha256": "f96011096de4b5da3af3306527b70c9bdcf1ceda7991bfb85e4117eab5cbe09d"
+    },
+    "aerostore_core/src/wal_ring.rs": {
+      "baseline_sha256": "c32500ea26baf0602777fcd3dce1c7ecd558b410197668564f747796fc4eab4c",
+      "current_sha256": "c32500ea26baf0602777fcd3dce1c7ecd558b410197668564f747796fc4eab4c",
+      "production_projection_sha256": "c32500ea26baf0602777fcd3dce1c7ecd558b410197668564f747796fc4eab4c"
+    },
+    "aerostore_core/src/wal_writer.rs": {
+      "baseline_sha256": "619be861775b8b1942750f427d6ecef55abc5e208fb165e5dd4c6cf5d123a70a",
+      "current_sha256": "619be861775b8b1942750f427d6ecef55abc5e208fb165e5dd4c6cf5d123a70a",
+      "production_projection_sha256": "619be861775b8b1942750f427d6ecef55abc5e208fb165e5dd4c6cf5d123a70a"
+    },
+    "aerostore_core/src/watch.rs": {
+      "baseline_sha256": "f08c3d46e7fd77bbbcff92b3a88bde8724beae28fa888a7415163a732fa3f02a",
+      "current_sha256": "f08c3d46e7fd77bbbcff92b3a88bde8724beae28fa888a7415163a732fa3f02a",
+      "production_projection_sha256": "f08c3d46e7fd77bbbcff92b3a88bde8724beae28fa888a7415163a732fa3f02a"
+    },
+    "aerostore_core/tests/crucible_latency_histogram.rs": {
+      "baseline_sha256": "8014fee89c0af78776df3e66c224ea59b3aefe18354799a5c8c8f9b53ad85284",
+      "current_sha256": "8014fee89c0af78776df3e66c224ea59b3aefe18354799a5c8c8f9b53ad85284",
+      "production_projection_sha256": "8014fee89c0af78776df3e66c224ea59b3aefe18354799a5c8c8f9b53ad85284"
+    },
+    "aerostore_core/tests/crucible_seed.rs": {
+      "baseline_sha256": "369465d15e784ee21b9700e57dfb26aa5e920e21818d1ae0e3a999e022bbb60a",
+      "current_sha256": "369465d15e784ee21b9700e57dfb26aa5e920e21818d1ae0e3a999e022bbb60a",
+      "production_projection_sha256": "369465d15e784ee21b9700e57dfb26aa5e920e21818d1ae0e3a999e022bbb60a"
+    },
+    "aerostore_core/tests/extended_crucible_model.rs": {
+      "baseline_sha256": "d826bd40b851db9c91c0f555d629dc024d4c26cd61283ba7547d89fc894e456f",
+      "current_sha256": "d826bd40b851db9c91c0f555d629dc024d4c26cd61283ba7547d89fc894e456f",
+      "production_projection_sha256": "d826bd40b851db9c91c0f555d629dc024d4c26cd61283ba7547d89fc894e456f"
+    },
+    "aerostore_core/tests/index_relink_gc_consistency.rs": {
+      "baseline_sha256": "5a56b8220439a8020dcc8fddcf9e585717caff46549f8181d65a51b269dff365",
+      "current_sha256": "5a56b8220439a8020dcc8fddcf9e585717caff46549f8181d65a51b269dff365",
+      "production_projection_sha256": "5a56b8220439a8020dcc8fddcf9e585717caff46549f8181d65a51b269dff365"
+    },
+    "aerostore_core/tests/ingest_watch_ttl.rs": {
+      "baseline_sha256": "6cda1580ae6724d5d99d4b623974d53115272a93d8a7495c0724575f94b2fece",
+      "current_sha256": "6cda1580ae6724d5d99d4b623974d53115272a93d8a7495c0724575f94b2fece",
+      "production_projection_sha256": "6cda1580ae6724d5d99d4b623974d53115272a93d8a7495c0724575f94b2fece"
+    },
+    "aerostore_core/tests/logical_recovery.rs": {
+      "baseline_sha256": "53b9b52d701cef919f0a6ff70e2920f11bff2004c44b66559e56c1726ca19f57",
+      "current_sha256": "53b9b52d701cef919f0a6ff70e2920f11bff2004c44b66559e56c1726ca19f57",
+      "production_projection_sha256": "53b9b52d701cef919f0a6ff70e2920f11bff2004c44b66559e56c1726ca19f57"
+    },
+    "aerostore_core/tests/mvcc_tokio_concurrency.rs": {
+      "baseline_sha256": "3c31d15bf12a1617ce15fd1fff227d4fae5a3ab663e3f172d7b1fba35c303933",
+      "current_sha256": "3c31d15bf12a1617ce15fd1fff227d4fae5a3ab663e3f172d7b1fba35c303933",
+      "production_projection_sha256": "3c31d15bf12a1617ce15fd1fff227d4fae5a3ab663e3f172d7b1fba35c303933"
+    },
+    "aerostore_core/tests/occ_checkpoint_benchmark.rs": {
+      "baseline_sha256": "6d95914e8d5e428cc6d86a03faeda4ddccb0ae9dee59c6059f468cecdf2f7e9a",
+      "current_sha256": "6d95914e8d5e428cc6d86a03faeda4ddccb0ae9dee59c6059f468cecdf2f7e9a",
+      "production_projection_sha256": "6d95914e8d5e428cc6d86a03faeda4ddccb0ae9dee59c6059f468cecdf2f7e9a"
+    },
+    "aerostore_core/tests/occ_index_ordering.rs": {
+      "baseline_sha256": "fed6792e39a176b404c187f04e3e876ad185568a652de2408b3892968613a2c2",
+      "current_sha256": "fed6792e39a176b404c187f04e3e876ad185568a652de2408b3892968613a2c2",
+      "production_projection_sha256": "fed6792e39a176b404c187f04e3e876ad185568a652de2408b3892968613a2c2"
+    },
+    "aerostore_core/tests/occ_partitioned_lock_striping_benchmark.rs": {
+      "baseline_sha256": "303d50d3f531eab8c87033083c582e8d7adb66d4a4b589ba17c729925938aafa",
+      "current_sha256": "303d50d3f531eab8c87033083c582e8d7adb66d4a4b589ba17c729925938aafa",
+      "production_projection_sha256": "303d50d3f531eab8c87033083c582e8d7adb66d4a4b589ba17c729925938aafa"
+    },
+    "aerostore_core/tests/occ_recycle_invariants_single_thread.rs": {
+      "baseline_sha256": "ef47cb8b45aa53728132c38f9c07f008d931340108a31de46cf8c77d90dd98b6",
+      "current_sha256": "ef47cb8b45aa53728132c38f9c07f008d931340108a31de46cf8c77d90dd98b6",
+      "production_projection_sha256": "ef47cb8b45aa53728132c38f9c07f008d931340108a31de46cf8c77d90dd98b6"
+    },
+    "aerostore_core/tests/occ_recycle_progress.rs": {
+      "baseline_sha256": "7f8e6d52bff452da0d9d80adbca7d002bbed901c5af1b39e6efc35e12621a173",
+      "current_sha256": "7f8e6d52bff452da0d9d80adbca7d002bbed901c5af1b39e6efc35e12621a173",
+      "production_projection_sha256": "7f8e6d52bff452da0d9d80adbca7d002bbed901c5af1b39e6efc35e12621a173"
+    },
+    "aerostore_core/tests/occ_row_lock_semantics.rs": {
+      "baseline_sha256": "7b6f05077926377b0076832ba37eac40f3f5380b4153e0003b1ceffb2f97e417",
+      "current_sha256": "7b6f05077926377b0076832ba37eac40f3f5380b4153e0003b1ceffb2f97e417",
+      "production_projection_sha256": "7b6f05077926377b0076832ba37eac40f3f5380b4153e0003b1ceffb2f97e417"
+    },
+    "aerostore_core/tests/occ_savepoint_reclaim.rs": {
+      "baseline_sha256": "ae029721fba6a393631d8c96ee7f683960a969d0c8745e6f30a64092895b9bdc",
+      "current_sha256": "ae029721fba6a393631d8c96ee7f683960a969d0c8745e6f30a64092895b9bdc",
+      "production_projection_sha256": "ae029721fba6a393631d8c96ee7f683960a969d0c8745e6f30a64092895b9bdc"
+    },
+    "aerostore_core/tests/occ_transactional_index.rs": {
+      "baseline_sha256": "3dd79400836154bee62de788ba7281efa9bf02c5d3381ac80abc09eb1a8c40c4",
+      "current_sha256": "3dd79400836154bee62de788ba7281efa9bf02c5d3381ac80abc09eb1a8c40c4",
+      "production_projection_sha256": "3dd79400836154bee62de788ba7281efa9bf02c5d3381ac80abc09eb1a8c40c4"
+    },
+    "aerostore_core/tests/occ_write_skew.rs": {
+      "baseline_sha256": "4e0e4a9b394a974319023c6550abe1392f1c0d9246f115c8814e7571420045f0",
+      "current_sha256": "4e0e4a9b394a974319023c6550abe1392f1c0d9246f115c8814e7571420045f0",
+      "production_projection_sha256": "4e0e4a9b394a974319023c6550abe1392f1c0d9246f115c8814e7571420045f0"
+    },
+    "aerostore_core/tests/planner_cardinality.rs": {
+      "baseline_sha256": "f726feb9d88a5a8b6b22f757d556a6586ea1fdd316ab0e0764523c16279ce1df",
+      "current_sha256": "f726feb9d88a5a8b6b22f757d556a6586ea1fdd316ab0e0764523c16279ce1df",
+      "production_projection_sha256": "f726feb9d88a5a8b6b22f757d556a6586ea1fdd316ab0e0764523c16279ce1df"
+    },
+    "aerostore_core/tests/procarray_concurrency.rs": {
+      "baseline_sha256": "1c328a40ed3a7f32070fd1113d911e83b8f41b0d18a37a5ca9b3b63b3a98ae0d",
+      "current_sha256": "1c328a40ed3a7f32070fd1113d911e83b8f41b0d18a37a5ca9b3b63b3a98ae0d",
+      "production_projection_sha256": "1c328a40ed3a7f32070fd1113d911e83b8f41b0d18a37a5ca9b3b63b3a98ae0d"
+    },
+    "aerostore_core/tests/query_index_benchmark.rs": {
+      "baseline_sha256": "0cda9272089b077d3fe2cc4a7c9a938fec469214cb22b74f7c6314fa92f7d1c7",
+      "current_sha256": "0cda9272089b077d3fe2cc4a7c9a938fec469214cb22b74f7c6314fa92f7d1c7",
+      "production_projection_sha256": "0cda9272089b077d3fe2cc4a7c9a938fec469214cb22b74f7c6314fa92f7d1c7"
+    },
+    "aerostore_core/tests/rbo_planner_routing.rs": {
+      "baseline_sha256": "38d99684aa078ea44cd85345943636fb5b0b2ff2498f368e255292882444968d",
+      "current_sha256": "38d99684aa078ea44cd85345943636fb5b0b2ff2498f368e255292882444968d",
+      "production_projection_sha256": "38d99684aa078ea44cd85345943636fb5b0b2ff2498f368e255292882444968d"
+    },
+    "aerostore_core/tests/shm_benchmark.rs": {
+      "baseline_sha256": "18f4bf69b44d6a047969ee1a8b89130e22a9506bacf043e43982f6c4da6b772a",
+      "current_sha256": "18f4bf69b44d6a047969ee1a8b89130e22a9506bacf043e43982f6c4da6b772a",
+      "production_projection_sha256": "18f4bf69b44d6a047969ee1a8b89130e22a9506bacf043e43982f6c4da6b772a"
+    },
+    "aerostore_core/tests/shm_fork.rs": {
+      "baseline_sha256": "dbf51a01d55304c3db1b09ec57b3225711fe769caffc255adc39bce6bbce47cb",
+      "current_sha256": "dbf51a01d55304c3db1b09ec57b3225711fe769caffc255adc39bce6bbce47cb",
+      "production_projection_sha256": "dbf51a01d55304c3db1b09ec57b3225711fe769caffc255adc39bce6bbce47cb"
+    },
+    "aerostore_core/tests/shm_index_benchmark.rs": {
+      "baseline_sha256": "880e1aab845b423a939ab64e182f859c961aece66e7552acb396cbd74a68f157",
+      "current_sha256": "880e1aab845b423a939ab64e182f859c961aece66e7552acb396cbd74a68f157",
+      "production_projection_sha256": "880e1aab845b423a939ab64e182f859c961aece66e7552acb396cbd74a68f157"
+    },
+    "aerostore_core/tests/shm_index_bounds.rs": {
+      "baseline_sha256": "2baeb1ed08fadd7365ee6d4d87c13e3f12bb5bdbc32bbbb40bbed5ffb745cbd0",
+      "current_sha256": "2baeb1ed08fadd7365ee6d4d87c13e3f12bb5bdbc32bbbb40bbed5ffb745cbd0",
+      "production_projection_sha256": "2baeb1ed08fadd7365ee6d4d87c13e3f12bb5bdbc32bbbb40bbed5ffb745cbd0"
+    },
+    "aerostore_core/tests/shm_index_churn.rs": {
+      "baseline_sha256": "73d9f9c34849dd3915edfea03a10371ec8f9cf473db45e5f8ffc033bf2ab7f08",
+      "current_sha256": "73d9f9c34849dd3915edfea03a10371ec8f9cf473db45e5f8ffc033bf2ab7f08",
+      "production_projection_sha256": "73d9f9c34849dd3915edfea03a10371ec8f9cf473db45e5f8ffc033bf2ab7f08"
+    },
+    "aerostore_core/tests/shm_index_contention.rs": {
+      "baseline_sha256": "78a76847800c0f47d1c1483dcfa4d6d2a853142bb612a41c632178f7ba664246",
+      "current_sha256": "78a76847800c0f47d1c1483dcfa4d6d2a853142bb612a41c632178f7ba664246",
+      "production_projection_sha256": "78a76847800c0f47d1c1483dcfa4d6d2a853142bb612a41c632178f7ba664246"
+    },
+    "aerostore_core/tests/shm_index_fork.rs": {
+      "baseline_sha256": "bef4d06cbc028d00341cde08b350f4b75f24e4d67fb3605a706735345eecb0e6",
+      "current_sha256": "bef4d06cbc028d00341cde08b350f4b75f24e4d67fb3605a706735345eecb0e6",
+      "production_projection_sha256": "bef4d06cbc028d00341cde08b350f4b75f24e4d67fb3605a706735345eecb0e6"
+    },
+    "aerostore_core/tests/shm_index_gc_horizon.rs": {
+      "baseline_sha256": "4ffc1e2a86f612b5a83c42a32e67fcbc146cd55379fefafef5e5d0a5dbdbc610",
+      "current_sha256": "4ffc1e2a86f612b5a83c42a32e67fcbc146cd55379fefafef5e5d0a5dbdbc610",
+      "production_projection_sha256": "4ffc1e2a86f612b5a83c42a32e67fcbc146cd55379fefafef5e5d0a5dbdbc610"
+    },
+    "aerostore_core/tests/shm_mutation_model.rs": {
+      "baseline_sha256": "4906f6eb71a5d19088c0228a17425cfd111a25407a72ccf9f871b9aaa504049b",
+      "current_sha256": "4906f6eb71a5d19088c0228a17425cfd111a25407a72ccf9f871b9aaa504049b",
+      "production_projection_sha256": "4906f6eb71a5d19088c0228a17425cfd111a25407a72ccf9f871b9aaa504049b"
+    },
+    "aerostore_core/tests/shm_recycle_visibility.rs": {
+      "baseline_sha256": "8c79970f8d0b32e095227ee4ed6eb79a16015764a33d9a4b6d193fe07be15fd4",
+      "current_sha256": "8c79970f8d0b32e095227ee4ed6eb79a16015764a33d9a4b6d193fe07be15fd4",
+      "production_projection_sha256": "8c79970f8d0b32e095227ee4ed6eb79a16015764a33d9a4b6d193fe07be15fd4"
+    },
+    "aerostore_core/tests/shm_shared_memory.rs": {
+      "baseline_sha256": "e0bb8d8b30280c90172debaf09c49aec68738a26e6b4406696e34404e1d8fb9d",
+      "current_sha256": "e0bb8d8b30280c90172debaf09c49aec68738a26e6b4406696e34404e1d8fb9d",
+      "production_projection_sha256": "e0bb8d8b30280c90172debaf09c49aec68738a26e6b4406696e34404e1d8fb9d"
+    },
+    "aerostore_core/tests/speedtable_arena_perf.rs": {
+      "baseline_sha256": "9b29769667f6d77737b8062d4028a461afd16e182428071c750718aaf12900fe",
+      "current_sha256": "9b29769667f6d77737b8062d4028a461afd16e182428071c750718aaf12900fe",
+      "production_projection_sha256": "9b29769667f6d77737b8062d4028a461afd16e182428071c750718aaf12900fe"
+    },
+    "aerostore_core/tests/test_concurrency.rs": {
+      "baseline_sha256": "4c085b6c11aa3de52cdb010c00fce27a1325f2054a4ecbdd0d46cf6b89887f15",
+      "current_sha256": "4c085b6c11aa3de52cdb010c00fce27a1325f2054a4ecbdd0d46cf6b89887f15",
+      "production_projection_sha256": "4c085b6c11aa3de52cdb010c00fce27a1325f2054a4ecbdd0d46cf6b89887f15"
+    },
+    "aerostore_core/tests/tmpfs_warm_restart_chaos.rs": {
+      "baseline_sha256": "2ab045a61e55310a63d839264bd7c991e8f8c8d9ad1b11d9595aac330f6cd411",
+      "current_sha256": "2ab045a61e55310a63d839264bd7c991e8f8c8d9ad1b11d9595aac330f6cd411",
+      "production_projection_sha256": "2ab045a61e55310a63d839264bd7c991e8f8c8d9ad1b11d9595aac330f6cd411"
+    },
+    "aerostore_core/tests/tmpfs_warm_restart_expansions.rs": {
+      "baseline_sha256": "425ffa5135303bb8867f57e9ca775e24547dc270a73532e098c087555dad50d5",
+      "current_sha256": "425ffa5135303bb8867f57e9ca775e24547dc270a73532e098c087555dad50d5",
+      "production_projection_sha256": "425ffa5135303bb8867f57e9ca775e24547dc270a73532e098c087555dad50d5"
+    },
+    "aerostore_core/tests/transactional_query_execution.rs": {
+      "baseline_sha256": "f2fc53ff50c744d728fd813831f9b1d5641d625222344ec9b758c6ba5281a27b",
+      "current_sha256": "f2fc53ff50c744d728fd813831f9b1d5641d625222344ec9b758c6ba5281a27b",
+      "production_projection_sha256": "f2fc53ff50c744d728fd813831f9b1d5641d625222344ec9b758c6ba5281a27b"
+    },
+    "aerostore_core/tests/vacuum_free_list_invariants.rs": {
+      "baseline_sha256": "09555d67c7e6ddef0eb92e02e3df34ed6370fe5f455aa40e5843cc4a5b86b15a",
+      "current_sha256": "09555d67c7e6ddef0eb92e02e3df34ed6370fe5f455aa40e5843cc4a5b86b15a",
+      "production_projection_sha256": "09555d67c7e6ddef0eb92e02e3df34ed6370fe5f455aa40e5843cc4a5b86b15a"
+    },
+    "aerostore_core/tests/vacuum_leader_handoff.rs": {
+      "baseline_sha256": "58bedb5e0f5ca4b1ef59e72acbcd29d6efb93a43eeea23933b2bc8c835805509",
+      "current_sha256": "58bedb5e0f5ca4b1ef59e72acbcd29d6efb93a43eeea23933b2bc8c835805509",
+      "production_projection_sha256": "58bedb5e0f5ca4b1ef59e72acbcd29d6efb93a43eeea23933b2bc8c835805509"
+    },
+    "aerostore_core/tests/vacuum_recycle_ab_benchmark.rs": {
+      "baseline_sha256": "483e259dadc4184eea2d99c7957bc1ff776348b1e177b70e37d03f2cf845cb65",
+      "current_sha256": "483e259dadc4184eea2d99c7957bc1ff776348b1e177b70e37d03f2cf845cb65",
+      "production_projection_sha256": "483e259dadc4184eea2d99c7957bc1ff776348b1e177b70e37d03f2cf845cb65"
+    },
+    "aerostore_core/tests/vacuum_recycle_stress.rs": {
+      "baseline_sha256": "a9d88f170dcdb6a28bf0326f6ca03fef1eaf301db360ae10cab60216aa20811c",
+      "current_sha256": "a9d88f170dcdb6a28bf0326f6ca03fef1eaf301db360ae10cab60216aa20811c",
+      "production_projection_sha256": "a9d88f170dcdb6a28bf0326f6ca03fef1eaf301db360ae10cab60216aa20811c"
+    },
+    "aerostore_core/tests/wal_crash_recovery.rs": {
+      "baseline_sha256": "69912a673b52b3a7f33f3828bbd60c54fcf58e4c7633d6dbc2cf89eae036c416",
+      "current_sha256": "69912a673b52b3a7f33f3828bbd60c54fcf58e4c7633d6dbc2cf89eae036c416",
+      "production_projection_sha256": "69912a673b52b3a7f33f3828bbd60c54fcf58e4c7633d6dbc2cf89eae036c416"
+    },
+    "aerostore_core/tests/wal_delta_codec.rs": {
+      "baseline_sha256": "9e06d2b98ebb1f543d5f8270120c5f2c3dcd6aa146dac22b3a4c2b6df226ffaf",
+      "current_sha256": "9e06d2b98ebb1f543d5f8270120c5f2c3dcd6aa146dac22b3a4c2b6df226ffaf",
+      "production_projection_sha256": "9e06d2b98ebb1f543d5f8270120c5f2c3dcd6aa146dac22b3a4c2b6df226ffaf"
+    },
+    "aerostore_core/tests/wal_delta_recovery_pk_map.rs": {
+      "baseline_sha256": "77d5d3c5bda8b5afad19be903d7e2f0216e4d9aea287420d25122596c3847582",
+      "current_sha256": "77d5d3c5bda8b5afad19be903d7e2f0216e4d9aea287420d25122596c3847582",
+      "production_projection_sha256": "77d5d3c5bda8b5afad19be903d7e2f0216e4d9aea287420d25122596c3847582"
+    },
+    "aerostore_core/tests/wal_protocol_regressions.rs": {
+      "baseline_sha256": "f13bba67b98c9faebcdf72eebe2ba1bbf2715e768a8b94dff4f08131b85b031b",
+      "current_sha256": "f13bba67b98c9faebcdf72eebe2ba1bbf2715e768a8b94dff4f08131b85b031b",
+      "production_projection_sha256": "f13bba67b98c9faebcdf72eebe2ba1bbf2715e768a8b94dff4f08131b85b031b"
+    },
+    "aerostore_core/tests/wal_ring_benchmark.rs": {
+      "baseline_sha256": "f27a3b9089966ed8ea69fa8aac95d4284f299811b09149b2aa0bc15bf53ec79f",
+      "current_sha256": "f27a3b9089966ed8ea69fa8aac95d4284f299811b09149b2aa0bc15bf53ec79f",
+      "production_projection_sha256": "f27a3b9089966ed8ea69fa8aac95d4284f299811b09149b2aa0bc15bf53ec79f"
+    },
+    "aerostore_core/tests/wal_writer_lifecycle.rs": {
+      "baseline_sha256": "74d61303ac8bf4882aacd02cecf165658e977a0452b65094098d17a674ea041e",
+      "current_sha256": "74d61303ac8bf4882aacd02cecf165658e977a0452b65094098d17a674ea041e",
+      "production_projection_sha256": "74d61303ac8bf4882aacd02cecf165658e977a0452b65094098d17a674ea041e"
+    },
+    "aerostore_macros/Cargo.toml": {
+      "baseline_sha256": "da7d527655c4d06ab619510ab450a9d8dcec609f4bca4990be0f12c6214aa1a9",
+      "current_sha256": "da7d527655c4d06ab619510ab450a9d8dcec609f4bca4990be0f12c6214aa1a9",
+      "production_projection_sha256": "da7d527655c4d06ab619510ab450a9d8dcec609f4bca4990be0f12c6214aa1a9"
+    },
+    "aerostore_macros/src/lib.rs": {
+      "baseline_sha256": "eb0747106587ce6605b396145c97c41586aee84ea250ee6e4e0f8f70ef3e9459",
+      "current_sha256": "eb0747106587ce6605b396145c97c41586aee84ea250ee6e4e0f8f70ef3e9459",
+      "production_projection_sha256": "eb0747106587ce6605b396145c97c41586aee84ea250ee6e4e0f8f70ef3e9459"
+    },
+    "aerostore_macros/tests/ui.rs": {
+      "baseline_sha256": "c6dc3b893d1a4b6c43877a9743a0638d1a83df7d7f31f54bba40da81d6f1ee8b",
+      "current_sha256": "c6dc3b893d1a4b6c43877a9743a0638d1a83df7d7f31f54bba40da81d6f1ee8b",
+      "production_projection_sha256": "c6dc3b893d1a4b6c43877a9743a0638d1a83df7d7f31f54bba40da81d6f1ee8b"
+    },
+    "aerostore_macros/tests/ui/compile_fail_reserved_null_bitmask.rs": {
+      "baseline_sha256": "697d1e0279d3e78f80e4af223c13d2e3576900033ce3bb1a5ef36fec977f7afc",
+      "current_sha256": "697d1e0279d3e78f80e4af223c13d2e3576900033ce3bb1a5ef36fec977f7afc",
+      "production_projection_sha256": "697d1e0279d3e78f80e4af223c13d2e3576900033ce3bb1a5ef36fec977f7afc"
+    },
+    "aerostore_macros/tests/ui/compile_fail_reserved_nullmask_legacy.rs": {
+      "baseline_sha256": "44adb2c5f8a8a233a4bfe962f624b603ba6a0f5c3fe584f86161215fed6cd469",
+      "current_sha256": "44adb2c5f8a8a233a4bfe962f624b603ba6a0f5c3fe584f86161215fed6cd469",
+      "production_projection_sha256": "44adb2c5f8a8a233a4bfe962f624b603ba6a0f5c3fe584f86161215fed6cd469"
+    },
+    "aerostore_macros/tests/ui/compile_fail_reserved_xmax.rs": {
+      "baseline_sha256": "f243c750bfef515da7b5c5bd5fdedef8b2bf0873a74ccc59c42cf35488b43da4",
+      "current_sha256": "f243c750bfef515da7b5c5bd5fdedef8b2bf0873a74ccc59c42cf35488b43da4",
+      "production_projection_sha256": "f243c750bfef515da7b5c5bd5fdedef8b2bf0873a74ccc59c42cf35488b43da4"
+    },
+    "aerostore_macros/tests/ui/compile_fail_reserved_xmin.rs": {
+      "baseline_sha256": "d061d84cbf65c0e3df2a5173e6bda66d3ea6766d170afc859bb19f528d61e488",
+      "current_sha256": "d061d84cbf65c0e3df2a5173e6bda66d3ea6766d170afc859bb19f528d61e488",
+      "production_projection_sha256": "d061d84cbf65c0e3df2a5173e6bda66d3ea6766d170afc859bb19f528d61e488"
+    },
+    "aerostore_macros/tests/ui/compile_fail_too_many_fields.rs": {
+      "baseline_sha256": "41fbc44e274e7967fb830314bbae45625881adc8108e774193307f675eeb1e9d",
+      "current_sha256": "41fbc44e274e7967fb830314bbae45625881adc8108e774193307f675eeb1e9d",
+      "production_projection_sha256": "41fbc44e274e7967fb830314bbae45625881adc8108e774193307f675eeb1e9d"
+    },
+    "aerostore_macros/tests/ui/compile_fail_tuple_struct.rs": {
+      "baseline_sha256": "6a677844babd58822581333371d3939bc00162005f3600f61e23af5e34630ef7",
+      "current_sha256": "6a677844babd58822581333371d3939bc00162005f3600f61e23af5e34630ef7",
+      "production_projection_sha256": "6a677844babd58822581333371d3939bc00162005f3600f61e23af5e34630ef7"
+    },
+    "aerostore_macros/tests/ui/compile_pass_basic.rs": {
+      "baseline_sha256": "9ec4b1a851518007fc5d00d9a1f784c40d142f085ed0643b1a989db9d5372d66",
+      "current_sha256": "9ec4b1a851518007fc5d00d9a1f784c40d142f085ed0643b1a989db9d5372d66",
+      "production_projection_sha256": "9ec4b1a851518007fc5d00d9a1f784c40d142f085ed0643b1a989db9d5372d66"
+    },
+    "aerostore_macros/tests/ui/compile_pass_generics.rs": {
+      "baseline_sha256": "be402d840fc2cc7957b1ba055412c9d34a570732157f8ed54ed0bfe8f89c47d1",
+      "current_sha256": "be402d840fc2cc7957b1ba055412c9d34a570732157f8ed54ed0bfe8f89c47d1",
+      "production_projection_sha256": "be402d840fc2cc7957b1ba055412c9d34a570732157f8ed54ed0bfe8f89c47d1"
+    },
+    "aerostore_tcl/Cargo.toml": {
+      "baseline_sha256": "04e6e3cc44be7bac624003efd253ae0aa404b00fceca2511879f1e7856ebb322",
+      "current_sha256": "04e6e3cc44be7bac624003efd253ae0aa404b00fceca2511879f1e7856ebb322",
+      "production_projection_sha256": "04e6e3cc44be7bac624003efd253ae0aa404b00fceca2511879f1e7856ebb322"
+    },
+    "aerostore_tcl/src/lib.rs": {
+      "baseline_sha256": "eea972d05b27edaae37503ad4738e898faadffea8fb61a659beebbc4fffc092c",
+      "current_sha256": "eea972d05b27edaae37503ad4738e898faadffea8fb61a659beebbc4fffc092c",
+      "production_projection_sha256": "eea972d05b27edaae37503ad4738e898faadffea8fb61a659beebbc4fffc092c"
+    },
+    "aerostore_tcl/src/vacuum_index_cleanup_tests.rs": {
+      "baseline_sha256": "f2a1c93c552cebf6efcb146bb4d1ce24f3462976f427beb895748cdbe2b20ae8",
+      "current_sha256": "f2a1c93c552cebf6efcb146bb4d1ce24f3462976f427beb895748cdbe2b20ae8",
+      "production_projection_sha256": "f2a1c93c552cebf6efcb146bb4d1ce24f3462976f427beb895748cdbe2b20ae8"
+    },
+    "aerostore_tcl/tests/config_checkpoint_integration.rs": {
+      "baseline_sha256": "84e8e2f7c844f7e88e80a40cac3617bea7e456c9da55bf44d6648942e95bdec6",
+      "current_sha256": "84e8e2f7c844f7e88e80a40cac3617bea7e456c9da55bf44d6648942e95bdec6",
+      "production_projection_sha256": "84e8e2f7c844f7e88e80a40cac3617bea7e456c9da55bf44d6648942e95bdec6"
+    },
+    "aerostore_tcl/tests/search_stapi_bridge.rs": {
+      "baseline_sha256": "4c8238afce4be2b1924190d93742ff9a1830ab40e1c56724b9a6a15253073ed4",
+      "current_sha256": "4c8238afce4be2b1924190d93742ff9a1830ab40e1c56724b9a6a15253073ed4",
+      "production_projection_sha256": "4c8238afce4be2b1924190d93742ff9a1830ab40e1c56724b9a6a15253073ed4"
+    },
+    "aerostore_verified/Cargo.toml": {
+      "baseline_sha256": "59ac3753bb0b4be8e2fcefa4a07d8541b308d3aa9cab83d988b0228111d30c22",
+      "current_sha256": "59ac3753bb0b4be8e2fcefa4a07d8541b308d3aa9cab83d988b0228111d30c22",
+      "production_projection_sha256": "59ac3753bb0b4be8e2fcefa4a07d8541b308d3aa9cab83d988b0228111d30c22"
+    },
+    "aerostore_verified/src/lib.rs": {
+      "baseline_sha256": "4be9e28442ba0c0b25bb655caa2d2076eee92c86cc5a49264a93fcc116ab5830",
+      "current_sha256": "4be9e28442ba0c0b25bb655caa2d2076eee92c86cc5a49264a93fcc116ab5830",
+      "production_projection_sha256": "4be9e28442ba0c0b25bb655caa2d2076eee92c86cc5a49264a93fcc116ab5830"
+    },
+    "aerostore_verified/src/tests.rs": {
+      "baseline_sha256": "ab7aacc6b35ce3deac41cba654aa834ea826f884a9d41ca6e611c6ce467e14a7",
+      "current_sha256": "ab7aacc6b35ce3deac41cba654aa834ea826f884a9d41ca6e611c6ce467e14a7",
+      "production_projection_sha256": "ab7aacc6b35ce3deac41cba654aa834ea826f884a9d41ca6e611c6ce467e14a7"
+    }
+  }
+}
