@@ -285,6 +285,22 @@ impl EncodedKey {
         }
     }
 
+    fn validate_encoding(&self) -> Result<(), ShmIndexError> {
+        let valid = match self.tag {
+            KEY_TAG_I64 | KEY_TAG_U64 => self.len == 8,
+            KEY_TAG_STRING => self
+                .data
+                .get(..self.len as usize)
+                .is_some_and(|bytes| std::str::from_utf8(bytes).is_ok()),
+            _ => false,
+        };
+        if valid {
+            Ok(())
+        } else {
+            Err(ShmIndexError::InvalidEncoding("key"))
+        }
+    }
+
     #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
         if self.tag == KEY_TAG_SENTINEL && other.tag == KEY_TAG_SENTINEL {
@@ -448,12 +464,33 @@ where
     }
 
     pub fn lookup(&self, predicate: &IndexCompare) -> Vec<RowId> {
-        self.lookup_with_limit(predicate, usize::MAX)
+        self.try_lookup(predicate).unwrap_or_default()
     }
 
     pub fn lookup_with_limit(&self, predicate: &IndexCompare, limit: usize) -> Vec<RowId> {
+        self.try_lookup_with_limit(predicate, limit)
+            .unwrap_or_default()
+    }
+
+    /// Materialize matching row IDs without hiding invalid keys, payloads, or
+    /// structural scan errors. Results are sorted and deduplicated.
+    pub fn try_lookup(&self, predicate: &IndexCompare) -> Result<Vec<RowId>, ShmIndexError> {
+        self.try_lookup_with_limit(predicate, usize::MAX)
+    }
+
+    /// Fallible counterpart of `lookup_with_limit`.
+    ///
+    /// Range scans retain the existing bounded scan budget before sorting and
+    /// deduplication. `In` forms the complete union before applying the limit so
+    /// overlapping postings do not consume the result budget. A zero limit is
+    /// a no-op. Multiple `In` lookups do not form a transactional snapshot.
+    pub fn try_lookup_with_limit(
+        &self,
+        predicate: &IndexCompare,
+        limit: usize,
+    ) -> Result<Vec<RowId>, ShmIndexError> {
         if limit == 0 {
-            return Vec::new();
+            return Ok(Vec::new());
         }
         let mut out = Vec::new();
         let scan_limit = if limit == usize::MAX {
@@ -463,91 +500,66 @@ where
         };
         match predicate {
             IndexCompare::Eq(v) => {
-                let Ok(key) = EncodedKey::from_index_value(v) else {
-                    return Vec::new();
-                };
-                let _ = self.skiplist.lookup_payloads(&key, |_, payload| {
-                    if let Some(row_id) = Self::decode_row_id(payload) {
-                        if out.len() < scan_limit {
-                            out.push(row_id);
+                let key = EncodedKey::from_index_value(v)?;
+                let mut invalid = None;
+                self.skiplist.scan_payloads_bounded(
+                    Some((&key, ScanBound::Inclusive)),
+                    Some((&key, ScanBound::Inclusive)),
+                    |stored_key, _, payload| {
+                        if let Err(err) = stored_key.validate_encoding() {
+                            invalid = Some(err);
+                            return;
                         }
-                    }
-                });
+                        match Self::decode_row_id(payload) {
+                            Some(row_id) if out.len() < scan_limit => out.push(row_id),
+                            Some(_) => {}
+                            None => invalid = Some(ShmIndexError::InvalidEncoding("posting")),
+                        }
+                    },
+                )?;
+                if let Some(err) = invalid {
+                    return Err(err);
+                }
             }
             IndexCompare::Gt(v) => {
-                let Ok(bound) = EncodedKey::from_index_value(v) else {
-                    return Vec::new();
-                };
-                let _ = self.skiplist.scan_payloads_bounded_with_limit(
-                    Some((&bound, ScanBound::Exclusive)),
+                out = self.try_scan_rows_with_limit(
+                    Some((v, ScanBound::Exclusive)),
                     None,
                     scan_limit,
-                    |_, _, payload| {
-                        if let Some(row_id) = Self::decode_row_id(payload) {
-                            out.push(row_id);
-                        }
-                    },
-                );
+                )?;
             }
             IndexCompare::Gte(v) => {
-                let Ok(bound) = EncodedKey::from_index_value(v) else {
-                    return Vec::new();
-                };
-                let _ = self.skiplist.scan_payloads_bounded_with_limit(
-                    Some((&bound, ScanBound::Inclusive)),
+                out = self.try_scan_rows_with_limit(
+                    Some((v, ScanBound::Inclusive)),
                     None,
                     scan_limit,
-                    |_, _, payload| {
-                        if let Some(row_id) = Self::decode_row_id(payload) {
-                            out.push(row_id);
-                        }
-                    },
-                );
+                )?;
             }
             IndexCompare::Lt(v) => {
-                let Ok(bound) = EncodedKey::from_index_value(v) else {
-                    return Vec::new();
-                };
-                let _ = self.skiplist.scan_payloads_bounded_with_limit(
+                out = self.try_scan_rows_with_limit(
                     None,
-                    Some((&bound, ScanBound::Exclusive)),
+                    Some((v, ScanBound::Exclusive)),
                     scan_limit,
-                    |_, _, payload| {
-                        if let Some(row_id) = Self::decode_row_id(payload) {
-                            out.push(row_id);
-                        }
-                    },
-                );
+                )?;
             }
             IndexCompare::Lte(v) => {
-                let Ok(bound) = EncodedKey::from_index_value(v) else {
-                    return Vec::new();
-                };
-                let _ = self.skiplist.scan_payloads_bounded_with_limit(
+                out = self.try_scan_rows_with_limit(
                     None,
-                    Some((&bound, ScanBound::Inclusive)),
+                    Some((v, ScanBound::Inclusive)),
                     scan_limit,
-                    |_, _, payload| {
-                        if let Some(row_id) = Self::decode_row_id(payload) {
-                            out.push(row_id);
-                        }
-                    },
-                );
+                )?;
             }
             IndexCompare::In(values) => {
+                // Limiting individual branches before union can spend capacity
+                // on duplicate rows and skip later values (including errors).
                 for value in values {
-                    if out.len() >= limit {
-                        break;
-                    }
-                    let remaining = limit.saturating_sub(out.len());
-                    let rows = self.lookup_with_limit(&IndexCompare::Eq(value.clone()), remaining);
-                    out.extend(rows);
+                    out.extend(self.try_lookup(&IndexCompare::Eq(value.clone()))?);
                 }
             }
         }
 
         if out.len() <= 1 {
-            return out;
+            return Ok(out);
         }
 
         out.sort_unstable();
@@ -555,7 +567,7 @@ where
         if out.len() > limit {
             out.truncate(limit);
         }
-        out
+        Ok(out)
     }
 
     pub fn lookup_posting_count(&self, indexed_value: &IndexValue) -> usize {
@@ -724,6 +736,41 @@ where
 
     fn decode_row_id(bytes: &[u8]) -> Option<RowId> {
         bincode::deserialize::<RowId>(bytes).ok()
+    }
+
+    fn try_scan_rows_with_limit(
+        &self,
+        lower: Option<(&IndexValue, ScanBound)>,
+        upper: Option<(&IndexValue, ScanBound)>,
+        limit: usize,
+    ) -> Result<Vec<RowId>, ShmIndexError> {
+        let lower = lower
+            .map(|(v, mode)| EncodedKey::from_index_value(v).map(|k| (k, mode)))
+            .transpose()?;
+        let upper = upper
+            .map(|(v, mode)| EncodedKey::from_index_value(v).map(|k| (k, mode)))
+            .transpose()?;
+        let mut out = Vec::new();
+        let mut invalid = None;
+        self.skiplist.scan_payloads_bounded_with_limit(
+            lower.as_ref().map(|(k, mode)| (k, *mode)),
+            upper.as_ref().map(|(k, mode)| (k, *mode)),
+            limit,
+            |key, _, payload| {
+                if let Err(err) = key.validate_encoding() {
+                    invalid = Some(err);
+                    return;
+                }
+                match Self::decode_row_id(payload) {
+                    Some(row_id) => out.push(row_id),
+                    None => invalid = Some(ShmIndexError::InvalidEncoding("posting")),
+                }
+            },
+        )?;
+        match invalid {
+            Some(err) => Err(err),
+            None => Ok(out),
+        }
     }
 
     fn try_scan_count_with_limit(
@@ -1102,6 +1149,14 @@ mod tests {
             .map(|_| shm.begin_transaction().unwrap())
             .collect();
         assert!(matches!(
+            index.try_lookup(&IndexCompare::Eq(IndexValue::I64(1))),
+            Err(ShmIndexError::Epoch(_))
+        ));
+        assert!(matches!(
+            index.try_lookup(&IndexCompare::Gte(IndexValue::I64(1))),
+            Err(ShmIndexError::Epoch(_))
+        ));
+        assert!(matches!(
             index.try_remove(&IndexValue::I64(1), &7),
             Err(ShmIndexError::Epoch(_))
         ));
@@ -1137,6 +1192,112 @@ mod tests {
             index.try_lookup_count_with_limit(&IndexCompare::Gt(invalid), usize::MAX),
             Err(ShmIndexError::KeyTooLong { .. })
         ));
+    }
+
+    #[test]
+    fn fallible_lookup_preserves_predicate_ordering_deduplication_and_limits() {
+        let index = SecondaryIndex::<u32>::new("key");
+        for (key, row) in [(10, 7), (10, 3), (20, 7), (20, 9), (30, 1)] {
+            index.try_insert(IndexValue::U64(key), row).unwrap();
+        }
+        for (predicate, expected) in [
+            (IndexCompare::Eq(IndexValue::U64(10)), vec![3, 7]),
+            (IndexCompare::Gt(IndexValue::U64(10)), vec![1, 7, 9]),
+            (IndexCompare::Gte(IndexValue::U64(10)), vec![1, 3, 7, 9]),
+            (IndexCompare::Lt(IndexValue::U64(20)), vec![3, 7]),
+            (IndexCompare::Lte(IndexValue::U64(20)), vec![3, 7, 9]),
+            (IndexCompare::Eq(IndexValue::U64(99)), vec![]),
+            (IndexCompare::In(vec![]), vec![]),
+        ] {
+            assert_eq!(index.try_lookup(&predicate).unwrap(), expected);
+            assert_eq!(
+                index.try_lookup_with_limit(&predicate, 2).unwrap(),
+                expected.into_iter().take(2).collect::<Vec<_>>()
+            );
+            assert!(index
+                .try_lookup_with_limit(&predicate, 0)
+                .unwrap()
+                .is_empty());
+        }
+    }
+
+    #[test]
+    fn fallible_in_lookup_limits_the_complete_union_not_overlapping_branches() {
+        let index = SecondaryIndex::<u32>::new("key");
+        for (key, row) in [(10, 1), (10, 2), (20, 1), (20, 2), (20, 3), (30, 0)] {
+            index.try_insert(IndexValue::U64(key), row).unwrap();
+        }
+        for keys in [[10, 20, 10, 30], [30, 10, 20, 20]] {
+            let predicate = IndexCompare::In(keys.into_iter().map(IndexValue::U64).collect());
+            assert_eq!(index.try_lookup(&predicate).unwrap(), vec![0, 1, 2, 3]);
+            assert_eq!(
+                index.try_lookup_with_limit(&predicate, 3).unwrap(),
+                vec![0, 1, 2]
+            );
+        }
+    }
+
+    #[test]
+    fn fallible_lookup_rejects_invalid_keys_even_in_later_union_branches() {
+        let index = SecondaryIndex::<u32>::new("key");
+        index.try_insert(IndexValue::U64(1), 7).unwrap();
+        let invalid = IndexValue::String("x".repeat(super::KEY_INLINE_BYTES + 1));
+        for predicate in [
+            IndexCompare::Eq(invalid.clone()),
+            IndexCompare::Gt(invalid.clone()),
+            IndexCompare::Gte(invalid.clone()),
+            IndexCompare::Lt(invalid.clone()),
+            IndexCompare::Lte(invalid.clone()),
+            IndexCompare::In(vec![IndexValue::U64(1), invalid]),
+        ] {
+            assert!(matches!(
+                index.try_lookup_with_limit(&predicate, 1),
+                Err(ShmIndexError::KeyTooLong { .. })
+            ));
+            assert!(index.lookup_with_limit(&predicate, 1).is_empty());
+        }
+    }
+
+    #[test]
+    fn fallible_lookup_rejects_corrupt_postings_instead_of_returning_partial_rows() {
+        let index = SecondaryIndex::<u32>::new("key");
+        index.try_insert(IndexValue::I64(1), 7).unwrap();
+        index
+            .skiplist
+            .insert_payload(super::EncodedKey::from_i64(2), 1, &[0])
+            .unwrap();
+        for predicate in [
+            IndexCompare::Eq(IndexValue::I64(2)),
+            IndexCompare::Gte(IndexValue::I64(1)),
+            IndexCompare::In(vec![IndexValue::I64(1), IndexValue::I64(2)]),
+        ] {
+            assert!(matches!(
+                index.try_lookup_with_limit(&predicate, 1),
+                Err(ShmIndexError::InvalidEncoding("posting"))
+            ));
+            assert!(index.lookup_with_limit(&predicate, 1).is_empty());
+        }
+    }
+
+    #[test]
+    fn fallible_lookup_rejects_malformed_stored_keys() {
+        let index = SecondaryIndex::<u32>::new("key");
+        let mut key = super::EncodedKey::from_i64(1);
+        key.len = 7;
+        let (len, payload) = SecondaryIndex::<u32>::encode_row_id(&7).unwrap();
+        index
+            .skiplist
+            .insert_payload(key, len, &payload[..len as usize])
+            .unwrap();
+        for predicate in [
+            IndexCompare::Eq(IndexValue::I64(1)),
+            IndexCompare::Gte(IndexValue::I64(0)),
+        ] {
+            assert!(matches!(
+                index.try_lookup(&predicate),
+                Err(ShmIndexError::InvalidEncoding("key"))
+            ));
+        }
     }
 
     #[test]

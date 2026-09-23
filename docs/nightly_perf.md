@@ -19,6 +19,19 @@ cargo bench -p aerostore_core --bench tmpfs_warm_restart
 cargo bench -p aerostore_core --bench hyperfeed_crucible -- --noplot
 ```
 
+The separate [Extended HyperFeed Crucible](extended_crucible.md) exercises complete
+synthetic message transactions and native isolation contracts:
+
+```bash
+cargo bench -p aerostore_core --bench hyperfeed_extended_crucible -- \
+  --engine both --mode all --families 32 --cycles 2 --workers 4 \
+  --output target/extended-crucible.json
+```
+
+Its full gate currently fails three Aerostore index/isolation contracts. Preserve
+that failure in automation; a bounded replay pass is not a substitute. This
+finite, phased workload complements the sustained churn checks below.
+
 `hyperfeed_crucible` notes:
 - comparison mode requires Docker daemon access (PostgreSQL is launched via `testcontainers`).
 - runs four profiles by default (`profile_512m`, `profile_1g`, `profile_2g`, `profile_3584m`); select profiles with `AEROSTORE_CRUCIBLE_PROFILE_FILTER`.
