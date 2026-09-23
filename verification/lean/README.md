@@ -53,7 +53,25 @@ Neither this abstract theorem nor the finite TLA model supplies it. The four
 new semantic controls fail when reservation stops advancing, a writer's start
 ID is used as its publication label, publication precedes ending, or wrapping
 arithmetic is admitted. There are now 26 audited roots and 13 semantic controls
-across the extracted functions and separately labeled abstract contracts.
+across the extracted functions and separately labeled abstract contracts at that
+lifecycle checkpoint.
+
+## Complete-or-retry indexed lookup
+
+[QueryCompleteness.lean](AerostoreProofs/QueryCompleteness.lean) adds eight audited
+roots that derive historical candidate coverage from coherent before/after key
+updates, maintained postings, overlap-local stamp histories and reachable
+lifecycle chronology. A matching historical row missing from current postings
+forces a visited bucket to reject. Private writes and arbitrary extra candidates
+are included in exact successful-result equality. The native MVCC predicate is
+covered by a separate two-version selection lemma; retained raw chains and their
+native concurrent-history mapping remain open. The [contract description](query_completeness.md)
+details these premises without assuming the desired candidate completeness.
+
+Seven new semantic controls exercise posting coverage, creator/deleter visibility,
+private candidate union/overlay and stamp ordering. Together there are 34 audited
+roots and 20 semantic controls. The complete new definition/proof file is frozen,
+including the query semantics and all audited statement aliases.
 
 ## Running
 

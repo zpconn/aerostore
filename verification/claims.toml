@@ -122,6 +122,51 @@ required_checks = ["lean", "tla"]
 lean_roots = ["AerostoreProofs.lifecycle_step_preserves", "AerostoreProofs.lifecycle_late_publication", "AerostoreProofs.lifecycle_publication_chronology", "AerostoreProofs.lifecycle_machine_reservation", "AerostoreProofs.lifecycle_observed_publication_rejected", "AerostoreProofs.lifecycle_older_writer_witness"]
 
 [[claims]]
+id = "TX-LIFECYCLE-INTERFERENCE-VERUS"
+contract = "verification/lifecycle_interference/README.md"
+implementation = ["aerostore_core/src/procarray.rs", "verification/lifecycle_interference/contracts.rs"]
+scope = "Native acquired-state suffixes composed with arbitrary finite legal metadata interference while waiting; borrowed owner token preserves only its registration, snapshot observes acquisition-time state. Native copyable-registration ownership, coherent metadata projection, mutex correspondence and no-wrap enforcement remain assumptions"
+status = "partial"
+required_checks = ["lifecycle-interference", "lifecycle-interference-adapter-tests", "core-regressions"]
+refinement_roots = { lifecycle-interference = ["begin_after_wait", "snapshot_after_wait", "end_after_wait", "history_reader_survives_wait"] }
+
+[[claims]]
+id = "TX-GUARD-OWNERSHIP-VERUS"
+contract = "verification/guard_ownership/README.md"
+implementation = ["aerostore_core/src/shm_lock.rs", "aerostore_core/src/shm_index.rs", "verification/guard_ownership/contracts.rs"]
+scope = "Source-bound successful CAS mints opaque affine lease, borrowed reads require live authority, and native Release drop consumes lease. Legal competing acquisitions/releases can interleave with retry and release; physical authority, atomics, frontend Drop and mmap correspondence remain native boundaries"
+status = "partial"
+required_checks = ["guard-ownership", "guard-ownership-adapter-tests", "lock-models"]
+refinement_roots = { guard-ownership = ["try_acquire", "drop_lease", "read_permission", "release_all"] }
+
+[[claims]]
+id = "TX-LOOKUP-MATERIALIZATION-VERUS"
+contract = "verification/lookup/README.md"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "verification/lookup/contracts.rs", "verification/lookup/history.rs"]
+scope = "Actual MVCC selection, private-write overlay, read provenance, row validation and lookup filtering; finite coherent publication histories derive complete snapshot candidates and complete-or-error results. Raw retained-image/history and current-posting correspondence remain explicit storage assumptions"
+status = "partial"
+required_checks = ["lookup", "lookup-adapter-tests", "core-regressions"]
+refinement_roots = { lookup = ["find_visible_row_ptr", "read", "record_read", "has_serialization_conflict", "materialize_after_checked_history", "invisible_head_append_preserves_snapshot"] }
+
+[[claims]]
+id = "TX-INDEXED-READ-VALIDATION-SLICE"
+contract = "verification/indexed_slice/README.md"
+implementation = ["verification/indexed_slice/slice.rs", "aerostore_core/src/occ_partitioned.rs"]
+scope = "One-bucket native indexed-read and later validation composition: acquire opaque lease, capture dependency and current candidates under that lease, consume guards before native materialization, reacquire and invoke native predicate and row validators. Complete results or rejection conditional on stated storage/history/authority projections; not full writer commit or arbitrary heap execution refinement"
+status = "partial"
+required_checks = ["indexed-slice", "indexed-slice-adapter-tests", "guard-ownership", "lookup", "predicate-capture", "predicate", "core-regressions"]
+refinement_roots = { indexed-slice = ["indexed_read_then_validate", "empty_history_has_success_witness"] }
+
+[[claims]]
+id = "TX-QUERY-COMPLETENESS-LEAN"
+contract = "verification/lean/query_completeness.md"
+implementation = ["verification/lean/AerostoreProofs/QueryCompleteness.lean", "verification/tla/QueryMaterialization.tla"]
+scope = "Unbounded finite coherent histories derive exact posting replay and accepted snapshot candidate completeness with private-write overlay, allowing disjoint publication-store reordering; abstract two-version visibility and live witnesses. TLC separately explores finite schedules; no unchecked theorem import or full native refinement"
+status = "partial"
+required_checks = ["lean", "tla"]
+lean_roots = ["AerostoreProofs.guarded_stamp_history_covers", "AerostoreProofs.lifecycle_publication_follows_writer", "AerostoreProofs.query_subreader_publication_visible", "AerostoreProofs.query_posting_replay_exact", "AerostoreProofs.query_success_complete", "AerostoreProofs.query_missing_candidate_retries", "AerostoreProofs.query_two_version_selection", "AerostoreProofs.query_contract_has_live_witnesses"]
+
+[[claims]]
 id = "DURABILITY-REGRESSIONS"
 contract = "verification/contracts/durability.md"
 implementation = ["aerostore_core/src/wal_writer.rs", "aerostore_core/src/occ_partitioned.rs", "aerostore_core/tests/wal_protocol_regressions.rs"]

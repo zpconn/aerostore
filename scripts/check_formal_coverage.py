@@ -35,6 +35,8 @@ def frozen_paths(root: Path) -> list[str]:
              "verification/lean/AerostoreProofs/Contracts.lean",
              "verification/lean/AerostoreProofs/BridgeContracts.lean",
              "verification/lean/AerostoreProofs/Lifecycle.lean",
+             "verification/lean/AerostoreProofs/QueryCompleteness.lean",
+             "verification/lean/query_completeness.md",
              "verification/bridge/toolchain.json", "verification/bridge/bootstrap.py"}
     for directory in ["aerostore_core", "aerostore_macros", "aerostore_tcl",
                       "verification/contracts", "verification/experiments/profiles",
@@ -46,7 +48,9 @@ def frozen_paths(root: Path) -> list[str]:
                       "verification/predicate_composition", "verification/skiplist_detach", "verification/postings",
                       "verification/guards", "verification/lifecycle", "verification/publication_slice",
                       "verification/lifecycle_scenario",
-                      "verification/lifecycle_native"]:
+                      "verification/lifecycle_native", "verification/lifecycle_interference",
+                      "verification/guard_ownership", "verification/lookup", "verification/indexed_slice",
+                      "verification/lookup_native"]:
         if not (root / directory).exists():
             continue
         paths.update(str(p.relative_to(root)) for p in (root / directory).iterdir()

@@ -14,10 +14,14 @@ This workspace implements component proofs and model campaigns from the [verific
 | Native guard identity | Actual bucket selection, retry and collection loops preserve arena/index/bucket identity and requested coverage | Lowest-level ownership, exclusion, Drop and subsequent retained lifetime remain primitive obligations |
 | Lifecycle/predicate joins | Actual key generation feeds actual guard acquisition; explicit inverse registry/common-arena correspondence; shared reservation history feeds native validation | Guarded-observation and native history correspondence are explicit, not inferred from numeric guard records |
 | Shared-clock scenario | Calls native reader registration, snapshot and dependency capture, writer deregistration, publication and validation through one checked clock adapter | Controlled schedule; no unmodeled metadata changes around acquisition, and no full candidate/MVCC or cross-actor guard-transfer proof |
+| Lifecycle interference | Actual acquired-state registration/snapshot/end suffixes after a finite legal wait trace; borrowed registration survives other-slot reuse and horizon changes | Native copyable-registration ownership, coherent metadata cuts, mutex/atomic correspondence and no-wrap enforcement remain assumptions |
+| Guard ownership | Actual CAS/Release bodies manage opaque affine leases; borrowed reads, interference during retry and release, nonresurrection of consumed lease identities | Initial physical authority, index domain, frontend Drop, weak memory and mmap correspondence remain native boundaries |
+| Native lookup | Actual MVCC visibility/walk, latest private writes, filtering, sorted unique results, exact read provenance and row conflict checks; coherent histories derive candidate completeness | Raw current-posting enumeration and retained-image/history correspondence are explicit; payloads are modeled through index-key projections |
+| Indexed-read slice | One-bucket acquire/capture/current-candidates/release/materialize/reacquire/predicate-and-row-validation composition | Conditional storage/history/authority projections; not complete writer commit, arbitrary native heap execution or crash refinement |
 | Posting helpers Verus | Actual destination preparation, reverse rollback and source removal: exact posting sets, recorded ownership, unchanged state or poison on failure | Caller-established absent/distinct destinations and guarded insert/remove contracts; unsafe pointer and ownership refinement remain open |
 | Skiplist detachment Verus | Actual cached and fallback unlink loops check every lane before retirement; pinned contents preserved under the primitive frame | Guarded lane/CAS/search and epoch contracts; unsafe ownership, actual reuse and termination remain open |
-| Lean | Both actual extracted bucket functions, including first-invalid errors; corollaries for the production limit; actual scalar comparison; supporting abstract lemmas and an axiom audit | Logical allocation models and explicit production capacity; required roots in [roots.json](lean/roots.json) state exact coverage |
-| TLA+/TLC | 94 lifecycle/predicate/publication, primary-key insertion, crash-ordering, checkpoint-cut, retention, collector-admission and live-key-reclamation cases, including intended safety/liveness failures and positive witnesses | Small explicit models with stated fairness; no checked Rust refinement or composed transaction-history theorem |
+| Lean | Both actual extracted bucket functions, including first-invalid errors; corollaries for the production limit; actual scalar comparison; lifecycle and complete-query history theorems; 34 audited roots and 20 semantic controls | Logical allocation models and explicit production capacity; required roots in [roots.json](lean/roots.json) state exact coverage |
+| TLA+/TLC | 136 lifecycle/predicate/publication, primary-key insertion, crash-ordering, checkpoint-cut, retention, collector-admission and live-key-reclamation cases, including intended safety/liveness failures and positive witnesses | Small explicit models with stated fairness; no checked Rust refinement or composed transaction-history theorem |
 | Loom | Seven bounded cases importing the actual production lock, including protected-value handoff and registered-priority admission; weakened-Acquire negative control | Preemption bound 2 and 10,000 branches; abstract index protocol, no native mmap refinement or unbounded progress theorem |
 | Integration | Kernel differential tests, three transaction/index test suites and extended Crucible under the default and both candidate features | Bounded engine regression evidence, not a replacement for implementation proofs |
 | Experiment gate | Fresh extraction/proofs, mandatory negative controls, source hashes, fixed proof roots, frozen engine/contracts/tool configuration, independently anchored comparison | Initial bootstrap is unanchored; repository review and protected CI remain external trust requirements |
@@ -43,7 +47,7 @@ The report defaults to `target/verification/report.json`. Logs, exact tool invoc
 
 Profiles are `models`, `proofs`, `pilot` and `full`. `pilot` runs all implemented component checks and the integration matrix. Its extended Crucible fixture uses eight families, one cycle, four local workers, all 27 replay phases and all six native concurrency contracts; these small runs check integration, not sustained performance. **`full` deliberately fails** while the complete implementation obligations remain open. It cannot be made successful by merely editing a descriptive claim status.
 
-Individual tool workflows are described in [Verus](verus/README.md), [native commit](concurrent/README.md), [native predicates](predicate/README.md), [dependency capture](predicate_capture/README.md), [predicate composition](predicate_composition/README.md), [lifecycle](lifecycle/README.md), [guard identity](guards/README.md), [lifecycle joins](publication_slice/README.md), [shared-clock scenario](lifecycle_scenario/README.md), [posting helpers](postings/README.md), [skiplist detachment](skiplist_detach/README.md), [Lean/bridge](lean/README.md) and [TLA+](tla/README.md). The TLA directory retains model counterexamples for inspection. The pilot also runs the native durability regressions and the performance comparison runner's integrity tests.
+Individual tool workflows are described in [Verus](verus/README.md), [native commit](concurrent/README.md), [native predicates](predicate/README.md), [dependency capture](predicate_capture/README.md), [predicate composition](predicate_composition/README.md), [lifecycle](lifecycle/README.md), [guard identity](guards/README.md), [lifecycle joins](publication_slice/README.md), [shared-clock scenario](lifecycle_scenario/README.md), [acquisition interference](lifecycle_interference/README.md), [guard ownership](guard_ownership/README.md), [native lookup](lookup/README.md), [indexed slice](indexed_slice/README.md), [posting helpers](postings/README.md), [skiplist detachment](skiplist_detach/README.md), [Lean/bridge](lean/README.md) and [TLA+](tla/README.md). The TLA directory retains model counterexamples for inspection. The pilot also runs the native durability regressions and the performance comparison runner's integrity tests.
 
 The predicate expansion adds general Lean publication-history and own-write
 overlay theorems, six deterministic native predicate regression tests, and
@@ -67,6 +71,17 @@ guard/storage contracts; it is not arbitrary concurrent API-entry refinement.
 The immutable transition definitions in `Lifecycle.lean` are frozen with the
 contracts. No additional runtime locks, stronger atomics, or proof bookkeeping
 are introduced, and no new performance improvement is claimed.
+
+The indexed-read expansion adds acquisition-time interference, opaque guard
+ownership, and native MVCC materialization proofs. Its composed one-bucket slice
+borrows a live lease for dependency capture and raw candidate enumeration,
+consumes guards before materialization, then reacquires for native predicate and
+row validation. Exact recorded row/pointer/creator provenance links selection to
+validation. Historical candidate completeness is derived; current-posting and
+retained-image correspondence remain explicit storage assumptions. New native
+regressions exercise slot reuse while waiting and posting deletion/key movement/
+reuse after capture, with private writes and attempted vacuum. The production
+implementation remains unchanged. P1 and whole-engine verification remain open.
 
 The [production-lock campaign](contracts/lock_models.md) is also mandatory in
 `pilot`. It requires all seven named cases and the intended synchronization
@@ -120,15 +135,17 @@ Such measurements are diagnostic only. The fixed bucket contract and first imple
 
 The complete concurrent native predicate/publication operation needs an implementation-refinement theorem connecting actual Rust executions to legal histories. General serializability, unsafe arena/guard ownership, acquire/release/relaxed atomics, process-shared mappings, quantitative reclamation bounds, durability/recovery, and query/application composition remain open. Freezing these files prevents this experiment from silently changing them; it does not prove them correct.
 
-The next native correspondence step must account for metadata changes while a
-transaction waits to acquire the lifecycle mutex. The current operation-local
-input view is selected at acquisition; mutual exclusion alone does not justify
-framing the API-entry slot state across that wait. Owning a registration and
-retaining physical bucket guards must be connected to those interferences and
-to complete-or-retry row materialization. The no-wrap condition applies to all
-intervening clock reservations; a proof-harness capacity branch is not a native
-exhaustion repair. Global publication-history reasoning must also distinguish
-reservation order from the order in which disjoint buckets receive their stores.
+The newest slice models metadata changes during lifecycle acquisition and legal
+foreign lock transitions during acquisition and release. Opaque leases justify
+borrowed guarded observations in the checked model. Candidate coverage follows
+from exact posting replay and accepted stamp history, and native materialization
+retains read provenance. These are conditional implementation results: native
+registration ownership, physical authority, actual atomic observations and the
+raw heap's correspondence to the retained image and coherent history still need
+proof. The next step is to connect one native publication/retention path to those
+storage projections, including partial publication and vacuum interleavings.
+The finite-clock no-wrap policy still needs native enforcement; no proof harness
+branch repairs production exhaustion.
 
 The durability model led to reproducible failures in the actual engine. The current repair puts WAL acceptance before publication and holds checkpoint exclusion through a cut that records active transaction IDs. The [durability boundary](contracts/durability.md) describes error handling, one-stream enforcement, upgrade requirements and open obligations. `CheckpointCut.tla` models this implemented ordering separately from the original globally drained design. Neither the tests nor the conditional control-flow proof establish full crash/history refinement. Likewise the resource models demonstrate specific retention and starvation mechanisms; they do not establish a general memory bound for a sustained HyperFeed workload.
 

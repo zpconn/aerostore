@@ -6,7 +6,35 @@ This is the full verification roadmap. Its first executable component pilot now 
 
 The program has two goals: establish the database's correctness, and create a verified environment for aggressive performance experiments. Each candidate implementation must preserve a stable public contract and carry evidence tied to its exact source and build configuration. Section 13 defines that experimentation workflow.
 
-Current lifecycle checkpoint, after `c5d27d2`: source-bound ProcArray proofs now
+Current indexed-read checkpoint, after `1e7311a`: the native lifecycle suffixes
+are composed with a finite legal acquisition-wait trace, permitting other-slot
+reuse and horizon changes while protecting only the borrowed registration.
+Source-bound CAS and Release-store proofs manage opaque affine leases; acquisition
+and release admit legal competing transitions. Native MVCC selection, private
+writes, candidate filtering, exact read provenance and row conflict checks are
+proved over a retained image. Lean and independent Verus history proofs derive
+snapshot candidate completeness from coherent posting replay and guarded stamp
+coverage, including disjoint publication-store reordering. A checked one-bucket
+slice composes guard acquisition, capture, raw lookup, guard consumption,
+materialization, reacquisition and native predicate/row validation.
+
+This narrows the previous acquisition/guard/materialization gaps within explicit
+primitive contracts. It does not prove raw heap-to-image/history correspondence,
+unique native arena authority, copyable registration ownership, atomic weak-memory
+semantics, partial multirow publication, reclamation or full writer commit. The
+next correspondence step connects a native publication/retention path to the
+storage projections used by the slice. P1 remains incomplete and the editable
+performance boundary remains restricted. Native changes in this checkpoint are
+test-only: no additional runtime locks, atomics or proof bookkeeping. The complete
+TLC campaign has 136 cases, and Lean audits 34 required roots and rejects 20
+semantic controls in addition to forged-proof rejection and kernel replay.
+
+The [indexed-read evidence archive](verification_data/indexed_lookup_2026-09-23/README.md)
+retains the successful 45-check pilot against 414 stable source fingerprints,
+264 core regression tests, all three Extended Crucible configurations, and
+the explicit remaining assumptions. Production execution paths are unchanged.
+
+Earlier lifecycle checkpoint, after `c5d27d2`: source-bound ProcArray proofs now
 cover registration, snapshot scans, retention-horizon publication and
 deregistration; source-bound guard proofs cover physical arena/header/bucket
 identity and complete acquisition. A checked scenario calls native reader

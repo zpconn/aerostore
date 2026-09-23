@@ -69,7 +69,8 @@ def collect_claim_evidence(claims: list[dict], checks: list[dict], directory: Pa
     tla = json.loads((directory / "tla/report.json").read_text()) if "tla" in passed else {}
     refinements = {name: check_refinement_evidence.validate_receipt(directory / name / "receipt.json", name, ROOT)
                    for name in ["predicate", "predicate-capture", "predicate-composition", "skiplist-detach", "postings",
-                                "guards", "lifecycle", "publication-slice", "lifecycle-scenario"] if name in passed}
+                                "guards", "lifecycle", "publication-slice", "lifecycle-scenario",
+                                "lifecycle-interference", "guard-ownership", "lookup", "indexed-slice"] if name in passed}
     if "lock-models" in passed:
         check_lock_models.validate_receipt(directory / "lock-models/receipt.json", ROOT)
     lean_mutations = {mutation["name"] for mutation in lean.get("mutation_checks", []) if mutation.get("rejected")}
@@ -78,7 +79,10 @@ def collect_claim_evidence(claims: list[dict], checks: list[dict], directory: Pa
                           "predicate_ignores_changed_stamp", "predicate_accepts_equal_start",
                           "predicate_drops_publication", "predicate_omits_own_candidates",
                           "lifecycle_reservation_does_not_advance", "lifecycle_uses_writer_start_stamp",
-                          "lifecycle_publishes_before_end", "lifecycle_allows_wrapping_reservation"}
+                          "lifecycle_publishes_before_end", "lifecycle_allows_wrapping_reservation",
+                          "query_omits_old_bucket", "query_omits_destination_posting", "query_ignores_creator_active",
+                          "query_omits_own_candidates", "query_allows_stamp_regression",
+                          "query_ignores_deleter_active", "query_filters_before_own_overlay"}
     if "lean" in passed and not (lean.get("passed") and lean.get("completed") and
                                 lean.get("kernel_recheck_passed") and lean.get("forged_theorem_rejected") and
                                 required_mutations <= lean_mutations):
@@ -240,6 +244,14 @@ def main() -> int:
                          ("publication-slice", [sys.executable, "verification/publication_slice/run.py", "--output", str(directory / "publication-slice")]),
                          ("lifecycle-scenario-adapter-tests", [sys.executable, "verification/lifecycle_scenario/test_generate.py"]),
                          ("lifecycle-scenario", [sys.executable, "verification/lifecycle_scenario/run.py", "--output", str(directory / "lifecycle-scenario")]),
+                         ("lifecycle-interference-adapter-tests", [sys.executable, "verification/lifecycle_interference/test_generate.py"]),
+                         ("lifecycle-interference", [sys.executable, "verification/lifecycle_interference/run.py", "--output", str(directory / "lifecycle-interference")]),
+                         ("guard-ownership-adapter-tests", [sys.executable, "verification/guard_ownership/test_generate.py"]),
+                         ("guard-ownership", [sys.executable, "verification/guard_ownership/run.py", "--output", str(directory / "guard-ownership")]),
+                         ("lookup-adapter-tests", [sys.executable, "verification/lookup/test_generate.py"]),
+                         ("lookup", [sys.executable, "verification/lookup/run.py", "--output", str(directory / "lookup")]),
+                         ("indexed-slice-adapter-tests", [sys.executable, "verification/indexed_slice/test_generate.py"]),
+                         ("indexed-slice", [sys.executable, "verification/indexed_slice/run.py", "--output", str(directory / "indexed-slice")]),
                          ("lean", [sys.executable, "scripts/check_lean.py", "--output", str(directory / "lean.json")]),
                          ("kernel-tests", ["cargo", "test", "--offline", "-p", "aerostore_verified"])]
         if args.profile != "proofs":

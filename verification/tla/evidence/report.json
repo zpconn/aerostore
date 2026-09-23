@@ -7,12 +7,13 @@
     "Finite abstract protocol models; no production Rust refinement proof",
     "Publication model: exactly two one-shot transactions, two rows, two nonzero keys; one index with one or two publication buckets",
     "Publication/durability enumerate all interleavings in explicit finite one-shot configurations; no depth/state constraints",
-    "Exact snapshot row materialization is assumed; allocator, process-sharing and weak-memory implementations are not modeled",
+    "Earlier publication models assume exact snapshot row materialization; QueryMaterialization evaluates explicit version visibility. Native allocator, process-sharing and weak-memory implementations are not modeled",
     "Durability.tla retains historical candidate-ordering models; CheckpointCut.tla models the implemented partition-exclusion plus active-cut alternative, still without Rust refinement",
     "Resource pilots use finite cyclic scenario abstractions with explicitly stated weak fairness; conditional liveness only, no general timestamp-abstraction or Rust-refinement proof",
     "PrimaryKeyInsert models two one-shot insertions into one append-only bucket, same-key exclusion and distinct colliding keys; captured-chain search/CAS and row-ID reservation are abstract primitives, not a Rust refinement",
     "PredicatePublication adds two repeated equality lookups, local insert/move/delete overlay, a one-shot older writer, and separate post-deregister publication stamps; exact pinned MVCC and raw candidate capture remain abstract primitives",
-    "LifecyclePublication splits reserve/register under lifecycle exclusion, captures snapshot active IDs/xmax, and derives late publication ordering with one or two bucket guards; two one-shot transactions, no machine wrap or native atomic refinement"
+    "LifecyclePublication splits reserve/register under lifecycle exclusion, captures snapshot active IDs/xmax, and derives late publication ordering with one or two bucket guards; two one-shot transactions, no machine wrap or native atomic refinement",
+    "QueryMaterialization derives single-writer/two-row complete-or-retry results from actual xmin/xmax/active branches, explicit old/new row versions and posting publication, acquisition-time metadata and retained history; exact raw posting enumeration, mutex primitives and physical retention remain abstract, not native refinement"
   ],
   "toolchain": {
     "tool": "TLC",
@@ -39,7 +40,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.34320448400103487,
+      "elapsed_seconds": 0.3354252790013561,
       "states": {
         "generated": 468,
         "distinct": 305,
@@ -64,8 +65,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/publication_empty_b1/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/publication_empty_b1.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Publication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/publication_empty_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Publication.tla"
       ],
       "config_sha256": "e9cd9389edbeaed16b84554711320b85d8e759186e00987bde4a8a011f74ec09",
       "log": "publication_empty_b1/tlc.log"
@@ -84,7 +85,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.34559330900083296,
+      "elapsed_seconds": 0.34165652199590113,
       "states": {
         "generated": 468,
         "distinct": 305,
@@ -109,8 +110,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/publication_empty_b2/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/publication_empty_b2.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Publication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/publication_empty_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Publication.tla"
       ],
       "config_sha256": "52c4057f8452680232002e3dbbb347ba98b60c947b536fefe62e0219194c2d7f",
       "log": "publication_empty_b2/tlc.log"
@@ -129,7 +130,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.32980950400815345,
+      "elapsed_seconds": 0.32746887499524746,
       "states": {
         "generated": 166,
         "distinct": 121,
@@ -154,8 +155,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/publication_move_b1/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/publication_move_b1.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Publication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/publication_move_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Publication.tla"
       ],
       "config_sha256": "dc629ac1e884bc0f288a5e44fcc5d7f421fb1f2669aa1cbb18460ffa09f43c17",
       "log": "publication_move_b1/tlc.log"
@@ -174,7 +175,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.3357545409962768,
+      "elapsed_seconds": 0.31728098599705845,
       "states": {
         "generated": 195,
         "distinct": 136,
@@ -199,8 +200,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/publication_move_b2/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/publication_move_b2.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Publication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/publication_move_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Publication.tla"
       ],
       "config_sha256": "2705596b30d567e2355c92e109681c50a17d2e27676a776d58dbf44136cdc083",
       "log": "publication_move_b2/tlc.log"
@@ -219,7 +220,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.3459610890131444,
+      "elapsed_seconds": 0.3393982400011737,
       "states": {
         "generated": 468,
         "distinct": 305,
@@ -244,8 +245,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/publication_disjoint_b1/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/publication_disjoint_b1.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Publication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/publication_disjoint_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Publication.tla"
       ],
       "config_sha256": "8afcd6f3f081d5256d6988defc5f2357d219d27099f2a30243a57eedc21bc72e",
       "log": "publication_disjoint_b1/tlc.log"
@@ -264,7 +265,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.3654118370031938,
+      "elapsed_seconds": 0.3446433680073824,
       "states": {
         "generated": 1180,
         "distinct": 657,
@@ -289,8 +290,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/publication_disjoint_b2/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/publication_disjoint_b2.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Publication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/publication_disjoint_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Publication.tla"
       ],
       "config_sha256": "e26d8888b2c80ac1e105b4f62e233a72342b71a01f817404972c959907535924",
       "log": "publication_disjoint_b2/tlc.log"
@@ -310,7 +311,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.3644195599918021,
+      "elapsed_seconds": 0.3516874440101674,
       "states": {
         "generated": 466,
         "distinct": 309,
@@ -335,8 +336,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/negative_omitempty/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/negative_omitempty.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Publication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/negative_omitempty.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Publication.tla"
       ],
       "config_sha256": "54b1d1de5e4054cb2f5a8b93b4e6b08aea0ee195881488538f60aaf209407add",
       "log": "negative_omitempty/tlc.log"
@@ -356,7 +357,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.37526748700474855,
+      "elapsed_seconds": 0.3546116590005113,
       "states": {
         "generated": 466,
         "distinct": 309,
@@ -381,8 +382,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/negative_skipvalidation/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/negative_skipvalidation.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Publication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/negative_skipvalidation.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Publication.tla"
       ],
       "config_sha256": "fd7ccb49431ee368f748acff46d6b9bcb405f577e1cebd0b247dd7e1b7aac50e",
       "log": "negative_skipvalidation/tlc.log"
@@ -402,7 +403,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.3424984050070634,
+      "elapsed_seconds": 0.33023596699058544,
       "states": {
         "generated": 158,
         "distinct": 107,
@@ -427,8 +428,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/negative_beginstamp/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/negative_beginstamp.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Publication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/negative_beginstamp.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Publication.tla"
       ],
       "config_sha256": "8660e7e072e834c8ecf77771d7d669cfee2141169e2900b61c77ccf9d2f6cc8b",
       "log": "negative_beginstamp/tlc.log"
@@ -448,7 +449,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.3472119919897523,
+      "elapsed_seconds": 0.3356584940047469,
       "states": {
         "generated": 139,
         "distinct": 92,
@@ -473,8 +474,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/negative_earlyunlock/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/negative_earlyunlock.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Publication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/negative_earlyunlock.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Publication.tla"
       ],
       "config_sha256": "f2955979bbfc9ef47374498a316c96d89ed6e6fd3e650f2a3d8640b7d9bed2fe",
       "log": "negative_earlyunlock/tlc.log"
@@ -494,7 +495,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.3571368560078554,
+      "elapsed_seconds": 0.35434680100297555,
       "states": {
         "generated": 448,
         "distinct": 291,
@@ -519,8 +520,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/witness_creator_conflict/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/witness_creator_conflict.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Publication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/witness_creator_conflict.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Publication.tla"
       ],
       "config_sha256": "19a7068cc287c698ff0ac7f406cbc7e751ef4f33b1375fc4721bc6db679f4bb3",
       "log": "witness_creator_conflict/tlc.log"
@@ -540,7 +541,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.3828591299970867,
+      "elapsed_seconds": 0.36957026399613824,
       "states": {
         "generated": 1139,
         "distinct": 644,
@@ -565,8 +566,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/witness_both_commit/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/witness_both_commit.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Publication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/witness_both_commit.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Publication.tla"
       ],
       "config_sha256": "560273192d998dceb6185ea86faff9cbf4c31dcfd6a3f18b147d8a325505196d",
       "log": "witness_both_commit/tlc.log"
@@ -586,7 +587,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.349104973996873,
+      "elapsed_seconds": 0.33294988599664066,
       "states": {
         "generated": 158,
         "distinct": 107,
@@ -611,8 +612,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/witness_old_snapshot_retry/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/witness_old_snapshot_retry.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Publication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/witness_old_snapshot_retry.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Publication.tla"
       ],
       "config_sha256": "95963e63a3f332b7ddfe341b784bbcaf54f2d1a78e868de009117d128a3cb3d0",
       "log": "witness_old_snapshot_retry/tlc.log"
@@ -632,7 +633,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.3469254310039105,
+      "elapsed_seconds": 0.3307550949975848,
       "states": {
         "generated": 138,
         "distinct": 92,
@@ -657,8 +658,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/witness_captured_old_read/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/witness_captured_old_read.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Publication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/witness_captured_old_read.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Publication.tla"
       ],
       "config_sha256": "99f86ad53943aecca04cddffd2186850a53b5c9eaaa1f36a9b4eb5d63fbe642a",
       "log": "witness_captured_old_read/tlc.log"
@@ -677,7 +678,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.29780356300761923,
+      "elapsed_seconds": 0.27619015699019656,
       "states": {
         "generated": 37,
         "distinct": 25,
@@ -702,8 +703,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/durability_dependent_unsafe_candidate/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/durability_dependent_unsafe_candidate.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Durability.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/durability_dependent_unsafe_candidate.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Durability.tla"
       ],
       "config_sha256": "173045e95c86daaa6a6ac0363999619d2c8a3cddddc9eff6c7e0a40a9cada332",
       "log": "durability_dependent_unsafe_candidate/tlc.log"
@@ -721,7 +722,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.29151288999128155,
+      "elapsed_seconds": 0.26980731000367086,
       "states": {
         "generated": 43,
         "distinct": 26,
@@ -746,8 +747,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/durability_dependent_safe_design/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/durability_dependent_safe_design.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Durability.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/durability_dependent_safe_design.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Durability.tla"
       ],
       "config_sha256": "519e63c27ae2bcbd6ee70032360caa91a44da75733a6a1007b1a8ec06de414d5",
       "log": "durability_dependent_safe_design/tlc.log"
@@ -766,7 +767,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.3184019949985668,
+      "elapsed_seconds": 0.29492407500219997,
       "states": {
         "generated": 278,
         "distinct": 178,
@@ -791,8 +792,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/durability_checkpoint_unsafe_candidate/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/durability_checkpoint_unsafe_candidate.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Durability.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/durability_checkpoint_unsafe_candidate.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Durability.tla"
       ],
       "config_sha256": "52ea99d4828ba9bbeff712429c51339cae29bf6f5bff75057c2918820e835e0f",
       "log": "durability_checkpoint_unsafe_candidate/tlc.log"
@@ -810,7 +811,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.3070848869974725,
+      "elapsed_seconds": 0.2810534419986652,
       "states": {
         "generated": 131,
         "distinct": 82,
@@ -835,8 +836,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/durability_checkpoint_safe_design/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/durability_checkpoint_safe_design.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Durability.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/durability_checkpoint_safe_design.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Durability.tla"
       ],
       "config_sha256": "c85a302e0ee82153b3e8d9fdd01c0e5e3bdf2a5f1ba279d5a700f3729d900366",
       "log": "durability_checkpoint_safe_design/tlc.log"
@@ -855,7 +856,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.29400752199580893,
+      "elapsed_seconds": 0.2880089219979709,
       "states": {
         "generated": 15,
         "distinct": 12,
@@ -880,8 +881,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/witness_nonempty_recovery/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/witness_nonempty_recovery.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Durability.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/witness_nonempty_recovery.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Durability.tla"
       ],
       "config_sha256": "2dab4ea231c43414e7c932cfaae44e0d4c581a6ab253c36087381f27bea90379",
       "log": "witness_nonempty_recovery/tlc.log"
@@ -900,7 +901,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.30371034900599625,
+      "elapsed_seconds": 0.28662480499770027,
       "states": {
         "generated": 75,
         "distinct": 52,
@@ -925,8 +926,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/witness_checkpoint_recovery/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/witness_checkpoint_recovery.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Durability.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/witness_checkpoint_recovery.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Durability.tla"
       ],
       "config_sha256": "a787f534736c892640bb130cdaf0fce91207c9a4c427eaed13489afb428be029",
       "log": "witness_checkpoint_recovery/tlc.log"
@@ -945,7 +946,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.30303106899373233,
+      "elapsed_seconds": 0.27418434800347313,
       "states": {
         "generated": 47,
         "distinct": 30,
@@ -970,8 +971,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/durability_acknowledged_dependency_loss/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/durability_acknowledged_dependency_loss.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Durability.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/durability_acknowledged_dependency_loss.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Durability.tla"
       ],
       "config_sha256": "866b2d05c9a04c277bb01a22a7ffbc8931173706e28bfd03bb0053ba47f967f6",
       "log": "durability_acknowledged_dependency_loss/tlc.log"
@@ -990,7 +991,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.2883112249983242,
+      "elapsed_seconds": 0.2869160650006961,
       "states": {
         "generated": 38,
         "distinct": 25,
@@ -1015,8 +1016,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/witness_dependent_recovery/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/witness_dependent_recovery.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Durability.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/witness_dependent_recovery.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Durability.tla"
       ],
       "config_sha256": "af4ce8aeebbd2b30cd1954d455c5e3f080585a2291dc82203da8e8f1be913583",
       "log": "witness_dependent_recovery/tlc.log"
@@ -1036,7 +1037,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.29372708599839825,
+      "elapsed_seconds": 0.27500731698819436,
       "states": {
         "generated": 17,
         "distinct": 12,
@@ -1061,8 +1062,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/reclamation_safe_snapshot/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/reclamation_safe_snapshot.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Reclamation.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/reclamation_safe_snapshot.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Reclamation.tla"
       ],
       "config_sha256": "1ddec6406ca7679c2cc136e8a84da66e31f8d9325d8b59b4c6f8f03def10c446",
       "log": "reclamation_safe_snapshot/tlc.log"
@@ -1082,7 +1083,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.2999835679947864,
+      "elapsed_seconds": 0.290332717995625,
       "states": {
         "generated": 25,
         "distinct": 16,
@@ -1107,8 +1108,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/reclamation_safe_guard/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/reclamation_safe_guard.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Reclamation.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/reclamation_safe_guard.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Reclamation.tla"
       ],
       "config_sha256": "99f54bfac867d2e57b3ccd726c2deeeb725626150bb3bffb8f055a30b07e3a59",
       "log": "reclamation_safe_guard/tlc.log"
@@ -1128,7 +1129,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.2857756190060172,
+      "elapsed_seconds": 0.29647749300056603,
       "states": {
         "generated": 5,
         "distinct": 5,
@@ -1153,8 +1154,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/reclamation_active_ids_only/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/reclamation_active_ids_only.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Reclamation.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/reclamation_active_ids_only.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Reclamation.tla"
       ],
       "config_sha256": "3586319b804e2aac0781c6b0d6fefb7fc398a7840c01184ef09773df2f8212f5",
       "log": "reclamation_active_ids_only/tlc.log"
@@ -1174,7 +1175,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.2963103649963159,
+      "elapsed_seconds": 0.2876110469951527,
       "states": {
         "generated": 8,
         "distinct": 8,
@@ -1199,8 +1200,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/reclamation_ignores_guard/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/reclamation_ignores_guard.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Reclamation.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/reclamation_ignores_guard.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Reclamation.tla"
       ],
       "config_sha256": "b91bcf1eeff18f66f65aba29f44b2ee85f815e13260e8f66b412f53b7914f0e6",
       "log": "reclamation_ignores_guard/tlc.log"
@@ -1220,7 +1221,7 @@
       "passed": true,
       "outcome": "intended_liveness_counterexample",
       "exit_code": 13,
-      "elapsed_seconds": 0.29377036199730355,
+      "elapsed_seconds": 0.28499393300444353,
       "states": {
         "generated": 9,
         "distinct": 8,
@@ -1245,8 +1246,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/reclamation_inherited_horizon/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/reclamation_inherited_horizon.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Reclamation.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/reclamation_inherited_horizon.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Reclamation.tla"
       ],
       "config_sha256": "9d432a05da97c498dc5a379790757f3dd07568b749a068850e3bdf2721135064",
       "log": "reclamation_inherited_horizon/tlc.log"
@@ -1266,7 +1267,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.28880520100938156,
+      "elapsed_seconds": 0.2772695570020005,
       "states": {
         "generated": 11,
         "distinct": 10,
@@ -1291,8 +1292,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/witness_reclamation_with_readers/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/witness_reclamation_with_readers.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/Reclamation.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/witness_reclamation_with_readers.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/Reclamation.tla"
       ],
       "config_sha256": "85ac854aec3ae8961dfa178a107837dd9f009c2e0542f0b72d5b338c0cec1f67",
       "log": "witness_reclamation_with_readers/tlc.log"
@@ -1311,7 +1312,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.28768683299131226,
+      "elapsed_seconds": 0.2714805610012263,
       "states": {
         "generated": 25,
         "distinct": 19,
@@ -1336,8 +1337,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/collector_priority_safe/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/collector_priority_safe.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/CollectorPriority.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/collector_priority_safe.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/CollectorPriority.tla"
       ],
       "config_sha256": "c30a115a522e5e229dc6ad54ae931275c6ca89b6ce51852ad526fc775c1d037e",
       "log": "collector_priority_safe/tlc.log"
@@ -1356,7 +1357,7 @@
       "passed": true,
       "outcome": "intended_liveness_counterexample",
       "exit_code": 13,
-      "elapsed_seconds": 0.2792534940090263,
+      "elapsed_seconds": 0.2650802779971855,
       "states": {
         "generated": 34,
         "distinct": 22,
@@ -1381,8 +1382,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/collector_no_priority/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/collector_no_priority.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/CollectorPriority.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/collector_no_priority.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/CollectorPriority.tla"
       ],
       "config_sha256": "15bd18165eec6ee11795dc6c9cdf6a6e17b63a4ca4958fe79ace6b9e8f55b345",
       "log": "collector_no_priority/tlc.log"
@@ -1401,7 +1402,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.2695727399986936,
+      "elapsed_seconds": 0.2541575400100555,
       "states": {
         "generated": 13,
         "distinct": 13,
@@ -1426,8 +1427,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/collector_no_recheck/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/collector_no_recheck.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/CollectorPriority.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/collector_no_recheck.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/CollectorPriority.tla"
       ],
       "config_sha256": "baa5710516824c6d0a1c71fbe537cbacb666421441481933911035c5854e44e4",
       "log": "collector_no_recheck/tlc.log"
@@ -1446,7 +1447,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.2633254179963842,
+      "elapsed_seconds": 0.24948528400273062,
       "states": {
         "generated": 7,
         "distinct": 7,
@@ -1471,8 +1472,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/witness_collector_runs/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/witness_collector_runs.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/CollectorPriority.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/witness_collector_runs.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/CollectorPriority.tla"
       ],
       "config_sha256": "58748cd72ee877b10ab37451aff6b390398fb62932f3c0cbc64a7313b7704c5a",
       "log": "witness_collector_runs/tlc.log"
@@ -1491,7 +1492,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.2928077859978657,
+      "elapsed_seconds": 0.27732605699566193,
       "states": {
         "generated": 43,
         "distinct": 18,
@@ -1516,8 +1517,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/live_key_posting_safe/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/live_key_posting_safe.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LiveKeyPosting.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/live_key_posting_safe.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LiveKeyPosting.tla"
       ],
       "config_sha256": "0f63371030ec3aa158a9c8d7cc55f8f5d47173ff0aa4d4cb02805303f30ceceb",
       "log": "live_key_posting_safe/tlc.log"
@@ -1536,7 +1537,7 @@
       "passed": true,
       "outcome": "intended_liveness_counterexample",
       "exit_code": 13,
-      "elapsed_seconds": 0.2886841529980302,
+      "elapsed_seconds": 0.2829647689941339,
       "states": {
         "generated": 17,
         "distinct": 9,
@@ -1561,8 +1562,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/live_key_posting_empty_keys_only/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/live_key_posting_empty_keys_only.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LiveKeyPosting.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/live_key_posting_empty_keys_only.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LiveKeyPosting.tla"
       ],
       "config_sha256": "e073f787ae195d3b40602f8c8d7792a385784dfd7fcbf51c302cebeeae82101f",
       "log": "live_key_posting_empty_keys_only/tlc.log"
@@ -1581,7 +1582,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.28024668600119185,
+      "elapsed_seconds": 0.26916714099934325,
       "states": {
         "generated": 9,
         "distinct": 8,
@@ -1606,8 +1607,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/witness_live_key_posting_reclaimed/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/witness_live_key_posting_reclaimed.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LiveKeyPosting.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/witness_live_key_posting_reclaimed.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LiveKeyPosting.tla"
       ],
       "config_sha256": "40f56e135841da09bb4db44f01172a36396fa7d5ac13fa6835cfea0157d88369",
       "log": "witness_live_key_posting_reclaimed/tlc.log"
@@ -1624,7 +1625,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.3833502240013331,
+      "elapsed_seconds": 0.38641299099253956,
       "states": {
         "generated": 8771,
         "distinct": 4630,
@@ -1649,8 +1650,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/checkpoint_active_cut_safe/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/checkpoint_active_cut_safe.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/CheckpointCut.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/checkpoint_active_cut_safe.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/CheckpointCut.tla"
       ],
       "config_sha256": "1ab8034e3bc0e6772f9e2d9710b0c728b48bf534e30dfc9a00a04de535469b78",
       "log": "checkpoint_active_cut_safe/tlc.log"
@@ -1668,7 +1669,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.3889299490110716,
+      "elapsed_seconds": 0.36523607998969965,
       "states": {
         "generated": 4643,
         "distinct": 2591,
@@ -1693,8 +1694,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/checkpoint_omit_active_cut/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/checkpoint_omit_active_cut.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/CheckpointCut.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/checkpoint_omit_active_cut.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/CheckpointCut.tla"
       ],
       "config_sha256": "91765b51857b39ba535efe4cd94fbcf0a54a6db9897f9bb370727c856ba50b1c",
       "log": "checkpoint_omit_active_cut/tlc.log"
@@ -1712,7 +1713,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.39324512500024866,
+      "elapsed_seconds": 0.37693905299238395,
       "states": {
         "generated": 8627,
         "distinct": 4740,
@@ -1737,8 +1738,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/checkpoint_release_after_snapshot/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/checkpoint_release_after_snapshot.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/CheckpointCut.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/checkpoint_release_after_snapshot.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/CheckpointCut.tla"
       ],
       "config_sha256": "6b3cfedfad13f3e93ccab7ca629e2d6d8afea6d66dc6c9eecd7ad060809c3cd6",
       "log": "checkpoint_release_after_snapshot/tlc.log"
@@ -1756,7 +1757,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.3631656609941274,
+      "elapsed_seconds": 0.35583459099871106,
       "states": {
         "generated": 3246,
         "distinct": 1826,
@@ -1781,8 +1782,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/checkpoint_truncate_before_persist/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/checkpoint_truncate_before_persist.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/CheckpointCut.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/checkpoint_truncate_before_persist.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/CheckpointCut.tla"
       ],
       "config_sha256": "276e3567ce3dff6b1fad4b1d90e120fb4db5e712bad97dd5b2cfcd28cad01354",
       "log": "checkpoint_truncate_before_persist/tlc.log"
@@ -1800,7 +1801,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.3853271279949695,
+      "elapsed_seconds": 0.3663984890008578,
       "states": {
         "generated": 4643,
         "distinct": 2591,
@@ -1825,8 +1826,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/witness_checkpoint_old_start/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/witness_checkpoint_old_start.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/CheckpointCut.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/witness_checkpoint_old_start.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/CheckpointCut.tla"
       ],
       "config_sha256": "2f536192ea04888cfe05e0379819a4660953ddec7d25e4c65e7347b868aaa270",
       "log": "witness_checkpoint_old_start/tlc.log"
@@ -1844,7 +1845,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.3843676380056422,
+      "elapsed_seconds": 0.36911016699741594,
       "states": {
         "generated": 4852,
         "distinct": 2706,
@@ -1869,8 +1870,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/witness_checkpoint_concurrent_start/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/witness_checkpoint_concurrent_start.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/CheckpointCut.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/witness_checkpoint_concurrent_start.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/CheckpointCut.tla"
       ],
       "config_sha256": "bd0323f40fbd62464354beff5f057c2f34d1cdf06bdce47a9063fc827b930a26",
       "log": "witness_checkpoint_concurrent_start/tlc.log"
@@ -1889,7 +1890,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.3036784129944863,
+      "elapsed_seconds": 0.28550158100551926,
       "states": {
         "generated": 85,
         "distinct": 55,
@@ -1914,8 +1915,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/primary_key_allocate_same_key/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/primary_key_allocate_same_key.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PrimaryKeyInsert.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/primary_key_allocate_same_key.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PrimaryKeyInsert.tla"
       ],
       "config_sha256": "4b60d84f3f4683d316f49d0566a2c84889570546acea8e61cde52f057bc62bd0",
       "log": "primary_key_allocate_same_key/tlc.log"
@@ -1934,7 +1935,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.3087947899912251,
+      "elapsed_seconds": 0.2804255630035186,
       "states": {
         "generated": 99,
         "distinct": 69,
@@ -1959,8 +1960,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/primary_key_allocate_colliding_keys/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/primary_key_allocate_colliding_keys.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PrimaryKeyInsert.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/primary_key_allocate_colliding_keys.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PrimaryKeyInsert.tla"
       ],
       "config_sha256": "5f70a2969fbdc33209148e4a770695c2f541c989e66e690204c94e796161bbf6",
       "log": "primary_key_allocate_colliding_keys/tlc.log"
@@ -1980,7 +1981,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.3196598430076847,
+      "elapsed_seconds": 0.29618403599306475,
       "states": {
         "generated": 74,
         "distinct": 52,
@@ -2005,8 +2006,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/primary_key_allocate_late_head/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/primary_key_allocate_late_head.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PrimaryKeyInsert.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/primary_key_allocate_late_head.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PrimaryKeyInsert.tla"
       ],
       "config_sha256": "68a25608054b8a028d0917fe918247f78d8813c326b8ca72dc4776ef71b2cef7",
       "log": "primary_key_allocate_late_head/tlc.log"
@@ -2025,7 +2026,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.3162698000087403,
+      "elapsed_seconds": 0.27959233699948527,
       "states": {
         "generated": 69,
         "distinct": 43,
@@ -2050,8 +2051,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/primary_key_existing_same_key/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/primary_key_existing_same_key.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PrimaryKeyInsert.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/primary_key_existing_same_key.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PrimaryKeyInsert.tla"
       ],
       "config_sha256": "829df6aff76fa42461e9e16ed477871a46ff1210c4d3c8d327f93161e7af2db6",
       "log": "primary_key_existing_same_key/tlc.log"
@@ -2070,7 +2071,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.3158153330005007,
+      "elapsed_seconds": 0.28587859000253957,
       "states": {
         "generated": 79,
         "distinct": 53,
@@ -2095,8 +2096,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/primary_key_existing_colliding_keys/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/primary_key_existing_colliding_keys.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PrimaryKeyInsert.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/primary_key_existing_colliding_keys.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PrimaryKeyInsert.tla"
       ],
       "config_sha256": "c1026e4dd972d51f9e46c76db79a864adfaaa135f29ca84b8a10af5aefa0d08c",
       "log": "primary_key_existing_colliding_keys/tlc.log"
@@ -2116,7 +2117,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.3102600370038999,
+      "elapsed_seconds": 0.2928898090030998,
       "states": {
         "generated": 64,
         "distinct": 42,
@@ -2141,8 +2142,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/primary_key_existing_late_head/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/primary_key_existing_late_head.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PrimaryKeyInsert.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/primary_key_existing_late_head.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PrimaryKeyInsert.tla"
       ],
       "config_sha256": "76f868fef93505d12b2ffd7463c78ece49cbc445baf8852ce6d9c17315c533f7",
       "log": "primary_key_existing_late_head/tlc.log"
@@ -2162,7 +2163,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.312198259998695,
+      "elapsed_seconds": 0.29413960200326983,
       "states": {
         "generated": 78,
         "distinct": 52,
@@ -2187,8 +2188,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/witness_primary_key_retry/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/witness_primary_key_retry.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PrimaryKeyInsert.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/witness_primary_key_retry.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PrimaryKeyInsert.tla"
       ],
       "config_sha256": "7f45d8cf5f5252a4e8a7b31705bd974f3d0436fdbf16b21ad04bb5654998ae50",
       "log": "witness_primary_key_retry/tlc.log"
@@ -2208,7 +2209,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.3106430129992077,
+      "elapsed_seconds": 0.2933486999972956,
       "states": {
         "generated": 66,
         "distinct": 44,
@@ -2233,8 +2234,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/witness_primary_key_collisions/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/witness_primary_key_collisions.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PrimaryKeyInsert.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/witness_primary_key_collisions.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PrimaryKeyInsert.tla"
       ],
       "config_sha256": "c041fda2eae7698098ddadd94da7ec26fe9eabbbb0d802b66d22551b289800c5",
       "log": "witness_primary_key_collisions/tlc.log"
@@ -2253,7 +2254,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.3067372249934124,
+      "elapsed_seconds": 0.3129506700061029,
       "states": {
         "generated": 111,
         "distinct": 86,
@@ -2278,8 +2279,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_empty_b1/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_empty_b1.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_empty_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "e381139623951ec1fedcfcd6c44bc286ed4e1d62828fed2d7677d552e4c24b8f",
       "log": "predicate_empty_b1/tlc.log"
@@ -2298,7 +2299,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.32577851199312136,
+      "elapsed_seconds": 0.30200848399545066,
       "states": {
         "generated": 111,
         "distinct": 86,
@@ -2323,8 +2324,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_empty_b2/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_empty_b2.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_empty_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "cbb3d72c6e9e86e2d580b4d80cd7cb2afc73611f122c2e80e582d81f9a2a19e5",
       "log": "predicate_empty_b2/tlc.log"
@@ -2343,7 +2344,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.3160597840033006,
+      "elapsed_seconds": 0.2920101219933713,
       "states": {
         "generated": 111,
         "distinct": 86,
@@ -2368,8 +2369,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_move_b1/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_move_b1.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_move_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "21708d1c2ede348abf4011eda260cf7c4facdbaea013f27e21cb548fe80ac9c6",
       "log": "predicate_move_b1/tlc.log"
@@ -2388,7 +2389,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.30730066800606437,
+      "elapsed_seconds": 0.29102144099306315,
       "states": {
         "generated": 111,
         "distinct": 86,
@@ -2413,8 +2414,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_move_b2/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_move_b2.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_move_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "feeb5867a6cbabf1cfa35f95163af3a4571eef6675bf8029e44a33ee300a3787",
       "log": "predicate_move_b2/tlc.log"
@@ -2433,7 +2434,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.31502457699389197,
+      "elapsed_seconds": 0.298573017003946,
       "states": {
         "generated": 111,
         "distinct": 86,
@@ -2458,8 +2459,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_owninsert_b1/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_owninsert_b1.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_owninsert_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "bb1e12f5bc26faf0e5fd3d6d42a8667aece867dea96e1a6d441b562a32f211b3",
       "log": "predicate_owninsert_b1/tlc.log"
@@ -2478,7 +2479,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.31087616601143964,
+      "elapsed_seconds": 0.31497736999881454,
       "states": {
         "generated": 111,
         "distinct": 86,
@@ -2503,8 +2504,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_owninsert_b2/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_owninsert_b2.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_owninsert_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "27d6b9158ed7c4f60caedb190638173b86441be868d137aa33184cb91dc2739f",
       "log": "predicate_owninsert_b2/tlc.log"
@@ -2523,7 +2524,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.3097352540062275,
+      "elapsed_seconds": 0.30564858599973377,
       "states": {
         "generated": 111,
         "distinct": 86,
@@ -2548,8 +2549,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_ownmovein_b1/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_ownmovein_b1.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_ownmovein_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "5cee9c7723cde5410cfe3552d1bc52f6b71a4987fae1a071b01e5dfe9a14eb35",
       "log": "predicate_ownmovein_b1/tlc.log"
@@ -2568,7 +2569,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.3032454790081829,
+      "elapsed_seconds": 0.32797639300406445,
       "states": {
         "generated": 111,
         "distinct": 86,
@@ -2593,8 +2594,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_ownmovein_b2/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_ownmovein_b2.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_ownmovein_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "91d0a7d0a3dc862328100ec9d21fcd1d126faa59028e3ceb4e1c7b911604c11d",
       "log": "predicate_ownmovein_b2/tlc.log"
@@ -2613,7 +2614,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.3130740660126321,
+      "elapsed_seconds": 0.33087992599757854,
       "states": {
         "generated": 111,
         "distinct": 86,
@@ -2638,8 +2639,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_ownmoveout_b1/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_ownmoveout_b1.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_ownmoveout_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "8e7e24966436197c00826055867d3b2da225485b0a63430cc0b936b469aaac94",
       "log": "predicate_ownmoveout_b1/tlc.log"
@@ -2658,7 +2659,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.31550779900862835,
+      "elapsed_seconds": 0.3059971929906169,
       "states": {
         "generated": 111,
         "distinct": 86,
@@ -2683,8 +2684,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_ownmoveout_b2/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_ownmoveout_b2.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_ownmoveout_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "d3aeceacb5bd95f8abc0b56157225b77bf8eb787535976518fce25847f631310",
       "log": "predicate_ownmoveout_b2/tlc.log"
@@ -2703,7 +2704,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.30633372999727726,
+      "elapsed_seconds": 0.3168119859910803,
       "states": {
         "generated": 111,
         "distinct": 86,
@@ -2728,8 +2729,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_owndelete_b1/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_owndelete_b1.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_owndelete_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "5c8ebed9e97fd0b98a822662328667667c574b3e0c0910ac452aaa8ebd8dedb2",
       "log": "predicate_owndelete_b1/tlc.log"
@@ -2748,7 +2749,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.312541646999307,
+      "elapsed_seconds": 0.30085959800635464,
       "states": {
         "generated": 111,
         "distinct": 86,
@@ -2773,8 +2774,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_owndelete_b2/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_owndelete_b2.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_owndelete_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "2131639f7b0671ae754488c1612d18591f12d2ec985131b5b6fdd22f40ee2f87",
       "log": "predicate_owndelete_b2/tlc.log"
@@ -2794,7 +2795,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.32906533699133433,
+      "elapsed_seconds": 0.31546516000526026,
       "states": {
         "generated": 127,
         "distinct": 90,
@@ -2819,8 +2820,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_negative_empty_omitempty/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_negative_empty_omitempty.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_negative_empty_omitempty.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "3f222c9e85fc3095a3263b72b5b876a58291b6420d9aba3436d7c95d9fa185fb",
       "log": "predicate_negative_empty_omitempty/tlc.log"
@@ -2840,7 +2841,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.3248948229884263,
+      "elapsed_seconds": 0.31222234800225124,
       "states": {
         "generated": 97,
         "distinct": 76,
@@ -2865,8 +2866,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_negative_move_skiprepeatvalidation/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_negative_move_skiprepeatvalidation.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_negative_move_skiprepeatvalidation.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "c4f4dd1b773a932c020eae6eda42e2d59357761f7e3f5be8a2785e8115682b7b",
       "log": "predicate_negative_move_skiprepeatvalidation/tlc.log"
@@ -2886,7 +2887,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.307867632000125,
+      "elapsed_seconds": 0.2937261570041301,
       "states": {
         "generated": 12,
         "distinct": 10,
@@ -2911,8 +2912,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_negative_owninsert_omitowncandidates/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_negative_owninsert_omitowncandidates.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_negative_owninsert_omitowncandidates.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "e35b18b4935e44411a4e3b34dd75f1162057df5e378d87cd7c364bceef09da5e",
       "log": "predicate_negative_owninsert_omitowncandidates/tlc.log"
@@ -2932,7 +2933,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.3198149679956259,
+      "elapsed_seconds": 0.29098009200242814,
       "states": {
         "generated": 12,
         "distinct": 10,
@@ -2957,8 +2958,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_negative_ownmovein_omitowncandidates/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_negative_ownmovein_omitowncandidates.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_negative_ownmovein_omitowncandidates.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "97be3ccf52661c701b3089140e69d25a86689f6767b090bada311fd0bfdcc2b6",
       "log": "predicate_negative_ownmovein_omitowncandidates/tlc.log"
@@ -2978,7 +2979,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.31643080100184307,
+      "elapsed_seconds": 0.3162390720099211,
       "states": {
         "generated": 77,
         "distinct": 61,
@@ -3003,8 +3004,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_negative_move_beginstamp/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_negative_move_beginstamp.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_negative_move_beginstamp.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "cfa7f8d9c2e4f9fbde2388e5eceb062e51d9de1b1e409ea6b6522fd85e000601",
       "log": "predicate_negative_move_beginstamp/tlc.log"
@@ -3024,7 +3025,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.30716741101059597,
+      "elapsed_seconds": 0.31332167799700983,
       "states": {
         "generated": 52,
         "distinct": 42,
@@ -3049,8 +3050,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_negative_move_earlyunlock/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_negative_move_earlyunlock.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_negative_move_earlyunlock.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "8a3b4c8a1be2e4625bd7947f859b9cf62e558c1b7587c0cdbd1ba9ea46b7da01",
       "log": "predicate_negative_move_earlyunlock/tlc.log"
@@ -3070,7 +3071,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.32744975000969134,
+      "elapsed_seconds": 0.30884967900055926,
       "states": {
         "generated": 52,
         "distinct": 36,
@@ -3095,8 +3096,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_negative_move_omitoldbucket/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_negative_move_omitoldbucket.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_negative_move_omitoldbucket.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "1972205287e5937d8051cd3742238b64fbf2e96befe45e233f50507649e1325f",
       "log": "predicate_negative_move_omitoldbucket/tlc.log"
@@ -3116,7 +3117,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.32422727400262374,
+      "elapsed_seconds": 0.30709863000083715,
       "states": {
         "generated": 109,
         "distinct": 84,
@@ -3141,8 +3142,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_negative_empty_unlockaftervalidation/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_negative_empty_unlockaftervalidation.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_negative_empty_unlockaftervalidation.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "b179097e8e477e3ba9496e35be2a3c2b0ea64fd0ae333d45b662790b974569a6",
       "log": "predicate_negative_empty_unlockaftervalidation/tlc.log"
@@ -3162,7 +3163,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.31759669400344137,
+      "elapsed_seconds": 0.296995861994219,
       "states": {
         "generated": 61,
         "distinct": 49,
@@ -3187,8 +3188,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_witness_own_insert/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_witness_own_insert.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_witness_own_insert.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "f3a1dfdaf8baceda4837269e6938aa726cc3b1e4a4d11855d5e583885db4f582",
       "log": "predicate_witness_own_insert/tlc.log"
@@ -3208,7 +3209,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.30989920200954657,
+      "elapsed_seconds": 0.3166126759897452,
       "states": {
         "generated": 61,
         "distinct": 49,
@@ -3233,8 +3234,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_witness_repeat_success/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_witness_repeat_success.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_witness_repeat_success.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "de6787a2e477cb834e55ea393776c41c074d15d065813a92a0777b9b32f8846d",
       "log": "predicate_witness_repeat_success/tlc.log"
@@ -3254,7 +3255,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.32321792299626395,
+      "elapsed_seconds": 0.31456314800016116,
       "states": {
         "generated": 97,
         "distinct": 76,
@@ -3279,8 +3280,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_witness_repeat_retry/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_witness_repeat_retry.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_witness_repeat_retry.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "e9073894b510513a0f9944220b4544b640ef133240a298e80b91b554c1c68fdb",
       "log": "predicate_witness_repeat_retry/tlc.log"
@@ -3300,7 +3301,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.33048569700622465,
+      "elapsed_seconds": 0.3067884029878769,
       "states": {
         "generated": 78,
         "distinct": 62,
@@ -3325,8 +3326,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_witness_start_between_deregister_and_stamp/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_witness_start_between_deregister_and_stamp.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_witness_start_between_deregister_and_stamp.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "dc5d864072db0652e5c9031291953c37fc0b551305d39794e72f10692dc45c59",
       "log": "predicate_witness_start_between_deregister_and_stamp/tlc.log"
@@ -3346,7 +3347,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.32077368299360387,
+      "elapsed_seconds": 0.30537024400837254,
       "states": {
         "generated": 55,
         "distinct": 44,
@@ -3371,8 +3372,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/predicate_witness_captured_before_move/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/predicate_witness_captured_before_move.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/PredicatePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/predicate_witness_captured_before_move.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/PredicatePublication.tla"
       ],
       "config_sha256": "78ba81ac71d74203f921e0e9151250015530ac69201dc8b2dbf908ef4ed39d2b",
       "log": "predicate_witness_captured_before_move/tlc.log"
@@ -3391,7 +3392,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.3871745990036288,
+      "elapsed_seconds": 0.36981360500794835,
       "states": {
         "generated": 1308,
         "distinct": 875,
@@ -3416,8 +3417,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_empty_b1/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_empty_b1.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_empty_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "997d7ec4dd18fc1d94ed639a8a477da42b61d2ffd56d73f93f0488434dacc3c7",
       "log": "lifecycle_empty_b1/tlc.log"
@@ -3436,7 +3437,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.38516626800992526,
+      "elapsed_seconds": 0.3855136510101147,
       "states": {
         "generated": 1308,
         "distinct": 875,
@@ -3461,8 +3462,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_empty_b2/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_empty_b2.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_empty_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "faa7753354edc5707c46485338ebe28f29a31c0c271dec0c0370e0eb8a0e69a0",
       "log": "lifecycle_empty_b2/tlc.log"
@@ -3481,7 +3482,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.3692268369923113,
+      "elapsed_seconds": 0.3589994179928908,
       "states": {
         "generated": 515,
         "distinct": 374,
@@ -3506,8 +3507,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_move_b1/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_move_b1.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_move_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "b011759ee644cd31a71e234ea5b014edd49554764b50519f882f762c29d574c3",
       "log": "lifecycle_move_b1/tlc.log"
@@ -3526,7 +3527,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.37150001600093674,
+      "elapsed_seconds": 0.36381997600256,
       "states": {
         "generated": 596,
         "distinct": 416,
@@ -3551,8 +3552,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_move_b2/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_move_b2.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_move_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "e129f8b1c84e86cc93cb0997ba7f18165bdc88805e57e4ced99b92e7c4b70e65",
       "log": "lifecycle_move_b2/tlc.log"
@@ -3571,7 +3572,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.3724117270030547,
+      "elapsed_seconds": 0.37407522699504625,
       "states": {
         "generated": 1308,
         "distinct": 875,
@@ -3596,8 +3597,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_disjoint_b1/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_disjoint_b1.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_disjoint_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "5e34964b119b667eabfaff7791c3a89adfd3d05baf0fed7c6840982ae72a3c61",
       "log": "lifecycle_disjoint_b1/tlc.log"
@@ -3616,7 +3617,7 @@
       "passed": true,
       "outcome": "completed_finite_search",
       "exit_code": 0,
-      "elapsed_seconds": 0.4377394219918642,
+      "elapsed_seconds": 0.4351415200071642,
       "states": {
         "generated": 3742,
         "distinct": 2117,
@@ -3641,8 +3642,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_disjoint_b2/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_disjoint_b2.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_disjoint_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "032e48be296e711d33b27577af7c09dfd6daf3f9941b6b64567ba24b2dc934d9",
       "log": "lifecycle_disjoint_b2/tlc.log"
@@ -3662,7 +3663,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.33932961299433373,
+      "elapsed_seconds": 0.3531151549977949,
       "states": {
         "generated": 38,
         "distinct": 27,
@@ -3687,8 +3688,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_negative_nolifecycle/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_negative_nolifecycle.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_negative_nolifecycle.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "c45b4726a283a9b9b14cad523a315616c8f60a8ff4f66d139a37df4fda3cc2ed",
       "log": "lifecycle_negative_nolifecycle/tlc.log"
@@ -3708,7 +3709,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.3757516420009779,
+      "elapsed_seconds": 0.3747229329892434,
       "states": {
         "generated": 365,
         "distinct": 239,
@@ -3733,8 +3734,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_negative_earlyunlock/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_negative_earlyunlock.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_negative_earlyunlock.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "59eb729056f852c844abe3616218bda8fc59a9280a2592e2501cff123113201a",
       "log": "lifecycle_negative_earlyunlock/tlc.log"
@@ -3754,7 +3755,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.3719250709982589,
+      "elapsed_seconds": 0.3717935010063229,
       "states": {
         "generated": 283,
         "distinct": 184,
@@ -3779,8 +3780,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_negative_prematurestamp/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_negative_prematurestamp.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_negative_prematurestamp.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "5b9ff7edf74d78b4ad55443c1bc3daf1fc68e62e94010e652e4848c7358872d8",
       "log": "lifecycle_negative_prematurestamp/tlc.log"
@@ -3800,7 +3801,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.3683596469927579,
+      "elapsed_seconds": 0.37354049300483894,
       "states": {
         "generated": 351,
         "distinct": 229,
@@ -3825,8 +3826,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_negative_beginstamp/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_negative_beginstamp.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_negative_beginstamp.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "fb350e5027d8cbc23bf753690435a8c85ee1c32b2cd8f4a63de83aa5abfbfd63",
       "log": "lifecycle_negative_beginstamp/tlc.log"
@@ -3846,7 +3847,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.408076373001677,
+      "elapsed_seconds": 0.3932708649954293,
       "states": {
         "generated": 1307,
         "distinct": 886,
@@ -3871,8 +3872,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_negative_omitempty/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_negative_omitempty.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_negative_omitempty.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "9ae57efce8a191ac82edf2e3ee64ba9cd43673bbe062645929ceba771a45815e",
       "log": "lifecycle_negative_omitempty/tlc.log"
@@ -3892,7 +3893,7 @@
       "passed": true,
       "outcome": "intended_counterexample",
       "exit_code": 12,
-      "elapsed_seconds": 0.4087713869957952,
+      "elapsed_seconds": 0.39635736800846644,
       "states": {
         "generated": 1307,
         "distinct": 886,
@@ -3917,8 +3918,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_negative_skipvalidation/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_negative_skipvalidation.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_negative_skipvalidation.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "e57e035140f08a8f3a1f5edb53f044f4c8cd9a4063149a9400318e9458a617dc",
       "log": "lifecycle_negative_skipvalidation/tlc.log"
@@ -3938,7 +3939,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.3418988379999064,
+      "elapsed_seconds": 0.341922245992464,
       "states": {
         "generated": 19,
         "distinct": 16,
@@ -3963,8 +3964,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_witness_reserved_gap_blocks_snapshot/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_witness_reserved_gap_blocks_snapshot.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_witness_reserved_gap_blocks_snapshot.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "d873819f8f9eb881532ea511e9d58ed195199a5f3d4f342d78abd9c848f41638",
       "log": "lifecycle_witness_reserved_gap_blocks_snapshot/tlc.log"
@@ -3984,7 +3985,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.38553273800062016,
+      "elapsed_seconds": 0.3904826600046363,
       "states": {
         "generated": 495,
         "distinct": 335,
@@ -4009,8 +4010,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_witness_late_older_writer/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_witness_late_older_writer.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_witness_late_older_writer.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "1db1f237c52dfb108a6af94d5571bbe6271e7694f5c70711441f72faf2135be6",
       "log": "lifecycle_witness_late_older_writer/tlc.log"
@@ -4030,7 +4031,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.38172201700217556,
+      "elapsed_seconds": 0.38495936899562366,
       "states": {
         "generated": 493,
         "distinct": 333,
@@ -4055,8 +4056,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_witness_reader_after_deregister_before_stamp/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_witness_reader_after_deregister_before_stamp.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_witness_reader_after_deregister_before_stamp.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "f6eb4503776aaeeb656ffc17b9454b2d49ac9b9ea9659f3960756ae498cacdc1",
       "log": "lifecycle_witness_reader_after_deregister_before_stamp/tlc.log"
@@ -4076,7 +4077,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.41240845699212514,
+      "elapsed_seconds": 0.3987563230039086,
       "states": {
         "generated": 1259,
         "distinct": 838,
@@ -4101,8 +4102,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_witness_creator_conflict/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_witness_creator_conflict.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_witness_creator_conflict.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "23dedbc596c5acc58fb4d4f5d7370fd8fc1e26e542306598e66a289f581d600f",
       "log": "lifecycle_witness_creator_conflict/tlc.log"
@@ -4122,7 +4123,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.4552649280085461,
+      "elapsed_seconds": 0.4614841449947562,
       "states": {
         "generated": 3653,
         "distinct": 2088,
@@ -4147,8 +4148,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_witness_both_commit/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_witness_both_commit.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_witness_both_commit.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "77b5c75e7e5b19dcfe1afa9d8627c28efb3427d0b413940a1f57140175b5796a",
       "log": "lifecycle_witness_both_commit/tlc.log"
@@ -4168,7 +4169,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.3811586049996549,
+      "elapsed_seconds": 0.37888766900869086,
       "states": {
         "generated": 416,
         "distinct": 274,
@@ -4193,8 +4194,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_witness_captured_old_read/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_witness_captured_old_read.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_witness_captured_old_read.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "07a7c0f42134932536d4698a2e896fa0a673dc0848a738f12c6735e07f612aed",
       "log": "lifecycle_witness_captured_old_read/tlc.log"
@@ -4214,7 +4215,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.37925133800308686,
+      "elapsed_seconds": 0.38388670299900696,
       "states": {
         "generated": 588,
         "distinct": 413,
@@ -4239,8 +4240,8 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_witness_reader_between_reservation_and_store/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_witness_reader_between_reservation_and_store.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_witness_reader_between_reservation_and_store.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "be4e7b2f766a90e2db132cad4b01cc7d76211f3e0cca8b73d5e7c7d908710de7",
       "log": "lifecycle_witness_reader_between_reservation_and_store/tlc.log"
@@ -4260,7 +4261,7 @@
       "passed": true,
       "outcome": "reachable_witness",
       "exit_code": 12,
-      "elapsed_seconds": 0.4468262959999265,
+      "elapsed_seconds": 0.45237252399965655,
       "states": {
         "generated": 3256,
         "distinct": 1856,
@@ -4285,11 +4286,2046 @@
         "-metadir",
         "/home/zpconn/code/aerostore/verification/tla/evidence/lifecycle_witness_disjoint_store_reordering/states",
         "-config",
-        "/tmp/aerostore-tlc-models-_ilxz69t/lifecycle_witness_disjoint_store_reordering.cfg",
-        "/tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla"
+        "/tmp/aerostore-tlc-models-u3vja32j/lifecycle_witness_disjoint_store_reordering.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla"
       ],
       "config_sha256": "7e5c679fea8ceb37d916a01cc2f2bb985b40d86445a9cfdb71cdce619daa8ad9",
       "log": "lifecycle_witness_disjoint_store_reordering/tlc.log"
+    },
+    {
+      "name": "query_move_old_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.3444405020127306,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_move_old_b1/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_move_old_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "901f0625af3b4f39dfbe421d19a8e8f9c12de43f7a26786b3b20081a675c54eb",
+      "log": "query_move_old_b1/tlc.log"
+    },
+    {
+      "name": "query_move_old_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.33818239498941693,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_move_old_b2/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_move_old_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "33ca60a2018c418ceec6c9cc8cd94bc32c2f0231cfa19b4bdf3b98fd1750b1c1",
+      "log": "query_move_old_b2/tlc.log"
+    },
+    {
+      "name": "query_move_new_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "New",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.3542785099998582,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_move_new_b1/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_move_new_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "7a7980db0d98667d9e73bc3e4f8e9db16176fb1c88e909d41b1a0f49164454a9",
+      "log": "query_move_new_b1/tlc.log"
+    },
+    {
+      "name": "query_move_new_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "New",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.3302622519986471,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_move_new_b2/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_move_new_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "17f2a60a4b7a17572c32f251199594537093844ff0afab1e191cf7dda43fdd6e",
+      "log": "query_move_new_b2/tlc.log"
+    },
+    {
+      "name": "query_move_all_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "All",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.3414812120026909,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_move_all_b1/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_move_all_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "735145b069b7bd0824dffdc235d13eab3a3d7af0ae438eebc29830539451191f",
+      "log": "query_move_all_b1/tlc.log"
+    },
+    {
+      "name": "query_move_all_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "All",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.3391080540022813,
+      "states": {
+        "generated": 1472,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_move_all_b2/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_move_all_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "3a40a2d3d93ea7649a41081c32aa458d79155406ef766417b2e3c3b90ab42304",
+      "log": "query_move_all_b2/tlc.log"
+    },
+    {
+      "name": "query_create_old_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Create",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.32458466400566977,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_create_old_b1/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_create_old_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "40b6aadf4fe4647539544e66affb36775a25a71a0d7c4f6e36a43df1735e5da8",
+      "log": "query_create_old_b1/tlc.log"
+    },
+    {
+      "name": "query_create_old_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Create",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.3336434119992191,
+      "states": {
+        "generated": 2494,
+        "distinct": 1544,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_create_old_b2/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_create_old_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "851cd4490ab979a6f5c9d7789dd306004f8b63a2229ca8b897f714cc6479d5f1",
+      "log": "query_create_old_b2/tlc.log"
+    },
+    {
+      "name": "query_create_new_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Create",
+        "Query": "New",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.32364942799904384,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_create_new_b1/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_create_new_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "752a6a106eb121a9e37e49922a1781bf0dbda567d50324eb31f6f9806d45f72f",
+      "log": "query_create_new_b1/tlc.log"
+    },
+    {
+      "name": "query_create_new_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Create",
+        "Query": "New",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.32235007800045423,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_create_new_b2/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_create_new_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "21bf9a7151cb94e0b732295b88548b7f5d481232deb76037de33abc57dd2a57d",
+      "log": "query_create_new_b2/tlc.log"
+    },
+    {
+      "name": "query_create_all_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Create",
+        "Query": "All",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.3236599899973953,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_create_all_b1/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_create_all_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "e497f30e0f522b6c4d38b0a93739fbdfb1efdcda230ac73db01f35b95c1eeb49",
+      "log": "query_create_all_b1/tlc.log"
+    },
+    {
+      "name": "query_create_all_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Create",
+        "Query": "All",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.324120777004282,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_create_all_b2/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_create_all_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "846a68d930984d9c37ca10ac5a672612e1377348296319fc52c81ee5576884c0",
+      "log": "query_create_all_b2/tlc.log"
+    },
+    {
+      "name": "query_delete_old_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Delete",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.31565521299489774,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_delete_old_b1/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_delete_old_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "e43fb3dd408a54b983c9e7012140863fb35ea37ed8b44a58cf165854f421252b",
+      "log": "query_delete_old_b1/tlc.log"
+    },
+    {
+      "name": "query_delete_old_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Delete",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.31907171399507206,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_delete_old_b2/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_delete_old_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "232065107de58cce5ecd82f8b2f3dcadf51bad1c3e6d659f054e93e63438ceb3",
+      "log": "query_delete_old_b2/tlc.log"
+    },
+    {
+      "name": "query_delete_new_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Delete",
+        "Query": "New",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.32186994899529964,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_delete_new_b1/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_delete_new_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "8529584b9428ff222cde69ed93ec5118cf6d36bcd7361143b55e539315c1d178",
+      "log": "query_delete_new_b1/tlc.log"
+    },
+    {
+      "name": "query_delete_new_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Delete",
+        "Query": "New",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.3383479339972837,
+      "states": {
+        "generated": 2494,
+        "distinct": 1544,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_delete_new_b2/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_delete_new_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "0b833e5c5b8ad41470d52e37e258c5d8bddab0f695d9fa618259a83b31a3c02c",
+      "log": "query_delete_new_b2/tlc.log"
+    },
+    {
+      "name": "query_delete_all_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Delete",
+        "Query": "All",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.3211538480099989,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_delete_all_b1/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_delete_all_b1.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "ec5e7a35dab57d7c4a9bc3baf986e20b51cac136f43b44b689350a101c78af67",
+      "log": "query_delete_all_b1/tlc.log"
+    },
+    {
+      "name": "query_delete_all_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Delete",
+        "Query": "All",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.33056568799656816,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_delete_all_b2/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_delete_all_b2.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "37a2f88de881092faa807956ad14f61117ddb1cfbbce4cb24238eccf68aa6514",
+      "log": "query_delete_all_b2/tlc.log"
+    },
+    {
+      "name": "query_own_insert",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "Insert",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.323520218997146,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_own_insert/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_own_insert.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "348a8641be9e56fd1f4977ab75d532ef4e4122eec8bdde5da7d3c86efecd5ee3",
+      "log": "query_own_insert/tlc.log"
+    },
+    {
+      "name": "query_own_movein",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "MoveIn",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.32160449799266644,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_own_movein/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_own_movein.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "972c51278ba19d10c1c5de11ced977202ac296653f443ba885f5fd73bdb66189",
+      "log": "query_own_movein/tlc.log"
+    },
+    {
+      "name": "query_own_moveout",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "MoveOut",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.3157265699992422,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_own_moveout/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_own_moveout.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "66e5d1e9b45b100833c0d35f8fbecbbfb7a5d2d72acbbd2c20222ba4ac562b7d",
+      "log": "query_own_moveout/tlc.log"
+    },
+    {
+      "name": "query_own_delete",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "Delete",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.3235870599892223,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_own_delete/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_own_delete.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "a9156d078c45f286bf453a3a91241675fae0e7cced612f83a1a773d5b42337e1",
+      "log": "query_own_delete/tlc.log"
+    },
+    {
+      "name": "query_stale_candidates",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": true,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "passed": true,
+      "outcome": "completed_finite_search",
+      "exit_code": 0,
+      "elapsed_seconds": 0.32738992699887604,
+      "states": {
+        "generated": 1362,
+        "distinct": 904,
+        "queued": 0
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_stale_candidates/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_stale_candidates.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "b9bdbe33b251f6dd131d46fe5967ca82ba9b73bd88e1420343e66812587d4a22",
+      "log": "query_stale_candidates/tlc.log"
+    },
+    {
+      "name": "query_negative_cachedsnapshotbeforewait",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "CachedSnapshotBeforeWait",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "SnapshotAcquired",
+      "failure_property": "SnapshotAcquired",
+      "passed": true,
+      "outcome": "intended_counterexample",
+      "exit_code": 12,
+      "elapsed_seconds": 0.3090676790016005,
+      "states": {
+        "generated": 71,
+        "distinct": 52,
+        "queued": 16
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_negative_cachedsnapshotbeforewait/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_negative_cachedsnapshotbeforewait.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "b26e4d27d1e5935d4fff11591539cf069eb853ffd0ed542be4e0ef70756ceb90",
+      "log": "query_negative_cachedsnapshotbeforewait/tlc.log"
+    },
+    {
+      "name": "query_negative_earlyunlock",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "EarlyUnlock",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete",
+      "passed": true,
+      "outcome": "intended_counterexample",
+      "exit_code": 12,
+      "elapsed_seconds": 0.3287388189928606,
+      "states": {
+        "generated": 403,
+        "distinct": 256,
+        "queued": 56
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_negative_earlyunlock/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_negative_earlyunlock.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "f378c2d3e53f3c08cfddd7b6f2fdb6df302d2360bda191ec98c14d3816cf6598",
+      "log": "query_negative_earlyunlock/tlc.log"
+    },
+    {
+      "name": "query_negative_dropretainedversion",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "DropRetainedVersion",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete",
+      "passed": true,
+      "outcome": "intended_counterexample",
+      "exit_code": 12,
+      "elapsed_seconds": 0.3374032329884358,
+      "states": {
+        "generated": 565,
+        "distinct": 358,
+        "queued": 70
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_negative_dropretainedversion/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_negative_dropretainedversion.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "6f0b9236943353c542cab112b97d72102286a2d36297e11a2ff35fc5002f4af7",
+      "log": "query_negative_dropretainedversion/tlc.log"
+    },
+    {
+      "name": "query_negative_beginstamp",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "BeginStamp",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete",
+      "passed": true,
+      "outcome": "intended_counterexample",
+      "exit_code": 12,
+      "elapsed_seconds": 0.34288291199482046,
+      "states": {
+        "generated": 1139,
+        "distinct": 760,
+        "queued": 78
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_negative_beginstamp/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_negative_beginstamp.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "f4b7a174e801eed1b6787a13b8f9cf638e73eeb6b2cbd39159dec4b0323bf87f",
+      "log": "query_negative_beginstamp/tlc.log"
+    },
+    {
+      "name": "query_negative_omitoldstamp",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "OmitOldStamp",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete",
+      "passed": true,
+      "outcome": "intended_counterexample",
+      "exit_code": 12,
+      "elapsed_seconds": 0.3381065660068998,
+      "states": {
+        "generated": 1139,
+        "distinct": 760,
+        "queued": 78
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_negative_omitoldstamp/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_negative_omitoldstamp.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "752bcdbe348a1a020ebfc3c9f15a002cfe338d52f1cc22223fcabc8ec75e0bb1",
+      "log": "query_negative_omitoldstamp/tlc.log"
+    },
+    {
+      "name": "query_negative_skipcapturecheck",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "SkipCaptureCheck",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete",
+      "passed": true,
+      "outcome": "intended_counterexample",
+      "exit_code": 12,
+      "elapsed_seconds": 0.33747945399954915,
+      "states": {
+        "generated": 1139,
+        "distinct": 760,
+        "queued": 78
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_negative_skipcapturecheck/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_negative_skipcapturecheck.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "af4565db8282dfb03e508426533c039230c89cd20eb89550d4b72a62daa39e1e",
+      "log": "query_negative_skipcapturecheck/tlc.log"
+    },
+    {
+      "name": "query_negative_ignorecreatoractive",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "IgnoreCreatorActive",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete",
+      "passed": true,
+      "outcome": "intended_counterexample",
+      "exit_code": 12,
+      "elapsed_seconds": 0.3295074100024067,
+      "states": {
+        "generated": 565,
+        "distinct": 358,
+        "queued": 70
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_negative_ignorecreatoractive/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_negative_ignorecreatoractive.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "7a47878bf197583b08033f2e1f993a3d56aaae50502ee9faa2775cf3cdd1883e",
+      "log": "query_negative_ignorecreatoractive/tlc.log"
+    },
+    {
+      "name": "query_negative_ignorecreatorxmax",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "IgnoreCreatorXmax",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete",
+      "passed": true,
+      "outcome": "intended_counterexample",
+      "exit_code": 12,
+      "elapsed_seconds": 0.3269838739943225,
+      "states": {
+        "generated": 638,
+        "distinct": 406,
+        "queued": 81
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_negative_ignorecreatorxmax/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_negative_ignorecreatorxmax.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "7634ef989c86170c519baf1820ffee1ab900b5ea1e08204ef929cfbc996ea001",
+      "log": "query_negative_ignorecreatorxmax/tlc.log"
+    },
+    {
+      "name": "query_negative_omitowncandidates",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "Insert",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "OmitOwnCandidates",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete",
+      "passed": true,
+      "outcome": "intended_counterexample",
+      "exit_code": 12,
+      "elapsed_seconds": 0.31898756700684316,
+      "states": {
+        "generated": 129,
+        "distinct": 82,
+        "queued": 23
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_negative_omitowncandidates/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_negative_omitowncandidates.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "594cdaa8ab813cdbf468bfe1d8f1a1009db0d8fb6fad0f2f6d96928d8f9b4926",
+      "log": "query_negative_omitowncandidates/tlc.log"
+    },
+    {
+      "name": "query_negative_skipkeyfilter",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": true,
+        "Mutation": "SkipKeyFilter",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete",
+      "passed": true,
+      "outcome": "intended_counterexample",
+      "exit_code": 12,
+      "elapsed_seconds": 0.3233604520064546,
+      "states": {
+        "generated": 129,
+        "distinct": 82,
+        "queued": 23
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_negative_skipkeyfilter/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_negative_skipkeyfilter.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "1227670ea482e283dfdbcf8d78081a7a1771c0147c5d95c824ed35c235a67966",
+      "log": "query_negative_skipkeyfilter/tlc.log"
+    },
+    {
+      "name": "query_negative_skipcommitvalidation",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "SkipCommitValidation",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "CommitStable",
+      "failure_property": "CommitStable",
+      "passed": true,
+      "outcome": "intended_counterexample",
+      "exit_code": 12,
+      "elapsed_seconds": 0.3338558999967063,
+      "states": {
+        "generated": 1289,
+        "distinct": 874,
+        "queued": 42
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_negative_skipcommitvalidation/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_negative_skipcommitvalidation.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "61cf0f659676db73c5cbb144688a4a7168db39905bcf4cf3d771a1e7349519e8",
+      "log": "query_negative_skipcommitvalidation/tlc.log"
+    },
+    {
+      "name": "query_witness_old_row_after_release",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "old_row_after_release"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached",
+      "passed": true,
+      "outcome": "reachable_witness",
+      "exit_code": 12,
+      "elapsed_seconds": 0.3378679120069137,
+      "states": {
+        "generated": 1141,
+        "distinct": 762,
+        "queued": 78
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_witness_old_row_after_release/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_witness_old_row_after_release.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "f8702e63c2c1f06cd28234d0d30baba1bfb897ab37fd87c29592e2d8e7cd1a89",
+      "log": "query_witness_old_row_after_release/tlc.log"
+    },
+    {
+      "name": "query_witness_writer_ends_while_waiting",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "writer_ends_while_waiting"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached",
+      "passed": true,
+      "outcome": "reachable_witness",
+      "exit_code": 12,
+      "elapsed_seconds": 0.3418066199956229,
+      "states": {
+        "generated": 1203,
+        "distinct": 821,
+        "queued": 75
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_witness_writer_ends_while_waiting/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_witness_writer_ends_while_waiting.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "07d2da882d687610200f8bc5cea4baea5e52ea62a59e6eea0028637aa24f8563",
+      "log": "query_witness_writer_ends_while_waiting/tlc.log"
+    },
+    {
+      "name": "query_witness_acquisition_refresh",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "acquisition_refresh"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached",
+      "passed": true,
+      "outcome": "reachable_witness",
+      "exit_code": 12,
+      "elapsed_seconds": 0.33337750801001675,
+      "states": {
+        "generated": 446,
+        "distinct": 279,
+        "queued": 48
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_witness_acquisition_refresh/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_witness_acquisition_refresh.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "43afdd2dc7a0ca5b5f888ca3856b33ae4895b23ae3097aa55cf3e001a6804313",
+      "log": "query_witness_acquisition_refresh/tlc.log"
+    },
+    {
+      "name": "query_witness_reader_after_reservation",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "New",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "reader_after_reservation"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached",
+      "passed": true,
+      "outcome": "reachable_witness",
+      "exit_code": 12,
+      "elapsed_seconds": 0.3331435860018246,
+      "states": {
+        "generated": 1273,
+        "distinct": 868,
+        "queued": 52
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_witness_reader_after_reservation/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_witness_reader_after_reservation.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "c229fa70f4dbe092d63d9e5f8d305243e9c3371830cd20c5950d754210c9b9c8",
+      "log": "query_witness_reader_after_reservation/tlc.log"
+    },
+    {
+      "name": "query_witness_private_insert",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "Insert",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "private_insert"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached",
+      "passed": true,
+      "outcome": "reachable_witness",
+      "exit_code": 12,
+      "elapsed_seconds": 0.3213198099983856,
+      "states": {
+        "generated": 129,
+        "distinct": 82,
+        "queued": 23
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_witness_private_insert/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_witness_private_insert.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "5d690b6c8839d5b3e09a18f888e64d7e006c924ab0da30bc5f768ca80587f46d",
+      "log": "query_witness_private_insert/tlc.log"
+    },
+    {
+      "name": "query_witness_stale_filtered",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": true,
+        "Mutation": "None",
+        "Witness": "stale_filtered"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached",
+      "passed": true,
+      "outcome": "reachable_witness",
+      "exit_code": 12,
+      "elapsed_seconds": 0.3148650719958823,
+      "states": {
+        "generated": 129,
+        "distinct": 82,
+        "queued": 23
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_witness_stale_filtered/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_witness_stale_filtered.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "9761764e016cfc6bd90f1825928caa4c81992723229581629a0a2d80724c0aec",
+      "log": "query_witness_stale_filtered/tlc.log"
+    },
+    {
+      "name": "query_witness_empty_success",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Create",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "empty_success"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached",
+      "passed": true,
+      "outcome": "reachable_witness",
+      "exit_code": 12,
+      "elapsed_seconds": 0.32510883000213653,
+      "states": {
+        "generated": 247,
+        "distinct": 144,
+        "queued": 33
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_witness_empty_success/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_witness_empty_success.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "1b02b844b59e1a24410a9bd6d204e6c8abb4b6b6ab8539115dbc7db2d864349c",
+      "log": "query_witness_empty_success/tlc.log"
+    },
+    {
+      "name": "query_witness_capture_then_commit_retry",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "capture_then_commit_retry"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached",
+      "passed": true,
+      "outcome": "reachable_witness",
+      "exit_code": 12,
+      "elapsed_seconds": 0.34646791200793814,
+      "states": {
+        "generated": 1332,
+        "distinct": 895,
+        "queued": 20
+      },
+      "command": [
+        "java",
+        "-XX:+UseParallelGC",
+        "-Xmx512m",
+        "-cp",
+        "/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar",
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-fp",
+        "0",
+        "-seed",
+        "1",
+        "-cleanup",
+        "-difftrace",
+        "-noGenerateSpecTE",
+        "-metadir",
+        "/home/zpconn/code/aerostore/verification/tla/evidence/query_witness_capture_then_commit_retry/states",
+        "-config",
+        "/tmp/aerostore-tlc-models-u3vja32j/query_witness_capture_then_commit_retry.cfg",
+        "/tmp/aerostore-tlc-models-u3vja32j/QueryMaterialization.tla"
+      ],
+      "config_sha256": "7d6ee532abf01d8d1988bd388989b87ff08e59794de883f9cf1448ea56243df7",
+      "log": "query_witness_capture_then_commit_retry/tlc.log"
     }
   ],
   "source_sha256": {
@@ -4301,8 +6337,9 @@
     "verification/tla/PredicatePublication.tla": "02aeccb367feeaf2dbbd1d29d99bcbeff5f87c30f1df56040f2affa470e502b1",
     "verification/tla/PrimaryKeyInsert.tla": "62440bcd822c1e47dd113a197c27d1005d96550b6dbe3939554833f41786cf9d",
     "verification/tla/Publication.tla": "dd69b279b4bb078f133f72c9ee4fbe4549b36c9c799c0337f5e9496603831b9b",
+    "verification/tla/QueryMaterialization.tla": "87452a6eb3610a9057898a7326ccbecf399dbcac8fb5bfe9465cd1acb0f1d5b8",
     "verification/tla/Reclamation.tla": "5efce22d279ba56742adb7a00b3e2e38450f2f28cbbce04a3b6d001fd98e500a",
-    "verification/tla/campaign.json": "33401f3361cd575da116497c15ba036764f510f94276b755572ffc3fe40b7996",
+    "verification/tla/campaign.json": "67badfe16e4cd19d43e41639022f3b61f98a81b5721c285532843e6dfe938ee4",
     "verification/tla/toolchain.json": "f6f72abbc2db47f467bd2939c84658f256ebeacb188f03635b36b61fb1655b49",
     "scripts/check_tla.py": "327c4f7de04fc9a8832c1b0d3d164ea6410694107a888872646cbf1b4b2fc9e5"
   },

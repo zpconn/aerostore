@@ -341,6 +341,48 @@ injectFalse
                 report["mutation_checks"].append({"name": name, "rejected": True, "proof": "Lifecycle.lean",
                                                   "scope": "abstract_history_not_native_atomic_refinement",
                                                   "transition_sha256": digest(mutant)})
+            # The complete-or-retry proof must depend on maintained old/new
+            # postings, overlap-local stamp ordering, real MVCC predicates and
+            # its own private-write candidate/filter path. Do not mutate the
+            # desired completeness conclusion or assume candidate coverage.
+            query_source = (PROJECT / "AerostoreProofs/QueryCompleteness.lean").read_text()
+            query_mutations = [
+                ("query_omits_old_bucket",
+                 "(event.beforeKey = some key ∨ event.afterKey = some key) ∧ bucket key = b",
+                 "event.afterKey = some key ∧ bucket key = b"),
+                ("query_omits_destination_posting",
+                 "{pair | pair.2 = event.row ∧ event.afterKey = some pair.1}", "{pair | False}"),
+                ("query_ignores_creator_active",
+                 "creator = s.reader ∨ creator < s.xmin ∨ (creator < s.xmax ∧ creator ∉ s.active)",
+                 "creator = s.reader ∨ creator < s.xmin ∨ creator < s.xmax"),
+                ("query_omits_own_candidates", "candidates ∪ {row | own row ≠ none}", "candidates"),
+                ("query_allows_stamp_regression", "(∀ b ∈ event.buckets, before b ≤ event.stamp)",
+                 "(∀ b ∈ event.buckets, 0 ≤ event.stamp)"),
+                ("query_ignores_deleter_active", "(s.xmax ≤ deleter ∨ deleter ∈ s.active)",
+                 "s.xmax ≤ deleter"),
+                ("query_filters_before_own_overlay",
+                 "row ∈ queryOwnCandidates candidates own ∧ rowMatches (overlayOwnWrites snapshot own) predicate row",
+                 "row ∈ queryOwnCandidates candidates own ∧ rowMatches snapshot predicate row"),
+            ]
+            for name, old, new in query_mutations:
+                if query_source.count(old) != 1:
+                    raise RuntimeError("query mutation anchor is absent or ambiguous: " + name)
+                mutant_dir = stage / name
+                mutant_dir.mkdir()
+                mutant = mutant_dir / "QueryCompleteness.lean"
+                mutant.write_text(query_source.replace(old, new))
+                mutation_output = run([lean_bin / "lake", "env", "lean", "-Dpp.deepTerms.threshold=8", mutant], cwd=PROJECT, expected=1)
+                intended_diagnostics = ["error: unsolved goals", "error: Type mismatch",
+                                        "error: Application type mismatch", "omega could not prove",
+                                        "Tactic `change` failed"]
+                forbidden_diagnostics = ["unknown module", "object file", "unknownIdentifier", "unknown identifier",
+                                         "unexpected token", "unknown constant", "unknown tactic", "maximum recursion depth"]
+                if not any(s in mutation_output for s in intended_diagnostics) or any(
+                        s in mutation_output for s in forbidden_diagnostics):
+                    raise RuntimeError("query mutation failed for an unexpected reason: " + name)
+                report["mutation_checks"].append({"name": name, "rejected": True, "proof": "QueryCompleteness.lean",
+                                                  "scope": "abstract_query_history_not_native_heap_refinement",
+                                                  "transition_sha256": digest(mutant)})
         report["source_sha256_before"] = initial_fingerprint
         report["source_sha256"] = source_fingerprint()
         if report["source_sha256"] != initial_fingerprint:

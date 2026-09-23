@@ -1,19 +1,19 @@
 TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
-Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 2361] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
-Parsing file /tmp/aerostore-tlc-models-_ilxz69t/LifecyclePublication.tla
-Parsing file /tmp/tlc-17466757752187076529/Integers.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
-Parsing file /tmp/tlc-17466757752187076529/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
-Parsing file /tmp/tlc-17466757752187076529/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
-Parsing file /tmp/tlc-17466757752187076529/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 2351] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-u3vja32j/LifecyclePublication.tla
+Parsing file /tmp/tlc-3998967363635672510/Integers.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /tmp/tlc-3998967363635672510/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-3998967363635672510/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-3998967363635672510/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
 Semantic processing of module Naturals
 Semantic processing of module Integers
 Semantic processing of module Sequences
 Semantic processing of module FiniteSets
 Semantic processing of module LifecyclePublication
 Linting of module LifecyclePublication
-Starting... (2026-09-23 16:34:22)
+Starting... (2026-09-23 17:46:27)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-09-23 16:34:22.
+Finished computing initial states: 1 distinct state generated at 2026-09-23 17:46:27.
 Error: Invariant LatePublication is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -150,4 +150,4 @@ State 21: <Snapshot(2) line 93, col 5 to line 103, col 91 of module LifecyclePub
 
 283 states generated, 184 distinct states found, 22 states left on queue.
 The depth of the complete state graph search is 21.
-Finished in 00s at (2026-09-23 16:34:22)
+Finished in 00s at (2026-09-23 17:46:27)

@@ -83,6 +83,7 @@ pub fn capture_dependencies<I: CaptureIndex>(index: &I, tx: &mut Transaction, bu
     ensures
         final(tx).txid == old(tx).txid,
         old(tx).index_conflict ==> final(tx).index_conflict,
+        result.is_ok() ==> final(tx).index_conflict == old(tx).index_conflict,
         unique(final(tx).index_reads@), extends(old(tx).index_reads@, final(tx).index_reads@),
         permitted_additions(old(tx).index_reads@, final(tx).index_reads@, index.offset(), buckets@, index.stamps()),
         final(tx).index_reads.len() <= old(tx).index_reads.len() + buckets.len(),

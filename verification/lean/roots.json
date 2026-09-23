@@ -134,6 +134,46 @@
       "name": "AerostoreProofs.lifecycle_older_writer_witness",
       "contract": "AerostoreProofs.LifecycleOlderWriterWitness",
       "scope": "parameterized_abstract_lifecycle_history"
+    },
+    {
+      "name": "AerostoreProofs.guarded_stamp_history_covers",
+      "contract": "AerostoreProofs.GuardedStampHistoryCovers",
+      "scope": "abstract_query_history_not_native_heap_refinement"
+    },
+    {
+      "name": "AerostoreProofs.lifecycle_publication_follows_writer",
+      "contract": "AerostoreProofs.QueryPublicationFollowsWriter",
+      "scope": "abstract_query_history_not_native_heap_refinement"
+    },
+    {
+      "name": "AerostoreProofs.query_subreader_publication_visible",
+      "contract": "AerostoreProofs.QuerySubreaderPublicationVisible",
+      "scope": "abstract_query_history_not_native_heap_refinement"
+    },
+    {
+      "name": "AerostoreProofs.query_posting_replay_exact",
+      "contract": "AerostoreProofs.QueryPostingReplayExact",
+      "scope": "abstract_query_history_not_native_heap_refinement"
+    },
+    {
+      "name": "AerostoreProofs.query_success_complete",
+      "contract": "AerostoreProofs.QuerySuccessComplete",
+      "scope": "abstract_query_history_not_native_heap_refinement"
+    },
+    {
+      "name": "AerostoreProofs.query_missing_candidate_retries",
+      "contract": "AerostoreProofs.QueryMissingCandidateRetries",
+      "scope": "abstract_query_history_not_native_heap_refinement"
+    },
+    {
+      "name": "AerostoreProofs.query_two_version_selection",
+      "contract": "AerostoreProofs.QueryTwoVersionSelection",
+      "scope": "abstract_query_history_not_native_heap_refinement"
+    },
+    {
+      "name": "AerostoreProofs.query_contract_has_live_witnesses",
+      "contract": "AerostoreProofs.QueryContractHasLiveWitnesses",
+      "scope": "abstract_query_history_not_native_heap_refinement"
     }
   ]
 }
