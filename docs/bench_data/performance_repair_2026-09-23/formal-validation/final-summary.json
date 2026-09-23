@@ -1,0 +1,15 @@
+{
+  "actual_lock_campaign_passed": true,
+  "checks": 19,
+  "completed": true,
+  "concurrent_mutants": 13,
+  "concurrent_roots": 6,
+  "current_sources_match_receipt": true,
+  "full_P1_complete": false,
+  "passed": true,
+  "promotion_eligible": false,
+  "report_sha256": "da0a518ac3a0f8166cf47194775662ee531751aee9df9f36f114948628660ac3",
+  "source_files": 233,
+  "source_stable": true,
+  "whole_engine_verified": false
+}

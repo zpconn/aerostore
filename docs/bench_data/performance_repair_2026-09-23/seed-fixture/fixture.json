@@ -1,0 +1,63 @@
+{
+  "parent_commit": "9676fa9ff602565d5a628af41b6d40ba1576a8b9",
+  "source": "/home/zpconn/code/aerostore/target/performance-repair/seed-fixture/source",
+  "changed_files": {
+    "aerostore_core/benches/hyperfeed_crucible.rs": {
+      "before_sha256": "174425b4cce43b4189d55152b3e445370049c5ace740454aef7a1a2ce5272f1f",
+      "after_sha256": "d8ab08776c2666cd517cb48cbe20c7b30dd0ac3dc8f42b72a3c189e3b6e3e092"
+    },
+    "aerostore_core/benches/support/crucible_seed.rs": {
+      "before_sha256": null,
+      "after_sha256": "7039d9d0fe7210cf1afccf870d78b796a8ad15b3cced8dbf5d4d72cc924161ee"
+    },
+    "aerostore_core/tests/crucible_seed.rs": {
+      "before_sha256": null,
+      "after_sha256": "369465d15e784ee21b9700e57dfb26aa5e920e21818d1ae0e3a999e022bbb60a"
+    }
+  },
+  "patch": "seed-fixture.patch",
+  "patch_sha256": "f543e16537df14d5465e3af70d3f541dfc7963b9cdd21bfc8537153565b6157c",
+  "reference_apply_checks": [
+    {
+      "source": "target/verification-next/baseline-fine/source",
+      "command": [
+        "git",
+        "apply",
+        "--check",
+        "--directory=target/verification-next/baseline-fine/source",
+        "target/performance-repair/seed-fixture/seed-fixture.patch"
+      ],
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "source": "target/performance-repair/control/source",
+      "command": [
+        "git",
+        "apply",
+        "--check",
+        "--directory=target/performance-repair/control/source",
+        "target/performance-repair/seed-fixture/seed-fixture.patch"
+      ],
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "source": "target/performance-repair/remove-window/source",
+      "command": [
+        "git",
+        "apply",
+        "--check",
+        "--directory=target/performance-repair/remove-window/source",
+        "target/performance-repair/seed-fixture/seed-fixture.patch"
+      ],
+      "exit_code": 0,
+      "output": ""
+    }
+  ],
+  "reverse_apply_check": true,
+  "fixed_marker": "hyperfeed_crucible_seed: mode=fixed seed=<u64> algorithm=worker_add_xorshift64_v1",
+  "entropy_marker": "hyperfeed_crucible_seed: mode=entropy seed=none algorithm=pid_time_xorshift64_v1",
+  "validation": "validation.json",
+  "performance_acceptance": false
+}

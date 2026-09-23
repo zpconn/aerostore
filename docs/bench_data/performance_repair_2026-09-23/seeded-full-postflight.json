@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "checked_utc": "2026-09-23T19:51:15Z",
+  "passed": true,
+  "campaign_completed": true,
+  "campaign_passed": false,
+  "performance_acceptance": false,
+  "campaign_sha256": "394cd3137e7f404f7584c4887b5820bf3b51e56b1b608a7be9c75d3b1c242746",
+  "all_26_runs_passed_correctness_resources": true,
+  "all_run_output_and_binary_hashes_match": true,
+  "plan_policy_seeds_scripts_unchanged": true,
+  "captures": {
+    "baseline": {
+      "manifest_sha256": "f96ca8aab6f1d4a7e087ef1787efb4bb3932ace6a08c266e4f5be8ec1649f3ba",
+      "source_files": 117,
+      "source_unchanged": true,
+      "binaries_unchanged": true
+    },
+    "candidate": {
+      "manifest_sha256": "9d38ca0373310dc682bce28a61106f5835f22dcf76b07196a38c3ae07756063d",
+      "source_files": 118,
+      "source_unchanged": true,
+      "binaries_unchanged": true
+    }
+  },
+  "main_native_matches_candidate": true,
+  "formal_report_sha256": "da0a518ac3a0f8166cf47194775662ee531751aee9df9f36f114948628660ac3",
+  "formal_source_files_unchanged": 233,
+  "formal_source_archive_unchanged": true,
+  "native_validation_sha256": "af03bc710a9c6c1ba16d1db825fc491f7059aa817a9968c05e3a67cae4246b8c",
+  "native_validation_source_files_unchanged": 118,
+  "benchmark_processes": [],
+  "disposable_run_tmp_directories": [],
+  "scope": "Postflight integrity and cleanup only; full performance gate remains inconclusive_noise because original-reference churn p99 variability exceeds the fixed ceiling."
+}

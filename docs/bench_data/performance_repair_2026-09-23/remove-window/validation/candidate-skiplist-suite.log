@@ -1,0 +1,44 @@
+
+running 39 tests
+test shm_skiplist::tests::alloc_node_prefers_reserve_node_offsets_under_pressure ... ok
+test shm_skiplist::tests::alloc_posting_prefers_reserve_pool_offsets ... ok
+test shm_skiplist::tests::alloc_tower_prefers_reserve_tower_and_can_reuse_taller_tower ... ok
+test shm_skiplist::tests::allocation_audit_accounts_for_churn_retirement_and_reuse ... ok
+test shm_skiplist::tests::allocation_audit_accounts_for_failed_insert_rollbacks ... ok
+test shm_skiplist::tests::allocation_audit_counts_physical_capacity_after_tower_reuse ... ok
+test shm_skiplist::tests::allocation_audit_rejects_an_unreachable_unretired_node ... ok
+test shm_skiplist::tests::allocation_audit_rejects_duplicate_pool_ownership ... ok
+test shm_skiplist::tests::bounded_scan_gt_starts_at_seek_ge_and_collects_tail_only ... ok
+test shm_skiplist::tests::bounded_scan_lt_and_lte_apply_strict_early_termination ... ok
+test shm_skiplist::tests::bounded_scan_matches_btreeset_model ... ok
+test shm_skiplist::tests::collector_waits_for_a_busy_list_instead_of_skipping_reclamation ... ok
+test shm_skiplist::tests::count_payloads_matches_lookup_payloads ... ok
+test shm_skiplist::tests::distinct_key_count_remains_stable_across_churn_cycles ... ok
+test shm_skiplist::tests::distinct_key_count_tracks_live_keys_with_duplicate_postings ... ok
+test shm_skiplist::tests::failed_constructor_returns_its_head_node_and_tower ... ok
+test shm_skiplist::tests::failed_insert_returns_posting_and_tower_for_reuse ... ok
+test shm_skiplist::tests::failed_insert_reuses_spill_storage_as_well_as_posting_and_tower ... ok
+test shm_skiplist::tests::failed_move_keeps_source_posting_visible ... ok
+test shm_skiplist::tests::failed_spill_allocation_returns_the_reserved_posting_slot ... ok
+test shm_skiplist::tests::gc_rotates_unreclaimable_head_and_preserves_backlog ... ok
+test shm_skiplist::tests::gc_unlinks_nodes_from_all_levels_before_reclaim_horizon ... ok
+test shm_skiplist::tests::insert_cannot_publish_through_a_deleted_predecessor ... ok
+test shm_skiplist::tests::marked_nodes_are_not_visible_after_deletions ... ok
+test shm_skiplist::tests::maybe_collect_garbage_on_alloc_failure_updates_failure_and_gc_counters ... ok
+test shm_skiplist::tests::move_payload_keeps_old_key_immutable_for_pinned_readers ... ok
+test shm_skiplist::tests::move_upserts_a_missing_source_without_an_external_fallback ... ok
+test shm_skiplist::tests::persistent_key_churn_reclaims_individual_postings_after_readers_finish ... ok
+test shm_skiplist::tests::pressure_state_forces_hot_when_reclaim_efficiency_collapses ... ok
+test shm_skiplist::tests::pressure_state_hot_needs_healthy_windows_to_return_normal ... ok
+test shm_skiplist::tests::pressure_state_transitions_use_hysteresis ... ok
+test shm_skiplist::tests::removal_window_detaches_every_lane_before_pinned_retirement_and_shorter_reuse ... ok
+test shm_skiplist::tests::reserve_tower_mask_tracks_nonempty_heights_and_bounds_miss_count ... ok
+test shm_skiplist::tests::retired_queue_preserves_fifo_order ... ok
+test shm_skiplist::tests::seek_ge_and_bounded_scan_stay_correct_with_tombstone_heavy_keys ... ok
+test shm_skiplist::tests::seek_ge_returns_exact_gap_and_end_candidates ... ok
+test shm_skiplist::tests::skiplist_higher_levels_are_subsets_of_lower_levels ... ok
+test shm_skiplist::tests::skiplist_levels_are_sorted_acyclic_and_fully_linked ... ok
+test shm_skiplist::tests::spill_payloads_round_trip_and_remove_cleanly ... ok
+
+test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 156 filtered out; finished in 0.07s
+

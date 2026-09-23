@@ -1,0 +1,36 @@
+--- a/aerostore_core/src/shm_skiplist.rs
++++ b/aerostore_core/src/shm_skiplist.rs
+@@ -1991,6 +1991,8 @@
+         preds: &mut [u32; MAX_HEIGHT],
+         succs: &mut [u32; MAX_HEIGHT],
+     ) -> Result<Option<u32>, ShmSkipListError> {
++        #[cfg(test)]
++        tests::REMOVAL_FIND_CALLS.with(|calls| calls.set(calls.get() + 1));
+         'retry: loop {
+             let header = self
+                 .header_ref()
+@@ -4025,6 +4027,24 @@
+         assert_eq!(list.node_ref(node).unwrap().height as usize, height);
+     }
+ 
++    thread_local! {
++        pub(super) static REMOVAL_FIND_CALLS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
++    }
++
++    #[test]
++    fn normal_last_posting_removal_search_count_probe() {
++        let list = make_list();
++        insert_with_height(&list, 10, 10, MAX_HEIGHT);
++        insert_with_height(&list, 20, 20, MAX_HEIGHT);
++        insert_with_height(&list, 30, 30, MAX_HEIGHT);
++        REMOVAL_FIND_CALLS.with(|calls| calls.set(0));
++        list.remove_payload(&TestKey(20), 4, &20_u32.to_le_bytes()).unwrap();
++        let calls = REMOVAL_FIND_CALLS.with(|calls| calls.get());
++        println!("normal_last_posting_removal_find_calls={calls}");
++        assert_eq!(calls, 1);
++        list.audit_allocations().unwrap();
++    }
++
+     #[test]
+     fn removal_window_detaches_every_lane_before_pinned_retirement_and_shorter_reuse() {
+         let list = make_list();

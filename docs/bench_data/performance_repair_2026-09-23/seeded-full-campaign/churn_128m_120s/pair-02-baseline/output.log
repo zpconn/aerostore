@@ -1,0 +1,66 @@
+Gnuplot not found, using plotters backend
+hyperfeed_crucible_seed: mode=fixed seed=2026092302 algorithm=worker_add_xorshift64_v1
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=5.017 interval_secs=5.017 interval_tps=310555.26 total_ops=1558210 arena_head_bytes=33377728 fresh_bytes=13221312 reclaimed_nodes=1242265 retired_backlog=4438 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=5.017 general_bytes=0 row_version_bytes=10112696 skip_node_bytes=2201408 skip_posting_bytes=700448 skip_tower_bytes=206760 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=10.032 interval_secs=5.014 interval_tps=300535.45 total_ops=3065171 arena_head_bytes=34393376 fresh_bytes=1015648 reclaimed_nodes=1210002 retired_backlog=0 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=10.032 general_bytes=0 row_version_bytes=1015344 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=304 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=15.046 interval_secs=5.015 interval_tps=297858.64 total_ops=4558825 arena_head_bytes=34670736 fresh_bytes=277360 reclaimed_nodes=1190287 retired_backlog=4629 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=15.046 general_bytes=0 row_version_bytes=277200 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=160 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=20.071 interval_secs=5.025 interval_tps=268180.02 total_ops=5906324 arena_head_bytes=35068664 fresh_bytes=397928 reclaimed_nodes=1079558 retired_backlog=3072 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=20.071 general_bytes=0 row_version_bytes=397760 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=168 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=25.085 interval_secs=5.014 interval_tps=283075.06 total_ops=7325686 arena_head_bytes=35126576 fresh_bytes=57912 reclaimed_nodes=1131877 retired_backlog=6710 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=25.085 general_bytes=0 row_version_bytes=57728 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=184 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=30.098 interval_secs=5.013 interval_tps=301567.56 total_ops=8837526 arena_head_bytes=35377600 fresh_bytes=251024 reclaimed_nodes=1214758 retired_backlog=1399 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=30.098 general_bytes=0 row_version_bytes=250800 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=224 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=35.113 interval_secs=5.014 interval_tps=294499.32 total_ops=10314245 arena_head_bytes=35458640 fresh_bytes=81040 reclaimed_nodes=1176761 retired_backlog=6002 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=35.113 general_bytes=0 row_version_bytes=23584 skip_node_bytes=40128 skip_posting_bytes=12768 skip_tower_bytes=4560 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=40.128 interval_secs=5.015 interval_tps=306426.15 total_ops=11851045 arena_head_bytes=35575856 fresh_bytes=117216 reclaimed_nodes=1228255 retired_backlog=7162 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=40.128 general_bytes=0 row_version_bytes=117216 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=0 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=45.137 interval_secs=5.009 interval_tps=302095.46 total_ops=13364310 arena_head_bytes=35667888 fresh_bytes=92032 reclaimed_nodes=1210231 retired_backlog=7597 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=45.137 general_bytes=0 row_version_bytes=57376 skip_node_bytes=24640 skip_posting_bytes=7840 skip_tower_bytes=2176 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=50.159 interval_secs=5.022 interval_tps=300017.36 total_ops=14870986 arena_head_bytes=35671496 fresh_bytes=3608 reclaimed_nodes=1211080 retired_backlog=1844 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=50.159 general_bytes=0 row_version_bytes=3608 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=0 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=55.172 interval_secs=5.013 interval_tps=291885.83 total_ops=16334305 arena_head_bytes=35742816 fresh_bytes=71320 reclaimed_nodes=1168706 retired_backlog=3826 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=55.172 general_bytes=0 row_version_bytes=6072 skip_node_bytes=46288 skip_posting_bytes=14728 skip_tower_bytes=4232 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=60.186 interval_secs=5.013 interval_tps=298006.51 total_ops=17828337 arena_head_bytes=35847800 fresh_bytes=104984 reclaimed_nodes=1196575 retired_backlog=2454 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=60.186 general_bytes=0 row_version_bytes=104984 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=0 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=65.200 interval_secs=5.014 interval_tps=295363.25 total_ops=19309345 arena_head_bytes=36103728 fresh_bytes=255928 reclaimed_nodes=1183951 retired_backlog=3300 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=65.200 general_bytes=0 row_version_bytes=5368 skip_node_bytes=177936 skip_posting_bytes=56616 skip_tower_bytes=16008 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=70.214 interval_secs=5.014 interval_tps=307262.12 total_ops=20849961 arena_head_bytes=36113760 fresh_bytes=10032 reclaimed_nodes=1229617 retired_backlog=6169 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=70.214 general_bytes=0 row_version_bytes=10032 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=0 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=75.237 interval_secs=5.023 interval_tps=301260.05 total_ops=22363086 arena_head_bytes=36113760 fresh_bytes=0 reclaimed_nodes=1214915 retired_backlog=1755 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=75.237 general_bytes=0 row_version_bytes=0 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=0 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=80.241 interval_secs=5.004 interval_tps=304127.60 total_ops=23885052 arena_head_bytes=36115360 fresh_bytes=1600 reclaimed_nodes=1213512 retired_backlog=5820 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=80.241 general_bytes=0 row_version_bytes=792 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=808 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=85.256 interval_secs=5.015 interval_tps=289498.05 total_ops=25336945 arena_head_bytes=36123632 fresh_bytes=8272 reclaimed_nodes=1164238 retired_backlog=3117 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=85.256 general_bytes=0 row_version_bytes=8272 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=0 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=90.271 interval_secs=5.015 interval_tps=302157.62 total_ops=26852168 arena_head_bytes=36128560 fresh_bytes=4928 reclaimed_nodes=1212542 retired_backlog=2745 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=90.271 general_bytes=0 row_version_bytes=4928 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=0 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=95.284 interval_secs=5.013 interval_tps=306271.42 total_ops=28387503 arena_head_bytes=36129792 fresh_bytes=1232 reclaimed_nodes=1223686 retired_backlog=7307 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=95.284 general_bytes=0 row_version_bytes=1232 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=0 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=100.297 interval_secs=5.013 interval_tps=308199.54 total_ops=29932617 arena_head_bytes=36129792 fresh_bytes=0 reclaimed_nodes=1236593 retired_backlog=6811 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=100.297 general_bytes=0 row_version_bytes=0 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=0 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=105.307 interval_secs=5.009 interval_tps=300059.86 total_ops=31435715 arena_head_bytes=36133136 fresh_bytes=3344 reclaimed_nodes=1203960 retired_backlog=5320 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=105.307 general_bytes=0 row_version_bytes=3344 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=0 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=110.328 interval_secs=5.022 interval_tps=300594.06 total_ops=32945230 arena_head_bytes=36133136 fresh_bytes=0 reclaimed_nodes=1211694 retired_backlog=1258 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=110.328 general_bytes=0 row_version_bytes=0 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=0 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=115.342 interval_secs=5.013 interval_tps=294611.94 total_ops=34422187 arena_head_bytes=36277720 fresh_bytes=144584 reclaimed_nodes=1177231 retired_backlog=5579 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=115.342 general_bytes=0 row_version_bytes=144584 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=0 spill_bytes=0
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=120.105 interval_secs=4.763 interval_tps=268490.86 total_ops=35701072 arena_head_bytes=36277720 fresh_bytes=0 reclaimed_nodes=1028687 retired_backlog=0 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=120.105 general_bytes=0 row_version_bytes=0 skip_node_bytes=0 skip_posting_bytes=0 skip_tower_bytes=0 spill_bytes=0
+hyperfeed_crucible_correctness: profile=diagnostic table_rows=50000 index_postings=50000 exact_match=true
+hyperfeed_crucible_stability: profile=diagnostic tail_fresh_bytes=429920 fresh_growth_budget_bytes=20156416 early_interval_tps=296225.22 late_interval_tps=298158.03 retained_tps=1.0065 arena_head_bytes=36277720
+hyperfeed_crucible_gc_drain: profile=diagnostic retired_backlog=0 gc_recycle_errors=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_allocation_class: profile=diagnostic class=nodes allocated=64151 reachable=50001 retired=0 reusable=14150
+hyperfeed_crucible_allocation_class: profile=diagnostic class=postings allocated=64150 reachable=50000 retired=0 reusable=14150
+hyperfeed_crucible_allocation_class: profile=diagnostic class=towers allocated=64164 reachable=50001 retired=0 reusable=14163
+hyperfeed_crucible_allocation_class: profile=diagnostic class=tower_lanes allocated=129491 reachable=99708 retired=0 reusable=29783
+hyperfeed_crucible_allocation_audit: profile=diagnostic status=pass
+hyperfeed_crucible_retry: profile=diagnostic max_insert_attempts=1 pressure_state=0 retry_alloc=0 gc_recycle_errors=0
+hyperfeed_crucible_latency_bounds: profile=diagnostic engine=aerostore histogram_subdivisions=64 samples=35701072 p99_lower_ns=237568 p99_upper_ns=239615
+hyperfeed_crucible_config: profile=diagnostic mode=aerostore_only aerostore_shm_bytes=134217728 workers=16
+| Engine | TPS | Total Ops | p50 upper (us) | p90 upper (us) | p99 upper (us) | Upserts | Scans | Hot Upserts | Conflicts | Index Remove Fail | Index Insert Fail |
+| aerostore | 297492.98 | 35701072 | 12.03 | 35.84 | 239.62 | 28560981 | 7140091 | 1428055 | 351605 | 0 | 0 |
+hyperfeed_crucible_engine_timing: profile=diagnostic aerostore_elapsed_secs=120.006 operation_failures=0
+hyperfeed_crucible_reclaim: profile=diagnostic vacuum_reclaimed_rows=28560981 index_retired_nodes=28560981 index_reclaimed_nodes=28560981 free_list_pushes=0 free_list_pops=0
+hyperfeed_crucible_occ: profile=diagnostic alloc_fresh=143215 reused=28769371

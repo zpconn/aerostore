@@ -1,0 +1,367 @@
+diff --git a/aerostore_core/benches/hyperfeed_crucible.rs b/aerostore_core/benches/hyperfeed_crucible.rs
+--- a/aerostore_core/benches/hyperfeed_crucible.rs
++++ b/aerostore_core/benches/hyperfeed_crucible.rs
+@@ -29,6 +29,10 @@
+ use latency_histogram::{
+     latency_bucket, merge_histograms, percentile_bounds, HIST_BUCKETS, SUBDIVISIONS,
+ };
++
++#[path = "support/crucible_seed.rs"]
++mod crucible_seed;
++use crucible_seed::{fixed_worker_seed, next_u64, parse_seed, FIXED_SEED_ALGORITHM, SEED_ENV};
+ 
+ const WORKERS: usize = 16;
+ const TOTAL_KEYS: usize = 50_000;
+@@ -541,12 +545,24 @@
+ }
+ 
+ fn bench_hyperfeed_crucible(c: &mut Criterion) {
++    // Parse once in the parent. An explicitly invalid seed must fail before
++    // allocation, Docker setup, or any worker/daemon fork.
++    let fixed_seed = parse_seed(std::env::var_os(SEED_ENV).as_deref())
++        .unwrap_or_else(|error| panic!("{SEED_ENV}: {error}"));
++    match fixed_seed {
++        Some(seed) => println!(
++            "hyperfeed_crucible_seed: mode=fixed seed={seed} algorithm={FIXED_SEED_ALGORITHM}"
++        ),
++        None => println!(
++            "hyperfeed_crucible_seed: mode=entropy seed=none algorithm=pid_time_xorshift64_v1"
++        ),
++    }
+     let duration = crucible_duration();
+     // This mode runs the identical Aerostore workload and correctness gates without
+     // requiring Docker. Comparison runs below retain all PostgreSQL performance gates.
+     if aerostore_only() {
+         for profile in selected_profiles() {
+-            let result = run_aerostore_crucible(duration, profile).unwrap_or_else(|err| {
++            let result = run_aerostore_crucible(duration, profile, fixed_seed).unwrap_or_else(|err| {
+                 panic!("aerostore diagnostic failed ({}): {err}", profile.label)
+             });
+             assert_workload_mix(&result, profile.label, "aerostore");
+@@ -554,7 +570,7 @@
+         }
+         return;
+     }
+-    let results = run_crucible(duration);
++    let results = run_crucible(duration, fixed_seed);
+ 
+     for result in &results {
+         print_results(result, duration);
+@@ -579,14 +595,14 @@
+     group.finish();
+ }
+ 
+-fn run_crucible(duration: Duration) -> Vec<ProfileRunResult> {
++fn run_crucible(duration: Duration, fixed_seed: Option<u64>) -> Vec<ProfileRunResult> {
+     let profiles = selected_profiles();
+     let mut out = Vec::with_capacity(profiles.len());
+     for profile in profiles {
+-        let aerostore = run_aerostore_crucible(duration, profile).unwrap_or_else(|err| {
++        let aerostore = run_aerostore_crucible(duration, profile, fixed_seed).unwrap_or_else(|err| {
+             panic!("aerostore crucible run failed ({}): {err}", profile.label)
+         });
+-        let postgres = run_postgres_crucible(duration, profile).unwrap_or_else(|err| {
++        let postgres = run_postgres_crucible(duration, profile, fixed_seed).unwrap_or_else(|err| {
+             panic!("postgres crucible run failed ({}): {err}", profile.label)
+         });
+         out.push(ProfileRunResult {
+@@ -814,6 +830,7 @@
+ fn run_aerostore_crucible(
+     duration: Duration,
+     profile: CrucibleProfile,
++    fixed_seed: Option<u64>,
+ ) -> Result<EngineRunResult, String> {
+     let alloc_telemetry_cfg = alloc_telemetry_config(profile.label);
+     let shm = Arc::new(ShmArena::new(profile.aerostore_shm_bytes).map_err(|err| {
+@@ -928,6 +945,7 @@
+                 table.as_ref(),
+                 &time_index,
+                 ring.clone(),
++                fixed_seed,
+             );
+         }
+ 
+@@ -1313,6 +1331,7 @@
+     table: &OccTable<CrucibleRow>,
+     time_index: &SecondaryIndex<usize>,
+     ring: SharedWalRing<RING_SLOTS, RING_SLOT_BYTES>,
++    fixed_seed: Option<u64>,
+ ) -> ! {
+     let Some(state) = RelPtr::<RunState>::from_offset(state_offset).as_ref(shm.mmap_base()) else {
+         unsafe { libc::_exit(71) };
+@@ -1323,7 +1342,7 @@
+         std::hint::spin_loop();
+     }
+ 
+-    let mut rng = seed_rng(worker_idx as u64, 0xA3E0_52D1_9911_AA11);
++    let mut rng = seed_rng(worker_idx as u64, 0xA3E0_52D1_9911_AA11, fixed_seed);
+     let mut retry = RetryBackoff::with_seed(next_u64(&mut rng), RetryPolicy::hot_key_default());
+     let mut committer = OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_asynchronous(ring);
+ 
+@@ -1486,6 +1505,7 @@
+ fn run_postgres_crucible(
+     duration: Duration,
+     _profile: CrucibleProfile,
++    fixed_seed: Option<u64>,
+ ) -> Result<EngineRunResult, String> {
+     ensure_docker_ready()?;
+     let docker = clients::Cli::default();
+@@ -1555,6 +1575,7 @@
+                 state_offset,
+                 metrics_shm.as_ref(),
+                 conn_str.as_str(),
++                fixed_seed,
+             );
+         }
+ 
+@@ -1655,7 +1676,13 @@
+     Ok(())
+ }
+ 
+-fn run_postgres_worker(worker_idx: usize, state_offset: u32, shm: &ShmArena, conn_str: &str) -> ! {
++fn run_postgres_worker(
++    worker_idx: usize,
++    state_offset: u32,
++    shm: &ShmArena,
++    conn_str: &str,
++    fixed_seed: Option<u64>,
++) -> ! {
+     let Some(state) = RelPtr::<RunState>::from_offset(state_offset).as_ref(shm.mmap_base()) else {
+         unsafe { libc::_exit(81) };
+     };
+@@ -1702,7 +1729,7 @@
+         std::hint::spin_loop();
+     }
+ 
+-    let mut rng = seed_rng(worker_idx as u64, 0xCC77_AA22_1958_3321);
++    let mut rng = seed_rng(worker_idx as u64, 0xCC77_AA22_1958_3321, fixed_seed);
+     let mut retry = RetryBackoff::with_seed(next_u64(&mut rng), RetryPolicy::hot_key_default());
+     let stats = &state.workers[worker_idx];
+ 
+@@ -2730,7 +2757,10 @@
+ }
+ 
+ #[inline]
+-fn seed_rng(worker: u64, salt: u64) -> u64 {
++fn seed_rng(worker: u64, salt: u64, fixed_seed: Option<u64>) -> u64 {
++    if let Some(seed) = fixed_seed {
++        return fixed_worker_seed(seed, worker, salt);
++    }
+     let pid = unsafe { libc::getpid() as u64 };
+     let now = SystemTime::now()
+         .duration_since(UNIX_EPOCH)
+@@ -2747,18 +2777,5 @@
+     state
+ }
+ 
+-#[inline]
+-fn next_u64(state: &mut u64) -> u64 {
+-    let mut x = *state;
+-    x ^= x << 13;
+-    x ^= x >> 7;
+-    x ^= x << 17;
+-    if x == 0 {
+-        x = 1;
+-    }
+-    *state = x;
+-    x
+-}
+-
+ criterion_group!(benches, bench_hyperfeed_crucible);
+ criterion_main!(benches);
+diff --git a/aerostore_core/benches/support/crucible_seed.rs b/aerostore_core/benches/support/crucible_seed.rs
+new file mode 100644
+--- /dev/null
++++ b/aerostore_core/benches/support/crucible_seed.rs
+@@ -0,0 +1,46 @@
++//! Optional reproducible per-worker row-choice seeds. This does not fix thread
++//! scheduling, timestamp assignment, retry outcomes, or complete histories.
++use std::ffi::OsStr;
++
++pub const SEED_ENV: &str = "AEROSTORE_CRUCIBLE_SEED";
++pub const FIXED_SEED_ALGORITHM: &str = "worker_add_xorshift64_v1";
++
++/// No seed preserves entropy-based behavior; a provided invalid seed is an error.
++/// Parsing is pure so tests never mutate process-global environment variables.
++pub fn parse_seed(raw: Option<&OsStr>) -> Result<Option<u64>, &'static str> {
++    let Some(raw) = raw else { return Ok(None) };
++    let text = raw.to_str().ok_or("expected an ASCII decimal u64")?;
++    if text.is_empty() || !text.bytes().all(|byte| byte.is_ascii_digit()) {
++        return Err("expected an ASCII decimal u64");
++    }
++    text.parse::<u64>()
++        .map(Some)
++        .map_err(|_| "decimal seed exceeds u64::MAX")
++}
++
++#[inline]
++pub fn fixed_worker_seed(seed: u64, worker: u64, salt: u64) -> u64 {
++    let state = worker
++        .wrapping_mul(0x9E37_79B9_7F4A_7C15)
++        .wrapping_add(seed)
++        .wrapping_add(salt);
++    if state == 0 {
++        1
++    } else {
++        state
++    }
++}
++
++/// Original Crucible generator, shared with seed tests without changing draws.
++#[inline]
++pub fn next_u64(state: &mut u64) -> u64 {
++    let mut x = *state;
++    x ^= x << 13;
++    x ^= x >> 7;
++    x ^= x << 17;
++    if x == 0 {
++        x = 1;
++    }
++    *state = x;
++    x
++}
+diff --git a/aerostore_core/tests/crucible_seed.rs b/aerostore_core/tests/crucible_seed.rs
+new file mode 100644
+--- /dev/null
++++ b/aerostore_core/tests/crucible_seed.rs
+@@ -0,0 +1,140 @@
++#[path = "../benches/support/crucible_seed.rs"]
++mod crucible_seed;
++
++use std::collections::HashSet;
++use std::ffi::OsStr;
++
++use crucible_seed::{fixed_worker_seed, next_u64, parse_seed, FIXED_SEED_ALGORITHM, SEED_ENV};
++
++#[test]
++fn absence_is_distinct_from_explicit_zero_and_both_u64_boundaries_are_accepted() {
++    assert_eq!(SEED_ENV, "AEROSTORE_CRUCIBLE_SEED");
++    assert_eq!(FIXED_SEED_ALGORITHM, "worker_add_xorshift64_v1");
++    assert_eq!(parse_seed(None), Ok(None));
++    for (text, value) in [
++        ("0", 0),
++        ("00000", 0),
++        ("1", 1),
++        ("2026092301", 2026092301),
++        ("18446744073709551615", u64::MAX),
++    ] {
++        assert_eq!(parse_seed(Some(OsStr::new(text))), Ok(Some(value)));
++    }
++}
++
++#[test]
++fn invalid_provided_seeds_fail_instead_of_using_entropy() {
++    for text in [
++        "",
++        " ",
++        " 1",
++        "1 ",
++        "1\n",
++        "+1",
++        "-1",
++        "1.0",
++        "1e2",
++        "0x12",
++        "18446744073709551616",
++        "99999999999999999999999999999999999999999999",
++        "١",
++        "none",
++    ] {
++        assert!(
++            parse_seed(Some(OsStr::new(text))).is_err(),
++            "accepted {text:?}"
++        );
++    }
++}
++
++#[cfg(unix)]
++#[test]
++fn non_unicode_provided_seed_is_rejected_without_environment_mutation() {
++    use std::os::unix::ffi::OsStrExt;
++    assert!(parse_seed(Some(OsStr::from_bytes(&[0xff]))).is_err());
++}
++
++#[test]
++fn seed_worker_and_existing_engine_salt_each_affect_the_worker_state() {
++    let mut states = HashSet::new();
++    for seed in [0, 1, u64::MAX] {
++        for worker in 0..16 {
++            for salt in [0xA3E0_52D1_9911_AA11, 0xCC77_AA22_1958_3321] {
++                let state = fixed_worker_seed(seed, worker, salt);
++                assert_ne!(state, 0);
++                assert_eq!(state, fixed_worker_seed(seed, worker, salt));
++                assert!(states.insert(state), "unexpected fixture-state collision");
++            }
++        }
++    }
++    assert_eq!(states.len(), 96);
++}
++
++#[test]
++fn wrapping_zero_state_is_normalized_without_rejecting_seed_zero() {
++    assert_eq!(fixed_worker_seed(0, 0, 0), 1);
++    assert_eq!(fixed_worker_seed(u64::MAX, 0, 1), 1);
++    let mut state = fixed_worker_seed(0, 0, 0);
++    assert_ne!(next_u64(&mut state), 0);
++}
++
++#[test]
++fn fixed_seeds_reproduce_the_initial_retry_draw_and_following_workload_draws() {
++    let cases = [
++        (
++            0,
++            0,
++            0xA3E0_52D1_9911_AA11,
++            11808529283135154705,
++            [
++                9406193496257277189,
++                9547888588708302367,
++                3214740728031298627,
++                1150336892143707659,
++                14645058260259751303,
++                15671131939985430988,
++            ],
++        ),
++        (
++            2026092301,
++            7,
++            0xA3E0_52D1_9911_AA11,
++            17826556725585429937,
++            [
++                17103565902084060282,
++                204318839596778130,
++                16501298228645644823,
++                7259158590259512899,
++                15552639714370158351,
++                1385428799333271601,
++            ],
++        ),
++        (
++            u64::MAX,
++            15,
++            0xCC77_AA22_1958_3321,
++            1276713322149148763,
++            [
++                10177195725116105835,
++                11772064569553537123,
++                1651743996599424563,
++                3934310641067546719,
++                7425754279215141423,
++                13866168508752072907,
++            ],
++        ),
++    ];
++    for (seed, worker, salt, initial, expected) in cases {
++        let mut state = fixed_worker_seed(seed, worker, salt);
++        assert_eq!(state, initial);
++        // The worker uses the first draw to seed its independent RetryBackoff;
++        // later draws select rows. Keep that existing draw sequence intact.
++        for draw in expected {
++            assert_eq!(next_u64(&mut state), draw);
++        }
++        let mut replay = fixed_worker_seed(seed, worker, salt);
++        for draw in expected {
++            assert_eq!(next_u64(&mut replay), draw);
++        }
++    }
++}

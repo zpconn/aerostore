@@ -1,0 +1,11 @@
+
+running 1 test
+test shm_skiplist::tests::removal_window_detaches_every_lane_before_pinned_retirement_and_shorter_reuse ... remove_window_fallback_entered
+remove_window_fallback_entered
+remove_window_fallback_entered
+remove_window_fallback_entered
+remove_window_fallback_entered
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 194 filtered out; finished in 0.00s
+

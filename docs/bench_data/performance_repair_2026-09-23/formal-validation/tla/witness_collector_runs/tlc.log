@@ -1,0 +1,36 @@
+TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 2985] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-nvadkrmt/CollectorPriority.tla
+Parsing file /tmp/tlc-5316825862260665733/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Semantic processing of module Naturals
+Semantic processing of module CollectorPriority
+Linting of module CollectorPriority
+Starting... (2026-09-23 14:02:13)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-09-23 14:02:13.
+Error: Invariant WitnessNotReached is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ owner = "Free"
+/\ done = FALSE
+/\ waiting = FALSE
+/\ fgPhase = "Idle"
+/\ acquiredWhileWaiting = FALSE
+
+State 2: <Request line 11, col 12 to line 12, col 70 of module CollectorPriority>
+/\ waiting = TRUE
+
+State 3: <CollectorAcquire line 34, col 5 to line 35, col 65 of module CollectorPriority>
+/\ owner = "Collector"
+/\ waiting = TRUE
+
+State 4: <CollectorFinish line 37, col 5 to line 38, col 50 of module CollectorPriority>
+/\ owner = "Free"
+/\ done = TRUE
+/\ waiting = FALSE
+/\ fgPhase = "Idle"
+/\ acquiredWhileWaiting = FALSE
+
+7 states generated, 7 distinct states found, 2 states left on queue.
+The depth of the complete state graph search is 4.
+Finished in 00s at (2026-09-23 14:02:13)

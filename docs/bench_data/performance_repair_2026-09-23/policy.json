@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "declared_utc": "2026-09-23T18:30:49Z",
+  "control_commit": "9676fa9ff602565d5a628af41b6d40ba1576a8b9",
+  "purpose": "Finite independent screens of two source-motivated optimizations after correctness repair",
+  "candidates": [
+    "wal-reuse",
+    "remove-window"
+  ],
+  "combined_candidate_rule": "Only consider a combined candidate if independent results support the contributing candidates; no repeated attempts to seek a pass",
+  "pairs": 3,
+  "duration_seconds": 30,
+  "order": [
+    [
+      "baseline",
+      "candidate"
+    ],
+    [
+      "candidate",
+      "baseline"
+    ],
+    [
+      "baseline",
+      "candidate"
+    ]
+  ],
+  "workers": 16,
+  "rows": 50000,
+  "shm_mib": 128,
+  "minimum_median_throughput_ratio": 1.03,
+  "minimum_individual_throughput_ratio": 1.0,
+  "maximum_median_p99_ratio": 1.1,
+  "maximum_individual_p99_ratio": 1.25,
+  "maximum_within_variant_relative_range": 0.1,
+  "unchanged_regression_policy": {
+    "minimum_pairs": 3,
+    "throughput_median_ratio_min": 0.95,
+    "throughput_pair_ratio_min": 0.9,
+    "p99_median_ratio_max": 1.1,
+    "p99_pair_ratio_max": 1.25,
+    "relative_range_noise_max": 0.1,
+    "retry_ratio_max": 1.2,
+    "retry_rate_absolute_slack": 0.02,
+    "arena_ratio_max": 1.05,
+    "arena_absolute_slack_bytes": 1048576
+  },
+  "comparison_library_sha256": "c828c61bed2d1d93e04e2921e428c2eefc55541bacad7ddc276bd6d2acf1a843",
+  "p99_comparison": "Exact inclusive nanosecond histogram intervals; conservative entire ratio bound must satisfy the threshold. Excess variability or threshold overlap prevents support.",
+  "required": "Every run passes existing correctness, allocation, GC and stability checks; unchanged paired retry/arena limits",
+  "all_results_retained": true,
+  "performance_acceptance": false,
+  "speedup_claim": false,
+  "full_original_baseline_campaign_required": true,
+  "quiet_window": "No overlapping builds, tests, provers, profiler or benchmark jobs; preserved executables only",
+  "inconclusive_followup": "Sparse separate phase/lock/queue instrumentation or controlled longer study; do not repeat short screens seeking green",
+  "workload_seed_limitation": "Original Crucible seed_rng mixes worker/salt with PID and SystemTime. These paired runs share the operation distribution and fixture, but not exact row-choice PRNG streams. Scheduler and input-sequence effects cannot be separated from these outputs. Preserve fixture unchanged for both first diagnostics; any future deterministic-seed patch must be identical on both references and candidates."
+}

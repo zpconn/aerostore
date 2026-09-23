@@ -1,0 +1,255 @@
+--- a/aerostore_core/src/shm_skiplist.rs
++++ b/aerostore_core/src/shm_skiplist.rs
+@@ -856,7 +856,9 @@
+         if Self::validate_payload_args(payload_len, payload).is_err() {
+             return Ok(());
+         }
+-        let Some(node_offset) = self.find_live_node_offset(key)? else {
++        let mut preds = [NULL_OFFSET; MAX_HEIGHT];
++        let mut succs = [NULL_OFFSET; MAX_HEIGHT];
++        let Some(node_offset) = self.find_live_node_offset(key, &mut preds, &mut succs)? else {
+             return Ok(());
+         };
+         let node = self
+@@ -876,7 +878,7 @@
+                 self.mark_tombstone_seen();
+                 if self.decrement_live_postings(node) == 0 {
+                     // The last posting is reclaimed with its node.
+-                    self.unlink_node(key, node_offset)?;
++                    self.unlink_node(key, node_offset, &mut preds, &mut succs)?;
+                 } else {
+                     // Readers holding `post` may still follow its next pointer. Keep
+                     // that pointer and payload immutable until their epochs finish.
+@@ -2170,7 +2172,15 @@
+         Ok(None)
+     }
+ 
+-    fn unlink_node(&self, key: &K, node_offset: u32) -> Result<(), ShmSkipListError> {
++    // Requires the same mutation guard that protected the search producing
++    // preds/succs. No structural mutation may intervene before this call.
++    fn unlink_node(
++        &self,
++        key: &K,
++        node_offset: u32,
++        preds: &mut [u32; MAX_HEIGHT],
++        succs: &mut [u32; MAX_HEIGHT],
++    ) -> Result<(), ShmSkipListError> {
+         let node = self
+             .node_ref(node_offset)
+             .ok_or(ShmSkipListError::InvalidNode(node_offset))?;
+@@ -2210,11 +2220,37 @@
+         // Ensure the node is detached from every lane before retiring its offsets.
+         // If we retire after only level-0 is unlinked, stale upper-lane pointers can
+         // survive long enough to hit recycled offsets and trigger structural retries.
+-        let mut preds = [NULL_OFFSET; MAX_HEIGHT];
+-        let mut succs = [NULL_OFFSET; MAX_HEIGHT];
+-        loop {
+-            let _ = self.find(key, &mut preds, &mut succs)?;
+-            let mut detached_all = true;
++        // The initial find already supplies every predecessor of this fully
++        // linked node. The mutation guard excludes insertion, unlink and GC;
++        // posting deletion and marking above cannot invalidate those links.
++        // Reuse that window instead of searching the entire list a second time.
++        let mut detached_all = true;
++        for level in (0..height).rev() {
++            if succs[level] != node_offset {
++                detached_all = false;
++                break;
++            }
++            let pred_lane = self.lane_ref_by_offset(preds[level], level)?;
++            let next = self.node_next_offset(node_offset, level)?;
++            if pred_lane
++                .next
++                .compare_exchange(
++                    node_offset,
++                    next,
++                    AtomicOrdering::AcqRel,
++                    AtomicOrdering::Acquire,
++                )
++                .is_err()
++            {
++                detached_all = false;
++                break;
++            }
++        }
++        // Preserve the original helping/recheck path if a window is incomplete
++        // or a link unexpectedly changed. Never retire after a partial detach.
++        while !detached_all {
++            let _ = self.find(key, preds, succs)?;
++            detached_all = true;
+             for level in (0..height).rev() {
+                 if succs[level] != node_offset {
+                     continue;
+@@ -2327,10 +2363,13 @@
+         }
+     }
+ 
+-    fn find_live_node_offset(&self, key: &K) -> Result<Option<u32>, ShmSkipListError> {
+-        let mut preds = [NULL_OFFSET; MAX_HEIGHT];
+-        let mut succs = [NULL_OFFSET; MAX_HEIGHT];
+-        let Some(node_offset) = self.find(key, &mut preds, &mut succs)? else {
++    fn find_live_node_offset(
++        &self,
++        key: &K,
++        preds: &mut [u32; MAX_HEIGHT],
++        succs: &mut [u32; MAX_HEIGHT],
++    ) -> Result<Option<u32>, ShmSkipListError> {
++        let Some(node_offset) = self.find(key, preds, succs)? else {
+             return Ok(None);
+         };
+         let node = self
+@@ -3956,6 +3995,154 @@
+         visible
+     }
+ 
++    // Seed the existing height generator rather than altering published lanes.
++    fn insert_with_height(list: &ShmSkipList<TestKey>, key: i64, payload: u32, height: usize) {
++        fn undo_left(value: u64, shift: u32) -> u64 {
++            let mut restored = value;
++            for _ in 0..64 / shift {
++                restored = value ^ (restored << shift);
++            }
++            restored
++        }
++        fn undo_right(value: u64, shift: u32) -> u64 {
++            let mut restored = value;
++            for _ in 0..64 / shift {
++                restored = value ^ (restored >> shift);
++            }
++            restored
++        }
++        assert!((1..=MAX_HEIGHT).contains(&height));
++        let random = 1_u64 << (height - 1);
++        let seed = undo_left(undo_right(undo_left(random, 17), 7), 13);
++        assert_eq!(xorshift64(seed), random);
++        list.header_ref()
++            .unwrap()
++            .rng_state
++            .store(seed, AtomicOrdering::Release);
++        list.insert_payload(TestKey(key), 4, &payload.to_le_bytes())
++            .unwrap();
++        let node = list.find_readonly_exact(&TestKey(key)).unwrap().unwrap();
++        assert_eq!(list.node_ref(node).unwrap().height as usize, height);
++    }
++
++    #[test]
++    fn removal_window_detaches_every_lane_before_pinned_retirement_and_shorter_reuse() {
++        let list = make_list();
++        // Different predecessors and successors at different levels prevent
++        // accidentally treating the level-zero window as the whole tower.
++        let shapes = [
++            (0, MAX_HEIGHT),
++            (10, 1),
++            (20, 7),
++            (30, MAX_HEIGHT),
++            (40, 3),
++            (50, MAX_HEIGHT),
++        ];
++        for &(key, height) in &shapes {
++            insert_with_height(&list, key, key as u32, height);
++        }
++        list.insert_payload(TestKey(30), 4, &31_u32.to_le_bytes())
++            .unwrap();
++        let original_offset = list.find_readonly_exact(&TestKey(30)).unwrap().unwrap();
++        let original_tower = list.node_ref(original_offset).unwrap().tower_offset;
++        let original_next: Vec<_> = (0..MAX_HEIGHT)
++            .map(|level| list.node_next_offset(original_offset, level).unwrap())
++            .collect();
++        let epoch = ProcArrayEpochGuard::acquire(list.shm.as_ref()).unwrap();
++
++        // Removing one posting must preserve every lane of a still-live key.
++        list.remove_payload(&TestKey(30), 4, &31_u32.to_le_bytes())
++            .unwrap();
++        assert_eq!(list.retired_nodes(), 0);
++        for level in 0..MAX_HEIGHT {
++            assert!(level_entries(&list, level)
++                .iter()
++                .any(|(offset, _, _, _)| *offset == original_offset));
++        }
++        assert_eq!(list.count_payloads(&TestKey(30)).unwrap(), 1);
++        list.remove_payload(&TestKey(30), 4, &30_u32.to_le_bytes())
++            .unwrap();
++        assert_eq!(list.retired_nodes(), 1);
++        assert_eq!(list.distinct_key_count(), 5);
++        for level in 0..MAX_HEIGHT {
++            let expected: Vec<_> = shapes
++                .iter()
++                .filter(|(key, height)| *key != 30 && *height > level)
++                .map(|(key, _)| *key)
++                .collect();
++            let actual: Vec<_> = level_entries(&list, level)
++                .iter()
++                .map(|(_, key, _, _)| *key)
++                .collect();
++            assert_eq!(
++                actual, expected,
++                "removed node remains reachable in lane {level}"
++            );
++            assert_eq!(
++                list.node_next_offset(original_offset, level).unwrap(),
++                original_next[level],
++                "a pinned reader's successor changed in lane {level}"
++            );
++        }
++        assert_eq!(list.node_ref(original_offset).unwrap().key, TestKey(30));
++        let retired = list.audit_allocations().unwrap();
++        assert_eq!(retired.retired.nodes, 1);
++        assert_eq!(retired.retired.postings, 2);
++        assert_eq!(list.collect_garbage_once(usize::MAX), 0);
++        assert_eq!(list.audit_allocations().unwrap(), retired);
++        // Removing a missing payload/key cannot enqueue duplicate retirement.
++        list.remove_payload(&TestKey(30), 4, &30_u32.to_le_bytes())
++            .unwrap();
++        assert_eq!(list.audit_allocations().unwrap(), retired);
++        drop(epoch);
++        assert_eq!(list.collect_garbage_once(usize::MAX), 1);
++        assert_eq!(list.retired_nodes(), 0);
++        let reclaimed = list.audit_allocations().unwrap();
++        assert_eq!(reclaimed.retired, ShmSkipAllocationCounts::default());
++
++        // Reuse that same node and its tall physical tower for a one-lane key.
++        // Any stale upper predecessor would now point at a too-short live node.
++        insert_with_height(&list, 35, 35, 1);
++        let reused = list.find_readonly_exact(&TestKey(35)).unwrap().unwrap();
++        assert_eq!(reused, original_offset);
++        assert_eq!(list.node_ref(reused).unwrap().tower_offset, original_tower);
++        assert_eq!(
++            list.node_ref(reused).unwrap().tower_capacity as usize,
++            MAX_HEIGHT
++        );
++        for level in 1..MAX_HEIGHT {
++            assert!(!level_entries(&list, level)
++                .iter()
++                .any(|(offset, _, _, _)| *offset == reused));
++        }
++        for key in [0, 10, 20, 35, 40, 50] {
++            assert_eq!(list.count_payloads(&TestKey(key)).unwrap(), 1);
++        }
++        assert_eq!(list.count_payloads(&TestKey(30)).unwrap(), 0);
++        let reused_audit = list.audit_allocations().unwrap();
++        assert_eq!(reused_audit.allocated, reclaimed.allocated);
++        // Remove head, tail, middle and the shortened reused tower in turn.
++        let mut remaining = vec![0, 10, 20, 35, 40, 50];
++        for key in [0, 50, 35, 20, 10, 40] {
++            list.remove_payload(&TestKey(key), 4, &(key as u32).to_le_bytes())
++                .unwrap();
++            remaining.retain(|value| *value != key);
++            assert_eq!(
++                level_entries(&list, 0)
++                    .iter()
++                    .map(|(_, key, _, _)| *key)
++                    .collect::<Vec<_>>(),
++                remaining
++            );
++            list.audit_allocations().unwrap();
++            list.collect_garbage_once(usize::MAX);
++            list.audit_allocations().unwrap();
++        }
++        for level in 0..MAX_HEIGHT {
++            assert!(level_entries(&list, level).is_empty());
++        }
++    }
++
+     #[test]
+     fn allocation_audit_accounts_for_churn_retirement_and_reuse() {
+         let list = make_list();

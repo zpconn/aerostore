@@ -1,0 +1,19 @@
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/target/performance-repair/wal-reuse/source/aerostore_core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.05s
+     Running unittests src/lib.rs (/home/zpconn/code/aerostore/target/performance-repair/wal-reuse/cargo-target/debug/deps/aerostore_core-458b83ba28fefdf8)
+
+running 6 tests
+
+thread 'wal_ring::reusable_buffer_tests::serializer_unwind_releases_oversized_output_and_restarts_scratch' (313) panicked at aerostore_core/src/wal_ring.rs:939:17:
+injected after partial archive
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test wal_ring::reusable_buffer_tests::serializer_error_restarts_cursor_and_discards_partial_record ... ok
+test wal_ring::reusable_buffer_tests::serializer_unwind_releases_oversized_output_and_restarts_scratch ... ok
+wal_serializer_heap_evidence: iterations=100 original_allocations=200 original_reallocations=800 original_deallocations=200 original_allocated_bytes=870300 original_scratch_8192_allocations=100 reused_allocations=0 reused_reallocations=0 reused_deallocations=0 reused_allocated_bytes=0
+test wal_ring::reusable_buffer_tests::repeated_frames_reuse_both_output_and_scratch_backing_allocations ... ok
+test wal_ring::reusable_buffer_tests::warmed_outer_serialization_eliminates_output_and_scratch_heap_allocations ... ok
+test wal_ring::reusable_buffer_tests::reusable_serialization_matches_legacy_bytes_for_varied_and_repeated_records ... ok
+test wal_ring::reusable_buffer_tests::successful_oversized_frame_is_valid_but_not_retained_between_calls ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 197 filtered out; finished in 0.01s
+

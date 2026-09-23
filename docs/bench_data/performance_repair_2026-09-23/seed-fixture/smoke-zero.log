@@ -1,0 +1,20 @@
+Gnuplot not found, using plotters backend
+hyperfeed_crucible_seed: mode=fixed seed=0 algorithm=worker_add_xorshift64_v1
+hyperfeed_crucible_interval: profile=diagnostic elapsed_secs=1.049 interval_secs=1.049 interval_tps=272723.91 total_ops=286041 arena_head_bytes=32006496 fresh_bytes=11845792 reclaimed_nodes=228955 retired_backlog=0 alloc_failure_events=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_fresh: profile=diagnostic elapsed_secs=1.049 general_bytes=0 row_version_bytes=9653160 skip_node_bytes=1553904 skip_posting_bytes=494424 skip_tower_bytes=144304 spill_bytes=0
+hyperfeed_crucible_correctness: profile=diagnostic table_rows=50000 index_postings=50000 exact_match=true
+hyperfeed_crucible_stability: profile=diagnostic status=short_run arena_head_bytes=32006496
+hyperfeed_crucible_gc_drain: profile=diagnostic retired_backlog=0 gc_recycle_errors=0 retired_postings=0 reclaimed_postings=0
+hyperfeed_crucible_allocation_class: profile=diagnostic class=nodes allocated=58830 reachable=50001 retired=0 reusable=8829
+hyperfeed_crucible_allocation_class: profile=diagnostic class=postings allocated=58829 reachable=50000 retired=0 reusable=8829
+hyperfeed_crucible_allocation_class: profile=diagnostic class=towers allocated=58834 reachable=50001 retired=0 reusable=8833
+hyperfeed_crucible_allocation_class: profile=diagnostic class=tower_lanes allocated=118612 reachable=100601 retired=0 reusable=18011
+hyperfeed_crucible_allocation_audit: profile=diagnostic status=pass
+hyperfeed_crucible_retry: profile=diagnostic max_insert_attempts=1 pressure_state=0 retry_alloc=0 gc_recycle_errors=0
+hyperfeed_crucible_latency_bounds: profile=diagnostic engine=aerostore histogram_subdivisions=64 samples=286041 p99_lower_ns=196608 p99_upper_ns=198655
+hyperfeed_crucible_config: profile=diagnostic mode=aerostore_only aerostore_shm_bytes=134217728 workers=16
+| Engine | TPS | Total Ops | p50 upper (us) | p90 upper (us) | p99 upper (us) | Upserts | Scans | Hot Upserts | Conflicts | Index Remove Fail | Index Insert Fail |
+| aerostore | 284255.47 | 286041 | 16.00 | 41.98 | 198.66 | 228955 | 57086 | 11452 | 2681 | 0 | 0 |
+hyperfeed_crucible_engine_timing: profile=diagnostic aerostore_elapsed_secs=1.006 operation_failures=0
+hyperfeed_crucible_reclaim: profile=diagnostic vacuum_reclaimed_rows=199982 index_retired_nodes=228955 index_reclaimed_nodes=228955 free_list_pushes=0 free_list_pops=0
+hyperfeed_crucible_occ: profile=diagnostic alloc_fresh=109695 reused=121941

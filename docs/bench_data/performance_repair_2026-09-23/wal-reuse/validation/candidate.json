@@ -1,0 +1,30 @@
+{
+  "parent_commit": "9676fa9ff602565d5a628af41b6d40ba1576a8b9",
+  "source": "/home/zpconn/code/aerostore/target/performance-repair/wal-reuse/source",
+  "changed_files": {
+    "aerostore_core/src/wal_ring.rs": {
+      "before_sha256": "c32500ea26baf0602777fcd3dce1c7ecd558b410197668564f747796fc4eab4c",
+      "after_sha256": "34658df2fdf26ddbc7f6bd2c06ba02d5c855173fff7d8ae3b3f138d258046cfb"
+    },
+    "aerostore_core/src/wal_writer.rs": {
+      "before_sha256": "619be861775b8b1942750f427d6ecef55abc5e208fb165e5dd4c6cf5d123a70a",
+      "after_sha256": "4cc0788e4bd1c97cb048567a6a9b0eed66306ced3e0d0ea44686f8587dd393cd"
+    },
+    "aerostore_core/tests/wal_serializer_allocations.rs": {
+      "before_sha256": null,
+      "after_sha256": "aa6bad4a624241f028f6d04c3ffb676e5defc3c432b41916b50e6b70ff32669e"
+    }
+  },
+  "only_expected_files_changed": true,
+  "patch": "wal-reuse.patch",
+  "patch_sha256": "a35030cfae54b0e61879821135741b78bfd905a41d863cec0dda0f824961345d",
+  "validation": "validation.json",
+  "retained_bytes_per_committer": {
+    "scratch": 8192,
+    "maximum_output_capacity": 65536,
+    "maximum_backing_total": 73728,
+    "excludes": "object bookkeeping, allocator metadata, codec temporaries and existing baseline-row cache"
+  },
+  "protocol_or_driver_changes": false,
+  "performance_acceptance": false
+}

@@ -1,0 +1,45 @@
+{
+  "baseline_check_command": [
+    "python3",
+    "/home/zpconn/code/aerostore/target/performance-repair/formal-remove-window/baseline_check_formal_coverage.py",
+    "--root",
+    "/home/zpconn/code/aerostore",
+    "--baseline-ref",
+    "9676fa9ff602565d5a628af41b6d40ba1576a8b9"
+  ],
+  "baseline_checker_sha256": "b04a09afb8b1b7e0e6998f1990daceb84c74b7b018e389587b6f8616b00593ea",
+  "baseline_rejection": {
+    "anchoring": "independent_git_baseline",
+    "baseline_ref": "9676fa9ff602565d5a628af41b6d40ba1576a8b9",
+    "checked_files": 178,
+    "errors": [
+      "frozen boundary path set changed; review new/deleted engine or contract files",
+      "frozen boundary changed: aerostore_core/benches/hyperfeed_crucible.rs",
+      "frozen boundary changed: aerostore_core/src/shm_skiplist.rs",
+      "frozen boundary changed: scripts/compare_engine_performance.py",
+      "frozen boundary changed: scripts/test_compare_engine_performance.py",
+      "frozen boundary changed: scripts/verify_formal.py",
+      "frozen boundary changed: verification/concurrent/README.md",
+      "frozen boundary changed: verification/contracts/transactions.md"
+    ],
+    "open_claims": [
+      "TX-HISTORY-IMPLEMENTATION",
+      "MEMORY-OWNERSHIP",
+      "MEMORY-PROGRESS",
+      "WEAK-MEMORY-MMAP",
+      "DURABILITY-IMPLEMENTATION",
+      "QUERY-APPLICATION"
+    ],
+    "passed": false,
+    "scope": "change detection only; not a whole-engine refinement proof"
+  },
+  "baseline_rejection_exit_code": 1,
+  "baseline_revision": "9676fa9ff602565d5a628af41b6d40ba1576a8b9",
+  "format_version": 1,
+  "independently_approved": false,
+  "performance_accepted": false,
+  "proposal_only": true,
+  "proposed_boundary_sha256": "cbfad1782ea984c0783ce00550a68e31536c0fe1328cba9c909458d0693391f0",
+  "refresh_exit_code": 0,
+  "whole_engine_verified": false
+}

@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "declared_utc": "2026-09-23T18:52:51Z",
+  "reason": "A single prospectively declared controlled longer study after retained short-study tail noise; not a repeated30-second screen",
+  "baseline": "a382ce3 original baseline-fine plus identical optional-seed fixture",
+  "candidate": "exact isolated remove-window from9676fa9 plus the same fixture; no WALreuse or lock-policy change",
+  "paired_churn_seeds": [
+    2026092301,
+    2026092302,
+    2026092303
+  ],
+  "sustained_churn_seed": 2026092399,
+  "seed_algorithm": "worker_add_xorshift64_v1",
+  "workload_order": [
+    "extended_64f_128c_8w",
+    "extended_256f_32c_16w",
+    "wal_sync_async_10000",
+    "churn_128m_120s",
+    "churn_128m_240s"
+  ],
+  "paired_timing_pairs": 3,
+  "paired_order": [
+    [
+      "baseline",
+      "candidate"
+    ],
+    [
+      "candidate",
+      "baseline"
+    ],
+    [
+      "baseline",
+      "candidate"
+    ]
+  ],
+  "duration_seconds": {
+    "paired_churn": 120,
+    "sustained_churn": 240
+  },
+  "fixed_policy": {
+    "minimum_pairs": 3,
+    "throughput_median_ratio_min": 0.95,
+    "throughput_pair_ratio_min": 0.9,
+    "p99_median_ratio_max": 1.1,
+    "p99_pair_ratio_max": 1.25,
+    "relative_range_noise_max": 0.1,
+    "retry_ratio_max": 1.2,
+    "retry_rate_absolute_slack": 0.02,
+    "arena_ratio_max": 1.05,
+    "arena_absolute_slack_bytes": 1048576
+  },
+  "decision": "All required workloads complete and every existing fixed correctness/resource/effect/noise/resolution gate passes; no missing/noisy result can approve performance. No speedup claim from this screen.",
+  "input_scope": "Same explicit per-worker PRNG prefixes within each pair, not identical schedules, operation counts or event timestamps. Different predeclared seeds across pairs are intentional workload diversity. Existing fixed10% variability ceiling still applies across those seeds.",
+  "required_before_timing": [
+    "same exactfixturepatch on both captures with reverse transition to parentverified",
+    "sameRust1.93.1 compiler, profiles, defaultfeatures, fixtures",
+    "mainnative source matches candidatecapture",
+    "fresh required sourcebound formal/nativevalidation",
+    "all builds/tests/provers stopped and quietwindowconfirmed"
+  ],
+  "historical_results_unchanged": true,
+  "unseeded_short_removal_result": "inconclusive_noise; no diagnostic support",
+  "additional_control": "Archive9676+seedfixture for reproducibility; do not build/time it without a separately justified need",
+  "performance_acceptance": false,
+  "complete_campaign_required": true
+}

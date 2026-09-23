@@ -1,0 +1,5 @@
+Gnuplot not found, using plotters backend
+
+thread 'main' (7007) panicked at aerostore_core/benches/hyperfeed_crucible.rs:551:33:
+AEROSTORE_CRUCIBLE_SEED: decimal seed exceeds u64::MAX
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

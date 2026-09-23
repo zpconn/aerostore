@@ -1,0 +1,37 @@
+{
+  "parent_commit": "9676fa9ff602565d5a628af41b6d40ba1576a8b9",
+  "passed": true,
+  "source_stable": true,
+  "main_source_stable": true,
+  "candidate_source": "/home/zpconn/code/aerostore/target/performance-repair/remove-window/source",
+  "changed_files": [
+    "aerostore_core/src/shm_skiplist.rs"
+  ],
+  "candidate_shm_skiplist_sha256": "a3b8862e481cb9a95345d9eafc88d8f2bdb102b28f001d70c7e01fd581f7c184",
+  "patch_sha256": "8b3ea5c15a431ebed5b54f2d6ef10626f8ea8b695e77525172e666c56bc23ce3",
+  "native_validation_receipt_sha256": "aa1c5f91d51890d2dfef1e71eedb587d5076020292812fe9c06091c27ad3765b",
+  "search_count_receipt_sha256": "d48deecd35eb69392ece05e1a68dbaa234dc04339a49ffc7611385a01c82fd6c",
+  "lock_model_receipt_sha256": "7a078e7cb903a3547d88cb52777c5d44ffbe2fa87a723ff46109252fd4f51c6b",
+  "native_regression_tests_passed": 95,
+  "baseline_regression_passed": true,
+  "upper_lane_omission_mutant_rejected": true,
+  "normal_last_posting_find_calls": {
+    "baseline": 2,
+    "candidate": 1
+  },
+  "performance_measured": false,
+  "native_full_refinement_proved": false,
+  "unbounded_progress_proved": false,
+  "new_runtime_lock_or_allocation": false,
+  "fallback_receipt_sha256": "2ab6f141c13309da937ffc76a98c40bbbc2ed936ee3bb4f6d7d751a66be60e7e",
+  "fallback_controls": {
+    "successor-mismatch": {
+      "passed": true,
+      "fallback_entries": 5
+    },
+    "cas-mismatch": {
+      "passed": true,
+      "fallback_entries": 5
+    }
+  }
+}

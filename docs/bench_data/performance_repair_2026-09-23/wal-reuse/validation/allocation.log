@@ -1,0 +1,22 @@
+warning: method `commit_with_record_before_publish` is never used
+    --> aerostore_core/src/occ_partitioned.rs:1256:19
+     |
+ 357 | impl<T: Copy + Send + Sync + 'static> OccTable<T> {
+     | ------------------------------------------------- method in this implementation
+...
+1256 |     pub(crate) fn commit_with_record_before_publish<E, F>(
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `aerostore_core` (lib) generated 1 warning
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/target/performance-repair/wal-reuse/source/aerostore_core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/wal_serializer_allocations.rs (/home/zpconn/code/aerostore/target/performance-repair/wal-reuse/cargo-target/debug/deps/wal_serializer_allocations-a953671e8425ce97)
+
+running 1 test
+wal_serializer_allocation_evidence: commits=100 allocations=1400 reallocations=0 deallocations=1400 allocated_bytes=51900 scratch_8192_allocations=0
+test warmed_native_commits_do_not_reallocate_the_8192_byte_serialization_scratch ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

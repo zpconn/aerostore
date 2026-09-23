@@ -1,0 +1,88 @@
+{
+  "passed": true,
+  "status": "passed",
+  "scope": "cfg-test-only exact call count; not throughput evidence",
+  "checks": [
+    {
+      "name": "baseline",
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--release",
+        "--manifest-path",
+        "/home/zpconn/code/aerostore/target/performance-repair/remove-window/search-count-baseline/Cargo.toml",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/performance-repair/remove-window/build-search-count-baseline",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "--no-run",
+        "--message-format=json"
+      ],
+      "source_sha256": "38d8d416dbbff0624b67a450be21ed9597a36f65ab15b05ed97d74f358f91889",
+      "base_source_sha256": "98e166b76e864a9045a83a50dd5b74e7cc006eebb069a6558e291588c2d4db86",
+      "patch_sha256": "5318b154d2c41d027b5cfe0e71292a926a6fb1582bf4dbe682f07fc95e3a8b88",
+      "build_log": "/home/zpconn/code/aerostore/target/performance-repair/remove-window/search-count-validation/baseline-build.log",
+      "build_log_sha256": "97219705f065439b76309674d23115c9ce00606e4afc3787d154c54fe53afa70",
+      "build_exit_code": 0,
+      "executable": "/home/zpconn/code/aerostore/target/performance-repair/remove-window/build-search-count-baseline/release/deps/aerostore_core-749fc51d62723f0b",
+      "executable_sha256": "5450ad23bd64138585a1aac9e6e1999d4025a438e30af078c22c40db8a2b03ec",
+      "fresh_test_binary": true,
+      "test_command": [
+        "/home/zpconn/code/aerostore/target/performance-repair/remove-window/build-search-count-baseline/release/deps/aerostore_core-749fc51d62723f0b",
+        "--exact",
+        "shm_skiplist::tests::normal_last_posting_removal_search_count_probe",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "test_exit_code": 0,
+      "test_log": "/home/zpconn/code/aerostore/target/performance-repair/remove-window/search-count-validation/baseline-count.log",
+      "test_log_sha256": "a5fa5c7bf50b2ce007ad22d2cbd4aeecdcab230e018b3b4f4cd23f102e25c438",
+      "expected_search_calls": 2
+    },
+    {
+      "name": "candidate",
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--release",
+        "--manifest-path",
+        "/home/zpconn/code/aerostore/target/performance-repair/remove-window/search-count-candidate/Cargo.toml",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/performance-repair/remove-window/build-search-count-candidate",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "--no-run",
+        "--message-format=json"
+      ],
+      "source_sha256": "b7fc546c7a3f98c06640be134e4d106453d8ee69a030a3c801f3286996def764",
+      "base_source_sha256": "a3b8862e481cb9a95345d9eafc88d8f2bdb102b28f001d70c7e01fd581f7c184",
+      "patch_sha256": "998aac8ea5933949cc1858303f0e1afeb78a5e8b015a6d93447261732f1a8c92",
+      "build_log": "/home/zpconn/code/aerostore/target/performance-repair/remove-window/search-count-validation/candidate-build.log",
+      "build_log_sha256": "1d0ac8f91a4c9010a865b480f083fdb6d191fee5945c7efcd6d978e92c72e404",
+      "build_exit_code": 0,
+      "executable": "/home/zpconn/code/aerostore/target/performance-repair/remove-window/build-search-count-candidate/release/deps/aerostore_core-749fc51d62723f0b",
+      "executable_sha256": "b3c71ae1aa6fdb81e70179d9908ae3589861f693e3c11cc4a455cdab483b2448",
+      "fresh_test_binary": true,
+      "test_command": [
+        "/home/zpconn/code/aerostore/target/performance-repair/remove-window/build-search-count-candidate/release/deps/aerostore_core-749fc51d62723f0b",
+        "--exact",
+        "shm_skiplist::tests::normal_last_posting_removal_search_count_probe",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "test_exit_code": 0,
+      "test_log": "/home/zpconn/code/aerostore/target/performance-repair/remove-window/search-count-validation/candidate-count.log",
+      "test_log_sha256": "a3cbdd159b307771808291addf2517c3e32a6eeea94650bff7dd284a23bc39cf",
+      "expected_search_calls": 1
+    }
+  ],
+  "candidate_source_before": "a3b8862e481cb9a95345d9eafc88d8f2bdb102b28f001d70c7e01fd581f7c184",
+  "candidate_source_after": "a3b8862e481cb9a95345d9eafc88d8f2bdb102b28f001d70c7e01fd581f7c184",
+  "source_stable": true
+}

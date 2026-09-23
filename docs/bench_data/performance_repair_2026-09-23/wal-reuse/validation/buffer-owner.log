@@ -1,0 +1,14 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running unittests src/lib.rs (/home/zpconn/code/aerostore/target/performance-repair/wal-reuse/cargo-target/debug/deps/aerostore_core-458b83ba28fefdf8)
+
+running 3 tests
+
+thread 'wal_writer::buffer_reuse_regressions::committer_owned_output_is_empty_and_reusable_after_codec_error_and_unwind' (319) panicked at aerostore_core/src/wal_writer.rs:1178:22:
+injected codec unwind
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test wal_writer::buffer_reuse_regressions::committer_owned_output_is_empty_and_reusable_after_codec_error_and_unwind ... ok
+test wal_writer::buffer_reuse_regressions::rejected_oversized_enqueue_releases_output_and_preserves_full_baseline_retry ... ok
+test wal_writer::buffer_reuse_regressions::oversized_synchronous_frame_is_durable_without_retaining_oversized_output ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 200 filtered out; finished in 0.03s
+

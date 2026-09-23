@@ -1,0 +1,17 @@
+
+running 1 test
+test shm_skiplist::tests::removal_window_detaches_every_lane_before_pinned_retirement_and_shorter_reuse ... 
+thread 'shm_skiplist::tests::removal_window_detaches_every_lane_before_pinned_retirement_and_shorter_reuse' (11470) panicked at aerostore_core/src/shm_skiplist.rs:4077:13:
+assertion `left == right` failed: removed node remains reachable in lane 1
+  left: [0, 20, 30, 40, 50]
+ right: [0, 20, 40, 50]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+
+failures:
+
+failures:
+    shm_skiplist::tests::removal_window_detaches_every_lane_before_pinned_retirement_and_shorter_reuse
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 194 filtered out; finished in 0.00s
+

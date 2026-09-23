@@ -1,0 +1,7 @@
+
+running 1 test
+test benchmark_async_synchronous_commit_modes ... wal_ring_benchmark: txns=10000 sync_tps=387.24 async_tps=1069638.72 ratio=2762.19x
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 25.85s
+

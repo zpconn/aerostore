@@ -1,0 +1,100 @@
+{
+  "variant": "baseline",
+  "workload": "wal_sync_async_10000",
+  "pair": 1,
+  "command": [
+    "/home/zpconn/code/aerostore/target/performance-repair/baseline-seeded/wal_ring_benchmark",
+    "benchmark_async_synchronous_commit_modes",
+    "--exact",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "workload_seed": null,
+  "binary_sha256": "472bf3048c867134f7f80cc315c94f578fffa3b62289800212d91e830989da8e",
+  "environment_before": {
+    "utc": "2026-09-23T19:22:40Z",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "cpu_affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23
+    ],
+    "loadavg": [
+      4.0390625,
+      3.958984375,
+      3.5166015625
+    ],
+    "memory": "MemTotal:       49328260 kB\nMemFree:        23541224 kB\nMemAvailable:   47470484 kB\nBuffers:          851348 kB\nCached:         22378120 kB\nSwapCached:        79088 kB\nActive:         16969248 kB\nInactive:        6851408 kB\nActive(anon):     271828 kB\nInactive(anon):   322316 kB\nActive(file):   16697420 kB\nInactive(file):  6529092 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:      25165824 kB\nSwapFree:       24671060 kB\nDirty:              1360 kB\nWriteback:             0 kB\nAnonPages:        580688 kB\nMapped:           170460 kB\nShmem:              2944 kB\nKReclaimable:    1212472 kB\nSlab:            1478512 kB\nSReclaimable:    1212472 kB\nSUnreclaim:       266040 kB\nKernelStack:       11744 kB\nPageTables:        14236 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    49829952 kB\nCommitted_AS:    3784144 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      120712 kB\nVmallocChunk:          0 kB\nPercpu:            12672 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      179200 kB\nDirectMap2M:    17645568 kB\nDirectMap1G:    41943040 kB\n"
+  },
+  "workload_environment": {
+    "TMPDIR": "/home/zpconn/code/aerostore/docs/bench_data/performance_repair_2026-09-23/seeded-full-campaign/wal_sync_async_10000/pair-01-baseline/tmp"
+  },
+  "completed": true,
+  "passed": true,
+  "exit_code": 0,
+  "elapsed_wall_seconds": 25.688360371997987,
+  "environment_after": {
+    "utc": "2026-09-23T19:23:06Z",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "cpu_affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23
+    ],
+    "loadavg": [
+      3.34228515625,
+      3.80029296875,
+      3.47509765625
+    ],
+    "memory": "MemTotal:       49328260 kB\nMemFree:        23506960 kB\nMemAvailable:   47486912 kB\nBuffers:          899708 kB\nCached:         22380556 kB\nSwapCached:        79088 kB\nActive:         17017324 kB\nInactive:        6853640 kB\nActive(anon):     271780 kB\nInactive(anon):   322052 kB\nActive(file):   16745544 kB\nInactive(file):  6531588 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:      25165824 kB\nSwapFree:       24671060 kB\nDirty:              1144 kB\nWriteback:           116 kB\nAnonPages:        580484 kB\nMapped:           170560 kB\nShmem:              3064 kB\nKReclaimable:    1212544 kB\nSlab:            1478536 kB\nSReclaimable:    1212544 kB\nSUnreclaim:       265992 kB\nKernelStack:       11904 kB\nPageTables:        13864 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    49829952 kB\nCommitted_AS:    3818024 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      120744 kB\nVmallocChunk:          0 kB\nPercpu:            12672 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      179200 kB\nDirectMap2M:    17645568 kB\nDirectMap1G:    41943040 kB\n"
+  },
+  "metrics": {
+    "sync_throughput": 390.15,
+    "async_throughput": 1099991.66,
+    "operations_per_mode": 10000,
+    "synchronous_p99_measured": false
+  },
+  "output_sha256": "0c5d7951f095386dc9df885630ff87af3ae0513becee037775c035f01f4d058a"
+}

@@ -1,0 +1,9 @@
+{
+  "commit": "9676fa9ff602565d5a628af41b6d40ba1576a8b9",
+  "archive": "/home/zpconn/code/aerostore/target/performance-repair/control/source.tar",
+  "archive_sha256": "172e8c1e8d18622383cdeb0c0009e8d50c8103933b342e1d08d6500ce8f5f206",
+  "archive_bytes": 66887680,
+  "source": "/home/zpconn/code/aerostore/target/performance-repair/control/source",
+  "created_utc": "2026-09-23T18:28:58Z",
+  "origin": "git archive; exact committed source before performance repair"
+}

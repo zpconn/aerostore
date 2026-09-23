@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/shm_skiplist.rs
++++ b/aerostore_core/src/shm_skiplist.rs
+@@ -2225,7 +2225,7 @@
+         // posting deletion and marking above cannot invalidate those links.
+         // Reuse that window instead of searching the entire list a second time.
+         let mut detached_all = true;
+-        for level in (0..height).rev() {
++        for level in (0..1).rev() {
+             if succs[level] != node_offset {
+                 detached_all = false;
+                 break;

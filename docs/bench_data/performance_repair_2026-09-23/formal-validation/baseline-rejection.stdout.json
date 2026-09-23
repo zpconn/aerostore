@@ -1,0 +1,25 @@
+{
+  "passed": false,
+  "errors": [
+    "frozen boundary path set changed; review new/deleted engine or contract files",
+    "frozen boundary changed: aerostore_core/benches/hyperfeed_crucible.rs",
+    "frozen boundary changed: aerostore_core/src/shm_skiplist.rs",
+    "frozen boundary changed: scripts/compare_engine_performance.py",
+    "frozen boundary changed: scripts/test_compare_engine_performance.py",
+    "frozen boundary changed: scripts/verify_formal.py",
+    "frozen boundary changed: verification/concurrent/README.md",
+    "frozen boundary changed: verification/contracts/transactions.md"
+  ],
+  "scope": "change detection only; not a whole-engine refinement proof",
+  "checked_files": 178,
+  "baseline_ref": "9676fa9ff602565d5a628af41b6d40ba1576a8b9",
+  "anchoring": "independent_git_baseline",
+  "open_claims": [
+    "TX-HISTORY-IMPLEMENTATION",
+    "MEMORY-OWNERSHIP",
+    "MEMORY-PROGRESS",
+    "WEAK-MEMORY-MMAP",
+    "DURABILITY-IMPLEMENTATION",
+    "QUERY-APPLICATION"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "origin_commit": "9676fa9ff602565d5a628af41b6d40ba1576a8b9",
+  "reason": "Preserve the exact shared comparator/tests bound by completed unseeded diagnostics before adding optional explicit seed support",
+  "sha256": {
+    "test_compare_engine_performance.py": "77805583e171b1b30763a157bbda6a5499dbe9bf388b1beea04e22dd15ba879b",
+    "compare_engine_performance.py": "c828c61bed2d1d93e04e2921e428c2eefc55541bacad7ddc276bd6d2acf1a843"
+  }
+}

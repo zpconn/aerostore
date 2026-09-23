@@ -1,0 +1,40 @@
+[coverage] /usr/bin/python3 scripts/check_formal_coverage.py
+[coverage] PASS (0.1s); target/performance-repair/formal-remove-window/coverage.log
+[gate-tests] /usr/bin/python3 scripts/test_formal_gate.py
+[gate-tests] PASS (0.6s); target/performance-repair/formal-remove-window/gate-tests.log
+[adapter-tests] /usr/bin/python3 verification/verus/test_generate.py
+[adapter-tests] PASS (0.1s); target/performance-repair/formal-remove-window/adapter-tests.log
+[verus] /usr/bin/python3 verification/verus/run.py --output /home/zpconn/code/aerostore/target/performance-repair/formal-remove-window/verus
+[verus] PASS (7.8s); target/performance-repair/formal-remove-window/verus.log
+[concurrent-adapter-tests] /usr/bin/python3 verification/concurrent/test_generate.py
+[concurrent-adapter-tests] PASS (0.1s); target/performance-repair/formal-remove-window/concurrent-adapter-tests.log
+[concurrent] /usr/bin/python3 verification/concurrent/run.py --output /home/zpconn/code/aerostore/target/performance-repair/formal-remove-window/concurrent
+[concurrent] PASS (119.8s); target/performance-repair/formal-remove-window/concurrent.log
+[lean] /usr/bin/python3 scripts/check_lean.py --output /home/zpconn/code/aerostore/target/performance-repair/formal-remove-window/lean.json
+[lean] PASS (172.4s); target/performance-repair/formal-remove-window/lean.log
+[kernel-tests] cargo test --offline -p aerostore_verified
+[kernel-tests] PASS (0.1s); target/performance-repair/formal-remove-window/kernel-tests.log
+[tla-runner-tests] /usr/bin/python3 scripts/test_tla_runner.py
+[tla-runner-tests] PASS (0.1s); target/performance-repair/formal-remove-window/tla-runner-tests.log
+[tla] /usr/bin/python3 scripts/check_tla.py --output /home/zpconn/code/aerostore/target/performance-repair/formal-remove-window/tla
+[tla] PASS (15.3s); target/performance-repair/formal-remove-window/tla.log
+[lock-models] /usr/bin/python3 scripts/check_lock_models.py --output /home/zpconn/code/aerostore/target/performance-repair/formal-remove-window/lock-models
+[lock-models] PASS (23.8s); target/performance-repair/formal-remove-window/lock-models.log
+[performance-gate-tests] /usr/bin/python3 scripts/test_compare_engine_performance.py
+[performance-gate-tests] PASS (0.1s); target/performance-repair/formal-remove-window/performance-gate-tests.log
+[core-regressions] cargo test --offline --locked -p aerostore_core --release --lib --test wal_protocol_regressions --test wal_delta_recovery_pk_map --test wal_writer_lifecycle --test wal_crash_recovery --test shm_shared_memory --test crucible_latency_histogram --test crucible_seed -- --test-threads=1
+[core-regressions] PASS (20.4s); target/performance-repair/formal-remove-window/core-regressions.log
+[integration-default] cargo test --offline -p aerostore_core --release --test occ_transactional_index --test transactional_query_execution --test occ_write_skew -- --test-threads=1
+[integration-default] PASS (1.3s); target/performance-repair/formal-remove-window/integration-default.log
+[crucible-default] cargo bench --offline -p aerostore_core --bench hyperfeed_extended_crucible -- --engine aerostore --mode all --families 8 --cycles 1 --workers 4 --shm-mib 128 --output /home/zpconn/code/aerostore/target/performance-repair/formal-remove-window/crucible-default.json
+[crucible-default] PASS (16.6s); target/performance-repair/formal-remove-window/crucible-default.log
+[integration-verified-buckets-sort] cargo test --offline -p aerostore_core --release --features verified-buckets-sort --test occ_transactional_index --test transactional_query_execution --test occ_write_skew -- --test-threads=1
+[integration-verified-buckets-sort] PASS (2.7s); target/performance-repair/formal-remove-window/integration-verified-buckets-sort.log
+[crucible-verified-buckets-sort] cargo bench --offline -p aerostore_core --features verified-buckets-sort --bench hyperfeed_extended_crucible -- --engine aerostore --mode all --families 8 --cycles 1 --workers 4 --shm-mib 128 --output /home/zpconn/code/aerostore/target/performance-repair/formal-remove-window/crucible-verified-buckets-sort.json
+[crucible-verified-buckets-sort] PASS (16.4s); target/performance-repair/formal-remove-window/crucible-verified-buckets-sort.log
+[integration-verified-buckets-bitmap] cargo test --offline -p aerostore_core --release --features verified-buckets-bitmap --test occ_transactional_index --test transactional_query_execution --test occ_write_skew -- --test-threads=1
+[integration-verified-buckets-bitmap] PASS (2.7s); target/performance-repair/formal-remove-window/integration-verified-buckets-bitmap.log
+[crucible-verified-buckets-bitmap] cargo bench --offline -p aerostore_core --features verified-buckets-bitmap --bench hyperfeed_extended_crucible -- --engine aerostore --mode all --families 8 --cycles 1 --workers 4 --shm-mib 128 --output /home/zpconn/code/aerostore/target/performance-repair/formal-remove-window/crucible-verified-buckets-bitmap.json
+[crucible-verified-buckets-bitmap] PASS (16.2s); target/performance-repair/formal-remove-window/crucible-verified-buckets-bitmap.log
+Report: /home/zpconn/code/aerostore/target/performance-repair/formal-remove-window/report.json
+Profile pilot: PASS; whole engine: UNPROVED

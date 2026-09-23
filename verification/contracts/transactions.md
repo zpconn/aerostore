@@ -60,6 +60,26 @@ offset bounds, sentinel values, slot exhaustion, and process attachment must be
 handled explicitly. Ordinary attachment cannot clear another live worker's
 registrations or create a second ownership authority for the same mapping.
 
+Skiplist removal may retain the predecessor/successor window from its live-node
+search only while the same mutation guard remains held through detachment and
+retirement. Every structural writer, helping traversal, and collector must obey
+that exclusion; read-only traversal must not publish structural changes. The
+searched target must be fully linked, its predecessors must remain attached,
+and key ordering must remain stable. Removing a posting or marking that target
+must not invalidate the window. Reentrant mutation through key comparison is
+outside the existing non-reentrant guard contract.
+
+Retirement requires detachment from every published lane. A cached successor
+mismatch or failed expected-link CAS is not proof of detachment: the native
+fallback must search/help until it confirms absence from every lane, including
+after a partially completed fast path. The retired node's key and successor
+links remain usable by pinned readers; reclamation and shorter-tower reuse must
+respect the existing epoch and ownership rules. The cached-window candidate
+preserves the original mutation lock, atomic orderings, collector priority,
+allocation-failure behavior, and WAL/publication boundary. Its native regression
+and mutation evidence supports these obligations but does not discharge the
+open native skiplist-refinement or memory-ownership claims.
+
 Safety must hold without fairness. Progress and finite-space guarantees require
 stated scheduling, worker-lifetime, resource, and live-set assumptions. Collector
 admission must permit reclamation while foreground work continues. Readers

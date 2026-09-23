@@ -1,0 +1,87 @@
+{
+  "created_utc": "2026-09-23T18:58:01Z",
+  "started": true,
+  "performance_acceptance": false,
+  "plan_sha256": "ff28362574a542eaf1ac4ff29352b98c2fa41d17ea263f831150106bcdf298f0",
+  "script_sha256": "b15f424306c777d2b8d1381d12a64d0ea359c444d9ef4b2873a68a6e1c9e3d34",
+  "test_script_sha256": "371db4125ecabe44da81bb165eaf3da09ada809d192546bc79aa63990378f27b",
+  "manifest_sha256": {
+    "baseline": "f96ca8aab6f1d4a7e087ef1787efb4bb3932ace6a08c266e4f5be8ec1649f3ba",
+    "candidate": "9d38ca0373310dc682bce28a61106f5835f22dcf76b07196a38c3ae07756063d"
+  },
+  "exact_fixture_patch_sha256": "f543e16537df14d5465e3af70d3f541dfc7963b9cdd21bfc8537153565b6157c",
+  "workloads": {
+    "extended_64f_128c_8w": {
+      "kind": "extended",
+      "families": 64,
+      "cycles": 128,
+      "workers": 8,
+      "seed": 8675309,
+      "paired_timing": true
+    },
+    "extended_256f_32c_16w": {
+      "kind": "extended",
+      "families": 256,
+      "cycles": 32,
+      "workers": 16,
+      "seed": 20260922,
+      "paired_timing": true
+    },
+    "wal_sync_async_10000": {
+      "kind": "wal",
+      "paired_timing": true
+    },
+    "churn_128m_120s": {
+      "kind": "churn",
+      "duration": 120,
+      "paired_timing": true,
+      "seeds": [
+        2026092301,
+        2026092302,
+        2026092303
+      ]
+    },
+    "churn_128m_240s": {
+      "kind": "churn",
+      "duration": 240,
+      "paired_timing": false,
+      "seed": 2026092399
+    }
+  },
+  "command": [
+    "python3",
+    "scripts/compare_engine_performance.py",
+    "run",
+    "--baseline",
+    "target/performance-repair/baseline-seeded/manifest.json",
+    "--candidate",
+    "target/performance-repair/remove-window-seeded/manifest.json",
+    "--output",
+    "docs/bench_data/performance_repair_2026-09-23/seeded-full-campaign",
+    "--pairs",
+    "3",
+    "--workloads",
+    "extended_64f_128c_8w,extended_256f_32c_16w,wal_sync_async_10000,churn_128m_120s,churn_128m_240s",
+    "--churn-seeds",
+    "2026092301,2026092302,2026092303",
+    "--sustained-churn-seed",
+    "2026092399",
+    "--quiet-window-note",
+    "Root and both implementation agents confirm all builds/tests/provers stopped; fresh19-check formal and441 native passes; exactsource/fixture/compiler/seed preflight passed; one predeclared full campaign"
+  ],
+  "required_preflight": "Fresh formal/native receipts and mainnative exactmatch; global quiet window; no alteredpolicy/seed/script/manifests",
+  "preflight_passed": true,
+  "formal_report_sha256": "da0a518ac3a0f8166cf47194775662ee531751aee9df9f36f114948628660ac3",
+  "native_validation_sha256": "af03bc710a9c6c1ba16d1db825fc491f7059aa817a9968c05e3a67cae4246b8c",
+  "formal_source_archive_sha256": "b9cc3936cd4a4fc8a8cb1314ff7d70b6759935b7ec10c5d4765651794a4e8589",
+  "main_native_matches_candidate": true,
+  "started_utc": "2026-09-23T19:06:10Z",
+  "completed": true,
+  "passed": false,
+  "finished_utc": "2026-09-23T19:45:25Z",
+  "exit_code": 2,
+  "postflight_passed": true,
+  "postflight_sha256": "f55a9c593481afba5afaadb19b8368c704b537885f3e8e553e8da5b932dcd295",
+  "campaign_sha256": "394cd3137e7f404f7584c4887b5820bf3b51e56b1b608a7be9c75d3b1c242746",
+  "result": "inconclusive_noise: original-reference 120s churn p99 interval spread exceeds fixed 10% ceiling; throughput component passes"
+}

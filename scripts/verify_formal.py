@@ -223,6 +223,7 @@ def main() -> int:
                              "--release", "--lib", "--test", "wal_protocol_regressions", "--test", "wal_delta_recovery_pk_map",
                              "--test", "wal_writer_lifecycle", "--test", "wal_crash_recovery", "--test", "shm_shared_memory",
                              "--test", "crucible_latency_histogram",
+                             "--test", "crucible_seed",
                              "--", "--test-threads=1"])]
             for feature in ["default", "verified-buckets-sort", "verified-buckets-bitmap"]:
                 command = ["cargo", "test", "--offline", "-p", "aerostore_core", "--release"]

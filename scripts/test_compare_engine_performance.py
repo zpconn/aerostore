@@ -5,7 +5,9 @@ import copy
 import json
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 import compare_engine_performance as gate
 
@@ -23,6 +25,73 @@ class ComparisonGateTests(unittest.TestCase):
     def test_real_retained_reports_parse(self):
         self.assertGreater(gate.parse_churn(self.churn, 120)["operations"], 1000000)
         self.assertEqual(gate.parse_extended(self.extended, self.config)["messages"], 30720)
+
+    def test_seeded_report_requires_exact_seed_algorithm_and_unique_marker(self):
+        marker = "hyperfeed_crucible_seed: mode=fixed seed=2026092301 algorithm=worker_add_xorshift64_v1\n"
+        result = gate.parse_churn(marker + self.churn, 120, expected_seed=2026092301)
+        self.assertEqual(result["workload_seed"], 2026092301)
+        self.assertEqual(result["seed_metadata"]["mode"], "fixed")
+        for text in (self.churn, marker + marker + self.churn,
+                     marker.replace("2026092301", "2026092302") + self.churn,
+                     marker.replace("worker_add_xorshift64_v1", "different") + self.churn,
+                     marker.replace("seed=2026092301", "seed=7 seed=2026092301") + self.churn,
+                     marker.rstrip() + " ignored junk\n" + self.churn,
+                     marker.replace("mode=fixed", "mode=entropy") + self.churn):
+            with self.subTest(text=text[:100]), self.assertRaises(ValueError):
+                gate.parse_churn(text, 120, expected_seed=2026092301)
+        with self.assertRaises(ValueError):
+            gate.parse_churn(marker + self.churn, 120)
+        self.assertEqual(gate.parse_churn(marker.replace("2026092301", "0") + self.churn, 120,
+                                        expected_seed=0)["workload_seed"], 0)
+
+    def test_entropy_and_historical_reports_remain_distinct_from_seeded_runs(self):
+        self.assertIsNone(gate.parse_churn(self.churn, 120)["seed_metadata"])
+        marker = "hyperfeed_crucible_seed: mode=entropy seed=none algorithm=pid_time_xorshift64_v1\n"
+        self.assertEqual(gate.parse_churn(marker + self.churn, 120)["seed_metadata"]["mode"], "entropy")
+        with self.assertRaises(ValueError):
+            gate.parse_churn(marker + self.churn, 120, expected_seed=0)
+
+    def test_seed_parser_accepts_full_u64_domain_and_rejects_malformed_input(self):
+        for text, expected in (("0", 0), ("18446744073709551615", (1 << 64) - 1)):
+            self.assertEqual(gate.parse_seed(text), expected)
+        for text in ("", "-1", "+1", " 1", "1 ", "1.0", "18446744073709551616", "١"):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                gate.parse_seed(text)
+
+    def test_seed_plan_preserves_pair_identity_without_mutating_default_workloads(self):
+        names = ["churn_128m_120s", "churn_128m_240s"]
+        before = copy.deepcopy(gate.WORKLOADS)
+        selected = gate.selected_workloads(names, 3, "11,22,33", "44")
+        self.assertEqual([gate.workload_seed(selected[names[0]], n) for n in (1, 2, 3)], [11, 22, 33])
+        self.assertEqual(gate.workload_seed(selected[names[1]], 1), 44)
+        self.assertEqual(gate.WORKLOADS, before)
+        for seeds in ("11,22", "11,22,33,44", "11,,33"):
+            with self.subTest(seeds=seeds), self.assertRaises(ValueError):
+                gate.selected_workloads(names, 3, seeds, None)
+        with self.assertRaises(ValueError):
+            gate.selected_workloads(["wal_sync_async_10000"], 3, "11,22,33", None)
+        with self.assertRaises(ValueError):
+            gate.workload_seed(selected[names[0]], 4)
+
+    def test_run_one_injects_declared_pair_seed_into_environment_and_receipt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binary = root / "fixture"
+            binary.write_bytes(b"not executed: subprocess is replaced")
+            capture = {"binaries": {gate.BENCHES[0]: {"resolved_path": str(binary)}}}
+            workload = {"kind": "churn", "duration": 120, "paired_timing": True, "seeds": [11, 22, 33]}
+            def fake_process(command, **kwargs):
+                self.assertEqual(kwargs["env"]["AEROSTORE_CRUCIBLE_SEED"], "22")
+                kwargs["stdout"].write("hyperfeed_crucible_seed: mode=fixed seed=22 algorithm=worker_add_xorshift64_v1\n" + self.churn)
+                kwargs["stdout"].flush()
+                return SimpleNamespace(wait=lambda **ignored: 0)
+            with patch.dict(gate.os.environ, {"AEROSTORE_CRUCIBLE_SEED": "999"}), \
+                 patch.object(gate.subprocess, "Popen", side_effect=fake_process), \
+                 patch.object(gate, "snapshot_environment", return_value={}):
+                result = gate.run_one(capture, "candidate", "churn", workload, 2, root)
+            self.assertEqual(result["workload_seed"], 22)
+            self.assertEqual(result["metrics"]["workload_seed"], 22)
+            self.assertEqual(result["workload_environment"]["AEROSTORE_CRUCIBLE_SEED"], "22")
 
     def test_wal_libtest_inline_prefix_is_parsed(self):
         text = ("running 1 test\ntest benchmark_async_synchronous_commit_modes ... "

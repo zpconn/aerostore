@@ -1,0 +1,725 @@
+diff --git a/aerostore_core/src/wal_ring.rs b/aerostore_core/src/wal_ring.rs
+--- a/aerostore_core/src/wal_ring.rs
++++ b/aerostore_core/src/wal_ring.rs
+@@ -2,8 +2,14 @@
+ use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
+ use std::sync::Arc;
+ 
++use rkyv::ser::serializers::{
++    AlignedSerializer, AllocScratch, BufferScratch, CompositeSerializer, FallbackScratch,
++    SharedSerializeMap,
++};
++use rkyv::ser::Serializer;
+ use rkyv::{
+-    AlignedVec, Archive, Deserialize as RkyvDeserialize, Infallible, Serialize as RkyvSerialize,
++    AlignedBytes, AlignedVec, Archive, Deserialize as RkyvDeserialize, Infallible,
++    Serialize as RkyvSerialize,
+ };
+ 
+ use crate::occ::OccCommitRecord;
+@@ -476,6 +482,94 @@
+     }
+ }
+ 
++// Each committer owns its output and 8 KiB scratch backing. Serializer cursors
++// are rebuilt for every attempt, including after a codec error or unwind. No
++// serializer state or shared-reference map crosses record boundaries.
++const WAL_SERIALIZATION_SCRATCH_BYTES: usize = 8192;
++const MAX_RETAINED_WAL_OUTPUT_BYTES: usize = 64 * 1024;
++
++type ReusableWalSerializer<'a> = CompositeSerializer<
++    AlignedSerializer<&'a mut AlignedVec>,
++    FallbackScratch<
++        BufferScratch<&'a mut AlignedBytes<WAL_SERIALIZATION_SCRATCH_BYTES>>,
++        AllocScratch,
++    >,
++    SharedSerializeMap,
++>;
++
++pub(crate) struct WalCommitBuffer {
++    output: AlignedVec,
++    scratch: Box<AlignedBytes<WAL_SERIALIZATION_SCRATCH_BYTES>>,
++}
++
++impl Default for WalCommitBuffer {
++    fn default() -> Self {
++        Self {
++            output: AlignedVec::new(),
++            scratch: Box::new(AlignedBytes::default()),
++        }
++    }
++}
++
++impl WalCommitBuffer {
++    #[cfg(test)]
++    pub(crate) fn retained_output(&self) -> (usize, usize) {
++        (self.output.len(), self.output.capacity())
++    }
++
++    pub(crate) fn lease(&mut self) -> WalCommitBufferLease<'_> {
++        WalCommitBufferLease { buffer: self }
++    }
++}
++
++// Keep this lease in the caller of the guarded commit driver. Acceptance only
++// borrows it, so clearing or freeing oversized output happens after guard
++// release, on both normal return and unwind.
++pub(crate) struct WalCommitBufferLease<'a> {
++    buffer: &'a mut WalCommitBuffer,
++}
++
++impl WalCommitBufferLease<'_> {
++    pub(crate) fn serialize_commit(&mut self, commit: &WalRingCommit) -> Result<(), WalRingError> {
++        self.with_serializer(|serializer| {
++            serializer
++                .serialize_value(commit)
++                .map_err(|err| WalRingError::Serialize(err.to_string()))?;
++            Ok(())
++        })
++    }
++
++    fn with_serializer<F>(&mut self, serialize: F) -> Result<(), WalRingError>
++    where
++        F: FnOnce(&mut ReusableWalSerializer<'_>) -> Result<(), WalRingError>,
++    {
++        self.buffer.output.clear();
++        let mut serializer = CompositeSerializer::new(
++            AlignedSerializer::new(&mut self.buffer.output),
++            FallbackScratch::new(
++                BufferScratch::new(self.buffer.scratch.as_mut()),
++                AllocScratch::default(),
++            ),
++            SharedSerializeMap::default(),
++        );
++        serialize(&mut serializer)
++    }
++
++    pub(crate) fn as_slice(&self) -> &[u8] {
++        self.buffer.output.as_slice()
++    }
++}
++
++impl Drop for WalCommitBufferLease<'_> {
++    fn drop(&mut self) {
++        if self.buffer.output.capacity() > MAX_RETAINED_WAL_OUTPUT_BYTES {
++            self.buffer.output = AlignedVec::new();
++        } else {
++            self.buffer.output.clear();
++        }
++    }
++}
++
+ pub fn serialize_commit_record(commit: &WalRingCommit) -> Result<AlignedVec, WalRingError> {
+     rkyv::to_bytes::<_, 8192>(commit).map_err(|err| WalRingError::Serialize(err.to_string()))
+ }
+@@ -616,3 +710,258 @@
+         );
+     }
+ }
++
++#[cfg(test)]
++mod reusable_buffer_tests {
++    use super::*;
++    use rkyv::ser::ScratchSpace;
++    use std::alloc::Layout;
++
++    #[derive(Clone, Copy, Default)]
++    struct AllocationCounts {
++        allocations: u64,
++        reallocations: u64,
++        deallocations: u64,
++        allocated_bytes: u64,
++        scratch_8192_allocations: u64,
++    }
++
++    thread_local! {
++        static ALLOCATION_COUNTS: std::cell::Cell<Option<AllocationCounts>> = const { std::cell::Cell::new(None) };
++    }
++
++    struct CountingAllocator;
++
++    fn account_allocation(size: usize, kind: u8) {
++        let _ = ALLOCATION_COUNTS.try_with(|slot| {
++            if let Some(mut count) = slot.get() {
++                match kind {
++                    0 => {
++                        count.allocations += 1;
++                        count.allocated_bytes += size as u64;
++                        count.scratch_8192_allocations +=
++                            u64::from(size == WAL_SERIALIZATION_SCRATCH_BYTES);
++                    }
++                    1 => {
++                        count.reallocations += 1;
++                        count.allocated_bytes += size as u64;
++                    }
++                    _ => count.deallocations += 1,
++                }
++                slot.set(Some(count));
++            }
++        });
++    }
++
++    // Unit-test-only accounting delegates every operation to System and only
++    // records allocations on this thread during the explicit measured region.
++    unsafe impl std::alloc::GlobalAlloc for CountingAllocator {
++        unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
++            account_allocation(layout.size(), 0);
++            std::alloc::System.alloc(layout)
++        }
++        unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
++            account_allocation(layout.size(), 0);
++            std::alloc::System.alloc_zeroed(layout)
++        }
++        unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
++            account_allocation(new_size, 1);
++            std::alloc::System.realloc(ptr, layout, new_size)
++        }
++        unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
++            account_allocation(layout.size(), 2);
++            std::alloc::System.dealloc(ptr, layout)
++        }
++    }
++
++    #[global_allocator]
++    static ALLOCATOR: CountingAllocator = CountingAllocator;
++
++    fn allocation_counts(f: impl FnOnce()) -> AllocationCounts {
++        ALLOCATION_COUNTS.with(|slot| slot.set(Some(AllocationCounts::default())));
++        f();
++        ALLOCATION_COUNTS.with(|slot| slot.replace(None).unwrap())
++    }
++
++    #[test]
++    fn warmed_outer_serialization_eliminates_output_and_scratch_heap_allocations() {
++        let commit = record(1, 37);
++        let expected = serialize_commit_record(&commit).unwrap();
++        let mut buffer = WalCommitBuffer::default();
++        {
++            let mut lease = buffer.lease();
++            lease.serialize_commit(&commit).unwrap();
++        }
++        let original = allocation_counts(|| {
++            for _ in 0..100 {
++                let bytes = serialize_commit_record(&commit).unwrap();
++                assert_eq!(bytes.as_slice(), expected.as_slice());
++            }
++        });
++        let reused = allocation_counts(|| {
++            for _ in 0..100 {
++                let mut lease = buffer.lease();
++                lease.serialize_commit(&commit).unwrap();
++                assert_eq!(lease.as_slice(), expected.as_slice());
++            }
++        });
++        println!("wal_serializer_heap_evidence: iterations=100 original_allocations={} original_reallocations={} original_deallocations={} original_allocated_bytes={} original_scratch_8192_allocations={} reused_allocations={} reused_reallocations={} reused_deallocations={} reused_allocated_bytes={}",
++            original.allocations, original.reallocations, original.deallocations,
++            original.allocated_bytes, original.scratch_8192_allocations,
++            reused.allocations, reused.reallocations, reused.deallocations,
++            reused.allocated_bytes);
++        assert_eq!(original.scratch_8192_allocations, 100);
++        assert!(original.allocations >= 200);
++        assert_eq!(reused.allocations, 0);
++        assert_eq!(reused.reallocations, 0);
++        assert_eq!(reused.deallocations, 0);
++    }
++
++    fn record(writes: usize, payload_bytes: usize) -> WalRingCommit {
++        WalRingCommit {
++            version: WAL_RING_COMMIT_VERSION,
++            txid: 87 + writes as u64,
++            writes: (0..writes)
++                .map(|i| WalRingWrite {
++                    row_id: i as u64,
++                    base_offset: 100 + i as u32,
++                    new_offset: 1000 + i as u32,
++                    value_payload: if i % 2 == 0 {
++                        vec![i as u8; payload_bytes]
++                    } else {
++                        Vec::new()
++                    },
++                    wal_record_payload: (0..payload_bytes)
++                        .map(|j| i.wrapping_add(j) as u8)
++                        .collect(),
++                })
++                .collect(),
++        }
++    }
++
++    #[test]
++    fn reusable_serialization_matches_legacy_bytes_for_varied_and_repeated_records() {
++        let mut buffer = WalCommitBuffer::default();
++        // More than 8 KiB of vector resolvers exercises fallback scratch too.
++        for (writes, bytes) in [
++            (0, 0),
++            (1, 17),
++            (512, 13),
++            (2, 4096),
++            (1, 0),
++            (0, 0),
++            (1, 17),
++        ] {
++            let commit = record(writes, bytes);
++            let expected = serialize_commit_record(&commit).unwrap();
++            let mut lease = buffer.lease();
++            lease.serialize_commit(&commit).unwrap();
++            assert_eq!(lease.as_slice(), expected.as_slice());
++            assert_eq!(deserialize_commit_record(lease.as_slice()).unwrap(), commit);
++        }
++    }
++
++    #[test]
++    fn repeated_frames_reuse_both_output_and_scratch_backing_allocations() {
++        let mut buffer = WalCommitBuffer::default();
++        let commit = record(3, 37);
++        let expected = serialize_commit_record(&commit).unwrap();
++        {
++            let mut lease = buffer.lease();
++            lease.serialize_commit(&commit).unwrap();
++        }
++        let output = buffer.output.as_ptr();
++        let capacity = buffer.output.capacity();
++        let scratch = buffer.scratch.as_ref() as *const _;
++        assert!(capacity > 0 && capacity <= MAX_RETAINED_WAL_OUTPUT_BYTES);
++        for _ in 0..100 {
++            {
++                let mut lease = buffer.lease();
++                lease.serialize_commit(&commit).unwrap();
++                assert_eq!(lease.as_slice(), expected.as_slice());
++            }
++            assert_eq!(buffer.output.len(), 0);
++            assert_eq!(buffer.output.as_ptr(), output);
++            assert_eq!(buffer.output.capacity(), capacity);
++            assert_eq!(buffer.scratch.as_ref() as *const _, scratch);
++        }
++    }
++
++    fn leave_partial_serialization(serializer: &mut ReusableWalSerializer<'_>) {
++        serializer
++            .write(&vec![0x99; MAX_RETAINED_WAL_OUTPUT_BYTES + 1])
++            .unwrap();
++        // Intentionally leave both allocations unpopped: an error or unwind
++        // can interrupt an archive serializer before its balanced cleanup.
++        unsafe {
++            serializer
++                .push_scratch(Layout::from_size_align(4096, 16).unwrap())
++                .unwrap();
++            serializer
++                .push_scratch(Layout::from_size_align(16384, 16).unwrap())
++                .unwrap();
++        }
++    }
++
++    #[test]
++    fn serializer_error_restarts_cursor_and_discards_partial_record() {
++        let mut buffer = WalCommitBuffer::default();
++        let commit = record(5, 19);
++        let expected = serialize_commit_record(&commit).unwrap();
++        {
++            let mut lease = buffer.lease();
++            let error = lease.with_serializer(|serializer| {
++                leave_partial_serialization(serializer);
++                Err(WalRingError::Serialize(
++                    "injected after partial archive".into(),
++                ))
++            });
++            assert!(matches!(error, Err(WalRingError::Serialize(_))));
++            lease.serialize_commit(&commit).unwrap();
++            assert_eq!(lease.as_slice(), expected.as_slice());
++        }
++        // Failed oversized output must not remain retained after the call.
++        assert_eq!(buffer.output.len(), 0);
++        assert_eq!(buffer.output.capacity(), 0);
++        let mut lease = buffer.lease();
++        lease.serialize_commit(&commit).unwrap();
++        assert_eq!(lease.as_slice(), expected.as_slice());
++    }
++
++    #[test]
++    fn serializer_unwind_releases_oversized_output_and_restarts_scratch() {
++        let mut buffer = WalCommitBuffer::default();
++        let scratch = buffer.scratch.as_ref() as *const _;
++        let unwind = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
++            let mut lease = buffer.lease();
++            let _ = lease.with_serializer(|serializer| {
++                leave_partial_serialization(serializer);
++                panic!("injected after partial archive");
++            });
++        }));
++        assert!(unwind.is_err());
++        assert_eq!(buffer.output.len(), 0);
++        assert_eq!(buffer.output.capacity(), 0);
++        assert_eq!(buffer.scratch.as_ref() as *const _, scratch);
++        let commit = record(512, 1);
++        let expected = serialize_commit_record(&commit).unwrap();
++        let mut lease = buffer.lease();
++        lease.serialize_commit(&commit).unwrap();
++        assert_eq!(lease.as_slice(), expected.as_slice());
++    }
++
++    #[test]
++    fn successful_oversized_frame_is_valid_but_not_retained_between_calls() {
++        let mut buffer = WalCommitBuffer::default();
++        let commit = record(1, MAX_RETAINED_WAL_OUTPUT_BYTES);
++        let expected = serialize_commit_record(&commit).unwrap();
++        {
++            let mut lease = buffer.lease();
++            lease.serialize_commit(&commit).unwrap();
++            assert_eq!(lease.as_slice(), expected.as_slice());
++            assert!(lease.as_slice().len() > MAX_RETAINED_WAL_OUTPUT_BYTES);
++        }
++        assert_eq!(buffer.output.capacity(), 0);
++        assert_eq!(buffer.output.len(), 0);
++    }
++}
+diff --git a/aerostore_core/src/wal_writer.rs b/aerostore_core/src/wal_writer.rs
+--- a/aerostore_core/src/wal_writer.rs
++++ b/aerostore_core/src/wal_writer.rs
+@@ -14,8 +14,8 @@
+ use crate::wal_delta::{deserialize_wal_record as deserialize_delta_wal_record, WalDeltaCodec};
+ use crate::wal_ring::{
+     deserialize_commit_record, serialize_commit_record, wal_commit_from_occ_record,
+-    wal_commit_from_occ_record_with_policy, SharedWalRing, SynchronousCommit, WalEncodingPolicy,
+-    WalRingCommit, WalRingError, WalRingWrite,
++    wal_commit_from_occ_record_with_policy, SharedWalRing, SynchronousCommit, WalCommitBuffer,
++    WalEncodingPolicy, WalRingCommit, WalRingError, WalRingWrite,
+ };
+ use crate::ShmPrimaryKeyMap;
+ 
+@@ -384,6 +384,7 @@
+     sink: CommitSink<SLOTS, SLOT_BYTES>,
+     sync_writer: Option<SyncWalWriter>,
+     async_delta_state: Option<AsyncDeltaState>,
++    wal_buffer: WalCommitBuffer,
+ }
+ 
+ impl<const SLOTS: usize, const SLOT_BYTES: usize> OccCommitter<SLOTS, SLOT_BYTES> {
+@@ -395,6 +396,7 @@
+             sink: CommitSink::Synchronous(wal_path),
+             sync_writer: Some(sync_writer),
+             async_delta_state: None,
++            wal_buffer: WalCommitBuffer::default(),
+         })
+     }
+ 
+@@ -404,6 +406,7 @@
+             sink: CommitSink::Asynchronous(ring),
+             sync_writer: None,
+             async_delta_state: Some(AsyncDeltaState::default()),
++            wal_buffer: WalCommitBuffer::default(),
+         }
+     }
+ 
+@@ -480,16 +483,22 @@
+         table.bind_wal_stream(identity)?;
+         let mut wal_accepted = false;
+         let accepted = &mut wal_accepted;
+-        let committer = &mut *self;
++        // The lease outlives the driver's row/index guards. Its output is only
++        // borrowed by acceptance, so no encoded-buffer free occurs under them.
++        let mut payload_lease = self.wal_buffer.lease();
++        let payload = &mut payload_lease;
++        let sink = &self.sink;
++        let sync_writer = &mut self.sync_writer;
++        let async_delta_state = &mut self.async_delta_state;
+         let result = table.commit_with_record_prepared(tx, move |record| {
+             // Codec and outer frame serialization operate on an immutable copy
+             // before acquiring row/index guards. Validation below must still
+             // reject a stale record before accepting any of these bytes.
+             let mut prepared_epoch = None;
+-            let wal_commit = match &committer.sink {
++            let wal_commit = match sink {
+                 CommitSink::Synchronous(_) => wal_commit_from_occ_record(record)?,
+                 CommitSink::Asynchronous(ring) => {
+-                    let Some(state) = committer.async_delta_state.as_mut() else {
++                    let Some(state) = async_delta_state.as_mut() else {
+                         return Err(WalWriterError::InvalidMode(
+                             "missing async delta state for asynchronous mode",
+                         ));
+@@ -517,11 +526,11 @@
+                 }
+             };
+ 
+-            let payload = serialize_commit_record(&wal_commit)?;
++            payload.serialize_commit(&wal_commit)?;
+             Ok::<_, WalWriterError>(move |_record: &OccCommitRecord<T>| {
+-                match &committer.sink {
++                match sink {
+                     CommitSink::Synchronous(_) => {
+-                        let Some(sync_writer) = committer.sync_writer.as_mut() else {
++                        let Some(sync_writer) = sync_writer.as_mut() else {
+                             return Err(WalWriterError::InvalidMode(
+                                 "missing sync writer for synchronous mode",
+                             ));
+@@ -1066,3 +1075,164 @@
+         assert!(arena.proc_array().create_snapshot(arena.global_txid()).in_flight_txids().is_empty());
+     }
+ }
++
++#[cfg(test)]
++mod buffer_reuse_regressions {
++    use super::*;
++    use std::cell::Cell;
++    use std::sync::Arc;
++
++    const LARGE_ROWS: usize = 2048;
++
++    fn populated_table() -> OccTable<u64> {
++        let arena = Arc::new(crate::ShmArena::new(16 << 20).unwrap());
++        let table = OccTable::new(arena, LARGE_ROWS).unwrap();
++        for row in 0..LARGE_ROWS {
++            table.seed_row(row, 0).unwrap();
++        }
++        table
++    }
++
++    fn large_transaction(table: &OccTable<u64>) -> OccTransaction<u64> {
++        let mut tx = table.begin_transaction().unwrap();
++        for row in 0..LARGE_ROWS {
++            table.write(&mut tx, row, 1).unwrap();
++        }
++        tx
++    }
++
++    #[test]
++    fn oversized_synchronous_frame_is_durable_without_retaining_oversized_output() {
++        let dir = tempfile::tempdir().unwrap();
++        let wal = dir.path().join("wal");
++        let table = populated_table();
++        let mut committer = OccCommitter::<8, 256>::new_synchronous(&wal).unwrap();
++        let mut tx = large_transaction(&table);
++        assert_eq!(committer.commit(&table, &mut tx).unwrap(), LARGE_ROWS);
++        assert!(std::fs::metadata(&wal).unwrap().len() > 64 * 1024);
++        assert_eq!(committer.wal_buffer.retained_output(), (0, 0));
++        let records = read_wal_file(&wal).unwrap();
++        assert_eq!(records.len(), 1);
++        assert_eq!(records[0].writes.len(), LARGE_ROWS);
++        for row in 0..LARGE_ROWS {
++            assert_eq!(table.latest_value(row).unwrap(), Some(1));
++        }
++        let mut next = table.begin_transaction().unwrap();
++        table.write(&mut next, 0, 2).unwrap();
++        committer.commit(&table, &mut next).unwrap();
++        assert_eq!(read_wal_file(&wal).unwrap().len(), 2);
++        let (len, capacity) = committer.wal_buffer.retained_output();
++        assert_eq!(len, 0);
++        assert!(capacity > 0 && capacity <= 64 * 1024);
++    }
++
++    #[test]
++    fn rejected_oversized_enqueue_releases_output_and_preserves_full_baseline_retry() {
++        let table = populated_table();
++        let ring = SharedWalRing::<8, 256>::create(Arc::clone(table.shared_arena())).unwrap();
++        let mut committer = OccCommitter::new_asynchronous(ring.clone());
++        let mut tx = large_transaction(&table);
++        assert!(matches!(
++            committer.commit(&table, &mut tx),
++            Err(WalWriterError::Ring(WalRingError::MessageTooLarge { .. }))
++        ));
++        assert_eq!(committer.wal_buffer.retained_output(), (0, 0));
++        assert!(ring.pop_bytes().unwrap().is_none());
++        for row in 0..LARGE_ROWS {
++            assert_eq!(table.latest_value(row).unwrap(), Some(0));
++        }
++        assert!(table
++            .shared_arena()
++            .proc_array()
++            .create_snapshot(table.shared_arena().global_txid())
++            .in_flight_txids()
++            .is_empty());
++        assert!(committer
++            .async_delta_state
++            .as_ref()
++            .unwrap()
++            .rows_with_full_baseline_in_epoch
++            .is_empty());
++        let mut retry = table.begin_transaction().unwrap();
++        table.write(&mut retry, 0, 2).unwrap();
++        committer.commit(&table, &mut retry).unwrap();
++        let record = deserialize_commit_record(&ring.pop_bytes().unwrap().unwrap()).unwrap();
++        assert!(matches!(
++            deserialize_delta_wal_record(&record.writes[0].wal_record_payload).unwrap(),
++            crate::wal_delta::WalRecord::UpdateFull { .. }
++        ));
++        assert_eq!(committer.wal_buffer.retained_output().0, 0);
++    }
++
++    thread_local! {
++        static SERIALIZE_FAULT: Cell<u8> = const { Cell::new(0) };
++    }
++
++    #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
++    struct FaultyRow(u64);
++
++    impl Serialize for FaultyRow {
++        fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
++            match SERIALIZE_FAULT.with(|fault| fault.replace(0)) {
++                1 => return Err(serde::ser::Error::custom("injected codec error")),
++                2 => panic!("injected codec unwind"),
++                _ => {}
++            }
++            serializer.serialize_u64(self.0)
++        }
++    }
++
++    impl WalDeltaCodec for FaultyRow {}
++
++    #[test]
++    fn committer_owned_output_is_empty_and_reusable_after_codec_error_and_unwind() {
++        let arena = Arc::new(crate::ShmArena::new(8 << 20).unwrap());
++        let table = OccTable::new(Arc::clone(&arena), 1).unwrap();
++        table.seed_row(0, FaultyRow(0)).unwrap();
++        let ring = SharedWalRing::<8, 256>::create(Arc::clone(&arena)).unwrap();
++        let mut committer = OccCommitter::new_asynchronous(ring.clone());
++        let mut initial = table.begin_transaction().unwrap();
++        table.write(&mut initial, 0, FaultyRow(1)).unwrap();
++        committer.commit(&table, &mut initial).unwrap();
++        ring.pop_bytes().unwrap().unwrap();
++        for fault in [1, 2] {
++            let previous = table.latest_value(0).unwrap().unwrap();
++            let mut tx = table.begin_transaction().unwrap();
++            table.write(&mut tx, 0, FaultyRow(previous.0 + 1)).unwrap();
++            SERIALIZE_FAULT.with(|slot| slot.set(fault));
++            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
++                committer.commit(&table, &mut tx)
++            }));
++            if fault == 1 {
++                assert!(matches!(
++                    result,
++                    Ok(Err(WalWriterError::Ring(WalRingError::Serialize(_))))
++                ));
++            } else {
++                assert!(result.is_err());
++            }
++            let (len, capacity) = committer.wal_buffer.retained_output();
++            assert_eq!(len, 0);
++            assert!(capacity > 0 && capacity <= 64 * 1024);
++            assert!(ring.pop_bytes().unwrap().is_none());
++            assert_eq!(table.latest_value(0).unwrap(), Some(previous));
++            assert!(arena
++                .proc_array()
++                .create_snapshot(arena.global_txid())
++                .in_flight_txids()
++                .is_empty());
++            let mut retry = table.begin_transaction().unwrap();
++            table
++                .write(&mut retry, 0, FaultyRow(previous.0 + 2))
++                .unwrap();
++            committer.commit(&table, &mut retry).unwrap();
++            let record = deserialize_commit_record(&ring.pop_bytes().unwrap().unwrap()).unwrap();
++            assert_eq!(record.writes.len(), 1);
++            assert_eq!(
++                table.latest_value(0).unwrap(),
++                Some(FaultyRow(previous.0 + 2))
++            );
++            assert_eq!(committer.wal_buffer.retained_output().0, 0);
++        }
++    }
++}
+diff --git a/aerostore_core/tests/wal_serializer_allocations.rs b/aerostore_core/tests/wal_serializer_allocations.rs
+new file mode 100644
+--- /dev/null
++++ b/aerostore_core/tests/wal_serializer_allocations.rs
+@@ -0,0 +1,103 @@
++//! Native warmed commit allocation evidence, independent of wall-clock timing.
++use std::alloc::{GlobalAlloc, Layout, System};
++use std::cell::Cell;
++use std::sync::Arc;
++
++use aerostore_core::{OccCommitter, OccTable, SharedWalRing, ShmArena};
++
++#[derive(Clone, Copy, Default)]
++struct Counts {
++    allocations: u64,
++    reallocations: u64,
++    deallocations: u64,
++    allocated_bytes: u64,
++    scratch_8192_allocations: u64,
++}
++
++thread_local! {
++    static COUNTS: Cell<Option<Counts>> = const { Cell::new(None) };
++}
++
++struct CountingAllocator;
++
++fn account(size: usize, kind: u8) {
++    let _ = COUNTS.try_with(|slot| {
++        if let Some(mut counts) = slot.get() {
++            match kind {
++                0 => {
++                    counts.allocations += 1;
++                    counts.allocated_bytes += size as u64;
++                    counts.scratch_8192_allocations += u64::from(size == 8192);
++                }
++                1 => {
++                    counts.reallocations += 1;
++                    counts.allocated_bytes += size as u64;
++                    counts.scratch_8192_allocations += u64::from(size == 8192);
++                }
++                _ => counts.deallocations += 1,
++            }
++            slot.set(Some(counts));
++        }
++    });
++}
++
++// The counter only observes this test thread while enabled. System remains the
++// allocator; no allocation is performed by the accounting path.
++unsafe impl GlobalAlloc for CountingAllocator {
++    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
++        account(layout.size(), 0);
++        System.alloc(layout)
++    }
++    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
++        account(layout.size(), 0);
++        System.alloc_zeroed(layout)
++    }
++    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
++        account(new_size, 1);
++        System.realloc(ptr, layout, new_size)
++    }
++    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
++        account(layout.size(), 2);
++        System.dealloc(ptr, layout)
++    }
++}
++
++#[global_allocator]
++static ALLOCATOR: CountingAllocator = CountingAllocator;
++
++#[test]
++fn warmed_native_commits_do_not_reallocate_the_8192_byte_serialization_scratch() {
++    let arena = Arc::new(ShmArena::new(8 << 20).unwrap());
++    let table = OccTable::<u64>::new(Arc::clone(&arena), 1).unwrap();
++    table.seed_row(0, 0).unwrap();
++    let ring = SharedWalRing::<8, 1024>::create(arena).unwrap();
++    let mut committer = OccCommitter::new_asynchronous(ring.clone());
++    for value in 1..=2 {
++        let mut tx = table.begin_transaction().unwrap();
++        table.write(&mut tx, 0, value).unwrap();
++        committer.commit(&table, &mut tx).unwrap();
++        ring.pop_bytes().unwrap().unwrap();
++    }
++    let mut totals = Counts::default();
++    for value in 3..103 {
++        let mut tx = table.begin_transaction().unwrap();
++        table.write(&mut tx, 0, value).unwrap();
++        COUNTS.with(|slot| slot.set(Some(Counts::default())));
++        let result = committer.commit(&table, &mut tx);
++        let counts = COUNTS.with(|slot| slot.replace(None).unwrap());
++        result.unwrap();
++        ring.pop_bytes().unwrap().unwrap();
++        totals.allocations += counts.allocations;
++        totals.reallocations += counts.reallocations;
++        totals.deallocations += counts.deallocations;
++        totals.allocated_bytes += counts.allocated_bytes;
++        totals.scratch_8192_allocations += counts.scratch_8192_allocations;
++    }
++    println!(
++        "wal_serializer_allocation_evidence: commits=100 allocations={} reallocations={} deallocations={} allocated_bytes={} scratch_8192_allocations={}",
++        totals.allocations, totals.reallocations, totals.deallocations,
++        totals.allocated_bytes, totals.scratch_8192_allocations,
++    );
++    assert_eq!(totals.scratch_8192_allocations, 0);
++    assert_eq!(table.latest_value(0).unwrap(), Some(102));
++}

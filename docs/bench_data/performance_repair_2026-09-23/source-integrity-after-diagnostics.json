@@ -1,0 +1,18 @@
+{
+  "completed_utc": "2026-09-23T18:49:46Z",
+  "both_campaigns_completed": true,
+  "benchmark_sessions_exited": [
+    21386,
+    81285
+  ],
+  "visible_benchmark_processes": [],
+  "disposable_tmp_remaining": false,
+  "main_native_source_still_matches_control": true,
+  "control_manifest_sha256": "0926547993233c5e055e86f0c5462a875c0cbb178a717efe0fdffa2538ec9088",
+  "source_stable": true,
+  "performance_acceptance": false,
+  "candidate_result_sha256": {
+    "wal-reuse": "a964c87d2da2041f43a162d8b9259b2341a61ee2ff4e982791ab263239af3c14",
+    "remove-window": "cb8cadc229dc6729e1ebd28f66d8d188f720df112e31895cf41c0f51864748ee"
+  }
+}

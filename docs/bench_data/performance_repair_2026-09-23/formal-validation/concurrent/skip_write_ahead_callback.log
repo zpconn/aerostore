@@ -1,0 +1,30 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/performance-repair/formal-remove-window/concurrent/skip_write_ahead_callback.rs:311:1
+    |
+311 | / pub fn commit_with_record_impl<T, D: CommitPrimitives<T>, const WRITE_AHEAD: bool, P, F>(driver: &mut D, tx: &mut OccTransaction<...
+312 | |  -> (result: Result<OccCommitRecord<T>, Error>)
+    | |______________________________________________^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/performance-repair/formal-remove-window/concurrent/skip_write_ahead_callback.rs:370:1
+    |
+274 |             old(self).events().write_ahead ==> old(self).events().callback_complete,
+    |             ----------------------------------------------------------------------- failed precondition
+...
+370 | driver . remove_index_sources ( & index_changes ) ? ;
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/performance-repair/formal-remove-window/concurrent/skip_write_ahead_callback.rs:372:24
+    |
+280 |             old(self).events().record_prepared, old(self).events().callback_complete,
+    |                                                 ------------------------------------ failed precondition
+...
+372 |     Some ( record ) => driver . publish_prepared_write_set ( & record ) . map ( | ( ) | record . writes ) , None => driver . publis...
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

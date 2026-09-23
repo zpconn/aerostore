@@ -30,6 +30,10 @@ use latency_histogram::{
     latency_bucket, merge_histograms, percentile_bounds, HIST_BUCKETS, SUBDIVISIONS,
 };
 
+#[path = "support/crucible_seed.rs"]
+mod crucible_seed;
+use crucible_seed::{fixed_worker_seed, next_u64, parse_seed, FIXED_SEED_ALGORITHM, SEED_ENV};
+
 const WORKERS: usize = 16;
 const TOTAL_KEYS: usize = 50_000;
 const HOT_KEY_COUNT: usize = 256;
@@ -541,12 +545,24 @@ fn print_aerostore_diagnostic(result: &EngineRunResult, profile: CrucibleProfile
 }
 
 fn bench_hyperfeed_crucible(c: &mut Criterion) {
+    // Parse once in the parent. An explicitly invalid seed must fail before
+    // allocation, Docker setup, or any worker/daemon fork.
+    let fixed_seed = parse_seed(std::env::var_os(SEED_ENV).as_deref())
+        .unwrap_or_else(|error| panic!("{SEED_ENV}: {error}"));
+    match fixed_seed {
+        Some(seed) => println!(
+            "hyperfeed_crucible_seed: mode=fixed seed={seed} algorithm={FIXED_SEED_ALGORITHM}"
+        ),
+        None => println!(
+            "hyperfeed_crucible_seed: mode=entropy seed=none algorithm=pid_time_xorshift64_v1"
+        ),
+    }
     let duration = crucible_duration();
     // This mode runs the identical Aerostore workload and correctness gates without
     // requiring Docker. Comparison runs below retain all PostgreSQL performance gates.
     if aerostore_only() {
         for profile in selected_profiles() {
-            let result = run_aerostore_crucible(duration, profile).unwrap_or_else(|err| {
+            let result = run_aerostore_crucible(duration, profile, fixed_seed).unwrap_or_else(|err| {
                 panic!("aerostore diagnostic failed ({}): {err}", profile.label)
             });
             assert_workload_mix(&result, profile.label, "aerostore");
@@ -554,7 +570,7 @@ fn bench_hyperfeed_crucible(c: &mut Criterion) {
         }
         return;
     }
-    let results = run_crucible(duration);
+    let results = run_crucible(duration, fixed_seed);
 
     for result in &results {
         print_results(result, duration);
@@ -579,14 +595,14 @@ fn bench_hyperfeed_crucible(c: &mut Criterion) {
     group.finish();
 }
 
-fn run_crucible(duration: Duration) -> Vec<ProfileRunResult> {
+fn run_crucible(duration: Duration, fixed_seed: Option<u64>) -> Vec<ProfileRunResult> {
     let profiles = selected_profiles();
     let mut out = Vec::with_capacity(profiles.len());
     for profile in profiles {
-        let aerostore = run_aerostore_crucible(duration, profile).unwrap_or_else(|err| {
+        let aerostore = run_aerostore_crucible(duration, profile, fixed_seed).unwrap_or_else(|err| {
             panic!("aerostore crucible run failed ({}): {err}", profile.label)
         });
-        let postgres = run_postgres_crucible(duration, profile).unwrap_or_else(|err| {
+        let postgres = run_postgres_crucible(duration, profile, fixed_seed).unwrap_or_else(|err| {
             panic!("postgres crucible run failed ({}): {err}", profile.label)
         });
         out.push(ProfileRunResult {
@@ -814,6 +830,7 @@ fn alloc_telemetry_config(profile_label: &str) -> Option<AllocTelemetryConfig> {
 fn run_aerostore_crucible(
     duration: Duration,
     profile: CrucibleProfile,
+    fixed_seed: Option<u64>,
 ) -> Result<EngineRunResult, String> {
     let alloc_telemetry_cfg = alloc_telemetry_config(profile.label);
     let shm = Arc::new(ShmArena::new(profile.aerostore_shm_bytes).map_err(|err| {
@@ -928,6 +945,7 @@ fn run_aerostore_crucible(
                 table.as_ref(),
                 &time_index,
                 ring.clone(),
+                fixed_seed,
             );
         }
 
@@ -1313,6 +1331,7 @@ fn run_aerostore_worker(
     table: &OccTable<CrucibleRow>,
     time_index: &SecondaryIndex<usize>,
     ring: SharedWalRing<RING_SLOTS, RING_SLOT_BYTES>,
+    fixed_seed: Option<u64>,
 ) -> ! {
     let Some(state) = RelPtr::<RunState>::from_offset(state_offset).as_ref(shm.mmap_base()) else {
         unsafe { libc::_exit(71) };
@@ -1323,7 +1342,7 @@ fn run_aerostore_worker(
         std::hint::spin_loop();
     }
 
-    let mut rng = seed_rng(worker_idx as u64, 0xA3E0_52D1_9911_AA11);
+    let mut rng = seed_rng(worker_idx as u64, 0xA3E0_52D1_9911_AA11, fixed_seed);
     let mut retry = RetryBackoff::with_seed(next_u64(&mut rng), RetryPolicy::hot_key_default());
     let mut committer = OccCommitter::<RING_SLOTS, RING_SLOT_BYTES>::new_asynchronous(ring);
 
@@ -1486,6 +1505,7 @@ fn run_aerostore_worker(
 fn run_postgres_crucible(
     duration: Duration,
     _profile: CrucibleProfile,
+    fixed_seed: Option<u64>,
 ) -> Result<EngineRunResult, String> {
     ensure_docker_ready()?;
     let docker = clients::Cli::default();
@@ -1555,6 +1575,7 @@ fn run_postgres_crucible(
                 state_offset,
                 metrics_shm.as_ref(),
                 conn_str.as_str(),
+                fixed_seed,
             );
         }
 
@@ -1655,7 +1676,13 @@ fn ensure_docker_ready() -> Result<(), String> {
     Ok(())
 }
 
-fn run_postgres_worker(worker_idx: usize, state_offset: u32, shm: &ShmArena, conn_str: &str) -> ! {
+fn run_postgres_worker(
+    worker_idx: usize,
+    state_offset: u32,
+    shm: &ShmArena,
+    conn_str: &str,
+    fixed_seed: Option<u64>,
+) -> ! {
     let Some(state) = RelPtr::<RunState>::from_offset(state_offset).as_ref(shm.mmap_base()) else {
         unsafe { libc::_exit(81) };
     };
@@ -1702,7 +1729,7 @@ fn run_postgres_worker(worker_idx: usize, state_offset: u32, shm: &ShmArena, con
         std::hint::spin_loop();
     }
 
-    let mut rng = seed_rng(worker_idx as u64, 0xCC77_AA22_1958_3321);
+    let mut rng = seed_rng(worker_idx as u64, 0xCC77_AA22_1958_3321, fixed_seed);
     let mut retry = RetryBackoff::with_seed(next_u64(&mut rng), RetryPolicy::hot_key_default());
     let stats = &state.workers[worker_idx];
 
@@ -2730,7 +2757,10 @@ fn stop_background_daemons(
 }
 
 #[inline]
-fn seed_rng(worker: u64, salt: u64) -> u64 {
+fn seed_rng(worker: u64, salt: u64, fixed_seed: Option<u64>) -> u64 {
+    if let Some(seed) = fixed_seed {
+        return fixed_worker_seed(seed, worker, salt);
+    }
     let pid = unsafe { libc::getpid() as u64 };
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -2745,19 +2775,6 @@ fn seed_rng(worker: u64, salt: u64) -> u64 {
         state = 1;
     }
     state
-}
-
-#[inline]
-fn next_u64(state: &mut u64) -> u64 {
-    let mut x = *state;
-    x ^= x << 13;
-    x ^= x >> 7;
-    x ^= x << 17;
-    if x == 0 {
-        x = 1;
-    }
-    *state = x;
-    x
 }
 
 criterion_group!(benches, bench_hyperfeed_crucible);

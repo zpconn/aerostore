@@ -1,0 +1,81 @@
+{
+  "passed": true,
+  "status": "passed",
+  "scope": "test-only local-window fault probes; no shared protocol metadata injection",
+  "candidate_source_sha256": "a3b8862e481cb9a95345d9eafc88d8f2bdb102b28f001d70c7e01fd581f7c184",
+  "checks": [
+    {
+      "name": "successor-mismatch",
+      "source_sha256": "25daf068a121cd232dcaf5ac4436248cb542a3cf095e8c6d843454647c27681f",
+      "patch_sha256": "e314a547f32393d802f2c4207718d268a3c7e5285ed3f6b7a88a5aad85920c19",
+      "build_command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--release",
+        "--manifest-path",
+        "/home/zpconn/code/aerostore/target/performance-repair/remove-window/fallback-successor-mismatch/Cargo.toml",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/performance-repair/remove-window/build-fallback-successor-mismatch",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "--no-run",
+        "--message-format=json"
+      ],
+      "build_log_sha256": "45b16890e62bf30991ccc33f6e2debdda3c97dea8f36b442a698372def62acf0",
+      "build_exit_code": 0,
+      "executable": "/home/zpconn/code/aerostore/target/performance-repair/remove-window/build-fallback-successor-mismatch/release/deps/aerostore_core-749fc51d62723f0b",
+      "executable_sha256": "c921e8cf6b57c10df0faa4e8a385797e6278872106fd87773e0bdcda8057860a",
+      "fresh_test_binary": true,
+      "test_command": [
+        "/home/zpconn/code/aerostore/target/performance-repair/remove-window/build-fallback-successor-mismatch/release/deps/aerostore_core-749fc51d62723f0b",
+        "--exact",
+        "shm_skiplist::tests::removal_window_detaches_every_lane_before_pinned_retirement_and_shorter_reuse",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "test_exit_code": 0,
+      "test_log_sha256": "f34674e8ee080041502eed0662de7f4913176a17270ea60481fd0b99311f03e3",
+      "fallback_entries": 5
+    },
+    {
+      "name": "cas-mismatch",
+      "source_sha256": "270fead37ef186e76b6a4432ceef7df6c991d0d79b79b7c7125e870719375711",
+      "patch_sha256": "b9ac1dfe0e1c6c8818969b2fc4429e1cb55ce9fb14df6cdaa3dbe1003faa33e2",
+      "build_command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--release",
+        "--manifest-path",
+        "/home/zpconn/code/aerostore/target/performance-repair/remove-window/fallback-cas-mismatch/Cargo.toml",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/performance-repair/remove-window/build-fallback-cas-mismatch",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "--no-run",
+        "--message-format=json"
+      ],
+      "build_log_sha256": "eebc42033f51d847e033b54ff465af7a7ed9472645da4c3ca3917b21fd77dd61",
+      "build_exit_code": 0,
+      "executable": "/home/zpconn/code/aerostore/target/performance-repair/remove-window/build-fallback-cas-mismatch/release/deps/aerostore_core-749fc51d62723f0b",
+      "executable_sha256": "a64462ee4fa687c53ac58e519d49f2ec29a82eaf8e8bf175816beb41f49b6873",
+      "fresh_test_binary": true,
+      "test_command": [
+        "/home/zpconn/code/aerostore/target/performance-repair/remove-window/build-fallback-cas-mismatch/release/deps/aerostore_core-749fc51d62723f0b",
+        "--exact",
+        "shm_skiplist::tests::removal_window_detaches_every_lane_before_pinned_retirement_and_shorter_reuse",
+        "--nocapture",
+        "--test-threads=1"
+      ],
+      "test_exit_code": 0,
+      "test_log_sha256": "f34674e8ee080041502eed0662de7f4913176a17270ea60481fd0b99311f03e3",
+      "fallback_entries": 5
+    }
+  ],
+  "source_stable": true
+}

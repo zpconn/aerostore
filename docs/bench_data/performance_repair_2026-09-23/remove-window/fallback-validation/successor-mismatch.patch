@@ -1,0 +1,20 @@
+--- a/aerostore_core/src/shm_skiplist.rs
++++ b/aerostore_core/src/shm_skiplist.rs
+@@ -878,6 +878,8 @@
+                 self.mark_tombstone_seen();
+                 if self.decrement_live_postings(node) == 0 {
+                     // The last posting is reclaimed with its node.
++                    #[cfg(test)]
++                    { succs[1] = NULL_OFFSET; }
+                     self.unlink_node(key, node_offset, &mut preds, &mut succs)?;
+                 } else {
+                     // Readers holding `post` may still follow its next pointer. Keep
+@@ -2249,6 +2251,8 @@
+         // Preserve the original helping/recheck path if a window is incomplete
+         // or a link unexpectedly changed. Never retire after a partial detach.
+         while !detached_all {
++            #[cfg(test)]
++            eprintln!("remove_window_fallback_entered");
+             let _ = self.find(key, preds, succs)?;
+             detached_all = true;
+             for level in (0..height).rev() {
