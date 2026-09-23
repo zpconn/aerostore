@@ -2,11 +2,12 @@
   "format_version": 1,
   "scope": [
     "Finite abstract protocol models; no production Rust refinement proof",
-    "Exactly two one-shot transactions, two rows, two nonzero keys; one index with one or two publication buckets",
+    "Publication model: exactly two one-shot transactions, two rows, two nonzero keys; one index with one or two publication buckets",
     "Publication/durability enumerate all interleavings in explicit finite one-shot configurations; no depth/state constraints",
     "Exact snapshot row materialization is assumed; allocator, process-sharing and weak-memory implementations are not modeled",
-    "Durability unsafe candidates are model counterexamples, not reproduced Rust crashes; safe variants are proposed model-only designs",
-    "Resource pilots use finite cyclic scenario abstractions with explicitly stated weak fairness; conditional liveness only, no general timestamp-abstraction or Rust-refinement proof"
+    "Durability.tla retains historical candidate-ordering models; CheckpointCut.tla models the implemented partition-exclusion plus active-cut alternative, still without Rust refinement",
+    "Resource pilots use finite cyclic scenario abstractions with explicitly stated weak fairness; conditional liveness only, no general timestamp-abstraction or Rust-refinement proof",
+    "PrimaryKeyInsert models two one-shot insertions into one append-only bucket, same-key exclusion and distinct colliding keys; captured-chain search/CAS and row-ID reservation are abstract primitives, not a Rust refinement"
   ],
   "cases": [
     {
@@ -439,6 +440,171 @@
       "expected": "witness",
       "safety_property": "Safety",
       "use_spec": true,
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "checkpoint_active_cut_safe",
+      "model": "CheckpointCut",
+      "constants": {
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "CheckpointSafety"
+    },
+    {
+      "name": "checkpoint_omit_active_cut",
+      "model": "CheckpointCut",
+      "constants": {
+        "Mutation": "OmitActive",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "CheckpointSafety",
+      "failure_property": "CheckpointSafety"
+    },
+    {
+      "name": "checkpoint_release_after_snapshot",
+      "model": "CheckpointCut",
+      "constants": {
+        "Mutation": "ReleaseAfterSnapshot",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "CheckpointSafety",
+      "failure_property": "CheckpointSafety"
+    },
+    {
+      "name": "checkpoint_truncate_before_persist",
+      "model": "CheckpointCut",
+      "constants": {
+        "Mutation": "TruncateBeforePersist",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "CheckpointSafety",
+      "failure_property": "CheckpointSafety"
+    },
+    {
+      "name": "witness_checkpoint_old_start",
+      "model": "CheckpointCut",
+      "constants": {
+        "Mutation": "None",
+        "Witness": "old_start_late_commit"
+      },
+      "expected": "witness",
+      "safety_property": "CheckpointSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "witness_checkpoint_concurrent_start",
+      "model": "CheckpointCut",
+      "constants": {
+        "Mutation": "None",
+        "Witness": "start_during_checkpoint"
+      },
+      "expected": "witness",
+      "safety_property": "CheckpointSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "primary_key_allocate_same_key",
+      "model": "PrimaryKeyInsert",
+      "constants": {
+        "Scenario": "SameKey",
+        "Api": "Allocate",
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "primary_key_allocate_colliding_keys",
+      "model": "PrimaryKeyInsert",
+      "constants": {
+        "Scenario": "CollidingKeys",
+        "Api": "Allocate",
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "primary_key_allocate_late_head",
+      "model": "PrimaryKeyInsert",
+      "constants": {
+        "Scenario": "SameKey",
+        "Api": "Allocate",
+        "Mutation": "LateHead",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "Safety",
+      "failure_property": "Safety"
+    },
+    {
+      "name": "primary_key_existing_same_key",
+      "model": "PrimaryKeyInsert",
+      "constants": {
+        "Scenario": "SameKey",
+        "Api": "Existing",
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "primary_key_existing_colliding_keys",
+      "model": "PrimaryKeyInsert",
+      "constants": {
+        "Scenario": "CollidingKeys",
+        "Api": "Existing",
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "primary_key_existing_late_head",
+      "model": "PrimaryKeyInsert",
+      "constants": {
+        "Scenario": "SameKey",
+        "Api": "Existing",
+        "Mutation": "LateHead",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "Safety",
+      "failure_property": "Safety"
+    },
+    {
+      "name": "witness_primary_key_retry",
+      "model": "PrimaryKeyInsert",
+      "constants": {
+        "Scenario": "SameKey",
+        "Api": "Allocate",
+        "Mutation": "None",
+        "Witness": "retry_finds_winner"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "witness_primary_key_collisions",
+      "model": "PrimaryKeyInsert",
+      "constants": {
+        "Scenario": "CollidingKeys",
+        "Api": "Existing",
+        "Mutation": "None",
+        "Witness": "colliding_keys_commit"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
       "failure_property": "WitnessNotReached"
     }
   ]

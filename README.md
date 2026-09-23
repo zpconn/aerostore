@@ -81,19 +81,32 @@ Run the release workspace suite with serial test scheduling for the process-heav
 cargo test --workspace --release -- --test-threads=1
 ```
 
-Run the focused Loom concurrency models in a separate build directory:
+Run the focused Loom concurrency campaign, including its deliberately broken
+acquire-ordering control, with the pinned verification toolchain:
 
 ```bash
-RUSTFLAGS='--cfg aerostore_loom' \
-CARGO_TARGET_DIR=/tmp/aerostore-loom-target \
-cargo test -p aerostore_core --test shm_mutation_model --release
+source target/verification-tools/environment.sh
+python3 scripts/check_lock_models.py
 ```
 
-The release workspace suite and all five bounded models passed in the September 2026 validation. The models cover specific concurrency invariants; their bounds and the implementation's remaining limits are documented in the [correctness and verification report](docs/sustained_churn_correctness.md).
+See the [verification setup](verification/README.md) to install the pinned tools.
+The campaign checks seven bounded cases against the actual mutex, with fresh,
+separate builds for the real implementation and its negative control. These
+checks cover specific concurrency invariants, not all native memory behavior or
+unbounded progress. The [correctness report](docs/sustained_churn_correctness.md)
+describes the earlier five-case validation.
 
-The [verification workspace](verification/README.md) contains executable Verus proofs of production bucket kernels, a Rust-to-Lean extraction/proof bridge, and TLA+ protocol and resource models. Its experiment gate ties evidence to the current source and freezes the unproved engine boundary. This is a component pilot; Aerostore is not yet a formally verified database. The [full verification plan](docs/formal_verification_plan.md) tracks the remaining implementation, recovery, memory, and performance obligations.
+The [verification workspace](verification/README.md) contains Verus proofs of production bucket kernels and conditional proofs of native commit control flow, a Rust-to-Lean extraction/proof bridge, and TLA+ protocol and resource models. Its experiment gate ties evidence to the current source and freezes the unproved engine boundary. This is a component pilot; Aerostore is not yet a formally verified database. The [full verification plan](docs/formal_verification_plan.md) tracks the remaining implementation, recovery, memory, and performance obligations.
 
 The [initial verification evidence](docs/bench_data/verification_pilot_2026-09-23/README.md) includes the passing composed campaign, extended Crucible results for all three bucket configurations, and component timing/allocation measurements.
+
+The [next verification phase](docs/bench_data/verified_engine_2026-09-23/README.md)
+reproduced and repaired WAL/checkpoint ordering bugs and a primary-key insertion
+race. Performance acceptance remains open: the last measured candidate met the
+extended-workload comparison margins, while sustained original Crucible
+throughput regressed by 7.0% in the median paired comparison. The subsequent
+poison-handling repair still requires fresh performance measurements. No engine
+candidate from this phase is an approved performance improvement.
 
 ## The Crucible benchmark
 
@@ -116,16 +129,18 @@ Run the 120- and 240-second 2 GiB comparison against PostgreSQL, with Docker run
 
 ### Sustained validation
 
-The 2026-09-23 comparison with native transactional indexes (shared layout 4) passed the 2 GiB 120/240-second gates on an Intel Core Ultra 9 285K host running WSL2, with PostgreSQL 16 and asynchronous commit in both engines:
+The 2026-09-23 comparison with native transactional indexes (shared layout 4) produced these historical 2 GiB results on an Intel Core Ultra 9 285K host running WSL2, with PostgreSQL 16 and asynchronous commit in both engines:
 
-| Duration | Aerostore ops/s | PostgreSQL ops/s | Throughput ratio | Overall p99 ratio |
+| Duration | Aerostore ops/s | PostgreSQL ops/s | Throughput ratio | Reported p99 bucket ratio |
 | --- | ---: | ---: | ---: | ---: |
 | 120 seconds | 315,881 | 51,098 | 6.18× | 0.50× |
 | 240 seconds | 309,568 | 50,592 | 6.12× | 0.25× |
 
 Both runs passed exact index agreement, allocation ownership, reclamation, and memory-growth checks. The 128 MiB Aerostore-only runs also passed at both durations. The longer run retained 98.0% of aggregate throughput. These are workload-wide results: Aerostore's update-only p99 was higher than PostgreSQL's in these runs. Direct shared-memory access, client/server overhead, and durability paths also differ.
 
-See the [current results and reproduction commands](docs/bench_data/transactional_indexes_2026-09-22/README.md), [earlier layout-3 baseline](docs/bench_data/crucible_fixed_2026-09-22/README.md), and [performance runbook](docs/nightly_perf.md) for the full scope.
+The historical latency values were power-of-two bucket lower bounds, not exact percentiles; their ratios cannot establish precise tail-latency margins. The current benchmark reports much narrower integer intervals and uses conservative ratio bounds. Throughput measurements are independent of that earlier reporting defect.
+
+See the [archived results and reproduction commands](docs/bench_data/transactional_indexes_2026-09-22/README.md), [earlier layout-3 baseline](docs/bench_data/crucible_fixed_2026-09-22/README.md), [current engine verification and comparison](docs/bench_data/verified_engine_2026-09-23/README.md), and [performance runbook](docs/nightly_perf.md) for the full scope.
 
 ## Extended HyperFeed Crucible
 
@@ -155,7 +170,7 @@ See the [extended benchmark runbook](docs/extended_crucible.md) for modes, assum
 
 ## Compatibility and recovery
 
-The current shared-memory layout is **version 4**, with boot metadata **version 6**. Older mappings require a cold rebuild using the appropriate durable recovery inputs. Preserve WAL and checkpoint data when upgrading.
+The current shared-memory layout is **version 5**, with boot metadata **version 7**. Older mappings require a cold rebuild using the appropriate durable recovery inputs. Preserve WAL and checkpoint data when upgrading. A table binds to one WAL stream; live changes between synchronous/asynchronous modes, files or rings after binding are rejected. See the [durability contract and current limitations](verification/contracts/durability.md).
 
 Applications using `OccTable` should bind their secondary indexes before starting transactions and query through `index_lookup`; commit then maintains rows and indexes together. Raw posting operations are for initialization and diagnostics. Process death while holding a shared lock and poisoned storage still require recovery. The [transactional-index guide](docs/transactional_indexes.md) describes the API, retry behavior, and limits.
 

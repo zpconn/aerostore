@@ -12,6 +12,46 @@ This does **not** close P1's actual concurrent-operation/slice-refinement obliga
 
 The [initial evidence archive](bench_data/verification_pilot_2026-09-23/README.md) retains the successful composed run, proof/model diagnostics, integration matrix, and timing/allocation results.
 
+The next implementation phase uses `a382ce3` as its performance baseline. It adds a source-bound, conditional Verus proof of the existing commit driver and callback cleanup, with explicit native primitive obligations. Durability-model schedules have now reproduced real WAL-publication and checkpoint-cut bugs; the [native durability contract](../verification/contracts/durability.md) describes the implemented repairs and one-stream boundary. A separate checkpoint model checks active-at-cut replay while allowing new transactions to start. The broader cross-process suite also exposed a primary-key duplicate-insertion race; deterministic regressions and a searched-head CAS repair now accompany its finite model. The complete model campaign has 49 cases. Matched whole-engine performance comparisons replace reliance on helper microbenchmarks for these changes. This is a reviewed-boundary change proposal, not approval of an optimization against the old frozen engine; P1 and the full gate remain open.
+
+The first whole-engine campaign rejected the initial durability candidate:
+extended workloads showed repeatable throughput regressions from the longer
+commit critical section. The revised implementation prepares the immutable
+record and encoded WAL bytes before acquiring guards, revalidates the transaction
+under guards, and accepts WAL before publication. Native regressions check that
+a competing writer can complete during encoding and invalidate the prepared
+transaction without logging it. The conditional proof now includes preparation
+error/unwind cleanup. The original Crucible's coarse, mislabeled latency bins
+also required a measurement repair: exact integer quantile intervals, identical
+instrumentation patches on both engines, and conservative comparison gates.
+All original failures and captures are preserved in the
+[native-engine evidence archive](bench_data/verified_engine_2026-09-23/README.md).
+These changes illustrate the required loop: reject a measured regression,
+reduce unnecessary lock duration, reverify, and measure again.
+
+The pilot also requires seven bounded Loom cases importing the actual production
+lock, with fresh separate builds and a weakened-acquire negative control that
+must fail for the intended causality violation. The [lock-model boundary](../verification/contracts/lock_models.md)
+states the finite scheduling limits and evidence checks. No diagnostic lock
+optimization was adopted; the original runtime lock remains. This strengthens
+regression detection without claiming native mmap refinement or unbounded
+progress.
+
+The revised candidate passes the extended-workload performance margins, but its
+original sustained Crucible comparison still fails the throughput gate (7.0%
+median regression). Three isolated lock/layout experiments were rejected rather
+than promoted: one gave insufficient benefit, one increased throughput while
+greatly worsening p99, and the last failed both throughput and latency criteria.
+Their complete results remain in the same evidence archive. Actual-mutex Loom
+checks and a separately rebuilt weakened-acquire negative control now extend
+the verification gate; no experimental lock implementation was adopted. Final
+review also identified a transaction resuming after table poison during WAL
+preparation, and a synchronous appender checking poison outside its file lock.
+Three deterministic regressions fail before the repair and pass afterward;
+the resulting source is newer than the timed candidate.
+Resolving the sustained regression and measuring the final source remain required
+performance tasks, independent of a passing component proof campaign.
+
 ## 1. Recommended architecture
 
 Use **TLA+/TLC to explore concurrent executions, Lean to prove the general transaction and reclamation mathematics, Aeneas/Charon to connect actual safe Rust functions to Lean, and Verus to verify the concurrent Rust implementation**. Start with one complete transaction slice before scaling to the whole core.
@@ -133,7 +173,7 @@ Several implementation details require explicit investigation or repairs before 
 
 **Lifecycle authority.** `open_boot_context` clears orphaned slots on warm attachment, while `clear_orphaned_slots` requires prior workers to have stopped. Separate exclusive restart/recovery authority from ordinary live worker attachment and enforce the distinction. A valid header alone does not establish a safe recovery state.
 
-**Durability ordering.** `OccCommitter::commit` publishes through `commit_with_record` before encoding or submitting WAL. Checkpoint code captures rows, then samples the global identifier, writes/renames/syncs a checkpoint, and truncates WAL. A process-local Tcl mutex does not by itself establish exclusion across independent processes. These facts create concrete schedules to model; this plan does not claim to have reproduced a crash anomaly.
+**Durability ordering.** The baseline published through `commit_with_record` before encoding or submitting WAL and released checkpoint exclusion before sampling the cut and truncating WAL. Deterministic real-engine tests now reproduce both hazards, including acknowledged dependency loss and an old-starting transaction omitted by replay. The repair moves WAL acceptance under existing commit locks before publication and holds checkpoint partition exclusion through durable persistence/truncation, recording active IDs. A separate mixed-stream dependency failure motivated shared immutable WAL-stream binding. These fixes have executable evidence; their complete implementation-refinement and filesystem obligations remain open.
 
 **Extractor identity.** Bound attachments must agree on a pure, deterministic extractor. An offset registry does not prove equality of callback bodies. Prefer schema/extractor identities with verified built-in functions; define panic, reentry, and error behavior. Tests of matching hashes alone do not prove semantic equivalence.
 
@@ -213,7 +253,7 @@ The planned theorem dependency order is:
 | Definitions and initialization | `init_well_formed`, `bootstrap_indexes_match_rows`, `attachment_preserves_authority` |
 | Snapshot/visibility | `registration_snapshot_coherent`, `visibility_matches_snapshot`, `retention_horizon_safe` |
 | Predicate reads | `bucket_coverage_sound`, `candidate_capture_complete_or_retry`, `validated_predicate_remains_complete` |
-| Commit/failure | `publication_observation_atomic`, `savepoint_rollback_preserves_semantics`, `prepublication_failure_preserves_database`, `poison_blocks_further_success` |
+| Commit/failure | `publication_observation_atomic`, `savepoint_rollback_preserves_semantics`, `prepublication_failure_preserves_database`, `poison_blocks_new_admission` |
 | Storage | `step_preserves_ownership`, `reclamation_preserves_observations`, `pool_conservation`, `machine_counters_refine_epochs` |
 | Histories | `concrete_step_refines_abstract_step_or_stutter`, `committed_history_strictly_serializable` |
 | Persistence | `replay_matches_log_prefix`, `recovery_history_dependency_closed`, `synchronous_ack_survives_recovery` |
@@ -335,7 +375,17 @@ Required negative controls:
 - Permit counter sentinel reuse, mismatched key encoding, or duplicate ownership on attach.
 - Recover a dependent commit without its prerequisite; truncate beyond a safe durable checkpoint cut.
 
-Also require positive witnesses: disjoint writers can both commit; empty-search conflicts are reachable; own-write lookups work; an older reader can complete when no relevant bucket changed; allocation-failure rollback executes; poison is reachable and blocks later success; memory becomes reusable when blockers finish; a crash can recover a nonempty committed history.
+Also require positive witnesses: disjoint writers can both commit; empty-search conflicts are reachable; own-write lookups work; an older reader can complete when no relevant bucket changed; allocation-failure rollback executes; poison is reachable and blocks new admission at the relevant guarded check; memory becomes reusable when blockers finish; a crash can recover a nonempty committed history.
+
+The poison theorem must identify its admission boundary. Native commit rechecks
+table health after taking its guards; managed synchronous append additionally
+checks health and publishes detected indeterminate failure while holding the
+file lock. Disjoint transactions already admitted or accepted may still finish.
+Their eventual responses cannot be turned into clean-abort retries merely
+because poison became visible elsewhere. Instantaneous cancellation of all
+in-flight work, cross-table/raw-writer stream health, and process death before
+poison publication are separate open obligations; the conditional driver proof
+does not establish them.
 
 An always-aborting implementation, an empty initial-state set, unreachable commit actions, or a theorem quantified over no legal callers must not qualify as success. Review strengthened preconditions and weakened postconditions as changes to the product contract, not routine proof repairs.
 

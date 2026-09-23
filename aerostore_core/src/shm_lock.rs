@@ -112,3 +112,76 @@ impl Drop for ShmMutexGuard<'_> {
         self.mutex.state.store(0, Ordering::Release);
     }
 }
+
+// These bounded schedules exercise this actual lock with Loom atomics. They do
+// not prove mmap/process semantics or unbounded fairness/progress.
+#[cfg(all(test, aerostore_loom))]
+mod loom_tests {
+    use super::ShmMutex;
+    use loom::cell::UnsafeCell;
+    use loom::sync::atomic::{AtomicUsize, Ordering};
+    use loom::sync::Arc;
+    use loom::thread;
+
+    fn check_model(f: impl Fn() + Send + Sync + 'static) {
+        let mut model = loom::model::Builder::new();
+        model.preemption_bound = Some(2);
+        model.max_branches = 10_000;
+        model.check(f);
+    }
+
+    #[test]
+    fn contended_handoff_publishes_protected_non_atomic_value() {
+        check_model(|| {
+            let lock = Arc::new(ShmMutex::new());
+            let value = Arc::new(UnsafeCell::new(0_usize));
+            let owner = lock.lock();
+            let worker = {
+                let lock = Arc::clone(&lock);
+                let value = Arc::clone(&value);
+                thread::spawn(move || {
+                    let _guard = lock.lock();
+                    value.with_mut(|pointer| unsafe {
+                        assert_eq!(*pointer, 1);
+                        *pointer = 2;
+                    });
+                })
+            };
+            value.with_mut(|pointer| unsafe { *pointer = 1 });
+            drop(owner);
+            worker.join().unwrap();
+            value.with(|pointer| unsafe { assert_eq!(*pointer, 2) });
+        });
+    }
+
+    #[test]
+    fn registered_priority_waiter_precedes_ordinary_contender() {
+        check_model(|| {
+            let lock = Arc::new(ShmMutex::new());
+            let admissions = Arc::new(AtomicUsize::new(0));
+            let owner = lock.lock();
+            let priority = {
+                let lock = Arc::clone(&lock);
+                let admissions = Arc::clone(&admissions);
+                thread::spawn(move || {
+                    let _guard = lock.lock_priority();
+                    assert_eq!(admissions.fetch_add(1, Ordering::Relaxed), 0);
+                })
+            };
+            // Observe real priority registration while the initial owner still
+            // holds the lock; no protocol state is injected by the test.
+            while lock.priority_waiters.load(Ordering::Acquire) == 0 {
+                thread::yield_now();
+            }
+            drop(owner);
+            // The original owner becomes the ordinary contender. This keeps
+            // all three roles while exploring only two concurrent threads.
+            {
+                let _ordinary = lock.lock();
+                assert_eq!(admissions.fetch_add(1, Ordering::Relaxed), 1);
+            }
+            priority.join().unwrap();
+            assert_eq!(admissions.load(Ordering::Relaxed), 2);
+        });
+    }
+}

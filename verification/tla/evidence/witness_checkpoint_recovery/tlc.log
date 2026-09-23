@@ -1,17 +1,17 @@
 TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
-Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 552] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
-Parsing file /tmp/aerostore-tlc-models-uquyd5w5/Durability.tla
-Parsing file /tmp/tlc-1530012163123507397/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
-Parsing file /tmp/tlc-1530012163123507397/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
-Parsing file /tmp/tlc-1530012163123507397/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 557] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-nfmgei4q/Durability.tla
+Parsing file /tmp/tlc-6674890980232048335/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-6674890980232048335/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-6674890980232048335/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
 Semantic processing of module Naturals
 Semantic processing of module Sequences
 Semantic processing of module FiniteSets
 Semantic processing of module Durability
 Linting of module Durability
-Starting... (2026-09-23 09:16:58)
+Starting... (2026-09-23 10:46:57)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-09-23 09:16:58.
+Finished computing initial states: 1 distinct state generated at 2026-09-23 10:46:57.
 Error: Invariant WitnessNotReached is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -79,4 +79,4 @@ State 10: <Crash line 76, col 5 to line 81, col 75 of module Durability>
 
 75 states generated, 52 distinct states found, 8 states left on queue.
 The depth of the complete state graph search is 10.
-Finished in 00s at (2026-09-23 09:16:58)
+Finished in 00s at (2026-09-23 10:46:57)

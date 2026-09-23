@@ -19,6 +19,32 @@ load __LIBPATH__ Aerostore
 package require aerostore
 set _ [aerostore::init __DATA_DIR__]
 
+# Initial configuration may choose either mode before the first WAL attempt.
+set sync_mode [aerostore::get_config aerostore.synchronous_commit]
+if {$sync_mode ne "on"} {
+    error "expected default synchronous_commit mode on, got: $sync_mode"
+}
+
+aerostore::set_config aerostore.synchronous_commit off
+set sync_mode [aerostore::get_config aerostore.synchronous_commit]
+if {$sync_mode ne "off"} {
+    error "expected synchronous_commit mode off after toggle, got: $sync_mode"
+}
+
+if {[catch {aerostore::checkpoint_now} checkpoint_err] == 0} {
+    error "checkpoint unexpectedly succeeded while synchronous_commit=off"
+}
+if {![string match "TCL_ERROR:*" $checkpoint_err]} {
+    error "checkpoint error missing TCL_ERROR prefix: $checkpoint_err"
+}
+
+aerostore::set_config aerostore.synchronous_commit on
+set sync_mode [aerostore::get_config aerostore.synchronous_commit]
+if {$sync_mode ne "on"} {
+    error "expected synchronous_commit mode on after restore, got: $sync_mode"
+}
+
+
 set batch [join [list \
     "UAL123\t37.618805\t-122.375416\t35000\t451\t1709000000" \
     "UAL555\t41.974200\t-87.907300\t41000\t472\t1709000001" \
@@ -166,30 +192,6 @@ if {![string match "TCL_ERROR:*" $err2]} {
     error "unknown option error missing TCL_ERROR prefix: $err2"
 }
 
-set sync_mode [aerostore::get_config aerostore.synchronous_commit]
-if {$sync_mode ne "on"} {
-    error "expected default synchronous_commit mode on, got: $sync_mode"
-}
-
-aerostore::set_config aerostore.synchronous_commit off
-set sync_mode [aerostore::get_config aerostore.synchronous_commit]
-if {$sync_mode ne "off"} {
-    error "expected synchronous_commit mode off after toggle, got: $sync_mode"
-}
-
-if {[catch {aerostore::checkpoint_now} checkpoint_err] == 0} {
-    error "checkpoint unexpectedly succeeded while synchronous_commit=off"
-}
-if {![string match "TCL_ERROR:*" $checkpoint_err]} {
-    error "checkpoint error missing TCL_ERROR prefix: $checkpoint_err"
-}
-
-aerostore::set_config aerostore.synchronous_commit on
-set sync_mode [aerostore::get_config aerostore.synchronous_commit]
-if {$sync_mode ne "on"} {
-    error "expected synchronous_commit mode on after restore, got: $sync_mode"
-}
-
 aerostore::set_config aerostore.checkpoint_interval_secs 1
 set checkpoint_interval [aerostore::get_config aerostore.checkpoint_interval_secs]
 if {$checkpoint_interval != 1} {
@@ -307,7 +309,11 @@ fn build_cdylib_for_profile(profile_dir: &Path) -> Result<(), String> {
         .and_then(|v| v.to_str())
         .unwrap_or("debug");
     let mut cmd = Command::new("cargo");
-    cmd.args(["build", "-p", "aerostore_tcl"]);
+    cmd.args(["build", "--offline", "--locked", "-p", "aerostore_tcl"]);
+    let target_dir = profile_dir
+        .parent()
+        .ok_or_else(|| "profile directory has no target parent".to_string())?;
+    cmd.arg("--target-dir").arg(target_dir);
     if profile.eq_ignore_ascii_case("release") {
         cmd.arg("--release");
     }

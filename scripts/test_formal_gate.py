@@ -11,6 +11,7 @@ import tomllib
 import unittest
 from unittest.mock import patch
 import verify_formal
+import check_lock_models as lock_models
 
 HERE = Path(__file__).resolve().parent
 SPEC = importlib.util.spec_from_file_location("coverage", HERE / "check_formal_coverage.py")
@@ -62,6 +63,10 @@ class FrozenBoundaryTests(unittest.TestCase):
         (self.root / "scripts/check_lean.py").write_text("raise SystemExit(0)\n")
         self.assertFalse(coverage.validate(self.root)["passed"])
 
+    def test_weakened_concurrent_primitive_contract_fails(self):
+        (self.root / "verification/concurrent/contracts.rs").write_text("// silently assume publication\n")
+        self.assertFalse(coverage.validate(self.root)["passed"])
+
     def test_changed_required_roots_fails(self):
         (self.root / "verification/lean/roots.json").write_text('{"roots": []}')
         self.assertFalse(coverage.validate(self.root)["passed"])
@@ -96,6 +101,17 @@ class FrozenBoundaryTests(unittest.TestCase):
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_concurrent_success_without_negative_controls_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "concurrent").mkdir()
+            (root / "concurrent/receipt.json").write_text(json.dumps({
+                "passed": True, "status": "passed", "native_primitive_refinement_proved": False,
+                "transaction_history_refinement_proved": False, "checks": [],
+            }))
+            with self.assertRaisesRegex(RuntimeError, "complete conditional proof evidence"):
+                verify_formal.collect_claim_evidence([], [{"name": "concurrent", "passed": True}], root)
+
     def test_ambient_compiler_flags_fail(self):
         with patch.dict("os.environ", {"RUSTFLAGS": "--cfg ignore_contract"}):
             with self.assertRaisesRegex(RuntimeError, "unreviewed build environment"):
@@ -113,6 +129,158 @@ class EvidenceTests(unittest.TestCase):
                 verify_formal.collect_claim_evidence([{"id": "test", "scope": "test", "status": "partial",
                     "required_checks": ["lean"], "lean_roots": ["must_exist"]}],
                     [{"name": "lean", "passed": True}], root)
+
+
+class LockModelEvidenceTests(unittest.TestCase):
+    """Small synthetic artifacts test the receipt checker, never claim a model run."""
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="aerostore-lock-receipt-test-")
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.output = self.root / "target/lock-models"
+        self.output.mkdir(parents=True)
+        self.path = self.output / "receipt.json"
+        (self.root / "Cargo.toml").write_text('[workspace]\nmembers = ["aerostore_core"]\n')
+        (self.root / "Cargo.lock").write_text("# fixture\n")
+        for name in [lock_models.LOCK, lock_models.MODELS,
+                     "scripts/check_lock_models.py", "scripts/verify_formal.py"]:
+            destination = self.root / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(coverage.ROOT / name, destination)
+        inputs = lock_models.fingerprints(self.root)
+        original = (self.root / lock_models.LOCK).read_text()
+        mutated = original.replace(lock_models.MUTANT_OLD, lock_models.MUTANT_NEW)
+        patch_path = self.output / "relaxed-success-cas.patch"
+        patch_path.write_text("synthetic patch fixture\n")
+        bad_source = self.output / "mutant.rs"
+        bad_source.write_text(mutated)
+        self.receipt = {
+            "schema": 1, "status": "passed", "passed": True, "source_stable": True, "complete_campaign": True,
+            "scope": "bounded_production_lock_models", "native_weak_memory_refinement_proved": False,
+            "unbounded_progress_proved": False, "bounds": lock_models.BOUNDS,
+            "required_cases": list(lock_models.CASES), "required_mutant": lock_models.MUTANT_NAME,
+            "source_root": str(self.root), "environment_root": str(self.root),
+            "input_sha256": inputs, "final_input_sha256": inputs,
+            "candidate_shm_lock_sha256": inputs[lock_models.LOCK],
+            "runner_sha256": lock_models.digest(self.root / "scripts/check_lock_models.py"),
+            "environment_checker_sha256": lock_models.digest(self.root / "scripts/verify_formal.py"),
+            "model_environment": {"RUSTFLAGS": "--cfg aerostore_loom"},
+            "tool_sha256": {}, "builds": [], "listings": [], "checks": [],
+            "mutant": {"name": lock_models.MUTANT_NAME, "case": lock_models.MUTANT_CASE,
+                       "source_sha256": lock_models.digest(bad_source), "patch_sha256": lock_models.digest(patch_path)},
+        }
+        for name in ("rustc", "cargo"):
+            tool = self.output / name
+            tool.write_text("synthetic " + name)
+            self.receipt["tool_sha256"][str(tool)] = lock_models.digest(tool)
+        for variant in (0, 1):
+            directory = self.output / str(variant)
+            directory.mkdir()
+            executable = directory / "model"
+            executable.write_text("synthetic binary " + str(variant))
+            artifact = {"reason": "compiler-artifact", "fresh": False, "executable": str(executable),
+                        "target": {"name": "shm_mutation_model", "src_path": str(directory / lock_models.MODELS)}}
+            build = self.log_result(directory / "build.log", json.dumps(artifact), 0)
+            build.update(command=["cargo", "test", "--offline", "--locked", "--release", "--no-run",
+                                  "--message-format=json", "--test", "shm_mutation_model"], cwd=str(directory),
+                         executable=str(executable), executable_sha256=lock_models.digest(executable),
+                         fresh_test_binary=True, model_sha256=inputs[lock_models.MODELS],
+                         lock_sha256=inputs[lock_models.LOCK] if variant == 0 else lock_models.digest(bad_source))
+            self.receipt["builds"].append(build)
+            listing = self.log_result(directory / "list.log", "\n".join(case + ": test" for case in lock_models.CASES), 0)
+            listing["command"] = [str(executable), "--list"]
+            self.receipt["listings"].append(listing)
+        for index, name in enumerate([*lock_models.CASES, lock_models.MUTANT_NAME]):
+            mutant = index == len(lock_models.CASES)
+            case = lock_models.MUTANT_CASE if mutant else name
+            build = self.receipt["builds"][int(mutant)]
+            contents = "running 1 test\ntest " + case + " ... "
+            if mutant:
+                contents += "FAILED\nCausality violation: Concurrent write accesses to `UnsafeCell`.\ntest result: FAILED. 0 passed; 1 failed; 0 ignored;\n"
+            else:
+                contents += "ok\ntest result: ok. 1 passed; 0 failed; 0 ignored;\n" + lock_models.EXPECTED_COUNTEREXAMPLES.get(case, "")
+            check = self.log_result(self.output / (str(index) + ".log"), contents, 101 if mutant else 0)
+            check.update(name=name, passed=True, executable_sha256=build["executable_sha256"],
+                         command=[build["executable"], "--exact", case, "--nocapture", "--test-threads=1"])
+            if mutant:
+                check["expected_failure"] = True
+            else:
+                check["expected_counterexample"] = case in lock_models.EXPECTED_COUNTEREXAMPLES
+            self.receipt["checks"].append(check)
+
+    def log_result(self, path, contents, code):
+        path.write_text(contents)
+        return {"log": str(path), "log_sha256": lock_models.digest(path), "exit_code": code}
+
+    def validate(self):
+        self.path.write_text(json.dumps(self.receipt))
+        with patch.object(verify_formal, "ROOT", self.root):
+            return verify_formal.collect_claim_evidence([], [{"name": "lock-models", "passed": True}], self.output.parent)
+
+    def test_complete_receipt_validates(self):
+        self.assertEqual(self.validate(), [])
+
+    def test_missing_receipt_fails(self):
+        with patch.object(verify_formal, "ROOT", self.root), self.assertRaisesRegex(RuntimeError, "lock-model evidence"):
+            verify_formal.collect_claim_evidence([], [{"name": "lock-models", "passed": True}], self.output.parent)
+
+    def test_success_boolean_without_artifacts_fails(self):
+        self.receipt = {"passed": True, "status": "passed"}
+        with self.assertRaisesRegex(RuntimeError, "lock-model evidence"):
+            self.validate()
+
+    def test_missing_or_duplicate_case_fails(self):
+        self.receipt["checks"][1] = self.receipt["checks"][0]
+        with self.assertRaisesRegex(RuntimeError, "missing or duplicate"):
+            self.validate()
+
+    def test_missing_negative_control_fails(self):
+        self.receipt["checks"].pop()
+        with self.assertRaisesRegex(RuntimeError, "missing or duplicate"):
+            self.validate()
+
+    def test_arbitrary_mutant_failure_fails(self):
+        check = self.receipt["checks"][-1]
+        check.update(self.log_result(Path(check["log"]), "running 1 test\ntest " + lock_models.MUTANT_CASE
+                     + " ... FAILED\ntest result: FAILED. 0 passed; 1 failed; 0 ignored;\nunrelated panic\n", 101))
+        with self.assertRaisesRegex(RuntimeError, "intended Loom causality"):
+            self.validate()
+
+    def test_zero_tests_fails(self):
+        check = self.receipt["checks"][0]
+        check.update(self.log_result(Path(check["log"]), "running 0 tests\n0 passed; 0 failed; 0 ignored\n", 0))
+        with self.assertRaisesRegex(RuntimeError, "run exactly once"):
+            self.validate()
+
+    def test_compile_failure_fails(self):
+        self.receipt["builds"][1]["exit_code"] = 101
+        with self.assertRaisesRegex(RuntimeError, "model executable"):
+            self.validate()
+
+    def test_cached_artifact_fails(self):
+        build = self.receipt["builds"][0]
+        log = Path(build["log"])
+        artifact = json.loads(log.read_text())
+        artifact["fresh"] = True
+        build.update(self.log_result(log, json.dumps(artifact), 0))
+        with self.assertRaisesRegex(RuntimeError, "fresh compiler artifact"):
+            self.validate()
+
+    def test_changed_binary_fails(self):
+        Path(self.receipt["builds"][0]["executable"]).write_text("substituted binary")
+        with self.assertRaisesRegex(RuntimeError, "substituted model executable"):
+            self.validate()
+
+    def test_changed_source_fails(self):
+        with (self.root / lock_models.LOCK).open("a") as output:
+            output.write("\n// changed source\n")
+        with self.assertRaisesRegex(RuntimeError, "stale lock-model source"):
+            self.validate()
+
+    def test_broader_claim_fails(self):
+        self.receipt["unbounded_progress_proved"] = True
+        with self.assertRaisesRegex(RuntimeError, "unsupported lock-model scope"):
+            self.validate()
 
 
 class RunnerTests(unittest.TestCase):
@@ -158,6 +326,13 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertFalse(report["passed"])
         self.assertFalse(report["whole_engine_verified"])
+
+    def test_pilot_requires_lock_models(self):
+        code, _, calls = self.run_fixture("pilot")
+        self.assertEqual(code, 0)
+        commands = dict(calls)
+        self.assertIn("lock-models", commands)
+        self.assertIn("scripts/check_lock_models.py", commands["lock-models"])
 
 
 if __name__ == "__main__":

@@ -7,8 +7,10 @@ This workspace implements the first component of the [verification plan](../docs
 | Layer | Current coverage | Boundary |
 | --- | --- | --- |
 | Verus | Both actual bucket canonicalization functions: exact sorted unique membership, bounds, and first-invalid-input semantics; strict stamp comparison; uniqueness of the result contract | Safe Rust functions, successful allocation and pinned collection models; not their concurrent callers |
+| Native commit Verus | Actual commit driver and callback cleanup: validation/publication/cleanup order, both policy branches, semantic negative controls | Conditional on explicit primitive event contracts; native data, history refinement and weak memory remain open |
 | Lean | Both actual extracted bucket functions, including first-invalid errors; corollaries for the production limit; actual scalar comparison; supporting abstract lemmas and an axiom audit | Logical allocation models and explicit production capacity; required roots in [roots.json](lean/roots.json) state exact coverage |
-| TLA+/TLC | 35 publication, crash-ordering, retention, collector-admission and live-key-reclamation cases, including intended safety/liveness failures and positive witnesses | Small explicit models with stated fairness; no checked Rust refinement or composed transaction-history theorem |
+| TLA+/TLC | 49 publication, primary-key insertion, crash-ordering, checkpoint-cut, retention, collector-admission and live-key-reclamation cases, including intended safety/liveness failures and positive witnesses | Small explicit models with stated fairness; no checked Rust refinement or composed transaction-history theorem |
+| Loom | Seven bounded cases importing the actual production lock, including protected-value handoff and registered-priority admission; weakened-Acquire negative control | Preemption bound 2 and 10,000 branches; abstract index protocol, no native mmap refinement or unbounded progress theorem |
 | Integration | Kernel differential tests, three transaction/index test suites and extended Crucible under the default and both candidate features | Bounded engine regression evidence, not a replacement for implementation proofs |
 | Experiment gate | Fresh extraction/proofs, mandatory negative controls, source hashes, fixed proof roots, frozen engine/contracts/tool configuration, independently anchored comparison | Initial bootstrap is unanchored; repository review and protected CI remain external trust requirements |
 
@@ -33,7 +35,14 @@ The report defaults to `target/verification/report.json`. Logs, exact tool invoc
 
 Profiles are `models`, `proofs`, `pilot` and `full`. `pilot` runs all implemented component checks and the integration matrix. Its extended Crucible fixture uses eight families, one cycle, four local workers, all 27 replay phases and all six native concurrency contracts; these small runs check integration, not sustained performance. **`full` deliberately fails** while the complete implementation obligations remain open. It cannot be made successful by merely editing a descriptive claim status.
 
-Individual tool workflows are described in [Verus](verus/README.md), [Lean/bridge](lean/README.md) and [TLA+](tla/README.md). The TLA directory retains the initial model counterexamples for inspection.
+Individual tool workflows are described in [Verus](verus/README.md), [native commit](concurrent/README.md), [Lean/bridge](lean/README.md) and [TLA+](tla/README.md). The TLA directory retains model counterexamples for inspection. The pilot also runs the native durability regressions and the performance comparison runner's integrity tests.
+
+The [production-lock campaign](contracts/lock_models.md) is also mandatory in
+`pilot`. It requires all seven named cases and the intended synchronization
+counterexample from separate fresh builds, and validates source, binary and
+log hashes. Missing evidence, zero-test runs, unrelated mutant failures and
+stale compiler artifacts fail the composed gate. These checks add no runtime
+lock changes or production instrumentation.
 
 ## Make an optimization experiment
 
@@ -80,6 +89,24 @@ Such measurements are diagnostic only. The fixed bucket contract and first imple
 
 The complete concurrent native predicate/publication operation needs an implementation-refinement theorem connecting actual Rust executions to legal histories. General serializability, unsafe arena/guard ownership, acquire/release/relaxed atomics, process-shared mappings, quantitative reclamation bounds, durability/recovery, and query/application composition remain open. Freezing these files prevents this experiment from silently changing them; it does not prove them correct.
 
-The durability model exposes unsafe publication/WAL and checkpoint-cut orderings. Its passing alternatives are proposed model designs, not repairs implemented in the engine. Likewise the resource models demonstrate specific retention and starvation mechanisms; they do not establish a general memory bound for a sustained HyperFeed workload.
+The durability model led to reproducible failures in the actual engine. The current repair puts WAL acceptance before publication and holds checkpoint exclusion through a cut that records active transaction IDs. The [durability boundary](contracts/durability.md) describes error handling, one-stream enforcement, upgrade requirements and open obligations. `CheckpointCut.tla` models this implemented ordering separately from the original globally drained design. Neither the tests nor the conditional control-flow proof establish full crash/history refinement. Likewise the resource models demonstrate specific retention and starvation mechanisms; they do not establish a general memory bound for a sustained HyperFeed workload.
+
+The [engine comparison runner](../scripts/compare_engine_performance.py) captures binaries with source/compiler identities and runs alternating, matched original/extended Crucible and WAL workloads. Correctness failures, missing evidence, material regressions and inconclusive noisy measurements cannot produce a speed approval. This phase changes the previously frozen engine, so it proposes a new boundary for review; it cannot pass an optimization comparison anchored to the unchanged previous boundary.
+
+The first whole-engine comparison exposed a repeatable extended-workload slowdown
+from encoding WAL while holding commit guards. The revised path prepares the
+immutable record and complete encoded payload before acquiring guards, then
+revalidates and accepts that payload before publication. Its conditional proof
+and native tests cover the new preparation/cleanup ordering; performance must
+still be measured against the preserved original engine.
+
+The original Crucible's power-of-two histogram also reported bucket lower
+bounds as upper bounds. The replacement has 64 subdivisions per octave and
+reports inclusive integer nanosecond intervals. Tail-latency acceptance uses
+conservative interval ratios; ambiguous intervals or excessive run variation
+remain inconclusive. Fixture changes are applied identically to both engines,
+with parent-source and exact patch-transition checks, before new binary capture.
+The additional histogram storage is benchmark instrumentation, not production
+engine memory. Earlier measurements retain their original fixture identity.
 
 Extend the optimization boundary only when those implementation obligations close. The existing plan retains their original exit criteria.

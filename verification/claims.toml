@@ -1,5 +1,5 @@
 format_version = 1
-baseline_revision = "aa2f2c374e221dbcdd12069b91be3ed826291d98"
+baseline_revision = "a382ce3d06d4fb690ba09632d7b3a38b8902c65a"
 whole_engine_verified = false
 
 # Status is descriptive; successful commands and their exact source fingerprint
@@ -30,6 +30,39 @@ implementation = ["aerostore_core/src/occ_partitioned.rs", "aerostore_core/src/p
 scope = "Finite abstract protocol exploration; no automatic Rust refinement"
 status = "in_progress"
 required_checks = ["tla"]
+
+[[claims]]
+id = "TX-CONTROL-FLOW-VERUS"
+contract = "verification/concurrent/README.md"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "verification/concurrent/contracts.rs"]
+scope = "Actual commit driver, guarded health admission, pre-lock preparation cleanup and guarded acceptance cleanup, source-bound conditional event-order proof; native primitive semantics, histories, and weak memory remain open"
+status = "partial"
+required_checks = ["concurrent", "concurrent-adapter-tests"]
+concurrent_roots = ["commit_with_record_impl", "CommitPrimitives::prepare_before_publish", "CommitPrimitives::abort_preparation", "CommitPrimitives::invoke_before_publish", "CommitPrimitives::rollback_prepared_commit", "callback_contract_has_witnesses"]
+
+[[claims]]
+id = "DURABILITY-REGRESSIONS"
+contract = "verification/contracts/durability.md"
+implementation = ["aerostore_core/src/wal_writer.rs", "aerostore_core/src/occ_partitioned.rs", "aerostore_core/tests/wal_protocol_regressions.rs"]
+scope = "Deterministic real-engine reproductions and regressions for WAL publication, checkpoint cut, stream identity and framing; tests do not establish universal crash refinement"
+status = "partial"
+required_checks = ["core-regressions"]
+
+[[claims]]
+id = "PK-INSERT-MODEL-REGRESSIONS"
+contract = "verification/contracts/transactions.md"
+implementation = ["aerostore_core/src/execution.rs", "verification/tla/PrimaryKeyInsert.tla", "aerostore_core/tests/shm_shared_memory.rs"]
+scope = "Searched-head CAS insertion: finite uniqueness/return-value model plus deterministic same-key and colliding-key production regressions; native weak-memory and allocation refinement remain open"
+status = "partial"
+required_checks = ["tla", "core-regressions"]
+
+[[claims]]
+id = "LOCK-BOUNDED-MODELS"
+contract = "verification/contracts/lock_models.md"
+implementation = ["aerostore_core/src/shm_lock.rs", "aerostore_core/tests/shm_mutation_model.rs"]
+scope = "Seven bounded Loom cases importing the production lock, plus a rejected weakened-acquire mutant; abstract index ownership, no native mmap refinement or unbounded progress proof"
+status = "partial"
+required_checks = ["lock-models", "gate-tests"]
 
 [[claims]]
 id = "TX-HISTORY-IMPLEMENTATION"
