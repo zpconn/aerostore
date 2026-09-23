@@ -215,6 +215,229 @@
         "verification/predicate/generate.py",
         "verification/verus/toolchain.json"
       ]
+    },
+    "guards": {
+      "scope": "conditional_native_guard_identity_acquisition",
+      "crate_name": "aerostore_guards",
+      "rlimit": 40,
+      "false_flags": [
+        "native_mutex_ownership_refinement_proved",
+        "native_weak_memory_refinement_proved"
+      ],
+      "roots": [
+        "transactional_try_lock_bucket",
+        "acquire_index_bucket",
+        "acquire_index_locks",
+        "acquired_guards_cover_keys",
+        "separate_indexes_have_separate_guards"
+      ],
+      "mutations": {
+        "select_wrong_bucket": "transactional_try_lock_bucket",
+        "lock_wrong_bucket": "transactional_try_lock_bucket",
+        "select_wrong_index": "transactional_try_lock_bucket",
+        "acquire_wrong_bucket": "acquire_index_locks",
+        "acquire_wrong_index": "acquire_index_locks",
+        "drop_acquired_guard": "acquire_index_locks"
+      },
+      "full_check": "native_guards",
+      "generated": "verification/guards/guards.verus.rs",
+      "inputs": [
+        "aerostore_core/src/occ_partitioned.rs",
+        "aerostore_core/src/shm_index.rs",
+        "verification/guards/contracts.rs",
+        "verification/guards/guards.verus.rs",
+        "verification/guards/generate.py",
+        "verification/guards/run.py",
+        "verification/guards/test_generate.py",
+        "aerostore_core/src/shm_lock.rs",
+        "verification/concurrent/generate.py",
+        "verification/verus/toolchain.json"
+      ]
+    },
+    "publication-slice": {
+      "scope": "conditional_native_lifecycle_guard_predicate_join",
+      "crate_name": "aerostore_publication_slice",
+      "rlimit": 50,
+      "false_flags": [
+        "native_concurrent_history_refinement_proved",
+        "whole_lookup_refinement_proved"
+      ],
+      "roots": [
+        "registry_agreement_is_injective",
+        "read_key_binding_valid",
+        "native_keys_are_valid",
+        "acquire_required_guards",
+        "guard_coverage_supplies_validation_permission",
+        "lifecycle_publication_invalidates_read",
+        "validate_after_lifecycle_publication"
+      ],
+      "mutations": {
+        "omit_native_key_generation": "acquire_required_guards",
+        "omit_native_guard_acquisition": "acquire_required_guards",
+        "discard_acquired_guards": "acquire_required_guards",
+        "ignore_native_validation": "validate_after_lifecycle_publication",
+        "use_wrong_dependency": "lifecycle_publication_invalidates_read",
+        "use_wrong_reader_history": "lifecycle_publication_invalidates_read"
+      },
+      "full_check": "native_publication_slice",
+      "generated": "verification/publication_slice/slice.verus.rs",
+      "inputs": [
+        "aerostore_core/src/occ_partitioned.rs",
+        "aerostore_core/src/procarray.rs",
+        "aerostore_core/src/shm.rs",
+        "aerostore_core/src/shm_index.rs",
+        "aerostore_core/src/shm_lock.rs",
+        "aerostore_verified/src/lib.rs",
+        "verification/concurrent/generate.py",
+        "verification/guards/contracts.rs",
+        "verification/guards/generate.py",
+        "verification/guards/guards.verus.rs",
+        "verification/lifecycle/contracts.rs",
+        "verification/lifecycle/generate.py",
+        "verification/lifecycle/lifecycle.verus.rs",
+        "verification/predicate/contracts.rs",
+        "verification/predicate/generate.py",
+        "verification/predicate/predicate.verus.rs",
+        "verification/publication_slice/generate.py",
+        "verification/publication_slice/run.py",
+        "verification/publication_slice/slice.rs",
+        "verification/publication_slice/slice.verus.rs",
+        "verification/publication_slice/test_generate.py",
+        "verification/verus/toolchain.json"
+      ]
+    },
+    "lifecycle": {
+      "scope": "conditional_native_lifecycle_snapshot_shared_clock",
+      "crate_name": "aerostore_lifecycle",
+      "rlimit": 50,
+      "false_flags": [
+        "native_atomic_mutex_refinement_proved",
+        "acquisition_interference_refinement_proved",
+        "transaction_history_refinement_proved",
+        "clock_exhaustion_handling_proved"
+      ],
+      "roots": [
+        "checked_slot",
+        "reservation_preserves_clock_history",
+        "observation_preserves_state",
+        "snapshot_scan_bounds",
+        "snapshot_minimum_covers_slot",
+        "snapshot_fields_unchanged",
+        "reservation_after_reader",
+        "active_slot_membership",
+        "snapshot_covers_active_writer",
+        "retention_covers_active_snapshot",
+        "reservation_history_strict_order",
+        "lifecycle_contract_has_live_and_stale_witnesses",
+        "begin_transaction",
+        "end_transaction",
+        "snapshot_locked",
+        "create_snapshot",
+        "create_transaction_snapshot",
+        "oldest_snapshot_xmin",
+        "reserve_publication_clock",
+        "deregister_then_reserve"
+      ],
+      "mutations": {
+        "omit_begin_lock": "begin_transaction",
+        "omit_end_lock": "end_transaction",
+        "omit_snapshot_lock": "create_snapshot",
+        "omit_transaction_snapshot_lock": "create_transaction_snapshot",
+        "omit_retention_lock": "oldest_snapshot_xmin",
+        "skip_registration": "begin_transaction",
+        "omit_initial_horizon": "begin_transaction",
+        "wrong_slot_clear": "end_transaction",
+        "omit_retention_clear": "end_transaction",
+        "bypass_slot_ownership": "end_transaction",
+        "omit_snapshot_horizon": "create_transaction_snapshot",
+        "snapshot_reads_retention": "snapshot_locked",
+        "omit_active_txid_copy": "snapshot_locked",
+        "wrong_snapshot_minimum": "snapshot_locked",
+        "omit_xmax_compensation": "snapshot_locked",
+        "retention_uses_active_id": "oldest_snapshot_xmin",
+        "stale_publication_reservation": "reserve_publication_clock"
+      },
+      "full_check": "native_lifecycle",
+      "generated": "verification/lifecycle/lifecycle.verus.rs",
+      "inputs": [
+        "aerostore_core/src/procarray.rs",
+        "aerostore_core/src/occ_partitioned.rs",
+        "aerostore_core/src/shm.rs",
+        "verification/lifecycle/contracts.rs",
+        "verification/lifecycle/lifecycle.verus.rs",
+        "verification/lifecycle/generate.py",
+        "verification/lifecycle/run.py",
+        "verification/lifecycle/test_generate.py",
+        "verification/concurrent/generate.py",
+        "verification/predicate/generate.py",
+        "verification/verus/toolchain.json"
+      ]
+    },
+    "lifecycle-scenario": {
+      "scope": "conditional_native_shared_history_capture_publication_scenario",
+      "crate_name": "aerostore_lifecycle_scenario",
+      "rlimit": 60,
+      "false_flags": [
+        "whole_lookup_refinement_proved",
+        "transaction_history_refinement_proved",
+        "acquisition_interference_refinement_proved",
+        "native_overflow_handling_proved",
+        "native_guard_lifetime_refinement_proved"
+      ],
+      "roots": [
+        "CaptureView::header_offset",
+        "CaptureView::transactional_stamp",
+        "capture_one_dependency",
+        "Bridge::find_binding",
+        "Bridge::transactional_key_bucket",
+        "Bridge::transactional_stamp",
+        "Bridge::reserve_stamp",
+        "Bridge::transactional_publish_stamp",
+        "change_keys_ignore_clock",
+        "read_keys_ignore_clock",
+        "cleared_writer_is_absent",
+        "registered_reader_then_writer_publication",
+        "creation_and_move_have_live_witnesses"
+      ],
+      "mutations": {
+        "skip_native_capture": "capture_one_dependency",
+        "translate_wrong_stamp": "capture_one_dependency",
+        "translate_wrong_bucket": "capture_one_dependency",
+        "translate_wrong_index": "capture_one_dependency",
+        "capture_wrong_source_bucket": "CaptureView::transactional_stamp",
+        "stale_bridge_reservation": "Bridge::reserve_stamp",
+        "separate_clock_projection": "Bridge::reserve_stamp",
+        "omit_history_projection": "Bridge::reserve_stamp",
+        "store_wrong_stamp": "Bridge::transactional_publish_stamp",
+        "skip_native_snapshot": "registered_reader_then_writer_publication",
+        "skip_writer_deregistration": "registered_reader_then_writer_publication",
+        "skip_native_publication": "registered_reader_then_writer_publication",
+        "skip_native_validation": "registered_reader_then_writer_publication"
+      },
+      "full_check": "native_lifecycle_scenario",
+      "generated": "verification/lifecycle_scenario/scenario.verus.rs",
+      "inputs": [
+        "aerostore_core/src/occ_partitioned.rs",
+        "aerostore_core/src/procarray.rs",
+        "aerostore_core/src/shm.rs",
+        "aerostore_verified/src/lib.rs",
+        "verification/lifecycle_scenario/scenario.rs",
+        "verification/lifecycle_scenario/scenario.verus.rs",
+        "verification/lifecycle_scenario/generate.py",
+        "verification/lifecycle_scenario/run.py",
+        "verification/lifecycle_scenario/test_generate.py",
+        "verification/concurrent/generate.py",
+        "verification/verus/toolchain.json",
+        "verification/lifecycle/contracts.rs",
+        "verification/lifecycle/lifecycle.verus.rs",
+        "verification/lifecycle/generate.py",
+        "verification/predicate/contracts.rs",
+        "verification/predicate/predicate.verus.rs",
+        "verification/predicate/generate.py",
+        "verification/predicate_capture/contracts.rs",
+        "verification/predicate_capture/capture.verus.rs",
+        "verification/predicate_capture/generate.py"
+      ]
     }
   }
 }

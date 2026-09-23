@@ -329,10 +329,7 @@ mod tests {
         });
         reserved.wait();
         assert_eq!(global.load(std::sync::atomic::Ordering::Acquire), 101);
-        assert!(
-            procarray.lifecycle.try_lock().is_none(),
-            "reservation must hold snapshot metadata latch"
-        );
+        let reservation_holds_latch = procarray.lifecycle.try_lock().is_none();
         let reader_array = Arc::clone(&procarray);
         let reader_global = Arc::clone(&global);
         let (started_send, started_recv) = mpsc::channel();
@@ -352,6 +349,12 @@ mod tests {
             Err(_) => snapshot_recv.recv_timeout(Duration::from_secs(2)).unwrap(),
         };
         reader.join().unwrap();
+        // Release/join both workers before asserting, including when the
+        // missing-lifecycle-lock mutation exposes the reservation gap.
+        assert!(
+            reservation_holds_latch,
+            "reservation must hold snapshot metadata latch"
+        );
         // A scan without the lifecycle latch can incorrectly return xmax=101
         // and an empty active set while txid100 is reserved but unpublished.
         assert!(snapshot.in_flight_txids().contains(&registration.txid));

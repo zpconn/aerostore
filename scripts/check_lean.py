@@ -309,6 +309,38 @@ injectFalse
                 report["mutation_checks"].append({"name": name, "rejected": True, "proof": "Predicate.lean",
                                                   "scope": "abstract_contract_not_rust_refinement",
                                                   "contract_sha256": digest(mutant)})
+            # Lifecycle history controls mutate transitions/arithmetic premises,
+            # not the desired late-publication conclusion. This is independent
+            # abstract history evidence, not native atomic refinement.
+            lifecycle_source = (PROJECT / "AerostoreProofs/Lifecycle.lean").read_text()
+            lifecycle_mutations = [
+                ("lifecycle_reservation_does_not_advance", "LifecycleStep s {s with clock := s.clock + 1, starts :=",
+                 "LifecycleStep s {s with clock := s.clock, starts :="),
+                ("lifecycle_uses_writer_start_stamp", "Function.update s.publication tx (some s.clock)",
+                 "Function.update s.publication tx (s.starts tx)"),
+                ("lifecycle_publishes_before_end", "(ended : tx ∈ s.finished)", "(ended : True)"),
+                ("lifecycle_allows_wrapping_reservation", "∀ clock : Nat, clock < 2^64 - 1 →",
+                 "∀ clock : Nat, clock ≤ 2^64 - 1 →"),
+            ]
+            for name, old, new in lifecycle_mutations:
+                if lifecycle_source.count(old) != 1:
+                    raise RuntimeError("lifecycle mutation anchor is absent or ambiguous: " + name)
+                mutant_dir = stage / name
+                mutant_dir.mkdir()
+                mutant = mutant_dir / "Lifecycle.lean"
+                mutant.write_text(lifecycle_source.replace(old, new))
+                mutation_output = run([lean_bin / "lake", "env", "lean", "-Dpp.deepTerms.threshold=8", mutant], cwd=PROJECT, expected=1)
+                intended_diagnostics = ["error: unsolved goals", "error: Type mismatch",
+                                        "error: Application type mismatch", "omega could not prove",
+                                        "Tactic `change` failed"]
+                forbidden_diagnostics = ["unknown module", "object file", "unknownIdentifier", "unknown identifier",
+                                         "unexpected token", "unknown constant", "unknown tactic", "maximum recursion depth"]
+                if not any(s in mutation_output for s in intended_diagnostics) or any(
+                        s in mutation_output for s in forbidden_diagnostics):
+                    raise RuntimeError("lifecycle mutation failed for an unexpected reason: " + name)
+                report["mutation_checks"].append({"name": name, "rejected": True, "proof": "Lifecycle.lean",
+                                                  "scope": "abstract_history_not_native_atomic_refinement",
+                                                  "transition_sha256": digest(mutant)})
         report["source_sha256_before"] = initial_fingerprint
         report["source_sha256"] = source_fingerprint()
         if report["source_sha256"] != initial_fingerprint:

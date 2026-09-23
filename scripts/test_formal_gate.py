@@ -135,7 +135,9 @@ class EvidenceTests(unittest.TestCase):
                     ["stamp_accepts_equal", "bitmap_drops_membership", "bitmap_accepts_equal_bound",
                      "sort_writes_wrong_bucket", "sort_accepts_equal_bound",
                      "predicate_ignores_changed_stamp", "predicate_accepts_equal_start",
-                     "predicate_drops_publication", "predicate_omits_own_candidates"]], "required_roots": []}))
+                     "predicate_drops_publication", "predicate_omits_own_candidates",
+                     "lifecycle_reservation_does_not_advance", "lifecycle_uses_writer_start_stamp",
+                     "lifecycle_publishes_before_end", "lifecycle_allows_wrapping_reservation"]], "required_roots": []}))
             with self.assertRaisesRegex(RuntimeError, "missing declared proof roots"):
                 verify_formal.collect_claim_evidence([{"id": "test", "scope": "test", "status": "partial",
                     "required_checks": ["lean"], "lean_roots": ["must_exist"]}],
@@ -484,7 +486,8 @@ class RunnerTests(unittest.TestCase):
         code, _, calls = self.run_fixture("proofs")
         self.assertEqual(code, 0)
         commands = dict(calls)
-        for name in ["predicate", "predicate-capture", "predicate-composition", "skiplist-detach", "postings"]:
+        for name in ["predicate", "predicate-capture", "predicate-composition", "skiplist-detach", "postings",
+                     "guards", "lifecycle", "publication-slice", "lifecycle-scenario"]:
             self.assertIn(name, commands)
             self.assertIn(name + "-adapter-tests", commands)
 

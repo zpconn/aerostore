@@ -1,13 +1,13 @@
 TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
-Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 884] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
-Parsing file /tmp/aerostore-tlc-models-36qwl2du/CollectorPriority.tla
-Parsing file /tmp/tlc-1118640938010409240/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 887] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-_ilxz69t/CollectorPriority.tla
+Parsing file /tmp/tlc-10394610191394012868/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
 Semantic processing of module Naturals
 Semantic processing of module CollectorPriority
 Linting of module CollectorPriority
-Starting... (2026-09-23 15:27:30)
+Starting... (2026-09-23 16:34:05)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-09-23 15:27:30.
+Finished computing initial states: 1 distinct state generated at 2026-09-23 16:34:05.
 Error: Invariant WitnessNotReached is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -33,4 +33,4 @@ State 4: <CollectorFinish line 37, col 5 to line 38, col 50 of module CollectorP
 
 7 states generated, 7 distinct states found, 2 states left on queue.
 The depth of the complete state graph search is 4.
-Finished in 00s at (2026-09-23 15:27:30)
+Finished in 00s at (2026-09-23 16:34:05)

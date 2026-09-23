@@ -32,6 +32,10 @@ thread_local! {
         std::cell::RefCell::new(None);
     static INDEX_BUCKET_CONTENDED_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
         std::cell::RefCell::new(None);
+    static TRANSACTION_FINISHING_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+        std::cell::RefCell::new(None);
+    static TRANSACTION_FINISHED_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+        std::cell::RefCell::new(None);
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -2192,7 +2196,19 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         let Some(registration) = tx.registration.take() else {
             return Ok(());
         };
+        #[cfg(test)]
+        TRANSACTION_FINISHING_HOOK.with(|hook| {
+            if let Some(hook) = hook.borrow_mut().take() {
+                hook();
+            }
+        });
         self.shm.end_transaction(registration)?;
+        #[cfg(test)]
+        TRANSACTION_FINISHED_HOOK.with(|hook| {
+            if let Some(hook) = hook.borrow_mut().take() {
+                hook();
+            }
+        });
         Ok(())
     }
 
@@ -3688,5 +3704,141 @@ mod predicate_completion_tests {
             "a payload-only update has no predicate publication to stamp"
         );
         no_live_transactions(&table);
+    }
+
+    fn exercise_predicate_finish_cut(initial_key: Option<u64>, after_deregistration: bool) {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::mpsc;
+
+        let (table, index) = fixture(&[initial_key, None]);
+        let mut writer = table.begin_transaction().unwrap();
+        let writer_txid = writer.txid;
+        let mut empty_reader = table.begin_transaction().unwrap();
+        assert!(table
+            .index_lookup(&mut empty_reader, &index, &eq(42))
+            .unwrap()
+            .is_empty());
+        assert!(empty_reader.read_set.is_empty());
+        table
+            .write(
+                &mut writer,
+                0,
+                PredicateRow {
+                    key: Some(42),
+                    payload: 0,
+                },
+            )
+            .unwrap();
+        let (parked_send, parked_receive) = mpsc::channel();
+        let (resume_send, resume_receive) = mpsc::channel();
+        let writer_table = Arc::clone(&table);
+        let worker = std::thread::spawn(move || {
+            // Install only after all posting operations: their short ProcArray
+            // pins must not consume the lifecycle hook intended for this commit.
+            INDEX_PUBLICATION_HOOK.with(|hook| {
+                *hook.borrow_mut() = Some(Box::new(move || {
+                    let pause: Box<dyn FnOnce()> = Box::new(move || {
+                        parked_send.send(()).unwrap();
+                        resume_receive.recv().unwrap();
+                    });
+                    if after_deregistration {
+                        TRANSACTION_FINISHED_HOOK.with(|hook| *hook.borrow_mut() = Some(pause));
+                    } else {
+                        TRANSACTION_FINISHING_HOOK.with(|hook| *hook.borrow_mut() = Some(pause));
+                    }
+                }));
+            });
+            writer_table.commit(&mut writer)
+        });
+        parked_receive.recv_timeout(Duration::from_secs(5)).unwrap();
+        let active_at_cut = table
+            .shm
+            .create_snapshot()
+            .in_flight_txids()
+            .contains(&writer_txid);
+        let mut late_reader = table.begin_transaction().unwrap();
+        let late_excludes_writer = late_reader.snapshot_active.contains(&writer_txid);
+        let late_row = table.read(&mut late_reader, 0).unwrap();
+        let late_txid = late_reader.txid;
+
+        // Exercise both public lookup and commit, not just the raw latch. The
+        // existing contention hook proves the rejection came from a held bucket.
+        let mut blocked_reader = table.begin_transaction().unwrap();
+        let lookup_contended = Arc::new(AtomicBool::new(false));
+        let observed = Arc::clone(&lookup_contended);
+        INDEX_BUCKET_CONTENDED_HOOK.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(move || observed.store(true, Ordering::Release)));
+        });
+        let queried_key = initial_key.unwrap_or(42);
+        let blocked_lookup = table.index_lookup(&mut blocked_reader, &index, &eq(queried_key));
+        INDEX_BUCKET_CONTENDED_HOOK.with(|hook| *hook.borrow_mut() = None);
+        table.abort(&mut blocked_reader).unwrap();
+        let commit_contended = Arc::new(AtomicBool::new(false));
+        let observed = Arc::clone(&commit_contended);
+        INDEX_BUCKET_CONTENDED_HOOK.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(move || observed.store(true, Ordering::Release)));
+        });
+        let empty_commit = table.commit(&mut empty_reader);
+        INDEX_BUCKET_CONTENDED_HOOK.with(|hook| *hook.borrow_mut() = None);
+
+        // Release and join before assertions, so every negative control cleans
+        // up its parked writer even when a broken publication order is exposed.
+        resume_send.send(()).unwrap();
+        let writer_result = worker.join().unwrap();
+        let late_lookup = table.index_lookup(&mut late_reader, &index, &eq(queried_key));
+        table.abort(&mut late_reader).unwrap();
+        let stamp = index
+            .transactional_stamp(
+                index
+                    .transactional_key_bucket(&IndexValue::U64(queried_key))
+                    .unwrap(),
+            )
+            .unwrap();
+        let mut fresh = table.begin_transaction().unwrap();
+        let fresh_new = table.index_lookup(&mut fresh, &index, &eq(42)).unwrap();
+        let fresh_old =
+            initial_key.map(|key| table.index_lookup(&mut fresh, &index, &eq(key)).unwrap());
+        table.commit(&mut fresh).unwrap();
+        no_live_transactions(&table);
+
+        assert_eq!(writer_result, Ok(1));
+        assert_eq!(active_at_cut, !after_deregistration);
+        assert_eq!(late_excludes_writer, !after_deregistration);
+        let visible_key = if after_deregistration {
+            Some(42)
+        } else {
+            initial_key
+        };
+        assert_eq!(late_row.unwrap().key, visible_key);
+        assert!(
+            lookup_contended.load(Ordering::Acquire),
+            "lookup must encounter the held predicate guard"
+        );
+        assert_eq!(blocked_lookup, Err(Error::SerializationFailure));
+        assert!(
+            commit_contended.load(Ordering::Acquire),
+            "empty-query commit must encounter the held predicate guard"
+        );
+        assert_eq!(empty_commit, Err(Error::SerializationFailure));
+        assert_eq!(late_lookup, Err(Error::SerializationFailure),
+                "a reader registered at this publication cut must retry; stale stamps could hide the moved old key");
+        assert!(stamp >= late_txid && stamp > writer_txid,
+                "publication must reserve a fresh stamp after deregistration and after this reader registered");
+        assert_eq!(fresh_new, vec![0]);
+        assert!(fresh_old.is_none_or(|rows| rows.is_empty()));
+    }
+
+    #[test]
+    fn predicate_lifecycle_empty_creation_guards_both_deregistration_stamp_cuts() {
+        for after_deregistration in [false, true] {
+            exercise_predicate_finish_cut(None, after_deregistration);
+        }
+    }
+
+    #[test]
+    fn predicate_lifecycle_key_move_guards_both_deregistration_stamp_cuts() {
+        for after_deregistration in [false, true] {
+            exercise_predicate_finish_cut(Some(10), after_deregistration);
+        }
     }
 }

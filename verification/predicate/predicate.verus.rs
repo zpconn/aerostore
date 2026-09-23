@@ -14,6 +14,8 @@ pub struct IndexRead { pub index_offset: usize, pub bucket: usize, pub stamp: u6
 pub struct IndexChange { pub binding: usize, pub before: Option<usize>, pub after: Option<usize> }
 pub struct OccTransaction { pub txid: u64, pub index_conflict: bool, pub index_reads: Vec<IndexRead> }
 pub struct State {
+    // Physical arena identity, not a process-local virtual base address.
+    pub arena: usize,
     pub bindings: Map<usize, usize>,
     pub binding_count: usize,
     pub key_buckets: Map<Pair, usize>,
@@ -21,9 +23,11 @@ pub struct State {
     // every bucket in the concurrently changing database is frozen.
     pub stamps: Map<Pair, u64>,
     pub held: Set<Pair>,
-    // Logical state at the reservation's linearization point. The +1 result
-    // does not assert a physical global-counter delta across concurrent calls.
+    // Last represented clock observation. Interfering reservations may advance
+    // the actual allocator before this operation's fetch_add linearizes.
     pub clock: u64,
+    pub reserved_stamp: u64,
+    pub reservations: Seq<u64>,
     pub deregistered: bool,
 }
 // An arbitrary fixed key-to-bucket function; no hash injectivity is assumed.
@@ -105,8 +109,9 @@ pub trait Primitives {
             && r.unwrap() == self.state().stamps[(binding, bucket)];
     fn reserve_stamp(&mut self) -> (stamp: u64)
         requires old(self).state().deregistered, old(self).state().clock < u64::MAX,
-        ensures stamp == old(self).state().clock,
-            final(self).state() == (State { clock: (old(self).state().clock + 1) as u64, ..old(self).state() });
+        ensures old(self).state().clock <= stamp < u64::MAX,
+            final(self).state() == (State { clock: (stamp + 1) as u64, reserved_stamp: stamp,
+                reservations: old(self).state().reservations.push(stamp), ..old(self).state() });
     fn transactional_publish_stamp(&mut self, binding: usize, bucket: usize, stamp: u64) -> (r: Result<(), Error>)
         requires old(self).state().held.contains((binding, bucket)), old(self).state().deregistered,
             binding < old(self).state().binding_count,
@@ -258,14 +263,17 @@ pub fn publish_index_stamps<D: Primitives, C: PairSet>(driver: &mut D, changes: 
         changes_valid(old(driver).state(), changes@),
         change_keys(old(driver).state(), changes@, changes.len() as int).subset_of(old(driver).state().held),
     ensures final(driver).state().bindings == old(driver).state().bindings,
+        final(driver).state().arena == old(driver).state().arena,
         final(driver).state().binding_count == old(driver).state().binding_count,
         final(driver).state().key_buckets == old(driver).state().key_buckets,
         final(driver).state().held == old(driver).state().held,
         final(driver).state().deregistered == old(driver).state().deregistered,
-        final(driver).state().clock == if changes.len() == 0 { old(driver).state().clock as int } else { old(driver).state().clock + 1 },
+        changes.len() > 0 ==> old(driver).state().clock <= final(driver).state().reserved_stamp < u64::MAX,
+        changes.len() > 0 ==> final(driver).state().clock == final(driver).state().reserved_stamp + 1,
+        changes.len() > 0 ==> final(driver).state().reservations == old(driver).state().reservations.push(final(driver).state().reserved_stamp),
         changes.len() == 0 ==> final(driver).state() == old(driver).state(),
         result.is_ok() ==> stamp_relation(old(driver).state().stamps, final(driver).state().stamps,
-            change_keys(old(driver).state(), changes@, changes.len() as int), old(driver).state().clock),
+            change_keys(old(driver).state(), changes@, changes.len() as int), final(driver).state().reserved_stamp),
         // Failures may have published a prefix; every changed stamp has the
         // reserved value, and unrelated buckets are never modified.
         forall|p: Pair| !change_keys(old(driver).state(), changes@, changes.len() as int).contains(p) ==>
@@ -274,9 +282,9 @@ pub fn publish_index_stamps<D: Primitives, C: PairSet>(driver: &mut D, changes: 
         forall|p: Pair| final(driver).state().stamps.contains_key(p)
             && (!old(driver).state().stamps.contains_key(p) || final(driver).state().stamps[p] != old(driver).state().stamps[p]) ==>
                 change_keys(old(driver).state(), changes@, changes.len() as int).contains(p)
-                && final(driver).state().stamps[p] == old(driver).state().clock,
+                && final(driver).state().stamps[p] == final(driver).state().reserved_stamp,
 {
-    let ghost initial = driver.state(); proof { stamp_unchanged(initial.stamps, initial.clock); } if changes . is_empty ( ) {
+    let ghost initial = driver.state(); proof { stamp_unchanged(initial.stamps, initial.reserved_stamp); } if changes . is_empty ( ) {
     return Ok ( ( ) ) ;
 }
 let stamp = driver . reserve_stamp ( ) ;
@@ -286,8 +294,9 @@ let mut touched = C :: new ( ) ;
         while ci < changes.len()
             invariant ci <= changes.len(), initial == old(driver).state(),
                 changes_valid(initial, changes@),
-                driver.state() == (State { clock: (initial.clock + 1) as u64, ..initial }),
-                initial.deregistered, initial.clock < u64::MAX, stamp == initial.clock,
+                driver.state() == (State { clock: (stamp + 1) as u64, reserved_stamp: stamp,
+                    reservations: initial.reservations.push(stamp), ..initial }),
+                initial.deregistered, initial.clock < u64::MAX, initial.clock <= stamp < u64::MAX,
                 touched.contents() == change_keys(initial, changes@, ci as int),
                 change_keys(initial, changes@, changes.len() as int).subset_of(initial.held),
                 changes.len() > 0,
@@ -313,12 +322,14 @@ if let Some ( key ) = & change . after {
             invariant pi <= ordered.len(), initial == old(driver).state(),
                 changes_valid(initial, changes@),
                 driver.state().binding_count == initial.binding_count,
+                driver.state().arena == initial.arena,
                 canonical(ordered@, change_keys(initial, changes@, changes.len() as int)),
                 driver.state().bindings == initial.bindings, driver.state().held == initial.held,
                 driver.state().key_buckets == initial.key_buckets,
                 driver.state().deregistered == initial.deregistered,
-                driver.state().clock == initial.clock + 1,
-                initial.deregistered, initial.clock < u64::MAX, stamp == initial.clock,
+                driver.state().clock == stamp + 1, driver.state().reserved_stamp == stamp,
+                driver.state().reservations == initial.reservations.push(stamp),
+                initial.deregistered, initial.clock < u64::MAX, initial.clock <= stamp < u64::MAX,
                 changes.len() > 0,
                 change_keys(initial, changes@, changes.len() as int).subset_of(initial.held),
                 stamp_relation(initial.stamps, driver.state().stamps, ordered@.take(pi as int).to_set(), stamp),

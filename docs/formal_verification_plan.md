@@ -6,6 +6,29 @@ This is the full verification roadmap. Its first executable component pilot now 
 
 The program has two goals: establish the database's correctness, and create a verified environment for aggressive performance experiments. Each candidate implementation must preserve a stable public contract and carry evidence tied to its exact source and build configuration. Section 13 defines that experimentation workflow.
 
+Current lifecycle checkpoint, after `c5d27d2`: source-bound ProcArray proofs now
+cover registration, snapshot scans, retention-horizon publication and
+deregistration; source-bound guard proofs cover physical arena/header/bucket
+identity and complete acquisition. A checked scenario calls native reader
+registration, snapshot and dependency capture, writer deregistration, publication
+and validation through one shared clock. Freshness is derived from the actual
+reservations instead of an externally supplied numeric inequality. The predicate
+contract allows intervening allocations and records the returned reservation
+label. Six additional Lean roots and 20 lifecycle TLC cases model chronology,
+including readers between reservation and storage and reordered disjoint stores.
+Two deterministic native tests cover both deregistration cuts and five native
+negative variants reach their intended assertions. Release code is unchanged.
+
+The component lifecycle input is an operation-local view selected at lock
+acquisition. Framing it across acquisition is a separate unproved assumption,
+not a property of a blocking mutex or an API-entry/return refinement theorem.
+The controlled scenario excludes unmodeled slot transitions around its calls.
+Acquired-state ownership/interference, actual guard transfer/lifetime, candidate
+and MVCC completeness, weak memory, no-wrap enforcement and full concurrent
+history refinement remain open. Full P1 remains incomplete; the new proofs do
+not authorize unconstrained transaction, atomic or allocator optimizations.
+The [verification workspace](../verification/README.md) describes exact scope.
+
 Current predicate refinement checkpoint, after accepted implementation `8d9e9f4`:
 the native `index_lock_keys`, `index_read_conflict`, `publish_index_stamps` and
 `index_lookup` dependency-capture loop now have source-bound, data-bearing Verus

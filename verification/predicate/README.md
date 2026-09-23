@@ -119,12 +119,17 @@ operation's updates. Other workers may publish disjoint buckets concurrently.
 Connecting this projection to real lock ownership and admissible interference
 remains unproved.
 
-Similarly, `State.clock` describes the logical allocator step at the reservation's
-linearization point. Its increment by one is not a claim that the physical global
-counter advances by only one over the wall-clock duration of the native method:
-other transactions may allocate identifiers concurrently. Deriving reservation
-freshness from the actual shared allocator, deregistration, snapshots, and memory
-ordering remains a separate proof obligation. Wraparound is explicitly excluded;
+`State.clock` now records the previous represented clock observation. A reservation
+may return a larger value because other allocators intervene; `reserved_stamp`
+records that returned label and `reservations` appends it to the represented
+history. The projected counter then becomes label plus one. This is not a claim
+that the physical global counter advances by only one over the native method's
+duration. The publication theorem names the actual returned label, including on
+partial publication errors. The [shared-clock scenario](../lifecycle_scenario/README.md)
+implements this primitive by calling the source-bound lifecycle reservation on
+the same object used by reader registration, deriving freshness in that
+controlled schedule. General native interleaving and memory-order correspondence
+remain open. Wraparound is explicitly excluded, including intervening allocations;
 this campaign does not repair or verify exhaustion handling.
 
 The primitive trait contracts are assumptions. They cover registry/key-map

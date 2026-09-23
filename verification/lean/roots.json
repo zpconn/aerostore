@@ -104,6 +104,36 @@
       "name": "AerostoreProofs.dependency_rejects_recent",
       "contract": "AerostoreProofs.DependencyRejectsRecent",
       "scope": "abstract_predicate_validation"
+    },
+    {
+      "name": "AerostoreProofs.lifecycle_step_preserves",
+      "contract": "AerostoreProofs.LifecycleInductive",
+      "scope": "parameterized_abstract_lifecycle_history"
+    },
+    {
+      "name": "AerostoreProofs.lifecycle_late_publication",
+      "contract": "AerostoreProofs.LifecycleLatePublication",
+      "scope": "parameterized_abstract_lifecycle_history"
+    },
+    {
+      "name": "AerostoreProofs.lifecycle_publication_chronology",
+      "contract": "AerostoreProofs.LifecyclePublicationChronology",
+      "scope": "parameterized_abstract_lifecycle_history"
+    },
+    {
+      "name": "AerostoreProofs.lifecycle_machine_reservation",
+      "contract": "AerostoreProofs.LifecycleMachineReservation",
+      "scope": "parameterized_abstract_lifecycle_history"
+    },
+    {
+      "name": "AerostoreProofs.lifecycle_observed_publication_rejected",
+      "contract": "AerostoreProofs.LifecyclePublicationRejectsObservedRead",
+      "scope": "parameterized_abstract_lifecycle_history"
+    },
+    {
+      "name": "AerostoreProofs.lifecycle_older_writer_witness",
+      "contract": "AerostoreProofs.LifecycleOlderWriterWitness",
+      "scope": "parameterized_abstract_lifecycle_history"
     }
   ]
 }

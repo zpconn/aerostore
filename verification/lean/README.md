@@ -35,6 +35,26 @@ in isolation and require the unchanged proof module to fail: ignoring a changed
 stamp, accepting an equal start stamp, dropping publication, and omitting own-write
 candidates. They are reported separately from the extracted-Rust mutations.
 
+## Lifecycle and shared-clock histories
+
+[Lifecycle.lean](AerostoreProofs/Lifecycle.lean) adds six audited mathematical
+roots over an inductively reachable finite history. Registration reserves a
+fresh identifier; snapshot records the relevant active writer; ending a writer
+precedes reservation of its publication label. The invariant derives freshness
+and rejection of affected reads, including an older-writer witness. A separate
+machine-arithmetic root makes the no-wrap condition explicit. These definitions
+and theorem statements are frozen together; changing them requires boundary
+review, not merely rebuilding the proofs.
+
+Publication chronology means reservation order. Actual stores to disjoint buckets
+can occur out of that order; connecting the earlier fresh-publication history
+contract to those stores requires a commuting-updates/native-history argument.
+Neither this abstract theorem nor the finite TLA model supplies it. The four
+new semantic controls fail when reservation stops advancing, a writer's start
+ID is used as its publication label, publication precedes ending, or wrapping
+arithmetic is admitted. There are now 26 audited roots and 13 semantic controls
+across the extracted functions and separately labeled abstract contracts.
+
 ## Running
 
 On Linux x86-64 with Python 3.12+, `rustup`, a C linker, Git, tar and zstd:
