@@ -19,6 +19,7 @@ import sys
 import time
 import tomllib
 import check_lock_models
+import check_refinement_evidence
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -66,11 +67,15 @@ def collect_claim_evidence(claims: list[dict], checks: list[dict], directory: Pa
     verus = json.loads((directory / "verus/receipt.json").read_text()) if "verus" in passed else {}
     concurrent = json.loads((directory / "concurrent/receipt.json").read_text()) if "concurrent" in passed else {}
     tla = json.loads((directory / "tla/report.json").read_text()) if "tla" in passed else {}
+    refinements = {name: check_refinement_evidence.validate_receipt(directory / name / "receipt.json", name, ROOT)
+                   for name in ["predicate", "predicate-capture", "predicate-composition", "skiplist-detach", "postings"] if name in passed}
     if "lock-models" in passed:
         check_lock_models.validate_receipt(directory / "lock-models/receipt.json", ROOT)
     lean_mutations = {mutation["name"] for mutation in lean.get("mutation_checks", []) if mutation.get("rejected")}
     required_mutations = {"stamp_accepts_equal", "bitmap_drops_membership", "bitmap_accepts_equal_bound",
-                          "sort_writes_wrong_bucket", "sort_accepts_equal_bound"}
+                          "sort_writes_wrong_bucket", "sort_accepts_equal_bound",
+                          "predicate_ignores_changed_stamp", "predicate_accepts_equal_start",
+                          "predicate_drops_publication", "predicate_omits_own_candidates"}
     if "lean" in passed and not (lean.get("passed") and lean.get("completed") and
                                 lean.get("kernel_recheck_passed") and lean.get("forged_theorem_rejected") and
                                 required_mutations <= lean_mutations):
@@ -96,6 +101,7 @@ def collect_claim_evidence(claims: list[dict], checks: list[dict], directory: Pa
     lean_roots = {root["name"] for root in lean.get("required_roots", [])}
     verus_roots = {root["name"] for root in verus.get("required_roots", [])}
     concurrent_roots = set(concurrent.get("required_roots", []))
+    refinement_roots = {name: set(receipt["required_roots"]) for name, receipt in refinements.items()}
     results = []
     for claim in claims:
         required = set(claim["required_checks"])
@@ -103,6 +109,8 @@ def collect_claim_evidence(claims: list[dict], checks: list[dict], directory: Pa
         missing_roots = ((set(claim.get("lean_roots", [])) - lean_roots)
                          | (set(claim.get("verus_roots", [])) - verus_roots)
                          | (set(claim.get("concurrent_roots", [])) - concurrent_roots))
+        for name, roots in claim.get("refinement_roots", {}).items():
+            missing_roots |= set(roots) - refinement_roots.get(name, set())
         has_evidence = has_evidence and not missing_roots
         results.append({"id": claim["id"], "scope": claim["scope"],
                         "declared_status": claim["status"],
@@ -111,7 +119,8 @@ def collect_claim_evidence(claims: list[dict], checks: list[dict], directory: Pa
                         "missing_roots": sorted(missing_roots),
                         "lean_roots": claim.get("lean_roots", []),
                         "verus_roots": claim.get("verus_roots", []),
-                        "concurrent_roots": claim.get("concurrent_roots", [])})
+                        "concurrent_roots": claim.get("concurrent_roots", []),
+                        "refinement_roots": claim.get("refinement_roots", {})})
         if required <= passed and required and missing_roots:
             raise RuntimeError(f"{claim['id']}: missing declared proof roots {sorted(missing_roots)}")
     return results
@@ -210,6 +219,16 @@ def main() -> int:
                          ("verus", [sys.executable, "verification/verus/run.py", "--output", str(directory / "verus")]),
                          ("concurrent-adapter-tests", [sys.executable, "verification/concurrent/test_generate.py"]),
                          ("concurrent", [sys.executable, "verification/concurrent/run.py", "--output", str(directory / "concurrent")]),
+                         ("predicate-adapter-tests", [sys.executable, "verification/predicate/test_generate.py"]),
+                         ("predicate", [sys.executable, "verification/predicate/run.py", "--output", str(directory / "predicate")]),
+                         ("predicate-capture-adapter-tests", [sys.executable, "verification/predicate_capture/test_generate.py"]),
+                         ("predicate-capture", [sys.executable, "verification/predicate_capture/run.py", "--output", str(directory / "predicate-capture")]),
+                         ("predicate-composition-adapter-tests", [sys.executable, "verification/predicate_composition/test_generate.py"]),
+                         ("predicate-composition", [sys.executable, "verification/predicate_composition/run.py", "--output", str(directory / "predicate-composition")]),
+                         ("skiplist-detach-adapter-tests", [sys.executable, "verification/skiplist_detach/test_generate.py"]),
+                         ("skiplist-detach", [sys.executable, "verification/skiplist_detach/run.py", "--output", str(directory / "skiplist-detach")]),
+                         ("postings-adapter-tests", [sys.executable, "verification/postings/test_generate.py"]),
+                         ("postings", [sys.executable, "verification/postings/run.py", "--output", str(directory / "postings")]),
                          ("lean", [sys.executable, "scripts/check_lean.py", "--output", str(directory / "lean.json")]),
                          ("kernel-tests", ["cargo", "test", "--offline", "-p", "aerostore_verified"])]
         if args.profile != "proofs":

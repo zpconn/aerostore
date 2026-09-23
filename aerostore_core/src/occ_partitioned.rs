@@ -3185,3 +3185,508 @@ mod transactional_publication_tests {
         table.commit(&mut reader).unwrap();
     }
 }
+
+#[cfg(test)]
+mod predicate_completion_tests {
+    use super::*;
+    use std::cell::Cell;
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    struct PredicateRow {
+        key: Option<u64>,
+        payload: u64,
+    }
+
+    fn left_key(row: &PredicateRow) -> Option<IndexValue> {
+        row.key.map(IndexValue::U64)
+    }
+
+    fn right_key(row: &PredicateRow) -> Option<IndexValue> {
+        (row.payload != 0).then_some(IndexValue::U64(row.payload))
+    }
+
+    fn fixture(keys: &[Option<u64>]) -> (Arc<OccTable<PredicateRow>>, SecondaryIndex<usize>) {
+        let arena = Arc::new(ShmArena::new(8 << 20).unwrap());
+        let mut table = OccTable::new(Arc::clone(&arena), keys.len()).unwrap();
+        let index = SecondaryIndex::new_in_shared("left", arena);
+        for (id, key) in keys.iter().copied().enumerate() {
+            table
+                .seed_row(id, PredicateRow { key, payload: 0 })
+                .unwrap();
+            if let Some(key) = key {
+                index.try_insert(IndexValue::U64(key), id).unwrap();
+            }
+        }
+        table.bind_index(index.clone(), left_key).unwrap();
+        (Arc::new(table), index)
+    }
+
+    fn eq(key: u64) -> IndexCompare {
+        IndexCompare::Eq(IndexValue::U64(key))
+    }
+
+    fn no_live_transactions(table: &OccTable<PredicateRow>) {
+        assert!(table
+            .shm
+            .proc_array()
+            .create_snapshot(table.shm.global_txid())
+            .in_flight_txids()
+            .is_empty());
+    }
+
+    #[test]
+    fn empty_capture_then_create_or_key_move_rejects_without_concrete_row_dependency() {
+        for previous in [None, Some(10)] {
+            let (table, index) = fixture(&[previous, None]);
+            // The writer is active in the reader's snapshot, so materialization
+            // may correctly return the old empty result even after it commits.
+            let mut writer = table.begin_transaction().unwrap();
+            let mut reader = table.begin_transaction().unwrap();
+            let writer_table = Arc::clone(&table);
+            INDEX_CANDIDATES_CAPTURED_HOOK.with(|hook| {
+                *hook.borrow_mut() = Some(Box::new(move || {
+                    writer_table
+                        .write(
+                            &mut writer,
+                            0,
+                            PredicateRow {
+                                key: Some(42),
+                                payload: 0,
+                            },
+                        )
+                        .unwrap();
+                    writer_table.commit(&mut writer).unwrap();
+                }));
+            });
+            assert!(table
+                .index_lookup(&mut reader, &index, &eq(42))
+                .unwrap()
+                .is_empty());
+            assert!(
+                reader.read_set.is_empty(),
+                "concrete-row validation must not mask a missing predicate check"
+            );
+            table
+                .write(
+                    &mut reader,
+                    1,
+                    PredicateRow {
+                        key: None,
+                        payload: 1,
+                    },
+                )
+                .unwrap();
+            assert_eq!(table.commit(&mut reader), Err(Error::SerializationFailure));
+            assert_eq!(
+                table.latest_value(1).unwrap(),
+                Some(PredicateRow {
+                    key: None,
+                    payload: 0
+                })
+            );
+            assert_eq!(index.try_entries().unwrap(), vec![(IndexValue::U64(42), 0)]);
+            no_live_transactions(&table);
+            let mut fresh = table.begin_transaction().unwrap();
+            assert_eq!(
+                table.index_lookup(&mut fresh, &index, &eq(42)).unwrap(),
+                vec![0]
+            );
+            table.commit(&mut fresh).unwrap();
+        }
+    }
+
+    #[test]
+    fn empty_predicate_changed_during_payload_preparation_rejects_before_acceptance() {
+        for previous in [None, Some(10)] {
+            let (table, index) = fixture(&[previous, None]);
+            let mut writer = table.begin_transaction().unwrap();
+            let mut reader = table.begin_transaction().unwrap();
+            assert!(table
+                .index_lookup(&mut reader, &index, &eq(42))
+                .unwrap()
+                .is_empty());
+            assert!(reader.read_set.is_empty());
+            table
+                .write(
+                    &mut reader,
+                    1,
+                    PredicateRow {
+                        key: None,
+                        payload: 1,
+                    },
+                )
+                .unwrap();
+            let accepted = Cell::new(false);
+            let result = table.commit_with_record_prepared::<Error, _, _>(&mut reader, |record| {
+                assert_eq!(record.writes.len(), 1);
+                assert_eq!(record.writes[0].row_id, 1);
+                table
+                    .write(
+                        &mut writer,
+                        0,
+                        PredicateRow {
+                            key: Some(42),
+                            payload: 0,
+                        },
+                    )
+                    .unwrap();
+                table.commit(&mut writer).unwrap();
+                Ok(|_: &OccCommitRecord<PredicateRow>| {
+                    accepted.set(true);
+                    Ok(())
+                })
+            });
+            assert_eq!(result, Err(Error::SerializationFailure));
+            assert!(
+                !accepted.get(),
+                "a changed empty predicate must reject before accepting prepared WAL bytes"
+            );
+            assert_eq!(
+                table.latest_value(1).unwrap(),
+                Some(PredicateRow {
+                    key: None,
+                    payload: 0
+                })
+            );
+            assert_eq!(index.try_entries().unwrap(), vec![(IndexValue::U64(42), 0)]);
+            no_live_transactions(&table);
+        }
+    }
+
+    #[test]
+    fn equal_bucket_numbers_in_different_indexes_keep_independent_dependencies() {
+        let arena = Arc::new(ShmArena::new(8 << 20).unwrap());
+        let mut table = OccTable::new(Arc::clone(&arena), 1).unwrap();
+        table
+            .seed_row(
+                0,
+                PredicateRow {
+                    key: None,
+                    payload: 0,
+                },
+            )
+            .unwrap();
+        let left = SecondaryIndex::new_in_shared("left", Arc::clone(&arena));
+        let right = SecondaryIndex::new_in_shared("right", arena);
+        table.bind_index(left.clone(), left_key).unwrap();
+        table.bind_index(right.clone(), right_key).unwrap();
+        assert_ne!(left.header_offset(), right.header_offset());
+        assert_eq!(
+            left.transactional_key_bucket(&IndexValue::U64(42)).unwrap(),
+            right
+                .transactional_key_bucket(&IndexValue::U64(42))
+                .unwrap()
+        );
+        let mut reader = table.begin_transaction().unwrap();
+        assert!(table
+            .index_lookup(&mut reader, &right, &eq(42))
+            .unwrap()
+            .is_empty());
+        assert!(reader.read_set.is_empty());
+        let mut unrelated = table.begin_transaction().unwrap();
+        table
+            .write(
+                &mut unrelated,
+                0,
+                PredicateRow {
+                    key: Some(42),
+                    payload: 0,
+                },
+            )
+            .unwrap();
+        table.commit(&mut unrelated).unwrap();
+        table
+            .commit(&mut reader)
+            .expect("publishing the left index must not change the right predicate");
+
+        let mut reader = table.begin_transaction().unwrap();
+        assert!(table
+            .index_lookup(&mut reader, &right, &eq(42))
+            .unwrap()
+            .is_empty());
+        let mut relevant = table.begin_transaction().unwrap();
+        table
+            .write(
+                &mut relevant,
+                0,
+                PredicateRow {
+                    key: Some(42),
+                    payload: 42,
+                },
+            )
+            .unwrap();
+        table.commit(&mut relevant).unwrap();
+        assert_eq!(table.commit(&mut reader), Err(Error::SerializationFailure));
+        assert_eq!(left.try_entries().unwrap(), vec![(IndexValue::U64(42), 0)]);
+        assert_eq!(right.try_entries().unwrap(), vec![(IndexValue::U64(42), 0)]);
+        no_live_transactions(&table);
+    }
+
+    #[test]
+    fn colliding_predicates_filter_final_own_writes_and_revalidate_an_unread_creation() {
+        let (table, index) = fixture(&[Some(1), None, None, None]);
+        let bucket = index.transactional_key_bucket(&IndexValue::U64(1)).unwrap();
+        let collision = (2..=65_536)
+            .find(|value| {
+                index
+                    .transactional_key_bucket(&IndexValue::U64(*value))
+                    .unwrap()
+                    == bucket
+            })
+            .expect("find a real canonical-bucket collision");
+        let mut seed = table.begin_transaction().unwrap();
+        table
+            .write(
+                &mut seed,
+                1,
+                PredicateRow {
+                    key: Some(collision),
+                    payload: 0,
+                },
+            )
+            .unwrap();
+        table.commit(&mut seed).unwrap();
+        let mut reader = table.begin_transaction().unwrap();
+        table
+            .write(
+                &mut reader,
+                0,
+                PredicateRow {
+                    key: Some(collision),
+                    payload: 0,
+                },
+            )
+            .unwrap();
+        table
+            .write(
+                &mut reader,
+                0,
+                PredicateRow {
+                    key: None,
+                    payload: 0,
+                },
+            )
+            .unwrap();
+        table
+            .write(
+                &mut reader,
+                2,
+                PredicateRow {
+                    key: Some(1),
+                    payload: 0,
+                },
+            )
+            .unwrap();
+        table
+            .write(
+                &mut reader,
+                2,
+                PredicateRow {
+                    key: Some(collision),
+                    payload: 0,
+                },
+            )
+            .unwrap();
+        assert!(table
+            .index_lookup(&mut reader, &index, &eq(1))
+            .unwrap()
+            .is_empty());
+        assert_eq!(
+            table
+                .index_lookup(&mut reader, &index, &eq(collision))
+                .unwrap(),
+            vec![1, 2]
+        );
+        let repeated = IndexCompare::In(vec![
+            IndexValue::U64(1),
+            IndexValue::U64(collision),
+            IndexValue::U64(1),
+            IndexValue::U64(collision),
+        ]);
+        assert_eq!(
+            table.index_lookup(&mut reader, &index, &repeated).unwrap(),
+            vec![1, 2]
+        );
+        assert_eq!(
+            reader.index_reads.len(),
+            1,
+            "one dependency represents this actual collision"
+        );
+        assert!(reader.read_set.iter().all(|read| read.row_id != 3));
+        let mut creator = table.begin_transaction().unwrap();
+        table
+            .write(
+                &mut creator,
+                3,
+                PredicateRow {
+                    key: Some(1),
+                    payload: 0,
+                },
+            )
+            .unwrap();
+        table.commit(&mut creator).unwrap();
+        assert_eq!(table.commit(&mut reader), Err(Error::SerializationFailure));
+        assert_eq!(table.latest_value(0).unwrap().unwrap().key, Some(1));
+        assert_eq!(table.latest_value(2).unwrap().unwrap().key, None);
+        let mut entries = index.try_entries().unwrap();
+        entries.sort_unstable();
+        assert_eq!(
+            entries,
+            vec![
+                (IndexValue::U64(1), 0),
+                (IndexValue::U64(1), 3),
+                (IndexValue::U64(collision), 1)
+            ]
+        );
+        no_live_transactions(&table);
+    }
+
+    #[test]
+    fn crossed_empty_predicates_cannot_both_publish_through_disjoint_write_buckets() {
+        use std::sync::mpsc;
+        let (table, index) = fixture(&[None, None]);
+        assert_ne!(
+            index
+                .transactional_key_bucket(&IndexValue::U64(42))
+                .unwrap(),
+            index
+                .transactional_key_bucket(&IndexValue::U64(77))
+                .unwrap()
+        );
+        let mut first = table.begin_transaction().unwrap();
+        let mut second = table.begin_transaction().unwrap();
+        assert!(table
+            .index_lookup(&mut first, &index, &eq(42))
+            .unwrap()
+            .is_empty());
+        assert!(table
+            .index_lookup(&mut second, &index, &eq(77))
+            .unwrap()
+            .is_empty());
+        assert!(first.read_set.is_empty() && second.read_set.is_empty());
+        table
+            .write(
+                &mut first,
+                1,
+                PredicateRow {
+                    key: Some(77),
+                    payload: 0,
+                },
+            )
+            .unwrap();
+        table
+            .write(
+                &mut second,
+                0,
+                PredicateRow {
+                    key: Some(42),
+                    payload: 0,
+                },
+            )
+            .unwrap();
+        assert_ne!(
+            table.collect_lock_indices(&first),
+            table.collect_lock_indices(&second)
+        );
+        let (accepted, accepted_rx) = mpsc::channel();
+        let (resume, resume_rx) = mpsc::channel();
+        let first_table = Arc::clone(&table);
+        let worker = std::thread::spawn(move || {
+            first_table.commit_with_record_before_publish::<Error, _>(&mut first, |_| {
+                accepted.send(()).unwrap();
+                resume_rx.recv().unwrap();
+                Ok(())
+            })
+        });
+        accepted_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        let second_accepted = Cell::new(false);
+        let second_result =
+            table.commit_with_record_before_publish::<Error, _>(&mut second, |_| {
+                second_accepted.set(true);
+                Ok(())
+            });
+        // Release/join even in the unsafe mutant, before reporting its failure.
+        resume.send(()).unwrap();
+        assert_eq!(worker.join().unwrap().unwrap().writes.len(), 1);
+        assert_eq!(second_result, Err(Error::SerializationFailure));
+        assert!(!second_accepted.get());
+        assert_eq!(index.try_entries().unwrap(), vec![(IndexValue::U64(77), 1)]);
+        assert_eq!(table.latest_value(0).unwrap().unwrap().key, None);
+        no_live_transactions(&table);
+    }
+
+    #[test]
+    fn actual_publication_stamps_all_old_and_new_buckets_once_and_leaves_others_unchanged() {
+        let (table, index) = fixture(&[Some(10), Some(20)]);
+        let touched: BTreeSet<_> = [10, 20, 30, 40]
+            .into_iter()
+            .map(|key| {
+                index
+                    .transactional_key_bucket(&IndexValue::U64(key))
+                    .unwrap()
+            })
+            .collect();
+        let untouched = (0..65_536)
+            .map(|key| {
+                index
+                    .transactional_key_bucket(&IndexValue::U64(key))
+                    .unwrap()
+            })
+            .find(|bucket| !touched.contains(bucket))
+            .unwrap();
+        let untouched_before = index.transactional_stamp(untouched).unwrap();
+        let mut older = table.begin_transaction().unwrap();
+        let mut later = table.begin_transaction().unwrap();
+        let later_txid = later.txid;
+        table.abort(&mut later).unwrap();
+        table
+            .write(
+                &mut older,
+                0,
+                PredicateRow {
+                    key: Some(30),
+                    payload: 0,
+                },
+            )
+            .unwrap();
+        table
+            .write(
+                &mut older,
+                1,
+                PredicateRow {
+                    key: Some(40),
+                    payload: 0,
+                },
+            )
+            .unwrap();
+        table.commit(&mut older).unwrap();
+        let stamp = table.current_global_txid() - 1;
+        assert!(stamp > later_txid);
+        for bucket in touched {
+            assert_eq!(index.transactional_stamp(bucket).unwrap(), stamp);
+        }
+        assert_eq!(
+            index.transactional_stamp(untouched).unwrap(),
+            untouched_before
+        );
+        let mut same_key = table.begin_transaction().unwrap();
+        table
+            .write(
+                &mut same_key,
+                0,
+                PredicateRow {
+                    key: Some(30),
+                    payload: 1,
+                },
+            )
+            .unwrap();
+        let before_commit = table.current_global_txid();
+        table.commit(&mut same_key).unwrap();
+        assert_eq!(
+            table.current_global_txid(),
+            before_commit,
+            "a payload-only update has no predicate publication to stamp"
+        );
+        no_live_transactions(&table);
+    }
+}

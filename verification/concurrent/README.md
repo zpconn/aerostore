@@ -61,9 +61,16 @@ The trait declarations are assumptions, not certified implementations. No native
 | ProcArray and stamps | Correct deregistration, snapshot membership, fresh monotone publication stamps, and exhaustion handling; the event proof establishes call ordering, not atomic clock correctness |
 | Memory/runtime | Safe accesses and allocation/reclamation, absence of unmodeled panics, compiler/RAII behavior, and successful allocation where required |
 
-`prepare_index_destinations`, `rollback_index_destinations`, `remove_index_sources`, and actual row publication are still primitive obligations. Their event contracts do not assert that their algorithms or data structures are verified. The generated receipts therefore keep both `native_primitive_refinement_proved` and `transaction_history_refinement_proved` **false**. The full plan's P1 concurrent slice and P2 history theorem remain open.
+The [posting campaign](../postings/README.md) now separately checks the actual
+`prepare_index_destinations`, `rollback_index_destinations` and
+`remove_index_sources` algorithms against posting-set and poison contracts.
+Destination absence/ownership, primitive insertion/removal, and actual row
+publication remain obligations. This event interface has not been fully
+instantiated by those data proofs. The generated receipts therefore keep both
+`native_primitive_refinement_proved` and `transaction_history_refinement_proved`
+**false**. The full plan's P1 concurrent slice and P2 history theorem remain open.
 
-The provisional cached removal-window change is inside that source-removal
+The accepted cached removal-window change is inside that source-removal
 primitive boundary. Its [storage contract](../contracts/transactions.md#storage-and-progress)
 requires uninterrupted mutation exclusion, attached predecessors, all-lane
 detachment or a complete fallback search, and unchanged pinned-reader lifetime.
@@ -74,5 +81,18 @@ instrumentation confirms one ordinary removal search instead of two. The
 bounded Loom campaign exercises the actual lock, not this pointer algorithm.
 Neither those tests nor rechecking the unchanged conditional driver theorem
 establish native refinement or approve the candidate's performance.
+The [detachment campaign](../skiplist_detach/README.md) now proves the actual
+cached/fallback loop's retirement precondition under guarded lane/search/epoch
+contracts. Those native pointer and reclamation contracts remain unproved;
+engineering acceptance of the implementation is recorded separately in the
+performance archive.
 
-The next proof expansion should discharge these named contracts against the actual native methods, then join predicate capture and validation to a parameterized history invariant. A passing orchestration campaign must not be used to authorize changes to unproved atomic, allocator, snapshot, or WAL primitives.
+The [native predicate campaign](../predicate/README.md) now proves the actual
+lock-key calculation, read validation and stamp publication against data-bearing
+contracts, and [dependency capture](../predicate_capture/README.md) checks the
+actual lookup loop, including empty predicates. This narrows the named primitive
+obligations, but does not automatically instantiate this entire event interface
+or establish native concurrent history refinement. The remaining work joins
+those results to storage, snapshot and interference invariants. A passing
+orchestration campaign must not be used to authorize changes to unproved
+atomic, allocator, snapshot or WAL primitives.

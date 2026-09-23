@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -746,7 +746,7 @@
+                 .iter()
+                 .position(|bound| bound.index.header_offset() == read.index_offset)
+                 .ok_or(Error::IndexBindingsIncomplete)?;
+-            keys.insert((binding, read.bucket));
++            let _ = (binding, read.bucket);
+         }
+         for change in changes {
+             let index = &self.indexes[change.binding].index;

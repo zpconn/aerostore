@@ -6,6 +6,26 @@ This is the full verification roadmap. Its first executable component pilot now 
 
 The program has two goals: establish the database's correctness, and create a verified environment for aggressive performance experiments. Each candidate implementation must preserve a stable public contract and carry evidence tied to its exact source and build configuration. Section 13 defines that experimentation workflow.
 
+Current predicate refinement checkpoint, after accepted implementation `8d9e9f4`:
+the native `index_lock_keys`, `index_read_conflict`, `publish_index_stamps` and
+`index_lookup` dependency-capture loop now have source-bound, data-bearing Verus
+contracts. They establish read/write bucket coverage, stamp validation,
+publication updates and complete dependency capture, including empty lookups.
+Lean adds parameterized finite-history stamp coverage and own-write overlay
+theorems; the full TLA+ campaign now has 74 cases. Six deterministic native tests
+exercise the corresponding publication races and binding/collision boundaries.
+Checked contract composition calls the native capture and validation operations;
+separate conditional proofs cover destination preparation, reverse rollback,
+source removal, and cached/fallback skiplist detachment before retirement.
+The [verification workspace](../verification/README.md) records precise coverage
+and reproduction commands. This checkpoint adds proofs and tests without
+changing production code or adding runtime instrumentation. It preserves the
+accepted performance implementation while narrowing the next proof obligations.
+Actual lock/clock/registry correspondence, raw-index candidate completeness,
+MVCC ownership and native concurrent history composition are still explicit
+obligations; the full P1 and whole-engine gates remain closed. The chronological
+checkpoints below retain earlier results and decisions.
+
 Implementation checkpoint, 2026-09-23: the workspace now contains both production bucket variants with independent Verus and extracted-Rust Lean proofs, complete result equivalence, fixed-4096 production corollaries, and a proved scalar stamp comparison. The acceptance workflow rebuilds and independently replays Lean's complete environment, audits theorem types/axioms, requires semantic and forged-proof negative controls, and checks a frozen engine/contract boundary. Thirty-five TLA+ cases cover publication, crash-ordering candidates, retention, collector priority, and live-key reclamation. The experiment records component timing and allocation use and runs the existing extended Crucible under all three bucket configurations.
 
 This does **not** close P1's actual concurrent-operation/slice-refinement obligation, the parameterized transaction-history invariant, or the complete-engine milestones. Later resource and durability modeling has begun in parallel; its abstract results do not prove or repair the corresponding Rust implementations. The initial source baseline is explicitly unanchored until independently reviewed and committed. No candidate has been promoted, and the full verification gate remains closed.

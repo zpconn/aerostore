@@ -1,0 +1,14 @@
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/aerostore_core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.84s
+     Running unittests src/lib.rs (target/verification-p1/native-predicates/native-target/debug/deps/aerostore_core-458b83ba28fefdf8)
+
+running 6 tests
+test occ_partitioned::predicate_completion_tests::actual_publication_stamps_all_old_and_new_buckets_once_and_leaves_others_unchanged ... ok
+test occ_partitioned::predicate_completion_tests::colliding_predicates_filter_final_own_writes_and_revalidate_an_unread_creation ... ok
+test occ_partitioned::predicate_completion_tests::equal_bucket_numbers_in_different_indexes_keep_independent_dependencies ... ok
+test occ_partitioned::predicate_completion_tests::empty_predicate_changed_during_payload_preparation_rejects_before_acceptance ... ok
+test occ_partitioned::predicate_completion_tests::empty_capture_then_create_or_key_move_rejects_without_concrete_row_dependency ... ok
+test occ_partitioned::predicate_completion_tests::crossed_empty_predicates_cannot_both_publish_through_disjoint_write_buckets ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 195 filtered out; finished in 0.00s
+

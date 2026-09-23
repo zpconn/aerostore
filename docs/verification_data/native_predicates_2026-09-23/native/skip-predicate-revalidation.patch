@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -813,7 +813,7 @@
+                 .find(|bound| bound.index.header_offset() == read.index_offset)
+                 .ok_or(Error::IndexBindingsIncomplete)?;
+             let stamp = bound.index.transactional_stamp(read.bucket)?;
+-            if stamp != read.stamp || !aerostore_verified::stamp_precedes_snapshot(stamp, tx.txid) {
++            if false {
+                 return Ok(true);
+             }
+         }

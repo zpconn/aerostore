@@ -1,19 +1,109 @@
 {
-  "allowed_axioms": ["propext", "Classical.choice", "Quot.sound"],
+  "allowed_axioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
   "roots": [
-    {"name": "AerostoreProofs.bitmap_specification_correct", "contract": "AerostoreProofs.BucketSpecificationCorrect", "scope": "abstract_specification"},
-    {"name": "AerostoreProofs.canonical_unique", "contract": "AerostoreProofs.CanonicalUnique", "scope": "abstract_specification"},
-    {"name": "AerostoreProofs.rejection_persists", "contract": "AerostoreProofs.RejectionPersists", "scope": "abstract_specification"},
-    {"name": "AerostoreProofs.rust_stamp_refinement", "contract": "AerostoreProofs.RustStampRefinement", "scope": "extracted_rust"},
-    {"name": "AerostoreProofs.rust_bitmap_step_preserves_membership", "contract": "AerostoreProofs.RustBitmapStepPreservesMembership", "scope": "extracted_rust_loop_step"},
-    {"name": "AerostoreProofs.rust_bitmap_refinement", "contract": "AerostoreProofs.RustBitmapRefinement", "scope": "extracted_rust_whole_function_in_range_inputs"},
-    {"name": "AerostoreProofs.rust_bitmap_rejects_first_invalid", "contract": "AerostoreProofs.RustBitmapRejectsFirstInvalid", "scope": "extracted_rust_first_invalid_input"},
-    {"name": "AerostoreProofs.rust_bitmap_total", "contract": "AerostoreProofs.RustBitmapTotal", "scope": "extracted_rust_whole_function_all_inputs_vec_model"},
-    {"name": "AerostoreProofs.rust_bitmap_production", "contract": "AerostoreProofs.RustBitmapProduction", "scope": "extracted_rust_production_4096_all_inputs"},
-    {"name": "AerostoreProofs.rust_sort_refinement", "contract": "AerostoreProofs.RustSortRefinement", "scope": "extracted_rust_whole_function_in_range_inputs"},
-    {"name": "AerostoreProofs.rust_sort_rejects_first_invalid", "contract": "AerostoreProofs.RustSortRejectsFirstInvalid", "scope": "extracted_rust_first_invalid_input"},
-    {"name": "AerostoreProofs.rust_sort_total", "contract": "AerostoreProofs.RustSortTotal", "scope": "extracted_rust_whole_function_all_inputs_vec_model"},
-    {"name": "AerostoreProofs.rust_sort_production", "contract": "AerostoreProofs.RustSortProduction", "scope": "extracted_rust_production_4096_all_inputs"},
-    {"name": "AerostoreProofs.rust_bucket_implementations_equivalent", "contract": "AerostoreProofs.RustBucketImplementationsEquivalent", "scope": "extracted_rust_complete_result_equivalence_vec_model"}
+    {
+      "name": "AerostoreProofs.bitmap_specification_correct",
+      "contract": "AerostoreProofs.BucketSpecificationCorrect",
+      "scope": "abstract_specification"
+    },
+    {
+      "name": "AerostoreProofs.canonical_unique",
+      "contract": "AerostoreProofs.CanonicalUnique",
+      "scope": "abstract_specification"
+    },
+    {
+      "name": "AerostoreProofs.rejection_persists",
+      "contract": "AerostoreProofs.RejectionPersists",
+      "scope": "abstract_specification"
+    },
+    {
+      "name": "AerostoreProofs.rust_stamp_refinement",
+      "contract": "AerostoreProofs.RustStampRefinement",
+      "scope": "extracted_rust"
+    },
+    {
+      "name": "AerostoreProofs.rust_bitmap_step_preserves_membership",
+      "contract": "AerostoreProofs.RustBitmapStepPreservesMembership",
+      "scope": "extracted_rust_loop_step"
+    },
+    {
+      "name": "AerostoreProofs.rust_bitmap_refinement",
+      "contract": "AerostoreProofs.RustBitmapRefinement",
+      "scope": "extracted_rust_whole_function_in_range_inputs"
+    },
+    {
+      "name": "AerostoreProofs.rust_bitmap_rejects_first_invalid",
+      "contract": "AerostoreProofs.RustBitmapRejectsFirstInvalid",
+      "scope": "extracted_rust_first_invalid_input"
+    },
+    {
+      "name": "AerostoreProofs.rust_bitmap_total",
+      "contract": "AerostoreProofs.RustBitmapTotal",
+      "scope": "extracted_rust_whole_function_all_inputs_vec_model"
+    },
+    {
+      "name": "AerostoreProofs.rust_bitmap_production",
+      "contract": "AerostoreProofs.RustBitmapProduction",
+      "scope": "extracted_rust_production_4096_all_inputs"
+    },
+    {
+      "name": "AerostoreProofs.rust_sort_refinement",
+      "contract": "AerostoreProofs.RustSortRefinement",
+      "scope": "extracted_rust_whole_function_in_range_inputs"
+    },
+    {
+      "name": "AerostoreProofs.rust_sort_rejects_first_invalid",
+      "contract": "AerostoreProofs.RustSortRejectsFirstInvalid",
+      "scope": "extracted_rust_first_invalid_input"
+    },
+    {
+      "name": "AerostoreProofs.rust_sort_total",
+      "contract": "AerostoreProofs.RustSortTotal",
+      "scope": "extracted_rust_whole_function_all_inputs_vec_model"
+    },
+    {
+      "name": "AerostoreProofs.rust_sort_production",
+      "contract": "AerostoreProofs.RustSortProduction",
+      "scope": "extracted_rust_production_4096_all_inputs"
+    },
+    {
+      "name": "AerostoreProofs.rust_bucket_implementations_equivalent",
+      "contract": "AerostoreProofs.RustBucketImplementationsEquivalent",
+      "scope": "extracted_rust_complete_result_equivalence_vec_model"
+    },
+    {
+      "name": "AerostoreProofs.predicate_history_monotone",
+      "contract": "AerostoreProofs.PredicateHistoryMonotone",
+      "scope": "parameterized_abstract_predicate_history"
+    },
+    {
+      "name": "AerostoreProofs.predicate_history_covers_events",
+      "contract": "AerostoreProofs.PredicateHistoryCoversEvents",
+      "scope": "parameterized_abstract_predicate_history"
+    },
+    {
+      "name": "AerostoreProofs.accepted_read_excludes_later_publication",
+      "contract": "AerostoreProofs.AcceptedReadExcludesLaterPublication",
+      "scope": "parameterized_abstract_predicate_history"
+    },
+    {
+      "name": "AerostoreProofs.own_write_predicate_complete",
+      "contract": "AerostoreProofs.OwnWritePredicateComplete",
+      "scope": "parameterized_abstract_predicate_history"
+    },
+    {
+      "name": "AerostoreProofs.dependency_rejects_changed",
+      "contract": "AerostoreProofs.DependencyRejectsChanged",
+      "scope": "abstract_predicate_validation"
+    },
+    {
+      "name": "AerostoreProofs.dependency_rejects_recent",
+      "contract": "AerostoreProofs.DependencyRejectsRecent",
+      "scope": "abstract_predicate_validation"
+    }
   ]
 }

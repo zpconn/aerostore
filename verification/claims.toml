@@ -41,6 +41,42 @@ required_checks = ["concurrent", "concurrent-adapter-tests"]
 concurrent_roots = ["commit_with_record_impl", "CommitPrimitives::prepare_before_publish", "CommitPrimitives::abort_preparation", "CommitPrimitives::invoke_before_publish", "CommitPrimitives::rollback_prepared_commit", "callback_contract_has_witnesses"]
 
 [[claims]]
+id = "TX-PREDICATE-DATA-VERUS"
+contract = "verification/predicate/README.md"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "verification/predicate/contracts.rs"]
+scope = "Actual lock-key union, dependency validation and stamp-publication loops under operation-local registry/collection/hash/guard/atomic contracts; source-bound data proofs and late-publication validation harness, not native concurrent history refinement"
+status = "partial"
+required_checks = ["predicate", "predicate-adapter-tests"]
+refinement_roots = { predicate = ["index_lock_keys", "index_read_conflict", "publish_index_stamps", "validate_after_late_publication"] }
+
+[[claims]]
+id = "TX-PREDICATE-CAPTURE-VERUS"
+contract = "verification/predicate_capture/README.md"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "verification/predicate_capture/contracts.rs"]
+scope = "Actual index_lookup dependency loop: complete capture even for empty candidates, repeat checks, prefix/provenance/uniqueness and bounded dependency growth under guarded stamp-read and allocation contracts; raw candidates and native MVCC remain open"
+status = "partial"
+required_checks = ["predicate-capture", "predicate-capture-adapter-tests"]
+refinement_roots = { predicate-capture = ["capture_dependencies", "find_read"] }
+
+[[claims]]
+id = "TX-PREDICATE-COMPOSITION-VERUS"
+contract = "verification/predicate_composition/README.md"
+implementation = ["verification/predicate_composition/composition.rs", "aerostore_core/src/occ_partitioned.rs"]
+scope = "Checked composition invoking exact source-bound capture and validation modules: guarded dependency provenance and field translation; successful validation excludes overlapping late publication stamps. Two represented states, not native concurrent history refinement"
+status = "partial"
+required_checks = ["predicate", "predicate-capture", "predicate-composition", "predicate-composition-adapter-tests"]
+refinement_roots = { predicate-composition = ["capture_then_validate", "capture_preserves_guard_coverage", "publication_supplies_late_bucket"] }
+
+[[claims]]
+id = "TX-PREDICATE-HISTORY-LEAN"
+contract = "verification/contracts/transactions.md"
+implementation = ["verification/lean/AerostoreProofs/Predicate.lean", "verification/lean/AerostoreProofs/Contracts.lean"]
+scope = "Unbounded finite fresh-publication histories preserve stamp coverage; accepted dependencies exclude later overlapping publications; exact own-write predicate overlay under candidate-completeness premise. Abstract mathematics, not Rust extraction or native history refinement"
+status = "partial"
+required_checks = ["lean"]
+lean_roots = ["AerostoreProofs.predicate_history_monotone", "AerostoreProofs.predicate_history_covers_events", "AerostoreProofs.accepted_read_excludes_later_publication", "AerostoreProofs.own_write_predicate_complete", "AerostoreProofs.dependency_rejects_changed", "AerostoreProofs.dependency_rejects_recent"]
+
+[[claims]]
 id = "DURABILITY-REGRESSIONS"
 contract = "verification/contracts/durability.md"
 implementation = ["aerostore_core/src/wal_writer.rs", "aerostore_core/src/occ_partitioned.rs", "aerostore_core/tests/wal_protocol_regressions.rs"]
@@ -71,6 +107,24 @@ implementation = ["aerostore_core/src/occ_partitioned.rs", "aerostore_core/src/p
 scope = "Actual concurrent implementation refines strictly serializable histories"
 status = "open"
 required_checks = []
+
+[[claims]]
+id = "POSTING-PUBLICATION-VERUS"
+contract = "verification/postings/README.md"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "verification/postings/contracts.rs"]
+scope = "Actual destination preparation, reverse rollback and source removal against posting-set and poison contracts; exact owned additions/removals and clean failure or poison. Destination ownership, individual pointer operations and native concurrent composition remain caller/primitive obligations"
+status = "partial"
+required_checks = ["postings", "postings-adapter-tests", "core-regressions"]
+refinement_roots = { postings = ["prepare_index_destinations", "rollback_index_destinations", "remove_index_sources"] }
+
+[[claims]]
+id = "SKIPLIST-DETACHMENT-VERUS"
+contract = "verification/skiplist_detach/README.md"
+implementation = ["aerostore_core/src/shm_skiplist.rs", "verification/skiplist_detach/contracts.rs"]
+scope = "Actual cached/fallback unlink loops require all-lane detachment before retirement and preserve pinned contents under guarded lane/search/retire contracts; native pointer ownership, epoch refinement and retry termination remain open"
+status = "partial"
+required_checks = ["skiplist-detach", "skiplist-detach-adapter-tests", "core-regressions"]
+refinement_roots = { skiplist-detach = ["cached_detach", "refreshed_detach", "detach_before_retire", "primitive_contracts_have_success_and_retry_witnesses"] }
 
 [[claims]]
 id = "MEMORY-OWNERSHIP"

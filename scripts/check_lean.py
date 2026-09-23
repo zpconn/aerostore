@@ -274,6 +274,41 @@ injectFalse
                     raise RuntimeError("mutation failed for an unexpected reason: " + name)
                 report["mutation_checks"].append({"name": name, "rejected": True, "proof": proof,
                                                   "rust_sha256": digest(mutant), "extracted_sha256": digest(mutant_generated)})
+            # Independent mathematical-contract mutations. These are not Rust
+            # refinement checks: they test that the parameterized predicate
+            # proofs depend on stamp equality/freshness, overwrite publication,
+            # and inclusion of local writes, rather than proving a vacuous type.
+            contracts_source = (PROJECT / "AerostoreProofs/Contracts.lean").read_text()
+            predicate_mutations = [
+                ("predicate_ignores_changed_stamp", "current = recorded ∧ current < transactionStart",
+                 "current = current ∧ current < transactionStart"),
+                ("predicate_accepts_equal_start", "current = recorded ∧ current < transactionStart",
+                 "current = recorded ∧ current ≤ transactionStart"),
+                ("predicate_drops_publication", "(Classical.propDecidable _) event.stamp (before bucket)",
+                 "(Classical.propDecidable _) (before bucket) (before bucket)"),
+                ("predicate_omits_own_candidates", "row ∈ candidates ∨ own row ≠ none", "row ∈ candidates ∨ False"),
+            ]
+            for name, old, new in predicate_mutations:
+                if contracts_source.count(old) != 1:
+                    raise RuntimeError("predicate mutation anchor is absent or ambiguous: " + name)
+                module_dir = stage / name / "AerostoreProofs"
+                module_dir.mkdir(parents=True)
+                mutant = module_dir / "Contracts.lean"
+                mutant.write_text(contracts_source.replace(old, new))
+                mutant_env = env | {"LEAN_PATH": str(module_dir.parent) + os.pathsep + lean_path}
+                run([lean_bin / "lean", "-o", module_dir / "Contracts.olean", mutant], custom_env=mutant_env)
+                mutation_output = run([lean_bin / "lean", PROJECT / "AerostoreProofs/Predicate.lean"],
+                                      expected=1, custom_env=mutant_env)
+                intended_diagnostics = ["error: unsolved goals", "error: Type mismatch",
+                                        "error: Application type mismatch", "omega could not prove"]
+                forbidden_diagnostics = ["unknown module", "object file", "unknownIdentifier", "unknown identifier",
+                                         "unexpected token", "unknown constant", "unknown tactic", "maximum recursion depth"]
+                if not any(s in mutation_output for s in intended_diagnostics) or any(
+                        s in mutation_output for s in forbidden_diagnostics):
+                    raise RuntimeError("predicate mutation failed for an unexpected reason: " + name)
+                report["mutation_checks"].append({"name": name, "rejected": True, "proof": "Predicate.lean",
+                                                  "scope": "abstract_contract_not_rust_refinement",
+                                                  "contract_sha256": digest(mutant)})
         report["source_sha256_before"] = initial_fingerprint
         report["source_sha256"] = source_fingerprint()
         if report["source_sha256"] != initial_fingerprint:

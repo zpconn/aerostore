@@ -1,0 +1,20 @@
+{
+  "command": [
+    "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+    "test",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/home/zpconn/code/aerostore/target/verification-p1/native-predicates/native-target",
+    "-p",
+    "aerostore_core",
+    "--lib",
+    "removal_window_detaches_every_lane_before_pinned_retirement_and_shorter_reuse",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "log": "target/verification-p1/native-predicates/cached-window-native.log",
+  "log_sha256": "4f653bef8f5f1a9db93ed74a123805dcfdf56076d6b9bc0ed66818e23837747a",
+  "source_sha256": "a3b8862e481cb9a95345d9eafc88d8f2bdb102b28f001d70c7e01fd581f7c184"
+}

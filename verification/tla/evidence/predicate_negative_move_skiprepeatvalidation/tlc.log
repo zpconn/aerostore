@@ -1,0 +1,129 @@
+TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 1772] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-36qwl2du/PredicatePublication.tla
+Parsing file /tmp/tlc-2061875527857922742/Integers.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /tmp/tlc-2061875527857922742/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-2061875527857922742/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-2061875527857922742/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module PredicatePublication
+Linting of module PredicatePublication
+Starting... (2026-09-23 15:27:40)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-09-23 15:27:40.
+Error: Invariant PredicateSafety is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ commitRows = <<1, 0>>
+/\ dependency = -1
+/\ sawOwn = FALSE
+/\ repeatedAfterMove = FALSE
+/\ rejected = FALSE
+/\ writerPC = "Acquire"
+/\ captured = {}
+/\ nextId = 2
+/\ answers = {}
+/\ readerId = 0
+/\ committed = FALSE
+/\ rowHeads = <<1, 0>>
+/\ postings = {<<1, 1>>}
+/\ answerCount = 0
+/\ readerStartedDuringPublication = FALSE
+/\ captureAfterMove = FALSE
+/\ snapshot = <<1, 0>>
+/\ registered = TRUE
+/\ logicalRows = <<1, 0>>
+/\ stamps = (0 :> 0 @@ 1 :> 0)
+/\ readerPC = "Start"
+/\ owner = (0 :> 0 @@ 1 :> 0)
+
+State 2: <ReaderStart line 50, col 5 to line 57, col 85 of module PredicatePublication>
+/\ nextId = 3
+/\ readerId = 2
+/\ readerPC = "LookupLock"
+
+State 3: <ReaderLock line 59, col 5 to line 65, col 78 of module PredicatePublication>
+/\ readerPC = "Capture"
+/\ owner = (0 :> 0 @@ 1 :> 2)
+
+State 4: <ReaderCapture line 67, col 5 to line 81, col 51 of module PredicatePublication>
+/\ dependency = 0
+/\ captured = {1}
+/\ readerPC = "Materialize"
+/\ owner = (0 :> 0 @@ 1 :> 0)
+
+State 5: <ReaderMaterialize line 83, col 5 to line 94, col 51 of module PredicatePublication>
+/\ answers = {1}
+/\ answerCount = 1
+/\ readerPC = "LookupLock"
+
+State 6: <WriterAcquire line 126, col 5 to line 133, col 78 of module PredicatePublication>
+/\ writerPC = "Prepare"
+/\ owner = (0 :> 1 @@ 1 :> 1)
+
+State 7: <WriterPrepare line 135, col 5 to line 141, col 78 of module PredicatePublication>
+/\ writerPC = "Remove"
+/\ postings = {<<1, 1>>, <<2, 1>>}
+
+State 8: <WriterRemove line 143, col 5 to line 149, col 78 of module PredicatePublication>
+/\ writerPC = "Publish"
+/\ postings = {<<2, 1>>}
+
+State 9: <WriterPublish line 151, col 5 to line 159, col 78 of module PredicatePublication>
+/\ writerPC = "Deregister"
+/\ rowHeads = <<2, 0>>
+
+State 10: <WriterDeregister line 161, col 5 to line 167, col 78 of module PredicatePublication>
+/\ writerPC = "Stamp"
+/\ registered = FALSE
+/\ logicalRows = <<2, 0>>
+
+State 11: <WriterStamp line 169, col 5 to line 176, col 78 of module PredicatePublication>
+/\ writerPC = "Unlock"
+/\ nextId = 4
+/\ stamps = (0 :> 3 @@ 1 :> 3)
+
+State 12: <WriterUnlock line 178, col 5 to line 184, col 78 of module PredicatePublication>
+/\ writerPC = "Done"
+/\ owner = (0 :> 0 @@ 1 :> 0)
+
+State 13: <ReaderLock line 59, col 5 to line 65, col 78 of module PredicatePublication>
+/\ readerPC = "Capture"
+/\ owner = (0 :> 0 @@ 1 :> 2)
+
+State 14: <ReaderCapture line 67, col 5 to line 81, col 51 of module PredicatePublication>
+/\ dependency = 3
+/\ captured = {}
+/\ captureAfterMove = TRUE
+/\ readerPC = "Materialize"
+
+State 15: <ReaderMaterialize line 83, col 5 to line 94, col 51 of module PredicatePublication>
+/\ commitRows = <<1, 0>>
+/\ dependency = 3
+/\ sawOwn = FALSE
+/\ repeatedAfterMove = TRUE
+/\ rejected = FALSE
+/\ writerPC = "Done"
+/\ captured = {}
+/\ nextId = 4
+/\ answers = {}
+/\ readerId = 2
+/\ committed = FALSE
+/\ rowHeads = <<2, 0>>
+/\ postings = {<<2, 1>>}
+/\ answerCount = 2
+/\ readerStartedDuringPublication = FALSE
+/\ captureAfterMove = TRUE
+/\ snapshot = <<1, 0>>
+/\ registered = FALSE
+/\ logicalRows = <<2, 0>>
+/\ stamps = (0 :> 3 @@ 1 :> 3)
+/\ readerPC = "CommitLock"
+/\ owner = (0 :> 0 @@ 1 :> 0)
+
+97 states generated, 76 distinct states found, 3 states left on queue.
+The depth of the complete state graph search is 15.
+Finished in 00s at (2026-09-23 15:27:40)

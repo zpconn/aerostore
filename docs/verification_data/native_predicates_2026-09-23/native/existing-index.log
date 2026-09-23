@@ -1,0 +1,40 @@
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/aerostore_core)
+warning: method `commit_with_record_before_publish` is never used
+    --> aerostore_core/src/occ_partitioned.rs:1256:19
+     |
+ 357 | impl<T: Copy + Send + Sync + 'static> OccTable<T> {
+     | ------------------------------------------------- method in this implementation
+...
+1256 |     pub(crate) fn commit_with_record_before_publish<E, F>(
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `aerostore_core` (lib) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.20s
+     Running tests/occ_transactional_index.rs (target/verification-p1/native-predicates/native-target/debug/deps/occ_transactional_index-e7acc5b379590bc5)
+
+running 20 tests
+test transactional_index_child ... ok
+test different_equality_keys_do_not_force_table_wide_serialization ... ok
+test attached_table_cannot_begin_without_complete_registered_index_set ... ok
+test managed_indexes_reject_raw_mutations_through_attached_handles ... ok
+test absent_candidate_creation_rejects_one_disjoint_slot_writer ... ok
+test old_snapshot_first_lookup_after_delete_is_complete_or_rejected ... ok
+test older_writer_committing_after_newer_writer_invalidates_later_snapshot ... ok
+test ignored_lookup_conflict_cannot_be_cleared_by_savepoint_rollback ... ok
+test newer_overlapping_reader_does_not_inherit_an_obsolete_vacuum_horizon ... ok
+test old_snapshot_first_lookup_after_key_move_is_complete_or_rejected ... ok
+test rollback_to_savepoint_cannot_erase_an_outer_empty_predicate_dependency ... ok
+test own_writes_nested_savepoints_and_abort_preserve_exact_index_state ... ok
+test vacuum_preserves_snapshot_excluding_an_older_late_committing_writer ... ok
+test invalid_later_index_key_cannot_partially_publish_rows_or_earlier_indexes ... ok
+test rejected_wal_frame_preserves_row_and_managed_index ... ok
+test row_guard_outliving_commit_pins_its_version_without_unlocking_a_later_owner ... ok
+test predicate_publication_is_visible_across_independently_mapped_processes ... ok
+test concurrent_multirow_key_moves_never_return_a_mixed_successful_snapshot ... ok
+test all_predicate_forms_detect_a_row_entering_their_result ... ok
+test repeated_in_members_and_many_colliding_keys_preserve_exact_candidates ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+

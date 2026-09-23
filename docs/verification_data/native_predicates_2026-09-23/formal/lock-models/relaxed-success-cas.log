@@ -1,0 +1,16 @@
+
+running 1 test
+test shm_lock::loom_tests::contended_handoff_publishes_protected_non_atomic_value ... 
+thread 'shm_lock::loom_tests::contended_handoff_publishes_protected_non_atomic_value' (13975) panicked at /home/zpconn/code/aerostore/target/verification-tools/production-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/loom-0.7.2/src/rt/location.rs:115:9:
+Causality violation: Concurrent write accesses to `UnsafeCell`.
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+
+failures:
+
+failures:
+    shm_lock::loom_tests::contended_handoff_publishes_protected_non_atomic_value
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+

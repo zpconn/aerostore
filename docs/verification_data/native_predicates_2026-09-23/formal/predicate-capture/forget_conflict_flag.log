@@ -1,0 +1,29 @@
+note: verifying root module (selected functions)
+
+note: while loop: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+  --> /home/zpconn/code/aerostore/target/verification/predicate-phase/final/predicate-capture/forget_conflict_flag.rs:97:5
+   |
+97 |     while bucket_pos < buckets.len()
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification/predicate-phase/final/predicate-capture/forget_conflict_flag.rs:90:9
+    |
+ 90 |         result == Err(Error::SerializationFailure) ==> final(tx).index_conflict,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+115 |     return Err ( Error :: SerializationFailure ) ;
+    |     -------------------------------------------- at this exit
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification/predicate-phase/final/predicate-capture/forget_conflict_flag.rs:90:9
+    |
+ 90 |         result == Err(Error::SerializationFailure) ==> final(tx).index_conflict,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+119 |         return Err ( Error :: SerializationFailure ) ;
+    |         -------------------------------------------- at this exit
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

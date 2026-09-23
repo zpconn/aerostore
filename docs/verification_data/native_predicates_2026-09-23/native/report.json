@@ -1,0 +1,170 @@
+{
+  "parent_commit": "8d9e9f409a2d215de25e57b7a6c847495d1bf6a4",
+  "rustc": "rustc 1.93.1 (01f6ddf75 2026-02-11)\nbinary: rustc\ncommit-hash: 01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf\ncommit-date: 2026-02-11\nhost: x86_64-unknown-linux-gnu\nrelease: 1.93.1\nLLVM version: 21.1.8\n",
+  "main_occ_source_sha256": "11860b77fbe05ff510eaac66de195abeafa65f1736e1841797f887dd0576e324",
+  "main_source_stable": true,
+  "results": [
+    {
+      "name": "new-tests",
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-p1/native-predicates/native-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "predicate_completion_tests",
+        "--",
+        "--nocapture"
+      ],
+      "source": "/home/zpconn/code/aerostore",
+      "occ_source_sha256": "11860b77fbe05ff510eaac66de195abeafa65f1736e1841797f887dd0576e324",
+      "exit_code": 0,
+      "expected": "pass",
+      "passed": true,
+      "log": "new-tests.log"
+    },
+    {
+      "name": "existing-index",
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-p1/native-predicates/native-target",
+        "-p",
+        "aerostore_core",
+        "--test",
+        "occ_transactional_index",
+        "--",
+        "--nocapture"
+      ],
+      "source": "/home/zpconn/code/aerostore",
+      "occ_source_sha256": "11860b77fbe05ff510eaac66de195abeafa65f1736e1841797f887dd0576e324",
+      "exit_code": 0,
+      "expected": "pass",
+      "passed": true,
+      "log": "existing-index.log"
+    },
+    {
+      "name": "skip-predicate-revalidation",
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-p1/native-predicates/skip-predicate-revalidation/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "empty_capture_then_create_or_key_move_rejects_without_concrete_row_dependency",
+        "--",
+        "--nocapture"
+      ],
+      "source": "/home/zpconn/code/aerostore/target/verification-p1/native-predicates/skip-predicate-revalidation/source",
+      "occ_source_sha256": "376fa0fa2b0443a71de1f32def83e9300a1e833a81f381afcf33b26a6ace2ab5",
+      "exit_code": 101,
+      "expected": "assertion failure",
+      "passed": true,
+      "log": "skip-predicate-revalidation.log"
+    },
+    {
+      "name": "collapse-index-identity",
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-p1/native-predicates/collapse-index-identity/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "equal_bucket_numbers_in_different_indexes_keep_independent_dependencies",
+        "--",
+        "--nocapture"
+      ],
+      "source": "/home/zpconn/code/aerostore/target/verification-p1/native-predicates/collapse-index-identity/source",
+      "occ_source_sha256": "6af6b8199d3e150bdf565f841f1acd58831b82233c7f736900ea102687bd1759",
+      "exit_code": 101,
+      "expected": "assertion failure",
+      "passed": true,
+      "log": "collapse-index-identity.log"
+    },
+    {
+      "name": "omit-own-write-candidates",
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-p1/native-predicates/omit-own-write-candidates/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "colliding_predicates_filter_final_own_writes_and_revalidate_an_unread_creation",
+        "--",
+        "--nocapture"
+      ],
+      "source": "/home/zpconn/code/aerostore/target/verification-p1/native-predicates/omit-own-write-candidates/source",
+      "occ_source_sha256": "82fad4fab497c513cb3c9fe487b4c4fb78d4c629ad0c4fad7c6e9112bdf7d6d9",
+      "exit_code": 101,
+      "expected": "assertion failure",
+      "passed": true,
+      "log": "omit-own-write-candidates.log"
+    },
+    {
+      "name": "omit-query-locks",
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-p1/native-predicates/omit-query-locks/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "crossed_empty_predicates_cannot_both_publish_through_disjoint_write_buckets",
+        "--",
+        "--nocapture"
+      ],
+      "source": "/home/zpconn/code/aerostore/target/verification-p1/native-predicates/omit-query-locks/source",
+      "occ_source_sha256": "196b89b14dbcdbc06d4309dfda3000b6f9b48478c0b1a7a2c6a3eff2ea828bf2",
+      "exit_code": 101,
+      "expected": "assertion failure",
+      "passed": true,
+      "log": "omit-query-locks.log"
+    },
+    {
+      "name": "omit-old-key-stamps",
+      "command": [
+        "/home/zpconn/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-p1/native-predicates/omit-old-key-stamps/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "actual_publication_stamps_all_old_and_new_buckets_once_and_leaves_others_unchanged",
+        "--",
+        "--nocapture"
+      ],
+      "source": "/home/zpconn/code/aerostore/target/verification-p1/native-predicates/omit-old-key-stamps/source",
+      "occ_source_sha256": "2e64b96254095aaa65443d9f94425bf864fdf391449dc72fbe54584f4f2ee0cb",
+      "exit_code": 101,
+      "expected": "assertion failure",
+      "passed": true,
+      "log": "omit-old-key-stamps.log"
+    }
+  ],
+  "passed": true
+}

@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -903,7 +903,7 @@
+         let stamp = self.shm.global_txid().fetch_add(1, Ordering::AcqRel);
+         let mut touched = BTreeSet::new();
+         for change in changes {
+-            for key in [change.before.as_ref(), change.after.as_ref()]
++            for key in [None, change.after.as_ref()]
+                 .into_iter()
+                 .flatten()
+             {

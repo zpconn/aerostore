@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -582,7 +582,7 @@
+             }
+         });
+         let mut candidates: BTreeSet<usize> = candidates.into_iter().collect();
+-        candidates.extend(tx.write_set.iter().map(|write| write.row_id));
++        // mutant: omit pending writes from predicate candidates
+         let mut result = Vec::new();
+         for row_id in candidates {
+             if let Some(value) = self.read(tx, row_id)? {

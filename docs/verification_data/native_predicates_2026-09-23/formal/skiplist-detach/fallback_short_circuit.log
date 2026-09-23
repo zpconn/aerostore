@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: loop invariant not satisfied
+   --> /home/zpconn/code/aerostore/target/verification/predicate-phase/final/skiplist-detach/fallback_short_circuit.rs:150:5
+    |
+143 |         ensures detached(engine.view()),
+    |                 ----------------------- failed this invariant
+...
+150 |     break ;
+    |     ^^^^^ at this loop exit
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

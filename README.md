@@ -96,7 +96,7 @@ checks cover specific concurrency invariants, not all native memory behavior or
 unbounded progress. The [correctness report](docs/sustained_churn_correctness.md)
 describes the earlier five-case validation.
 
-The [verification workspace](verification/README.md) contains Verus proofs of production bucket kernels and conditional proofs of native commit control flow, a Rust-to-Lean extraction/proof bridge, and TLA+ protocol and resource models. Its experiment gate ties evidence to the current source and freezes the unproved engine boundary. This is a component pilot; Aerostore is not yet a formally verified database. The [full verification plan](docs/formal_verification_plan.md) tracks the remaining implementation, recovery, memory, and performance obligations.
+The [verification workspace](verification/README.md) contains Verus proofs of production bucket kernels, conditional proofs of native commit control flow and predicate data operations, a Rust-to-Lean extraction/proof bridge, and TLA+ protocol and resource models. Predicate proofs cover dependency capture, lock coverage, conflict checks and stamp publication under explicit storage and concurrency assumptions. Its experiment gate ties evidence to the current source and freezes the unproved engine boundary. This is a component pilot; Aerostore is not yet a formally verified database. The [full verification plan](docs/formal_verification_plan.md) tracks the remaining implementation, recovery, memory, and performance obligations.
 
 The [initial verification evidence](docs/bench_data/verification_pilot_2026-09-23/README.md) includes the passing composed campaign, extended Crucible results for all three bucket configurations, and component timing/allocation measurements.
 

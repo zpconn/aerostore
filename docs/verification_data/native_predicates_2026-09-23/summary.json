@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "scope": "Component verification expansion; native primitive and history obligations remain open",
+  "parent_commit": "8d9e9f409a2d215de25e57b7a6c847495d1bf6a4",
+  "checks": 29,
+  "new_verus_roots": 38,
+  "new_verus_semantic_mutations": 40,
+  "lean_roots": 20,
+  "tla_cases": 74,
+  "production_runtime_changed": false,
+  "full_P1_complete": false,
+  "whole_engine_verified": false,
+  "performance_claim": "No new timing claim; accepted production implementation unchanged"
+}

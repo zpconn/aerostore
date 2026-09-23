@@ -1,0 +1,12 @@
+note: verifying root module (selected functions)
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification/predicate-phase/final/predicate/omit_write_bucket.rs:205:17
+    |
+205 | /                 keys.contents() == read_keys(driver.state(), tx.index_reads@, tx.index_reads.len() as int)
+206 | |                     .union(change_keys(driver.state(), changes@, ci as int)),
+    | |____________________________________________________________________________^
+
+verification results:: 2 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

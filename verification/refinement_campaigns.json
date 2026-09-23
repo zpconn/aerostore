@@ -1,0 +1,220 @@
+{
+  "format_version": 1,
+  "campaigns": {
+    "predicate-capture": {
+      "scope": "conditional_native_predicate_dependency_capture",
+      "crate_name": "aerostore_capture",
+      "rlimit": 40,
+      "false_flags": [
+        "whole_lookup_refinement_proved",
+        "transaction_history_refinement_proved"
+      ],
+      "roots": [
+        "find_read",
+        "appended_read_preserves_unique",
+        "capture_dependencies",
+        "stamp_precedes_snapshot"
+      ],
+      "mutations": {
+        "skip_snapshot_check": "capture_dependencies",
+        "skip_repeat_check": "capture_dependencies",
+        "forget_conflict_flag": "capture_dependencies",
+        "capture_wrong_stamp": "capture_dependencies",
+        "capture_wrong_bucket": "capture_dependencies",
+        "capture_wrong_index": "capture_dependencies",
+        "omit_dependency": "capture_dependencies"
+      },
+      "full_check": "native_capture",
+      "generated": "verification/predicate_capture/capture.verus.rs",
+      "inputs": [
+        "aerostore_core/src/occ_partitioned.rs",
+        "aerostore_verified/src/lib.rs",
+        "verification/predicate_capture/contracts.rs",
+        "verification/predicate_capture/capture.verus.rs",
+        "verification/predicate_capture/generate.py",
+        "verification/predicate_capture/run.py",
+        "verification/predicate_capture/test_generate.py",
+        "verification/concurrent/generate.py",
+        "verification/verus/toolchain.json"
+      ]
+    },
+    "predicate": {
+      "scope": "conditional_source_bound_predicate_data_refinement",
+      "crate_name": "aerostore_predicate",
+      "rlimit": 50,
+      "false_flags": [
+        "native_storage_atomics_refinement_proved",
+        "transaction_history_refinement_proved"
+      ],
+      "roots": [
+        "index_lock_keys",
+        "index_read_conflict",
+        "publish_index_stamps",
+        "stamp_precedes_snapshot",
+        "publication_invalidates_dependency",
+        "changed_stamp_invalidates_dependency",
+        "read_key_member",
+        "stamp_unchanged",
+        "stamp_update",
+        "validate_after_late_publication",
+        "changed_binding_in_range"
+      ],
+      "mutations": {
+        "omit_read_bucket": "index_lock_keys",
+        "wrong_read_bucket": "index_lock_keys",
+        "wrong_write_binding": "index_lock_keys",
+        "omit_write_bucket": "index_lock_keys",
+        "ignore_sticky_conflict": "index_read_conflict",
+        "ignore_changed_stamp": "index_read_conflict",
+        "ignore_snapshot_boundary": "index_read_conflict",
+        "publish_wrong_bucket": "publish_index_stamps",
+        "publish_stale_stamp": "publish_index_stamps",
+        "omit_publication": "publish_index_stamps",
+        "skip_nonempty_publication": "publish_index_stamps",
+        "wrong_touched_binding": "publish_index_stamps",
+        "nonstrict_snapshot_boundary": "stamp_precedes_snapshot"
+      },
+      "full_check": "native_predicate",
+      "generated": "verification/predicate/predicate.verus.rs",
+      "inputs": [
+        "aerostore_core/src/occ_partitioned.rs",
+        "aerostore_verified/src/lib.rs",
+        "verification/predicate/contracts.rs",
+        "verification/predicate/predicate.verus.rs",
+        "verification/predicate/generate.py",
+        "verification/predicate/run.py",
+        "verification/predicate/test_generate.py",
+        "verification/verus/toolchain.json",
+        "verification/concurrent/generate.py"
+      ]
+    },
+    "predicate-composition": {
+      "scope": "conditional_native_capture_validation_composition",
+      "crate_name": "aerostore_predicate_composition",
+      "rlimit": 50,
+      "false_flags": [
+        "whole_lookup_refinement_proved",
+        "transaction_history_refinement_proved"
+      ],
+      "roots": [
+        "read_keys_are_held",
+        "capture_preserves_guard_coverage",
+        "captured_read_survives_translation",
+        "publication_supplies_late_bucket",
+        "capture_then_validate"
+      ],
+      "mutations": {
+        "translate_wrong_stamp": "capture_then_validate",
+        "translate_wrong_bucket": "capture_then_validate",
+        "translate_wrong_index": "capture_then_validate",
+        "accept_native_conflict": "capture_then_validate",
+        "skip_native_capture": "capture_then_validate",
+        "skip_native_validation": "capture_then_validate"
+      },
+      "full_check": "native_composition",
+      "generated": "verification/predicate_composition/composition.verus.rs",
+      "inputs": [
+        "aerostore_core/src/occ_partitioned.rs",
+        "aerostore_verified/src/lib.rs",
+        "verification/predicate_composition/composition.rs",
+        "verification/predicate_composition/composition.verus.rs",
+        "verification/predicate_composition/generate.py",
+        "verification/predicate_composition/run.py",
+        "verification/predicate_composition/test_generate.py",
+        "verification/concurrent/generate.py",
+        "verification/verus/toolchain.json",
+        "verification/predicate_capture/contracts.rs",
+        "verification/predicate_capture/generate.py",
+        "verification/predicate_capture/capture.verus.rs",
+        "verification/predicate/contracts.rs",
+        "verification/predicate/generate.py",
+        "verification/predicate/predicate.verus.rs"
+      ]
+    },
+    "skiplist-detach": {
+      "scope": "conditional_native_skiplist_detachment",
+      "crate_name": "aerostore_detach",
+      "rlimit": 40,
+      "false_flags": [
+        "native_unsafe_heap_refinement_proved",
+        "epoch_reclamation_refinement_proved",
+        "retry_termination_proved"
+      ],
+      "roots": [
+        "cached_detach",
+        "refreshed_detach",
+        "detach_before_retire",
+        "primitive_contracts_have_success_and_retry_witnesses"
+      ],
+      "mutations": {
+        "missing_upper_lane": "cached_detach",
+        "retire_after_missing_successor": "cached_detach",
+        "retire_after_failed_cas": "cached_detach",
+        "fallback_short_circuit": "detach_before_retire"
+      },
+      "full_check": "native_detach",
+      "generated": "verification/skiplist_detach/detach.verus.rs",
+      "inputs": [
+        "aerostore_core/src/shm_skiplist.rs",
+        "verification/skiplist_detach/contracts.rs",
+        "verification/skiplist_detach/detach.verus.rs",
+        "verification/skiplist_detach/generate.py",
+        "verification/skiplist_detach/run.py",
+        "verification/skiplist_detach/test_generate.py",
+        "verification/concurrent/generate.py",
+        "verification/verus/toolchain.json"
+      ]
+    },
+    "postings": {
+      "scope": "conditional_native_posting_preparation_rollback_removal",
+      "crate_name": "aerostore_postings",
+      "rlimit": 50,
+      "false_flags": [
+        "native_unsafe_posting_refinement_proved",
+        "transaction_history_refinement_proved",
+        "destination_ownership_derivation_proved"
+      ],
+      "roots": [
+        "rollback_index_destinations",
+        "prepare_index_destinations",
+        "remove_index_sources",
+        "destination_member",
+        "source_member",
+        "destination_prefix_subset",
+        "restoration_frame",
+        "destination_new",
+        "destination_not_prior",
+        "recorded_push",
+        "prefix_record_push",
+        "prefix_record_skip",
+        "recorded_member",
+        "recorded_suffix"
+      ],
+      "mutations": {
+        "omit_prepare_rollback": "prepare_index_destinations",
+        "omit_rollback_poison": "rollback_index_destinations",
+        "omit_source_poison": "remove_index_sources",
+        "wrong_rollback_row": "rollback_index_destinations",
+        "wrong_rollback_key": "rollback_index_destinations",
+        "wrong_source_row": "remove_index_sources",
+        "wrong_destination_row": "prepare_index_destinations",
+        "omit_insert_record": "prepare_index_destinations",
+        "wrong_insert_record": "prepare_index_destinations",
+        "skip_source_removal": "remove_index_sources"
+      },
+      "full_check": "native_postings",
+      "generated": "verification/postings/postings.verus.rs",
+      "inputs": [
+        "aerostore_core/src/occ_partitioned.rs",
+        "verification/postings/contracts.rs",
+        "verification/postings/postings.verus.rs",
+        "verification/postings/generate.py",
+        "verification/postings/run.py",
+        "verification/postings/test_generate.py",
+        "verification/concurrent/generate.py",
+        "verification/predicate/generate.py",
+        "verification/verus/toolchain.json"
+      ]
+    }
+  }
+}

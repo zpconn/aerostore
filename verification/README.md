@@ -1,6 +1,6 @@
 # Verification and performance experiments
 
-This workspace implements the first component of the [verification plan](../docs/formal_verification_plan.md). It connects proofs to actual production Rust and gives performance experiments a fixed semantic contract. **It does not yet verify the database or complete the plan's P1 concurrent-slice milestone.**
+This workspace implements component proofs and model campaigns from the [verification plan](../docs/formal_verification_plan.md). It connects proofs to actual production Rust and gives performance experiments a fixed semantic contract. **It does not yet verify the database or complete the plan's P1 concurrent-slice milestone.**
 
 ## What is checked
 
@@ -8,8 +8,12 @@ This workspace implements the first component of the [verification plan](../docs
 | --- | --- | --- |
 | Verus | Both actual bucket canonicalization functions: exact sorted unique membership, bounds, and first-invalid-input semantics; strict stamp comparison; uniqueness of the result contract | Safe Rust functions, successful allocation and pinned collection models; not their concurrent callers |
 | Native commit Verus | Actual commit driver and callback cleanup: validation/publication/cleanup order, both policy branches, semantic negative controls | Conditional on explicit primitive event contracts; native data, history refinement and weak memory remain open |
+| Native predicate Verus | Actual lock-key union, conflict checks, stamp publication, and lookup dependency capture; data contracts include empty queries, repeat reads, dependency provenance and bounded growth | Restricted source adaptation; registry, hashing, collection semantics, guard visibility and ownership remain primitive contracts |
+| Predicate composition | Calls the exact source-bound capture and validation operations, preserving every dependency field; publication's stamp relation implies rejection of overlapping late changes | Composition of represented states; their connection to a real concurrent execution and raw candidate/MVCC completeness remain open |
+| Posting helpers Verus | Actual destination preparation, reverse rollback and source removal: exact posting sets, recorded ownership, unchanged state or poison on failure | Caller-established absent/distinct destinations and guarded insert/remove contracts; unsafe pointer and ownership refinement remain open |
+| Skiplist detachment Verus | Actual cached and fallback unlink loops check every lane before retirement; pinned contents preserved under the primitive frame | Guarded lane/CAS/search and epoch contracts; unsafe ownership, actual reuse and termination remain open |
 | Lean | Both actual extracted bucket functions, including first-invalid errors; corollaries for the production limit; actual scalar comparison; supporting abstract lemmas and an axiom audit | Logical allocation models and explicit production capacity; required roots in [roots.json](lean/roots.json) state exact coverage |
-| TLA+/TLC | 49 publication, primary-key insertion, crash-ordering, checkpoint-cut, retention, collector-admission and live-key-reclamation cases, including intended safety/liveness failures and positive witnesses | Small explicit models with stated fairness; no checked Rust refinement or composed transaction-history theorem |
+| TLA+/TLC | 74 predicate/publication, primary-key insertion, crash-ordering, checkpoint-cut, retention, collector-admission and live-key-reclamation cases, including intended safety/liveness failures and positive witnesses | Small explicit models with stated fairness; no checked Rust refinement or composed transaction-history theorem |
 | Loom | Seven bounded cases importing the actual production lock, including protected-value handoff and registered-priority admission; weakened-Acquire negative control | Preemption bound 2 and 10,000 branches; abstract index protocol, no native mmap refinement or unbounded progress theorem |
 | Integration | Kernel differential tests, three transaction/index test suites and extended Crucible under the default and both candidate features | Bounded engine regression evidence, not a replacement for implementation proofs |
 | Experiment gate | Fresh extraction/proofs, mandatory negative controls, source hashes, fixed proof roots, frozen engine/contracts/tool configuration, independently anchored comparison | Initial bootstrap is unanchored; repository review and protected CI remain external trust requirements |
@@ -35,7 +39,16 @@ The report defaults to `target/verification/report.json`. Logs, exact tool invoc
 
 Profiles are `models`, `proofs`, `pilot` and `full`. `pilot` runs all implemented component checks and the integration matrix. Its extended Crucible fixture uses eight families, one cycle, four local workers, all 27 replay phases and all six native concurrency contracts; these small runs check integration, not sustained performance. **`full` deliberately fails** while the complete implementation obligations remain open. It cannot be made successful by merely editing a descriptive claim status.
 
-Individual tool workflows are described in [Verus](verus/README.md), [native commit](concurrent/README.md), [Lean/bridge](lean/README.md) and [TLA+](tla/README.md). The TLA directory retains model counterexamples for inspection. The pilot also runs the native durability regressions and the performance comparison runner's integrity tests.
+Individual tool workflows are described in [Verus](verus/README.md), [native commit](concurrent/README.md), [native predicates](predicate/README.md), [dependency capture](predicate_capture/README.md), [predicate composition](predicate_composition/README.md), [posting helpers](postings/README.md), [skiplist detachment](skiplist_detach/README.md), [Lean/bridge](lean/README.md) and [TLA+](tla/README.md). The TLA directory retains model counterexamples for inspection. The pilot also runs the native durability regressions and the performance comparison runner's integrity tests.
+
+The predicate expansion adds general Lean publication-history and own-write
+overlay theorems, six deterministic native predicate regression tests, and
+mandatory semantic mutants. No production Rust path changes in this expansion;
+the accepted `8d9e9f4` implementation remains the performance baseline. New
+proof contracts, adapters and evidence validators form an explicit proposed
+verification boundary; they cannot pass the previous boundary by silently
+refreshing its hashes. Full P1 remains open until the native storage and
+concurrent-history correspondence is composed and justified.
 
 The [production-lock campaign](contracts/lock_models.md) is also mandatory in
 `pilot`. It requires all seven named cases and the intended synchronization

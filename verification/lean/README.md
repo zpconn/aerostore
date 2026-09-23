@@ -8,6 +8,33 @@ The completed bitmap and insertion-sort theorems cover **all representable input
 
 These are component proofs. They do not prove native transaction serializability, publication memory ordering, vacuum safety, mmap validity, crash recovery, or the whole engine. The scalar helper is used in the native transaction path; bucket implementations are selectable production candidates under `verified-buckets-sort` and `verified-buckets-bitmap`. The default bucket implementation remains unchanged.
 
+## Parameterized predicate histories
+
+[Predicate.lean](AerostoreProofs/Predicate.lean) adds separately scoped mathematical
+proofs over arbitrary natural-number bucket IDs, row IDs, transaction starts, and
+finite publication histories. Publication replays the actual overwrite operation;
+under an explicit fresh-clock invariant it preserves stamp monotonicity and every
+prior affected bucket's publication lower bound. An accepted dependency therefore
+excludes an overlapping publication at or after the reader's start, including a
+writer whose own start was older. Stamp equality and strict snapshot ordering are
+separate audited obligations.
+
+The materialization theorem establishes exact predicate results after overlaying
+local inserts, moves and deletes, provided the raw candidate set covers matching
+snapshot rows. It includes all locally written row IDs before filtering and removes
+rows whose staged value no longer matches. Concrete checked examples exercise an
+own insert absent from raw candidates, an empty read rejected by a later creation,
+and a conservative retry for a bucket collision.
+
+These are **abstract contracts, not extracted transaction proofs**. The native
+skiplist's candidate completeness, stable row identity and pinned MVCC retention,
+lock ownership, clock reservation/exhaustion and memory visibility are remaining
+implementation obligations. No Lean theorem is imported into Verus as an unchecked
+axiom. The four `predicate_*` negative controls mutate the mathematical definitions
+in isolation and require the unchanged proof module to fail: ignoring a changed
+stamp, accepting an equal start stamp, dropping publication, and omitting own-write
+candidates. They are reported separately from the extracted-Rust mutations.
+
 ## Running
 
 On Linux x86-64 with Python 3.12+, `rustup`, a C linker, Git, tar and zstd:
