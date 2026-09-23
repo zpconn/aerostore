@@ -1,0 +1,4 @@
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/aerostore_core)
+    Finished `bench` profile [optimized] target(s) in 1.79s
+     Running benches/verified_bucket_sets.rs (target/release/deps/verified_bucket_sets-5e38eaaa08edb4fb)
+Bucket microbenchmark report: /home/zpconn/code/aerostore/target/verification/experiment-final/buckets.json

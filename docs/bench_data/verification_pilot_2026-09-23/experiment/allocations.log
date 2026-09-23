@@ -1,0 +1,3 @@
+    Finished `bench` profile [optimized] target(s) in 0.06s
+     Running benches/verified_bucket_allocations.rs (target/release/deps/verified_bucket_allocations-00984b8e772f41f1)
+Bucket allocation report: /home/zpconn/code/aerostore/target/verification/experiment-final/allocations.json

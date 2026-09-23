@@ -1,0 +1,56 @@
+TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 935] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-uquyd5w5/LiveKeyPosting.tla
+Parsing file /tmp/tlc-15279571519923240523/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-15279571519923240523/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-15279571519923240523/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module LiveKeyPosting
+Linting of module LiveKeyPosting
+Starting... (2026-09-23 09:17:02)
+Implied-temporal checking--satisfiability problem has 2 branches.
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-09-23 09:17:02.
+Progress(5) at 2026-09-23 09:17:02: 17 states generated, 9 distinct states found, 0 states left on queue.
+Checking 2 branches of temporal properties for the complete state space with 18 total distinct states at (2026-09-23 09:17:02)
+Error: Temporal property RetiredEventuallyReusable was violated.
+
+Error: The following behavior constitutes a counter-example:
+
+State 1: <Initial predicate>
+/\ reclaimed = FALSE
+/\ retired = {}
+/\ reachable = {0}
+/\ free = {1, 2}
+
+State 2: <Insert(2) line 10, col 14 to line 11, col 48 of module LiveKeyPosting>
+/\ reclaimed = FALSE
+/\ retired = {}
+/\ reachable = {0, 2}
+/\ free = {1}
+
+State 3: <Insert(1) line 10, col 14 to line 11, col 48 of module LiveKeyPosting>
+/\ reclaimed = FALSE
+/\ retired = {}
+/\ reachable = {0, 1, 2}
+/\ free = {}
+
+State 4: <Remove(1) line 12, col 14 to line 13, col 45 of module LiveKeyPosting>
+/\ reclaimed = FALSE
+/\ retired = {1}
+/\ reachable = {0, 2}
+/\ free = {}
+
+State 5: <Remove(2) line 12, col 14 to line 13, col 45 of module LiveKeyPosting>
+/\ reclaimed = FALSE
+/\ retired = {1, 2}
+/\ reachable = {0}
+/\ free = {}
+
+State 6: Stuttering
+Finished checking temporal properties in 00s at 2026-09-23 09:17:02
+17 states generated, 9 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 5.
+Finished in 00s at (2026-09-23 09:17:02)

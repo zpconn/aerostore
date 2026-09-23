@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "aerostore_core",
+    "aerostore_verified",
     "aerostore_macros",
     "aerostore_tcl",
 ]

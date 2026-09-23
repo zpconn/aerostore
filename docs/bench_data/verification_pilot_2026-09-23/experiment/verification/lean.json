@@ -1,0 +1,982 @@
+{
+  "schema_version": 1,
+  "passed": true,
+  "completed": true,
+  "whole_engine_verified": false,
+  "commands": [
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lean",
+        "--version"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "Lean (version 4.31.0, x86_64-unknown-linux-gnu, commit 68218e876d2a38b1985b8590fff244a83c321783, Release)\n",
+      "elapsed_seconds": 0.022
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/charon-62585970fc75f61d83c7898ff8dfdd7edaa3c073/charon/target/release/charon",
+        "version"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "0.1.270 (62585970fc75f61d83c7898ff8dfdd7edaa3c073)\n",
+      "elapsed_seconds": 0.002
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/aeneas/aeneas",
+        "-version"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "aeneas nightly-2026.09.23-12a018b\n",
+      "elapsed_seconds": 0.11
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/mathlib",
+      "exit_code": 0,
+      "output": "fabf563a7c95a166b8d7b6efca11c8b4dc9d911f\n",
+      "elapsed_seconds": 0.001
+    },
+    {
+      "command": [
+        "git",
+        "status",
+        "--porcelain",
+        "--untracked-files=no"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/mathlib",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 0.004
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/plausible",
+      "exit_code": 0,
+      "output": "63045536fe95024e6c18fc7b48e03f506701c5bc\n",
+      "elapsed_seconds": 0.001
+    },
+    {
+      "command": [
+        "git",
+        "status",
+        "--porcelain",
+        "--untracked-files=no"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/plausible",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 0.001
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/LeanSearchClient",
+      "exit_code": 0,
+      "output": "c5d5b8fe6e5158def25cd28eb94e4141ad97c843\n",
+      "elapsed_seconds": 0.001
+    },
+    {
+      "command": [
+        "git",
+        "status",
+        "--porcelain",
+        "--untracked-files=no"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/LeanSearchClient",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 0.001
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/importGraph",
+      "exit_code": 0,
+      "output": "5c7542ed018c78194f1e2b903eaf6a792b74c03d\n",
+      "elapsed_seconds": 0.001
+    },
+    {
+      "command": [
+        "git",
+        "status",
+        "--porcelain",
+        "--untracked-files=no"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/importGraph",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 0.001
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/proofwidgets",
+      "exit_code": 0,
+      "output": "24b0d9dc081c5423f8eec7e866c441e5184f29d9\n",
+      "elapsed_seconds": 0.001
+    },
+    {
+      "command": [
+        "git",
+        "status",
+        "--porcelain",
+        "--untracked-files=no"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/proofwidgets",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 0.001
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/aesop",
+      "exit_code": 0,
+      "output": "e3cb2f741431ce31bf73549fb52316a57368b06f\n",
+      "elapsed_seconds": 0.001
+    },
+    {
+      "command": [
+        "git",
+        "status",
+        "--porcelain",
+        "--untracked-files=no"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/aesop",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 0.001
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/Qq",
+      "exit_code": 0,
+      "output": "f46324995fca5f0483b742e4eb4daec7f4ee50d2\n",
+      "elapsed_seconds": 0.001
+    },
+    {
+      "command": [
+        "git",
+        "status",
+        "--porcelain",
+        "--untracked-files=no"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/Qq",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 0.001
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/batteries",
+      "exit_code": 0,
+      "output": "fa08db58b30eb033edcdab331bba000827f9f785\n",
+      "elapsed_seconds": 0.001
+    },
+    {
+      "command": [
+        "git",
+        "status",
+        "--porcelain",
+        "--untracked-files=no"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/batteries",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 0.001
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/Cli",
+      "exit_code": 0,
+      "output": "92564e5770e4d09f2d86dfbf8ada1e9c715b384c\n",
+      "elapsed_seconds": 0.001
+    },
+    {
+      "command": [
+        "git",
+        "status",
+        "--porcelain",
+        "--untracked-files=no"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/Cli",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 0.001
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/charon-62585970fc75f61d83c7898ff8dfdd7edaa3c073/charon/target/release/charon",
+        "rustc",
+        "--preset",
+        "aeneas",
+        "--sysroot",
+        "default",
+        "--dest-file",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/extraction/aerostore_verified.llbc",
+        "--",
+        "--edition=2021",
+        "--target=x86_64-unknown-linux-gnu",
+        "--crate-type",
+        "lib",
+        "--crate-name",
+        "aerostore_verified",
+        "aerostore_verified/src/lib.rs"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 0.075
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/aeneas/aeneas",
+        "-backend",
+        "lean",
+        "-dest",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/extraction",
+        "-namespace",
+        "AerostoreExtracted",
+        "-abort-on-error",
+        "-no-progress-bar",
+        "-emit-json",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/extraction/aerostore_verified.llbc"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "[\u001b[92mInfo\u001b[39m ] Imported: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/extraction/aerostore_verified.llbc\n[\u001b[92mInfo\u001b[39m ] Generated: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/extraction/AerostoreVerified.lean\n[\u001b[92mInfo\u001b[39m ] Generated: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/extraction/translation.json\n[\u001b[92mInfo\u001b[39m ] Total execution time: 0.514552 seconds\n",
+      "elapsed_seconds": 0.63
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lake",
+        "build"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean",
+      "exit_code": 0,
+      "output": "\u2714 [1705/1715] Built AerostoreProofs.Contracts (566ms)\n\u2714 [1706/1715] Built AerostoreProofs.Buckets (583ms)\n\u2714 [1707/1715] Built AerostoreProofs.Publication (584ms)\n\u2714 [1708/1715] Built AerostoreProofs.AerostoreVerified (1.2s)\n\u2714 [1709/1715] Built AerostoreProofs.BridgeContracts (932ms)\n\u2714 [1710/1715] Built AerostoreProofs.Bridge (994ms)\n\u2714 [1711/1715] Built AerostoreProofs.Bitmap (1.6s)\n\u2714 [1712/1715] Built AerostoreProofs.Sort (1.8s)\n\u2714 [1713/1715] Built AerostoreProofs.Equivalence (915ms)\n\u2714 [1714/1715] Built AerostoreProofs (885ms)\nBuild completed successfully (1715 jobs).\n",
+      "elapsed_seconds": 6.311
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/Audit.lean"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean",
+      "exit_code": 0,
+      "output": "'AerostoreProofs.bitmap_specification_correct' depends on axioms: [propext, Classical.choice, Quot.sound]\n'AerostoreProofs.canonical_unique' depends on axioms: [propext, Classical.choice, Quot.sound]\n'AerostoreProofs.rejection_persists' depends on axioms: [propext, Quot.sound]\n'AerostoreProofs.rust_stamp_refinement' depends on axioms: [propext, Quot.sound]\n'AerostoreProofs.rust_bitmap_step_preserves_membership' depends on axioms: [propext, Classical.choice, Quot.sound]\n'AerostoreProofs.rust_bitmap_refinement' depends on axioms: [propext, Classical.choice, Quot.sound]\n'AerostoreProofs.rust_bitmap_rejects_first_invalid' depends on axioms: [propext, Classical.choice, Quot.sound]\n'AerostoreProofs.rust_bitmap_total' depends on axioms: [propext, Classical.choice, Quot.sound]\n'AerostoreProofs.rust_bitmap_production' depends on axioms: [propext, Classical.choice, Quot.sound]\n'AerostoreProofs.rust_sort_refinement' depends on axioms: [propext, Classical.choice, Quot.sound]\n'AerostoreProofs.rust_sort_rejects_first_invalid' depends on axioms: [propext, Classical.choice, Quot.sound]\n'AerostoreProofs.rust_sort_total' depends on axioms: [propext, Classical.choice, Quot.sound]\n'AerostoreProofs.rust_sort_production' depends on axioms: [propext, Classical.choice, Quot.sound]\n'AerostoreProofs.rust_bucket_implementations_equivalent' depends on axioms: [propext, Classical.choice, Quot.sound]\n",
+      "elapsed_seconds": 1.275
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lake",
+        "env",
+        "leanchecker",
+        "--fresh",
+        "--verbose",
+        "AerostoreProofs"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean",
+      "exit_code": 0,
+      "output": "replaying AerostoreProofs with --fresh\n",
+      "elapsed_seconds": 131.91
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lean",
+        "-o",
+        "Forged.olean",
+        "Forged.lean"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/kernel-forgery",
+      "exit_code": 0,
+      "output": "'forgedFalse' does not depend on any axioms\n",
+      "elapsed_seconds": 0.442
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/leanchecker",
+        "--verbose",
+        "Forged"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/kernel-forgery",
+      "exit_code": 1,
+      "output": "leanchecker found a problem in Forged\nreplaying Forged\nuncaught exception: while replaying declaration 'forgedFalse':\n(kernel) declaration type mismatch, 'forgedFalse' has type\n  True\nbut it is expected to have type\n  False\n",
+      "elapsed_seconds": 0.373
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lake",
+        "env",
+        "printenv",
+        "LEAN_PATH"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/verification/lean",
+      "exit_code": 0,
+      "output": "/home/zpconn/code/aerostore/verification/lean/.lake/packages/Cli/.lake/build/lib/lean:/home/zpconn/code/aerostore/verification/lean/.lake/packages/batteries/.lake/build/lib/lean:/home/zpconn/code/aerostore/verification/lean/.lake/packages/Qq/.lake/build/lib/lean:/home/zpconn/code/aerostore/verification/lean/.lake/packages/aesop/.lake/build/lib/lean:/home/zpconn/code/aerostore/verification/lean/.lake/packages/proofwidgets/.lake/build/lib/lean:/home/zpconn/code/aerostore/verification/lean/.lake/packages/importGraph/.lake/build/lib/lean:/home/zpconn/code/aerostore/verification/lean/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/home/zpconn/code/aerostore/verification/lean/.lake/packages/plausible/.lake/build/lib/lean:/home/zpconn/code/aerostore/verification/lean/.lake/packages/mathlib/.lake/build/lib/lean:/home/zpconn/code/aerostore/target/verification-tools/aeneas/backends/lean/.lake/build/lib/lean:/home/zpconn/code/aerostore/verification/lean/.lake/build/lib/lean:/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/lib/lean\n",
+      "elapsed_seconds": 0.305
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/charon-62585970fc75f61d83c7898ff8dfdd7edaa3c073/charon/target/release/charon",
+        "rustc",
+        "--preset",
+        "aeneas",
+        "--sysroot",
+        "default",
+        "--dest-file",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/stamp_accepts_equal/extraction/aerostore_verified.llbc",
+        "--",
+        "--edition=2021",
+        "--target=x86_64-unknown-linux-gnu",
+        "--crate-type",
+        "lib",
+        "--crate-name",
+        "aerostore_verified",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/stamp_accepts_equal/mutant.rs"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 0.049
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/aeneas/aeneas",
+        "-backend",
+        "lean",
+        "-dest",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/stamp_accepts_equal/extraction",
+        "-namespace",
+        "AerostoreExtracted",
+        "-abort-on-error",
+        "-no-progress-bar",
+        "-emit-json",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/stamp_accepts_equal/extraction/aerostore_verified.llbc"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "[\u001b[92mInfo\u001b[39m ] Imported: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/stamp_accepts_equal/extraction/aerostore_verified.llbc\n[\u001b[92mInfo\u001b[39m ] Generated: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/stamp_accepts_equal/extraction/AerostoreVerified.lean\n[\u001b[92mInfo\u001b[39m ] Generated: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/stamp_accepts_equal/extraction/translation.json\n[\u001b[92mInfo\u001b[39m ] Total execution time: 0.527138 seconds\n",
+      "elapsed_seconds": 0.65
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lean",
+        "-o",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/stamp_accepts_equal/modules/AerostoreProofs/AerostoreVerified.olean",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/stamp_accepts_equal/extraction/AerostoreVerified.lean"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 1.149
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lean",
+        "-o",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/stamp_accepts_equal/modules/AerostoreProofs/BridgeContracts.olean",
+        "/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/BridgeContracts.lean"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 1.009
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lean",
+        "/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Bridge.lean"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 1,
+      "output": "/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Bridge.lean:9:2: error: Tactic `rfl` failed: The left-hand side\n  AerostoreExtracted.stamp_precedes_snapshot stamp transactionStart\nis not definitionally equal to the right-hand side\n  Result.ok (decide (\u2191stamp < \u2191transactionStart))\n\nstamp transactionStart : U64\n\u22a2 AerostoreExtracted.stamp_precedes_snapshot stamp transactionStart = Result.ok (decide (\u2191stamp < \u2191transactionStart))\n",
+      "elapsed_seconds": 0.981
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/charon-62585970fc75f61d83c7898ff8dfdd7edaa3c073/charon/target/release/charon",
+        "rustc",
+        "--preset",
+        "aeneas",
+        "--sysroot",
+        "default",
+        "--dest-file",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_drops_membership/extraction/aerostore_verified.llbc",
+        "--",
+        "--edition=2021",
+        "--target=x86_64-unknown-linux-gnu",
+        "--crate-type",
+        "lib",
+        "--crate-name",
+        "aerostore_verified",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_drops_membership/mutant.rs"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 0.049
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/aeneas/aeneas",
+        "-backend",
+        "lean",
+        "-dest",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_drops_membership/extraction",
+        "-namespace",
+        "AerostoreExtracted",
+        "-abort-on-error",
+        "-no-progress-bar",
+        "-emit-json",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_drops_membership/extraction/aerostore_verified.llbc"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "[\u001b[92mInfo\u001b[39m ] Imported: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_drops_membership/extraction/aerostore_verified.llbc\n[\u001b[92mInfo\u001b[39m ] Generated: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_drops_membership/extraction/AerostoreVerified.lean\n[\u001b[92mInfo\u001b[39m ] Generated: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_drops_membership/extraction/translation.json\n[\u001b[92mInfo\u001b[39m ] Total execution time: 0.526923 seconds\n",
+      "elapsed_seconds": 0.65
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lean",
+        "-o",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_drops_membership/modules/AerostoreProofs/AerostoreVerified.olean",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_drops_membership/extraction/AerostoreVerified.lean"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 1.157
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lean",
+        "-o",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_drops_membership/modules/AerostoreProofs/BridgeContracts.olean",
+        "/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/BridgeContracts.lean"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 1.018
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lean",
+        "/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Bitmap.lean"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 1,
+      "output": "/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Bitmap.lean:57:2: error: unsolved goals\ncase refine_1\ninput : Slice Usize\ni : Usize\npresent : alloc.vec.Vec Bool\nhi : \u2191i < (\u2191input).length\nbounded : \u2200 k \u2208 \u2191input, \u2191k < (\u2191present).length\nrepresented : \u2200 (b : Usize), \u2191b < (\u2191present).length \u2192 ((\u2191present)[\u2191b]! = true \u2194 b \u2208 List.take \u2191i \u2191input)\nindexBound : \u2191(\u2191input)[\u2191i] < (\u2191present).length\nnext : UScalar UScalarTy.Usize\nhnext : i + 1#usize = ok next\nnextVal : \u2191next = \u2191i + \u21911#usize\n\u22a2 present.set (\u2191input)[\u2191i] false = present.set (\u2191input)[\u2191i] true\n",
+      "elapsed_seconds": 1.507
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/charon-62585970fc75f61d83c7898ff8dfdd7edaa3c073/charon/target/release/charon",
+        "rustc",
+        "--preset",
+        "aeneas",
+        "--sysroot",
+        "default",
+        "--dest-file",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_accepts_equal_bound/extraction/aerostore_verified.llbc",
+        "--",
+        "--edition=2021",
+        "--target=x86_64-unknown-linux-gnu",
+        "--crate-type",
+        "lib",
+        "--crate-name",
+        "aerostore_verified",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_accepts_equal_bound/mutant.rs"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 0.047
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/aeneas/aeneas",
+        "-backend",
+        "lean",
+        "-dest",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_accepts_equal_bound/extraction",
+        "-namespace",
+        "AerostoreExtracted",
+        "-abort-on-error",
+        "-no-progress-bar",
+        "-emit-json",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_accepts_equal_bound/extraction/aerostore_verified.llbc"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "[\u001b[92mInfo\u001b[39m ] Imported: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_accepts_equal_bound/extraction/aerostore_verified.llbc\n[\u001b[92mInfo\u001b[39m ] Generated: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_accepts_equal_bound/extraction/AerostoreVerified.lean\n[\u001b[92mInfo\u001b[39m ] Generated: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_accepts_equal_bound/extraction/translation.json\n[\u001b[92mInfo\u001b[39m ] Total execution time: 0.537345 seconds\n",
+      "elapsed_seconds": 0.656
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lean",
+        "-o",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_accepts_equal_bound/modules/AerostoreProofs/AerostoreVerified.olean",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_accepts_equal_bound/extraction/AerostoreVerified.lean"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 1.152
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lean",
+        "-o",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/bitmap_accepts_equal_bound/modules/AerostoreProofs/BridgeContracts.olean",
+        "/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/BridgeContracts.lean"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 1.03
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lean",
+        "/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Bitmap.lean"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 1,
+      "output": "/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Bitmap.lean:302:30: error: unsolved goals\ninput : Slice Usize\ncount : Usize\nbounded : \u2200 key \u2208 \u2191input, \u2191key < \u2191count\ncursor : Usize\ncursorBound : \u2191cursor \u2264 (\u2191input).length\nprocessing : \u2191cursor < (\u2191input).length\nkeyBound : \u2191(\u2191input)[\u2191cursor] < \u2191count\nnext : UScalar UScalarTy.Usize\nhnext : cursor + 1#usize = ok next\nnextVal : \u2191next = \u2191cursor + \u21911#usize\nnv : \u2191next = \u2191cursor + 1\n\u22a2 \u2191(\u2191input)[\u2191cursor] \u2264 \u2191count\n/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Bitmap.lean:304:38: warning: This simp argument is unused:\n  Nat.not_le.mpr keyBound\n\nHint: Omit it from the simp argument list.\n  simp [AerostoreExtracted.canonical_buckets_bitmap_loop0.body, processing,\n              Slice.index_usize, hnext,\u0335 \u0335N\u0335a\u0335t\u0335.\u0335n\u0335o\u0335t\u0335_\u0335l\u0335e\u0335.\u0335m\u0335p\u0335r\u0335 \u0335k\u0335e\u0335y\u0335B\u0335o\u0335u\u0335n\u0335d\u0335]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`\n/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Bitmap.lean:337:30: error: unsolved goals\ninput : Slice Usize\ncount : Usize\nbad : \u2115\ninBounds : bad < (\u2191input).length\ninvalid : \u2191count \u2264 \u2191(\u2191input)[bad]\nvalidPrefix : \u2200 key \u2208 List.take bad \u2191input, \u2191key < \u2191count\ncursor : Usize\ncursorBound : \u2191cursor \u2264 bad\nprocessing : \u2191cursor < (\u2191input).length\nbefore : \u2191cursor < bad\nkeyInPrefix : (\u2191input)[\u2191cursor] \u2208 List.take bad \u2191input\nkeyBound : \u2191(\u2191input)[\u2191cursor] < \u2191count\nnext : UScalar UScalarTy.Usize\nhnext : cursor + 1#usize = ok next\nnextVal : \u2191next = \u2191cursor + \u21911#usize\nnv : \u2191next = \u2191cursor + 1\n\u22a2 \u2191(\u2191input)[\u2191cursor] \u2264 \u2191count\n/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Bitmap.lean:345:65: error: unsolved goals\ninput : Slice Usize\ncount : Usize\nbad : \u2115\ninBounds : bad < (\u2191input).length\ninvalid : \u2191count \u2264 \u2191(\u2191input)[bad]\nvalidPrefix : \u2200 key \u2208 List.take bad \u2191input, \u2191key < \u2191count\ncursor : Usize\ncursorBound : \u2191cursor \u2264 bad\nprocessing : \u2191cursor < (\u2191input).length\nbefore : \u00ac\u2191cursor < bad\nfound : \u2191cursor = bad\n\u22a2 \u2191(\u2191input)[bad] \u2264 \u2191count \u2192\n    (do\n        let i3 \u2190 cursor + 1#usize\n        ok (cont i3)) =\n      ok (done (core.result.Result.Err (\u2191input)[bad]))\n/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Bitmap.lean:339:38: warning: This simp argument is unused:\n  Nat.not_le.mpr keyBound\n\nHint: Omit it from the simp argument list.\n  simp [AerostoreExtracted.canonical_buckets_bitmap_loop0.body, processing,\n              Slice.index_usize, hnext,\u0335 \u0335N\u0335a\u0335t\u0335.\u0335n\u0335o\u0335t\u0335_\u0335l\u0335e\u0335.\u0335m\u0335p\u0335r\u0335 \u0335k\u0335e\u0335y\u0335B\u0335o\u0335u\u0335n\u0335d\u0335]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`\n/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Bitmap.lean:347:48: warning: This simp argument is unused:\n  invalid\n\nHint: Omit it from the simp argument list.\n  simp [AerostoreExtracted.canonical_buckets_bitmap_loop0.body, Slice.index_usize, found,\n  \u0332  \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332i\u0335n\u0335B\u0335o\u0335u\u0335n\u0335d\u0335s\u0335,\u0335 \u0335i\u0335n\u0335v\u0335a\u0335l\u0335i\u0335d\u0335]\u0335i\u0332n\u0332B\u0332o\u0332u\u0332n\u0332d\u0332s\u0332]\u0332\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`\n",
+      "elapsed_seconds": 1.491
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/charon-62585970fc75f61d83c7898ff8dfdd7edaa3c073/charon/target/release/charon",
+        "rustc",
+        "--preset",
+        "aeneas",
+        "--sysroot",
+        "default",
+        "--dest-file",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_writes_wrong_bucket/extraction/aerostore_verified.llbc",
+        "--",
+        "--edition=2021",
+        "--target=x86_64-unknown-linux-gnu",
+        "--crate-type",
+        "lib",
+        "--crate-name",
+        "aerostore_verified",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_writes_wrong_bucket/mutant.rs"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 0.048
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/aeneas/aeneas",
+        "-backend",
+        "lean",
+        "-dest",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_writes_wrong_bucket/extraction",
+        "-namespace",
+        "AerostoreExtracted",
+        "-abort-on-error",
+        "-no-progress-bar",
+        "-emit-json",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_writes_wrong_bucket/extraction/aerostore_verified.llbc"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "[\u001b[92mInfo\u001b[39m ] Imported: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_writes_wrong_bucket/extraction/aerostore_verified.llbc\n[\u001b[92mInfo\u001b[39m ] Generated: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_writes_wrong_bucket/extraction/AerostoreVerified.lean\n[\u001b[92mInfo\u001b[39m ] Generated: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_writes_wrong_bucket/extraction/translation.json\n[\u001b[92mInfo\u001b[39m ] Total execution time: 0.511220 seconds\n",
+      "elapsed_seconds": 0.629
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lean",
+        "-o",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_writes_wrong_bucket/modules/AerostoreProofs/AerostoreVerified.olean",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_writes_wrong_bucket/extraction/AerostoreVerified.lean"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 1.128
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lean",
+        "-o",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_writes_wrong_bucket/modules/AerostoreProofs/BridgeContracts.olean",
+        "/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/BridgeContracts.lean"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 1.001
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lean",
+        "/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Sort.lean"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 1,
+      "output": "/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Sort.lean:310:37: error: unsolved goals\ninput : Slice Usize\ncount i : Usize\noutput : alloc.vec.Vec Usize\ninvariant : SortInvariant input (output, i)\nprocessing : \u2191i < (\u2191input).length\nbucketBound : \u2191(\u2191input)[\u2191i] < \u2191count\ncursorBound : \u2191i \u2264 (\u2191input).length\nlengthBound : (\u2191output).length \u2264 \u2191i\nordered : List.Pairwise (fun a b => \u2191a < \u2191b) \u2191output\nrepresented : \u2200 (b : Usize), b \u2208 \u2191output \u2194 b \u2208 List.take \u2191i \u2191input\nnext : UScalar UScalarTy.Usize\nhnext : i + 1#usize = ok next\nnextVal : \u2191next = \u2191i + \u21911#usize\nnv : \u2191next = \u2191i + 1\nposition : Usize\nhsearch : AerostoreExtracted.canonical_buckets_sort_loop0_loop0 output (\u2191input)[\u2191i] 0#usize = ok position\nupper : \u2191position \u2264 (\u2191output).length\nearlier : \u2200 j < \u2191position, \u2191(\u2191output)[j]! < \u2191(\u2191input)[\u2191i]\ncurrent : \u2191position < (\u2191output).length \u2192 \u2191(\u2191input)[\u2191i] \u2264 \u2191(\u2191output)[\u2191position]!\npushed : alloc.vec.Vec Usize\nshift : UScalar UScalarTy.Usize\nshifted : alloc.vec.Vec Usize\nhpush : output.push (\u2191input)[\u2191i] = ok pushed\nhshift : pushed.len - 1#usize = ok shift\nhloop1 : AerostoreExtracted.canonical_buckets_sort_loop0_loop1 pushed position shift = ok shifted\nhloop2 : AerostoreExtracted.canonical_buckets_sort_loop0_loop2 pushed position shift = ok shifted\npositionBound : \u2191position < (\u2191shifted).length\ninserted : \u2191(shifted.set position (\u2191input)[\u2191i]) = (\u2191output).insertIdx (\u2191position) (\u2191input)[\u2191i]\nupdated : alloc.vec.Vec Usize := shifted.set position (\u2191input)[\u2191i]\natEnd : \u2191position = (\u2191output).length\nsame : position = output.len\n\u22a2 shifted.set position 0#usize = shifted.set position (\u2191input)[\u2191i]\n/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Sort.lean:357:39: error: unsolved goals\ninput : Slice Usize\ncount i : Usize\noutput : alloc.vec.Vec Usize\ninvariant : SortInvariant input (output, i)\nprocessing : \u2191i < (\u2191input).length\nbucketBound : \u2191(\u2191input)[\u2191i] < \u2191count\ncursorBound : \u2191i \u2264 (\u2191input).length\nlengthBound : (\u2191output).length \u2264 \u2191i\nordered : List.Pairwise (fun a b => \u2191a < \u2191b) \u2191output\nrepresented : \u2200 (b : Usize), b \u2208 \u2191output \u2194 b \u2208 List.take \u2191i \u2191input\nnext : UScalar UScalarTy.Usize\nhnext : i + 1#usize = ok next\nnextVal : \u2191next = \u2191i + \u21911#usize\nnv : \u2191next = \u2191i + 1\nposition : Usize\nhsearch : AerostoreExtracted.canonical_buckets_sort_loop0_loop0 output (\u2191input)[\u2191i] 0#usize = ok position\nupper : \u2191position \u2264 (\u2191output).length\nearlier : \u2200 j < \u2191position, \u2191(\u2191output)[j]! < \u2191(\u2191input)[\u2191i]\ncurrent : \u2191position < (\u2191output).length \u2192 \u2191(\u2191input)[\u2191i] \u2264 \u2191(\u2191output)[\u2191position]!\npushed : alloc.vec.Vec Usize\nshift : UScalar UScalarTy.Usize\nshifted : alloc.vec.Vec Usize\nhpush : output.push (\u2191input)[\u2191i] = ok pushed\nhshift : pushed.len - 1#usize = ok shift\nhloop1 : AerostoreExtracted.canonical_buckets_sort_loop0_loop1 pushed position shift = ok shifted\nhloop2 : AerostoreExtracted.canonical_buckets_sort_loop0_loop2 pushed position shift = ok shifted\npositionBound : \u2191position < (\u2191shifted).length\ninserted : \u2191(shifted.set position (\u2191input)[\u2191i]) = (\u2191output).insertIdx (\u2191position) (\u2191input)[\u2191i]\nupdated : alloc.vec.Vec Usize := shifted.set position (\u2191input)[\u2191i]\natEnd : \u00ac\u2191position = (\u2191output).length\npositionInBounds : \u2191position < (\u2191output).length\ndifferentPosition : position \u2260 output.len\nhindex : alloc.vec.Vec.index (core.slice.index.SliceIndexUsizeSlice Usize) output position = ok (\u2191output)[\u2191position]!\nsameBucket : \u00ac(\u2191output)[\u2191position]! = (\u2191input)[\u2191i]\ndifferentIndexed : (\u2191output)[\u2191position] \u2260 (\u2191input)[\u2191i]\ndifferentVals : \u2191(\u2191output)[\u2191position] \u2260 \u2191(\u2191input)[\u2191i]\n\u22a2 shifted.set position 0#usize = shifted.set position (\u2191input)[\u2191i]\n",
+      "elapsed_seconds": 1.666
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/charon-62585970fc75f61d83c7898ff8dfdd7edaa3c073/charon/target/release/charon",
+        "rustc",
+        "--preset",
+        "aeneas",
+        "--sysroot",
+        "default",
+        "--dest-file",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_accepts_equal_bound/extraction/aerostore_verified.llbc",
+        "--",
+        "--edition=2021",
+        "--target=x86_64-unknown-linux-gnu",
+        "--crate-type",
+        "lib",
+        "--crate-name",
+        "aerostore_verified",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_accepts_equal_bound/mutant.rs"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 0.05
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/aeneas/aeneas",
+        "-backend",
+        "lean",
+        "-dest",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_accepts_equal_bound/extraction",
+        "-namespace",
+        "AerostoreExtracted",
+        "-abort-on-error",
+        "-no-progress-bar",
+        "-emit-json",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_accepts_equal_bound/extraction/aerostore_verified.llbc"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "[\u001b[92mInfo\u001b[39m ] Imported: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_accepts_equal_bound/extraction/aerostore_verified.llbc\n[\u001b[92mInfo\u001b[39m ] Generated: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_accepts_equal_bound/extraction/AerostoreVerified.lean\n[\u001b[92mInfo\u001b[39m ] Generated: /home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_accepts_equal_bound/extraction/translation.json\n[\u001b[92mInfo\u001b[39m ] Total execution time: 0.514934 seconds\n",
+      "elapsed_seconds": 0.635
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lean",
+        "-o",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_accepts_equal_bound/modules/AerostoreProofs/AerostoreVerified.olean",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_accepts_equal_bound/extraction/AerostoreVerified.lean"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 1.137
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lean",
+        "-o",
+        "/home/zpconn/code/aerostore/target/aerostore-lean-wv7pab0k/sort_accepts_equal_bound/modules/AerostoreProofs/BridgeContracts.olean",
+        "/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/BridgeContracts.lean"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 0,
+      "output": "",
+      "elapsed_seconds": 0.993
+    },
+    {
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/lean-4.31.0-linux/bin/lean",
+        "/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Sort.lean"
+      ],
+      "cwd": "/home/zpconn/code/aerostore",
+      "exit_code": 1,
+      "output": "/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Sort.lean:310:37: error: unsolved goals\ninput : Slice Usize\ncount i : Usize\noutput : alloc.vec.Vec Usize\ninvariant : SortInvariant input (output, i)\nprocessing : \u2191i < (\u2191input).length\nbucketBound : \u2191(\u2191input)[\u2191i] < \u2191count\ncursorBound : \u2191i \u2264 (\u2191input).length\nlengthBound : (\u2191output).length \u2264 \u2191i\nordered : List.Pairwise (fun a b => \u2191a < \u2191b) \u2191output\nrepresented : \u2200 (b : Usize), b \u2208 \u2191output \u2194 b \u2208 List.take \u2191i \u2191input\nnext : UScalar UScalarTy.Usize\nhnext : i + 1#usize = ok next\nnextVal : \u2191next = \u2191i + \u21911#usize\nnv : \u2191next = \u2191i + 1\nposition : Usize\nhsearch : AerostoreExtracted.canonical_buckets_sort_loop0_loop0 output (\u2191input)[\u2191i] 0#usize = ok position\nupper : \u2191position \u2264 (\u2191output).length\nearlier : \u2200 j < \u2191position, \u2191(\u2191output)[j]! < \u2191(\u2191input)[\u2191i]\ncurrent : \u2191position < (\u2191output).length \u2192 \u2191(\u2191input)[\u2191i] \u2264 \u2191(\u2191output)[\u2191position]!\npushed : alloc.vec.Vec Usize\nshift : UScalar UScalarTy.Usize\nshifted : alloc.vec.Vec Usize\nhpush : output.push (\u2191input)[\u2191i] = ok pushed\nhshift : pushed.len - 1#usize = ok shift\nhloop1 : AerostoreExtracted.canonical_buckets_sort_loop0_loop1 pushed position shift = ok shifted\nhloop2 : AerostoreExtracted.canonical_buckets_sort_loop0_loop2 pushed position shift = ok shifted\npositionBound : \u2191position < (\u2191shifted).length\ninserted : \u2191(shifted.set position (\u2191input)[\u2191i]) = (\u2191output).insertIdx (\u2191position) (\u2191input)[\u2191i]\nupdated : alloc.vec.Vec Usize := shifted.set position (\u2191input)[\u2191i]\natEnd : \u2191position = (\u2191output).length\nsame : position = output.len\n\u22a2 \u2191(\u2191input)[\u2191i] \u2264 \u2191count\n/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Sort.lean:334:38: error: unsolved goals\ninput : Slice Usize\ncount i : Usize\noutput : alloc.vec.Vec Usize\ninvariant : SortInvariant input (output, i)\nprocessing : \u2191i < (\u2191input).length\nbucketBound : \u2191(\u2191input)[\u2191i] < \u2191count\ncursorBound : \u2191i \u2264 (\u2191input).length\nlengthBound : (\u2191output).length \u2264 \u2191i\nordered : List.Pairwise (fun a b => \u2191a < \u2191b) \u2191output\nrepresented : \u2200 (b : Usize), b \u2208 \u2191output \u2194 b \u2208 List.take \u2191i \u2191input\nnext : UScalar UScalarTy.Usize\nhnext : i + 1#usize = ok next\nnextVal : \u2191next = \u2191i + \u21911#usize\nnv : \u2191next = \u2191i + 1\nposition : Usize\nhsearch : AerostoreExtracted.canonical_buckets_sort_loop0_loop0 output (\u2191input)[\u2191i] 0#usize = ok position\nupper : \u2191position \u2264 (\u2191output).length\nearlier : \u2200 j < \u2191position, \u2191(\u2191output)[j]! < \u2191(\u2191input)[\u2191i]\ncurrent : \u2191position < (\u2191output).length \u2192 \u2191(\u2191input)[\u2191i] \u2264 \u2191(\u2191output)[\u2191position]!\npushed : alloc.vec.Vec Usize\nshift : UScalar UScalarTy.Usize\nshifted : alloc.vec.Vec Usize\nhpush : output.push (\u2191input)[\u2191i] = ok pushed\nhshift : pushed.len - 1#usize = ok shift\nhloop1 : AerostoreExtracted.canonical_buckets_sort_loop0_loop1 pushed position shift = ok shifted\nhloop2 : AerostoreExtracted.canonical_buckets_sort_loop0_loop2 pushed position shift = ok shifted\npositionBound : \u2191position < (\u2191shifted).length\ninserted : \u2191(shifted.set position (\u2191input)[\u2191i]) = (\u2191output).insertIdx (\u2191position) (\u2191input)[\u2191i]\nupdated : alloc.vec.Vec Usize := shifted.set position (\u2191input)[\u2191i]\natEnd : \u00ac\u2191position = (\u2191output).length\npositionInBounds : \u2191position < (\u2191output).length\ndifferentPosition : position \u2260 output.len\nhindex : alloc.vec.Vec.index (core.slice.index.SliceIndexUsizeSlice Usize) output position = ok (\u2191output)[\u2191position]!\nsameBucket : (\u2191output)[\u2191position]! = (\u2191input)[\u2191i]\nmember : (\u2191input)[\u2191i] \u2208 \u2191output\nsameIndexed : (\u2191output)[\u2191position] = (\u2191input)[\u2191i]\n\u22a2 \u2191(\u2191input)[\u2191i] \u2264 \u2191count\n/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Sort.lean:357:39: error: unsolved goals\ninput : Slice Usize\ncount i : Usize\noutput : alloc.vec.Vec Usize\ninvariant : SortInvariant input (output, i)\nprocessing : \u2191i < (\u2191input).length\nbucketBound : \u2191(\u2191input)[\u2191i] < \u2191count\ncursorBound : \u2191i \u2264 (\u2191input).length\nlengthBound : (\u2191output).length \u2264 \u2191i\nordered : List.Pairwise (fun a b => \u2191a < \u2191b) \u2191output\nrepresented : \u2200 (b : Usize), b \u2208 \u2191output \u2194 b \u2208 List.take \u2191i \u2191input\nnext : UScalar UScalarTy.Usize\nhnext : i + 1#usize = ok next\nnextVal : \u2191next = \u2191i + \u21911#usize\nnv : \u2191next = \u2191i + 1\nposition : Usize\nhsearch : AerostoreExtracted.canonical_buckets_sort_loop0_loop0 output (\u2191input)[\u2191i] 0#usize = ok position\nupper : \u2191position \u2264 (\u2191output).length\nearlier : \u2200 j < \u2191position, \u2191(\u2191output)[j]! < \u2191(\u2191input)[\u2191i]\ncurrent : \u2191position < (\u2191output).length \u2192 \u2191(\u2191input)[\u2191i] \u2264 \u2191(\u2191output)[\u2191position]!\npushed : alloc.vec.Vec Usize\nshift : UScalar UScalarTy.Usize\nshifted : alloc.vec.Vec Usize\nhpush : output.push (\u2191input)[\u2191i] = ok pushed\nhshift : pushed.len - 1#usize = ok shift\nhloop1 : AerostoreExtracted.canonical_buckets_sort_loop0_loop1 pushed position shift = ok shifted\nhloop2 : AerostoreExtracted.canonical_buckets_sort_loop0_loop2 pushed position shift = ok shifted\npositionBound : \u2191position < (\u2191shifted).length\ninserted : \u2191(shifted.set position (\u2191input)[\u2191i]) = (\u2191output).insertIdx (\u2191position) (\u2191input)[\u2191i]\nupdated : alloc.vec.Vec Usize := shifted.set position (\u2191input)[\u2191i]\natEnd : \u00ac\u2191position = (\u2191output).length\npositionInBounds : \u2191position < (\u2191output).length\ndifferentPosition : position \u2260 output.len\nhindex : alloc.vec.Vec.index (core.slice.index.SliceIndexUsizeSlice Usize) output position = ok (\u2191output)[\u2191position]!\nsameBucket : \u00ac(\u2191output)[\u2191position]! = (\u2191input)[\u2191i]\ndifferentIndexed : (\u2191output)[\u2191position] \u2260 (\u2191input)[\u2191i]\ndifferentVals : \u2191(\u2191output)[\u2191position] \u2260 \u2191(\u2191input)[\u2191i]\n\u22a2 \u2191(\u2191input)[\u2191i] \u2264 \u2191count\n/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Sort.lean:312:43: warning: This simp argument is unused:\n  Nat.not_le.mpr bucketBound\n\nHint: Omit it from the simp argument list.\n  simp [processing, Slice.index_usize, N\u0335a\u0335t\u0335.\u0335n\u0335o\u0335t\u0335_\u0335l\u0335e\u0335.\u0335m\u0335p\u0335r\u0335 \u0335b\u0335u\u0335c\u0335k\u0335e\u0335t\u0335B\u0335o\u0335u\u0335n\u0335d\u0335,\u0335hsearch, same, hpush, hshift,\n  \u0332  \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332alloc.vec.Vec.index_mut_usize, hnext, updated]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`\n/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Sort.lean:338:29: warning: This simp argument is unused:\n  Nat.not_le.mpr bucketBound\n\nHint: Omit it from the simp argument list.\n  simp [AerostoreExtracted.canonical_buckets_sort_loop0.body, processing, Slice.index_usize,\n  \u0332  \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332N\u0335a\u0335t\u0335.\u0335n\u0335o\u0335t\u0335_\u0335l\u0335e\u0335.\u0335m\u0335p\u0335r\u0335 \u0335b\u0335u\u0335c\u0335k\u0335e\u0335t\u0335B\u0335o\u0335u\u0335n\u0335d\u0335,\u0335 \u0335hsearch, differentPosition, alloc.vec.Vec.index_usize, positionInBounds, sameIndexed,\n  \u0332  \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332hnext]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`\n/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Sort.lean:359:29: warning: This simp argument is unused:\n  Nat.not_le.mpr bucketBound\n\nHint: Omit it from the simp argument list.\n  simp [AerostoreExtracted.canonical_buckets_sort_loop0.body, processing, Slice.index_usize,\n  \u0332  \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332N\u0335a\u0335t\u0335.\u0335n\u0335o\u0335t\u0335_\u0335l\u0335e\u0335.\u0335m\u0335p\u0335r\u0335 \u0335b\u0335u\u0335c\u0335k\u0335e\u0335t\u0335B\u0335o\u0335u\u0335n\u0335d\u0335,\u0335 \u0335hsearch, differentPosition, alloc.vec.Vec.index_usize, positionInBounds, differentVals,\n  \u0332  \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332hpush, hshift, hloop2, alloc.vec.Vec.index_mut_usize, positionBound, hnext, updated]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`\n/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Sort.lean:445:93: error: unsolved goals\ninput : Slice Usize\ncount : Usize\nbad : \u2115\ninBounds : bad < (\u2191input).length\ninvalid : \u2191count \u2264 \u2191(\u2191input)[bad]\nvalidPrefix : \u2200 key \u2208 List.take bad \u2191input, \u2191key < \u2191count\noutput : alloc.vec.Vec Usize\ncursor : Usize\ncursorBound : \u2191cursor \u2264 bad\ninvariant : SortInvariant input (output, cursor)\nprocessing : \u2191cursor < (\u2191input).length\nbefore : \u00ac\u2191cursor < bad\nfound : \u2191cursor = bad\n\u22a2 \u2191(\u2191input)[bad] \u2264 \u2191count \u2192\n    (do\n        let position \u2190 AerostoreExtracted.canonical_buckets_sort_loop0_loop0 output (\u2191input)[bad] 0#usize\n        if position = Usize.ofNatCore (\u2191output).length \u22ef then do\n            let output1 \u2190 output.push (\u2191input)[bad]\n            let shift \u2190 Usize.ofNatCore (\u2191output1).length \u22ef - 1#usize\n            let output2 \u2190 AerostoreExtracted.canonical_buckets_sort_loop0_loop1 output1 position shift\n            let (_, index_mut_back) \u2190 output2.index_mut_usize position\n            let i4 \u2190 cursor + 1#usize\n            ok (cont (index_mut_back (\u2191input)[bad], i4))\n          else do\n            let i3 \u2190 output.index_usize position\n            if \u2191i3 = \u2191(\u2191input)[bad] then do\n                let i4 \u2190 cursor + 1#usize\n                ok (cont (output, i4))\n              else do\n                let output1 \u2190 output.push (\u2191input)[bad]\n                let shift \u2190 Usize.ofNatCore (\u2191output1).length \u22ef - 1#usize\n                let output2 \u2190 AerostoreExtracted.canonical_buckets_sort_loop0_loop2 output1 position shift\n                let (_, index_mut_back) \u2190 output2.index_mut_usize position\n                let i4 \u2190 cursor + 1#usize\n                ok (cont (index_mut_back (\u2191input)[bad], i4))) =\n      ok (done (core.result.Result.Err (\u2191input)[bad]))\n/home/zpconn/code/aerostore/verification/lean/AerostoreProofs/Sort.lean:447:48: warning: This simp argument is unused:\n  invalid\n\nHint: Omit it from the simp argument list.\n  simp [AerostoreExtracted.canonical_buckets_sort_loop0.body, Slice.index_usize, found,\n  \u0332  \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332 \u0332i\u0335n\u0335B\u0335o\u0335u\u0335n\u0335d\u0335s\u0335,\u0335 \u0335i\u0335n\u0335v\u0335a\u0335l\u0335i\u0335d\u0335]\u0335i\u0332n\u0332B\u0332o\u0332u\u0332n\u0332d\u0332s\u0332]\u0332\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`\n",
+      "elapsed_seconds": 1.661
+    }
+  ],
+  "bucket_sort_lean_refinement": "proved_all_inputs_vec_model",
+  "tools": {
+    "schema_version": 1,
+    "target": "x86_64-unknown-linux-gnu",
+    "lean_version": "4.31.0",
+    "rust_toolchain": "nightly-2026-09-17",
+    "charon_commit": "62585970fc75f61d83c7898ff8dfdd7edaa3c073",
+    "charon_version": "0.1.270",
+    "aeneas_release": "nightly-2026.09.23-12a018b",
+    "mathlib_commit": "fabf563a7c95a166b8d7b6efca11c8b4dc9d911f",
+    "release_binary_sha256": {
+      "lean-4.31.0-linux/bin/lean": "e8baaa71855a616dc351028f3ad2200051b0671f423a1696a100e809302d5550",
+      "lean-4.31.0-linux/bin/lake": "60330ab6f07dce20f3fa9ebb08e8b984ea9549eac172afeb15d9d2227060e2b3",
+      "aeneas/aeneas": "96d3a9feca18e808c32bcf64f5c2b0980f8bf73631ae7b41463e5c9dcf9ab06f",
+      "lean-4.31.0-linux/bin/leanchecker": "e14365bacbe81e495558ef4c64508e97416e699f6d62900be38c995f39fcb9b8",
+      "lean-4.31.0-linux/lib/lean/libInit_shared.so": "2f96493ac9046f64ec7bcb78102a4c1e7cd9a7042487f246af45eda8a96667f5",
+      "lean-4.31.0-linux/lib/lean/libLake_shared.so": "02da596e8f70c60a2aec411ed968a633d41ffada2c24617dabe04ae20df1d8c8",
+      "lean-4.31.0-linux/lib/lean/libleanshared.so": "844963455a7800b417b067a3c7ad6cb86c34286b54be596b1e2b1e3808d6b718",
+      "lean-4.31.0-linux/lib/lean/libleanshared_1.so": "2f96493ac9046f64ec7bcb78102a4c1e7cd9a7042487f246af45eda8a96667f5",
+      "lean-4.31.0-linux/lib/lean/libleanshared_2.so": "2f96493ac9046f64ec7bcb78102a4c1e7cd9a7042487f246af45eda8a96667f5"
+    },
+    "archives": [
+      {
+        "file": "lean-4.31.0-linux.tar.zst",
+        "url": "https://github.com/leanprover/lean4/releases/download/v4.31.0/lean-4.31.0-linux.tar.zst",
+        "sha256": "07a633cc8d9151cbc08825ea4cdda50d4b02a2c9cb852c0131b13046f49cad7f",
+        "directory": ".",
+        "marker": "lean-4.31.0-linux/bin/lean"
+      },
+      {
+        "file": "aeneas-linux-x86_64.tar.gz",
+        "url": "https://github.com/AeneasVerif/aeneas/releases/download/nightly-2026.09.23-12a018b/aeneas-linux-x86_64.tar.gz",
+        "sha256": "4fc954f56f2f8d53304ee12d46df5023940a083f9b42717b29ee0b233f555acb",
+        "directory": "aeneas",
+        "marker": "aeneas/aeneas"
+      },
+      {
+        "file": "charon-62585970.tar.gz",
+        "url": "https://github.com/AeneasVerif/charon/archive/62585970fc75f61d83c7898ff8dfdd7edaa3c073.tar.gz",
+        "sha256": "d4872b4e4792da0288fed3b27d61f2a9ea800e8a193cb03a1c6a463d0d239295",
+        "directory": ".",
+        "marker": "charon-62585970fc75f61d83c7898ff8dfdd7edaa3c073/charon/Cargo.toml"
+      }
+    ]
+  },
+  "tool_versions": {
+    "lean": "Lean (version 4.31.0, x86_64-unknown-linux-gnu, commit 68218e876d2a38b1985b8590fff244a83c321783, Release)\n",
+    "charon": "0.1.270 (62585970fc75f61d83c7898ff8dfdd7edaa3c073)\n",
+    "aeneas": "aeneas nightly-2026.09.23-12a018b\n"
+  },
+  "semantic_model_integrity": {
+    "files_checked": 500,
+    "tree_sha256": "62df45a3de37c1f764966c7c23f5c2582f4fe352b6eb87c5614190405a0e6f5e",
+    "archive_sha256": "4fc954f56f2f8d53304ee12d46df5023940a083f9b42717b29ee0b233f555acb"
+  },
+  "tool_sha256": {
+    "target/verification-tools/lean-4.31.0-linux/bin/lean": "e8baaa71855a616dc351028f3ad2200051b0671f423a1696a100e809302d5550",
+    "target/verification-tools/lean-4.31.0-linux/bin/lake": "60330ab6f07dce20f3fa9ebb08e8b984ea9549eac172afeb15d9d2227060e2b3",
+    "target/verification-tools/lean-4.31.0-linux/bin/leanchecker": "e14365bacbe81e495558ef4c64508e97416e699f6d62900be38c995f39fcb9b8",
+    "target/verification-tools/charon-62585970fc75f61d83c7898ff8dfdd7edaa3c073/charon/target/release/charon": "fe6558f07d2ab3e9370a378f48ecc367ca60cb9c8d41edb243e4ef061952928e",
+    "target/verification-tools/charon-62585970fc75f61d83c7898ff8dfdd7edaa3c073/charon/target/release/charon-driver": "de2c28caf8a80e01634bcc249b3a9ec58a85dd5f27e96d2e64df7b502d635c8a",
+    "target/verification-tools/aeneas/aeneas": "96d3a9feca18e808c32bcf64f5c2b0980f8bf73631ae7b41463e5c9dcf9ab06f"
+  },
+  "dependency_revisions": {
+    "mathlib": "fabf563a7c95a166b8d7b6efca11c8b4dc9d911f",
+    "plausible": "63045536fe95024e6c18fc7b48e03f506701c5bc",
+    "LeanSearchClient": "c5d5b8fe6e5158def25cd28eb94e4141ad97c843",
+    "importGraph": "5c7542ed018c78194f1e2b903eaf6a792b74c03d",
+    "proofwidgets": "24b0d9dc081c5423f8eec7e866c441e5184f29d9",
+    "aesop": "e3cb2f741431ce31bf73549fb52316a57368b06f",
+    "Qq": "f46324995fca5f0483b742e4eb4daec7f4ee50d2",
+    "batteries": "fa08db58b30eb033edcdab331bba000827f9f785",
+    "Cli": "92564e5770e4d09f2d86dfbf8ada1e9c715b384c"
+  },
+  "required_roots": [
+    {
+      "name": "AerostoreProofs.bitmap_specification_correct",
+      "contract": "AerostoreProofs.BucketSpecificationCorrect",
+      "scope": "abstract_specification"
+    },
+    {
+      "name": "AerostoreProofs.canonical_unique",
+      "contract": "AerostoreProofs.CanonicalUnique",
+      "scope": "abstract_specification"
+    },
+    {
+      "name": "AerostoreProofs.rejection_persists",
+      "contract": "AerostoreProofs.RejectionPersists",
+      "scope": "abstract_specification"
+    },
+    {
+      "name": "AerostoreProofs.rust_stamp_refinement",
+      "contract": "AerostoreProofs.RustStampRefinement",
+      "scope": "extracted_rust"
+    },
+    {
+      "name": "AerostoreProofs.rust_bitmap_step_preserves_membership",
+      "contract": "AerostoreProofs.RustBitmapStepPreservesMembership",
+      "scope": "extracted_rust_loop_step"
+    },
+    {
+      "name": "AerostoreProofs.rust_bitmap_refinement",
+      "contract": "AerostoreProofs.RustBitmapRefinement",
+      "scope": "extracted_rust_whole_function_in_range_inputs"
+    },
+    {
+      "name": "AerostoreProofs.rust_bitmap_rejects_first_invalid",
+      "contract": "AerostoreProofs.RustBitmapRejectsFirstInvalid",
+      "scope": "extracted_rust_first_invalid_input"
+    },
+    {
+      "name": "AerostoreProofs.rust_bitmap_total",
+      "contract": "AerostoreProofs.RustBitmapTotal",
+      "scope": "extracted_rust_whole_function_all_inputs_vec_model"
+    },
+    {
+      "name": "AerostoreProofs.rust_bitmap_production",
+      "contract": "AerostoreProofs.RustBitmapProduction",
+      "scope": "extracted_rust_production_4096_all_inputs"
+    },
+    {
+      "name": "AerostoreProofs.rust_sort_refinement",
+      "contract": "AerostoreProofs.RustSortRefinement",
+      "scope": "extracted_rust_whole_function_in_range_inputs"
+    },
+    {
+      "name": "AerostoreProofs.rust_sort_rejects_first_invalid",
+      "contract": "AerostoreProofs.RustSortRejectsFirstInvalid",
+      "scope": "extracted_rust_first_invalid_input"
+    },
+    {
+      "name": "AerostoreProofs.rust_sort_total",
+      "contract": "AerostoreProofs.RustSortTotal",
+      "scope": "extracted_rust_whole_function_all_inputs_vec_model"
+    },
+    {
+      "name": "AerostoreProofs.rust_sort_production",
+      "contract": "AerostoreProofs.RustSortProduction",
+      "scope": "extracted_rust_production_4096_all_inputs"
+    },
+    {
+      "name": "AerostoreProofs.rust_bucket_implementations_equivalent",
+      "contract": "AerostoreProofs.RustBucketImplementationsEquivalent",
+      "scope": "extracted_rust_complete_result_equivalence_vec_model"
+    }
+  ],
+  "axioms": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "kernel_recheck_passed": true,
+  "kernel_recheck_scope": "all_project_and_imported_constants_in_fresh_environment",
+  "forged_theorem_rejected": true,
+  "mutation_checks": [
+    {
+      "name": "stamp_accepts_equal",
+      "rejected": true,
+      "proof": "Bridge.lean",
+      "rust_sha256": "cbbf15557f437c08b8280a400d90c6f5564a5366880eae51ac071aa6a82bf150",
+      "extracted_sha256": "7af555bf1efe5869df834ab716c8142d14ebdc8de9bae1f254069d0dbf6425df"
+    },
+    {
+      "name": "bitmap_drops_membership",
+      "rejected": true,
+      "proof": "Bitmap.lean",
+      "rust_sha256": "744e095f458a9abdd5522dfce2653bbd343304f7c957ad13bd4e0e7b0780e0f2",
+      "extracted_sha256": "25767ba28e5ae776383acf7c446ee5d3b878bdf0ef8127c7225fcfcf4d3882c6"
+    },
+    {
+      "name": "bitmap_accepts_equal_bound",
+      "rejected": true,
+      "proof": "Bitmap.lean",
+      "rust_sha256": "2e58c7b2655873f0e00b1fb8fc0a18950a2f5ce9846aa74856c56981c4bac826",
+      "extracted_sha256": "5a5ab79016f64909dc72102188aaeb8913e408173b79585e4e89e4c2e13764dd"
+    },
+    {
+      "name": "sort_writes_wrong_bucket",
+      "rejected": true,
+      "proof": "Sort.lean",
+      "rust_sha256": "726415d44b702cc2c0c9fa3fa9089631575a155a256019bab28102373851968b",
+      "extracted_sha256": "2d1bb101db5f7cff2854bd20d5112162dabbe2149ed9211241ae4f385dab69d2"
+    },
+    {
+      "name": "sort_accepts_equal_bound",
+      "rejected": true,
+      "proof": "Sort.lean",
+      "rust_sha256": "387013f64b5090825c3995de91d2718caa6218ad594309524c64cc9a8308abde",
+      "extracted_sha256": "6cd3bbc8adb9e661ae373251294e28141ac8e766f7ac9682c037dd4ce85a0bd6"
+    }
+  ],
+  "source_sha256_before": {
+    "aerostore_verified/src/lib.rs": "4be9e28442ba0c0b25bb655caa2d2076eee92c86cc5a49264a93fcc116ab5830",
+    "aerostore_verified/Cargo.toml": "59ac3753bb0b4be8e2fcefa4a07d8541b308d3aa9cab83d988b0228111d30c22",
+    "verification/bridge/toolchain.json": "1ea2e14ed2723e2153da4692b686a14a4b9901aa249a0f5c04c43339fd7ceb98",
+    "verification/bridge/bootstrap.py": "1c0113d10f637b6c9e3c567bac215eb374ca890622c41b7eb77e2ff5604274d8",
+    "verification/lean/roots.json": "63ccf18c24a16a87678590c8f8d28037adce4410739ac22aab1e90912fee087d",
+    "verification/lean/lakefile.lean": "f3f8947401a760bc14e2ae04e8d424f78e4e2d9f1796af562f170f528d73f112",
+    "verification/lean/lean-toolchain": "efac0b94923b2d8b6840cd35be9177ad0fc5ab2332f4f4311c98712cee92fdee",
+    "verification/lean/lake-manifest.json": "b2ba7ecd48e631726f859b1b489b39161feca8eeb1e8c4e785b1d58e4cebce73",
+    "verification/lean/AerostoreProofs.lean": "9a520085506d07a0573db4d87899f4f8bba6b8785191b304f653a858d8e6fc6f",
+    "scripts/check_lean.py": "e6c0c909cb24cd5c1adf6efd38ea4e11ca6212c7e14c9f58390e9881edc3d89a",
+    "verification/lean/AerostoreProofs/AerostoreVerified.lean": "627bb8d6213a57a4c129538eb23cf970c870f09cd9a44b98c0936b6e1d6549a5",
+    "verification/lean/AerostoreProofs/Bitmap.lean": "4b544eddd243229c18eece31cb21dfb0104fac014b863f3d6c1c80d846e865e3",
+    "verification/lean/AerostoreProofs/Bridge.lean": "f7ed8bc90f089d4047662d8444634a11d2f1a1f89475fd8800c36517bf753fb3",
+    "verification/lean/AerostoreProofs/BridgeContracts.lean": "250675e4db9b0c3d1b67a9664940be5a481080dc317d9fd571f63cacd3f3cb19",
+    "verification/lean/AerostoreProofs/Buckets.lean": "84e5359247b1eedfd7f551bb4bc5fb858c350bef37a890138e22d166b3efe462",
+    "verification/lean/AerostoreProofs/Contracts.lean": "ac4cfab522191873251d9c9d5afb3ad9690232e8f0f054d38eb89595c0212e5c",
+    "verification/lean/AerostoreProofs/Equivalence.lean": "292ad003256265b080e6dbb5ba7818d5d7d35b91144fa8faae187cfa8c51c544",
+    "verification/lean/AerostoreProofs/Publication.lean": "47815e20e29fe0607aed358348f37521a76058bdb84d7e88573c90ebfd5a1585",
+    "verification/lean/AerostoreProofs/Sort.lean": "e6ad91744b8ca043d195e6647cb98e56ea8064c64eb23f44fd83761a7b695593"
+  },
+  "source_sha256": {
+    "aerostore_verified/src/lib.rs": "4be9e28442ba0c0b25bb655caa2d2076eee92c86cc5a49264a93fcc116ab5830",
+    "aerostore_verified/Cargo.toml": "59ac3753bb0b4be8e2fcefa4a07d8541b308d3aa9cab83d988b0228111d30c22",
+    "verification/bridge/toolchain.json": "1ea2e14ed2723e2153da4692b686a14a4b9901aa249a0f5c04c43339fd7ceb98",
+    "verification/bridge/bootstrap.py": "1c0113d10f637b6c9e3c567bac215eb374ca890622c41b7eb77e2ff5604274d8",
+    "verification/lean/roots.json": "63ccf18c24a16a87678590c8f8d28037adce4410739ac22aab1e90912fee087d",
+    "verification/lean/lakefile.lean": "f3f8947401a760bc14e2ae04e8d424f78e4e2d9f1796af562f170f528d73f112",
+    "verification/lean/lean-toolchain": "efac0b94923b2d8b6840cd35be9177ad0fc5ab2332f4f4311c98712cee92fdee",
+    "verification/lean/lake-manifest.json": "b2ba7ecd48e631726f859b1b489b39161feca8eeb1e8c4e785b1d58e4cebce73",
+    "verification/lean/AerostoreProofs.lean": "9a520085506d07a0573db4d87899f4f8bba6b8785191b304f653a858d8e6fc6f",
+    "scripts/check_lean.py": "e6c0c909cb24cd5c1adf6efd38ea4e11ca6212c7e14c9f58390e9881edc3d89a",
+    "verification/lean/AerostoreProofs/AerostoreVerified.lean": "627bb8d6213a57a4c129538eb23cf970c870f09cd9a44b98c0936b6e1d6549a5",
+    "verification/lean/AerostoreProofs/Bitmap.lean": "4b544eddd243229c18eece31cb21dfb0104fac014b863f3d6c1c80d846e865e3",
+    "verification/lean/AerostoreProofs/Bridge.lean": "f7ed8bc90f089d4047662d8444634a11d2f1a1f89475fd8800c36517bf753fb3",
+    "verification/lean/AerostoreProofs/BridgeContracts.lean": "250675e4db9b0c3d1b67a9664940be5a481080dc317d9fd571f63cacd3f3cb19",
+    "verification/lean/AerostoreProofs/Buckets.lean": "84e5359247b1eedfd7f551bb4bc5fb858c350bef37a890138e22d166b3efe462",
+    "verification/lean/AerostoreProofs/Contracts.lean": "ac4cfab522191873251d9c9d5afb3ad9690232e8f0f054d38eb89595c0212e5c",
+    "verification/lean/AerostoreProofs/Equivalence.lean": "292ad003256265b080e6dbb5ba7818d5d7d35b91144fa8faae187cfa8c51c544",
+    "verification/lean/AerostoreProofs/Publication.lean": "47815e20e29fe0607aed358348f37521a76058bdb84d7e88573c90ebfd5a1585",
+    "verification/lean/AerostoreProofs/Sort.lean": "e6ad91744b8ca043d195e6647cb98e56ea8064c64eb23f44fd83761a7b695593"
+  },
+  "bucket_bitmap_lean_refinement": "proved_all_inputs_vec_model",
+  "production_4096_corollaries": true,
+  "complete_result_equivalence": true,
+  "elapsed_seconds": 164.051
+}

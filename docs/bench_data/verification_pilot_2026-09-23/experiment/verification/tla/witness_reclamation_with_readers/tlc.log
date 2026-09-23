@@ -1,0 +1,69 @@
+TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 2300] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-1rf9dm2d/Reclamation.tla
+Parsing file /tmp/tlc-9939245177698707006/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-9939245177698707006/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-9939245177698707006/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module Reclamation
+Linting of module Reclamation
+Starting... (2026-09-23 09:37:31)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-09-23 09:37:31.
+Error: Invariant WitnessNotReached is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ retired = FALSE
+/\ writerActive = TRUE
+/\ needsOld = {}
+/\ guard = TRUE
+/\ readers = {}
+/\ phase = "FirstReader"
+/\ turn = 1
+/\ free = FALSE
+/\ pinsOld = {}
+
+State 2: <FirstReader line 15, col 5 to line 18, col 61 of module Reclamation>
+/\ needsOld = {1}
+/\ readers = {1}
+/\ phase = "WriterCommit"
+/\ pinsOld = {1}
+
+State 3: <WriterCommit line 20, col 5 to line 23, col 66 of module Reclamation>
+/\ retired = TRUE
+/\ writerActive = FALSE
+/\ phase = "SecondReader"
+
+State 4: <SecondReader line 25, col 5 to line 29, col 71 of module Reclamation>
+/\ readers = {1, 2}
+/\ phase = "EndFirst"
+
+State 5: <EndFirst line 31, col 5 to line 34, col 61 of module Reclamation>
+/\ needsOld = {}
+/\ readers = {2}
+/\ phase = "StartNext"
+/\ pinsOld = {}
+
+State 6: <ReleaseGuard line 49, col 17 to line 51, col 101 of module Reclamation>
+/\ needsOld = {}
+/\ guard = FALSE
+/\ readers = {2}
+/\ phase = "StartNext"
+/\ pinsOld = {}
+
+State 7: <Collect line 53, col 5 to line 57, col 90 of module Reclamation>
+/\ retired = TRUE
+/\ writerActive = FALSE
+/\ needsOld = {}
+/\ guard = FALSE
+/\ readers = {2}
+/\ phase = "StartNext"
+/\ turn = 1
+/\ free = TRUE
+/\ pinsOld = {}
+
+11 states generated, 10 distinct states found, 2 states left on queue.
+The depth of the complete state graph search is 7.
+Finished in 00s at (2026-09-23 09:37:31)

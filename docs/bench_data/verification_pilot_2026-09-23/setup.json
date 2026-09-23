@@ -1,0 +1,115 @@
+{
+  "format_version": 1,
+  "passed": true,
+  "completed": true,
+  "meaning": "tool setup only, not a proof or promotion decision",
+  "started_at": "2026-09-23T14:27:55.630302+00:00",
+  "plan": {
+    "components": [
+      "rust",
+      "bridge",
+      "verus",
+      "tla"
+    ],
+    "production_rust": "1.93.1",
+    "local_environment": {
+      "RUSTUP_HOME": "/home/zpconn/code/aerostore/target/verification-tools/production-rustup",
+      "CARGO_HOME": "/home/zpconn/code/aerostore/target/verification-tools/production-cargo",
+      "RUSTUP_TOOLCHAIN": "1.93.1",
+      "RUSTUP_NO_UPDATE_CHECK": "1"
+    },
+    "commands": {
+      "rust": [
+        "rustup set auto-self-update disable (local RUSTUP_HOME)",
+        "rustup toolchain install 1.93.1 --profile minimal",
+        "cargo fetch --locked --target x86_64-unknown-linux-gnu"
+      ],
+      "bridge": [
+        "/usr/bin/python3 verification/bridge/bootstrap.py"
+      ],
+      "verus": [
+        "rustup set auto-self-update disable (local Verus RUSTUP_HOME)",
+        "/usr/bin/python3 verification/verus/install.py"
+      ],
+      "tla": [
+        "download only if missing; verify verification/tla/toolchain.json SHA-256",
+        "java -version"
+      ]
+    },
+    "note": "No global Rust default, package manager, profile, or system installation changes."
+  },
+  "commands": [
+    {
+      "command": [
+        "rustup",
+        "set",
+        "auto-self-update",
+        "disable"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "rustup",
+        "toolchain",
+        "install",
+        "1.93.1",
+        "--profile",
+        "minimal"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "rustup",
+        "run",
+        "1.93.1",
+        "rustc",
+        "--version"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "rustup",
+        "run",
+        "1.93.1",
+        "cargo",
+        "fetch",
+        "--locked",
+        "--target",
+        "x86_64-unknown-linux-gnu"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "verification/bridge/bootstrap.py"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "rustup",
+        "set",
+        "auto-self-update",
+        "disable"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "verification/verus/install.py"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "tlc_sha256": "9732eea90bdc7432e618184e4bee78700460e83e988238a80151dfd6507cfa0c",
+  "java_version": "openjdk version \"21.0.12.1\" 2026-08-18\nOpenJDK Runtime Environment (build 21.0.12.1+1-1-24.04.4-Ubuntu)\nOpenJDK 64-Bit Server VM (build 21.0.12.1+1-1-24.04.4-Ubuntu, mixed mode, sharing)",
+  "dependency_manifest_sha256": {
+    "Cargo.lock": "6f59ada1ce08ded2eaed54c1dcd80c1b9b14c5176028af60d1a6570364959128",
+    "verification/lean/lake-manifest.json": "b2ba7ecd48e631726f859b1b489b39161feca8eeb1e8c4e785b1d58e4cebce73"
+  }
+}

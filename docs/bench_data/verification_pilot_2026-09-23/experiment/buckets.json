@@ -1,0 +1,407 @@
+{
+  "bucket_count": 4096,
+  "format_version": 1,
+  "passed_output_comparisons": true,
+  "results": [
+    {
+      "algorithm": "standard",
+      "case": "empty",
+      "input_length": 0,
+      "iterations_per_sample": 100000,
+      "median_ns_per_call": 5.81727,
+      "samples_ns_per_call": [
+        5.93012,
+        5.88316,
+        5.81761,
+        5.81333,
+        5.81727,
+        5.74433,
+        5.7437,
+        5.7548,
+        5.87317
+      ],
+      "unique_buckets": 0
+    },
+    {
+      "algorithm": "verified_sort",
+      "case": "empty",
+      "input_length": 0,
+      "iterations_per_sample": 100000,
+      "median_ns_per_call": 6.30585,
+      "samples_ns_per_call": [
+        6.21519,
+        6.2305,
+        6.21558,
+        6.28764,
+        6.31977,
+        6.67027,
+        6.30585,
+        6.37743,
+        6.34024
+      ],
+      "unique_buckets": 0
+    },
+    {
+      "algorithm": "verified_bitmap",
+      "case": "empty",
+      "input_length": 0,
+      "iterations_per_sample": 2106,
+      "median_ns_per_call": 2382.7488129154794,
+      "samples_ns_per_call": [
+        2399.830009496676,
+        2396.7165242165242,
+        2383.488603988604,
+        2374.6073124406457,
+        2382.7488129154794,
+        2382.9591642924975,
+        2368.0270655270656,
+        2368.811965811966,
+        2371.9444444444443
+      ],
+      "unique_buckets": 0
+    },
+    {
+      "algorithm": "standard",
+      "case": "equality",
+      "input_length": 1,
+      "iterations_per_sample": 100000,
+      "median_ns_per_call": 11.04824,
+      "samples_ns_per_call": [
+        11.28739,
+        11.10016,
+        10.88436,
+        11.29472,
+        11.04824,
+        10.68964,
+        11.26566,
+        10.72303,
+        10.76822
+      ],
+      "unique_buckets": 1
+    },
+    {
+      "algorithm": "verified_sort",
+      "case": "equality",
+      "input_length": 1,
+      "iterations_per_sample": 100000,
+      "median_ns_per_call": 13.89193,
+      "samples_ns_per_call": [
+        13.49362,
+        14.12757,
+        13.44781,
+        14.06632,
+        13.8917,
+        13.64091,
+        14.04251,
+        14.04056,
+        13.89193
+      ],
+      "unique_buckets": 1
+    },
+    {
+      "algorithm": "verified_bitmap",
+      "case": "equality",
+      "input_length": 1,
+      "iterations_per_sample": 2051,
+      "median_ns_per_call": 2401.156996587031,
+      "samples_ns_per_call": [
+        2474.8751828376403,
+        2393.264748902974,
+        2399.686494392979,
+        2401.156996587031,
+        2421.7001462701123,
+        2410.244758654315,
+        2397.607996099464,
+        2385.107264748903,
+        2413.1350560702094
+      ],
+      "unique_buckets": 1
+    },
+    {
+      "algorithm": "standard",
+      "case": "short_in",
+      "input_length": 8,
+      "iterations_per_sample": 100000,
+      "median_ns_per_call": 19.1321,
+      "samples_ns_per_call": [
+        19.44879,
+        19.32299,
+        18.88581,
+        20.72244,
+        19.13344,
+        18.68735,
+        19.1321,
+        18.7064,
+        18.74586
+      ],
+      "unique_buckets": 8
+    },
+    {
+      "algorithm": "verified_sort",
+      "case": "short_in",
+      "input_length": 8,
+      "iterations_per_sample": 100000,
+      "median_ns_per_call": 29.09326,
+      "samples_ns_per_call": [
+        29.44754,
+        28.80089,
+        28.6511,
+        30.51042,
+        29.08554,
+        28.85874,
+        29.11532,
+        29.09326,
+        29.387
+      ],
+      "unique_buckets": 8
+    },
+    {
+      "algorithm": "verified_bitmap",
+      "case": "short_in",
+      "input_length": 8,
+      "iterations_per_sample": 1839,
+      "median_ns_per_call": 2508.847199564981,
+      "samples_ns_per_call": [
+        2508.847199564981,
+        2515.8227297444264,
+        2517.179989124524,
+        2493.547580206634,
+        2491.2882001087546,
+        2501.257748776509,
+        2528.447525829255,
+        2496.279499728113,
+        2518.4393692224035
+      ],
+      "unique_buckets": 8
+    },
+    {
+      "algorithm": "standard",
+      "case": "medium_in",
+      "input_length": 64,
+      "iterations_per_sample": 29419,
+      "median_ns_per_call": 157.64118426866992,
+      "samples_ns_per_call": [
+        156.21302559570347,
+        157.0693769332744,
+        158.7386722866175,
+        158.8586967605969,
+        157.09803188415648,
+        158.66637207247018,
+        157.64118426866992,
+        157.86583500458886,
+        157.0461946361195
+      ],
+      "unique_buckets": 64
+    },
+    {
+      "algorithm": "verified_sort",
+      "case": "medium_in",
+      "input_length": 64,
+      "iterations_per_sample": 9353,
+      "median_ns_per_call": 523.1409173527211,
+      "samples_ns_per_call": [
+        527.9414091735272,
+        523.9379878113974,
+        526.6763605260344,
+        525.8085106382979,
+        523.1409173527211,
+        480.5668769378809,
+        480.5382230300438,
+        485.76606436437504,
+        483.3491927723725
+      ],
+      "unique_buckets": 64
+    },
+    {
+      "algorithm": "verified_bitmap",
+      "case": "medium_in",
+      "input_length": 64,
+      "iterations_per_sample": 1856,
+      "median_ns_per_call": 2607.853448275862,
+      "samples_ns_per_call": [
+        2608.3394396551726,
+        2613.669181034483,
+        2671.580818965517,
+        2620.9008620689656,
+        2569.302801724138,
+        2560.5592672413795,
+        2607.853448275862,
+        2601.8060344827586,
+        2594.6460129310344
+      ],
+      "unique_buckets": 64
+    },
+    {
+      "algorithm": "standard",
+      "case": "duplicate_in",
+      "input_length": 1024,
+      "iterations_per_sample": 1557,
+      "median_ns_per_call": 3173.7219010918434,
+      "samples_ns_per_call": [
+        3162.5375722543354,
+        3144.491971740527,
+        3192.0899165061014,
+        3207.937700706487,
+        3161.7996146435453,
+        3192.0083493898524,
+        3201.412331406551,
+        3136.678869621066,
+        3173.7219010918434
+      ],
+      "unique_buckets": 32
+    },
+    {
+      "algorithm": "verified_sort",
+      "case": "duplicate_in",
+      "input_length": 1024,
+      "iterations_per_sample": 787,
+      "median_ns_per_call": 4307.508259212198,
+      "samples_ns_per_call": [
+        4608.418043202033,
+        4463.595933926303,
+        4307.508259212198,
+        4231.420584498094,
+        4236.803049555273,
+        4391.734434561627,
+        4342.0609911054635,
+        4261.327827191868,
+        4286.656925031766
+      ],
+      "unique_buckets": 32
+    },
+    {
+      "algorithm": "verified_bitmap",
+      "case": "duplicate_in",
+      "input_length": 1024,
+      "iterations_per_sample": 1639,
+      "median_ns_per_call": 2751.220256253813,
+      "samples_ns_per_call": [
+        2807.2312385600976,
+        2802.5527760829773,
+        2784.0109823062844,
+        2795.5466748017084,
+        2751.220256253813,
+        2709.7474069554605,
+        2727.5716900549114,
+        2725.9060402684563,
+        2707.442953020134
+      ],
+      "unique_buckets": 32
+    },
+    {
+      "algorithm": "standard",
+      "case": "long_in",
+      "input_length": 1024,
+      "iterations_per_sample": 1156,
+      "median_ns_per_call": 3960.705017301038,
+      "samples_ns_per_call": [
+        3974.3667820069204,
+        3859.516435986159,
+        3960.705017301038,
+        4050.1617647058824,
+        3891.8935986159167,
+        3927.810553633218,
+        4002.5025951557095,
+        4068.8079584775087,
+        3908.5700692041523
+      ],
+      "unique_buckets": 905
+    },
+    {
+      "algorithm": "verified_sort",
+      "case": "long_in",
+      "input_length": 1024,
+      "iterations_per_sample": 63,
+      "median_ns_per_call": 79219.49206349206,
+      "samples_ns_per_call": [
+        76032.22222222222,
+        79663.69841269842,
+        79313.6507936508,
+        79847.41269841269,
+        76158.04761904762,
+        80052.1746031746,
+        78340.88888888889,
+        79219.49206349206,
+        76021.79365079365
+      ],
+      "unique_buckets": 905
+    },
+    {
+      "algorithm": "verified_bitmap",
+      "case": "long_in",
+      "input_length": 1024,
+      "iterations_per_sample": 1441,
+      "median_ns_per_call": 3211.551006245663,
+      "samples_ns_per_call": [
+        3278.8029146426093,
+        3447.9798750867453,
+        3336.444829979181,
+        3259.063150589868,
+        3106.490631505899,
+        3211.551006245663,
+        3150.5176960444137,
+        3198.234559333796,
+        3057.0992366412215
+      ],
+      "unique_buckets": 905
+    },
+    {
+      "algorithm": "standard",
+      "case": "all_buckets",
+      "input_length": 4096,
+      "iterations_per_sample": 2540,
+      "median_ns_per_call": 1905.9405511811024,
+      "samples_ns_per_call": [
+        1894.486220472441,
+        1930.9133858267717,
+        1905.9405511811024,
+        1889.9444881889763,
+        1942.4291338582677,
+        1868.9027559055119,
+        1890.0799212598424,
+        1971.2299212598425,
+        1980.341338582677
+      ],
+      "unique_buckets": 4096
+    },
+    {
+      "algorithm": "verified_sort",
+      "case": "all_buckets",
+      "input_length": 4096,
+      "iterations_per_sample": 8,
+      "median_ns_per_call": 1051960.5,
+      "samples_ns_per_call": [
+        1061257.375,
+        1066384.125,
+        1039225.125,
+        1026593.875,
+        1051666.25,
+        1051960.5,
+        1070889.875,
+        1048933.5,
+        1080650.0
+      ],
+      "unique_buckets": 4096
+    },
+    {
+      "algorithm": "verified_bitmap",
+      "case": "all_buckets",
+      "input_length": 4096,
+      "iterations_per_sample": 1043,
+      "median_ns_per_call": 4701.341323106424,
+      "samples_ns_per_call": [
+        4779.908916586769,
+        4588.992329817833,
+        4642.1773729626075,
+        4593.7420901246405,
+        4744.001917545542,
+        4695.680728667306,
+        4701.341323106424,
+        4851.139022051773,
+        4970.745925215724
+      ],
+      "unique_buckets": 4096
+    }
+  ],
+  "scope": "Microbenchmark of exact safe functions; excludes hashing, locking, transactions, and durability. Does not promote a candidate."
+}

@@ -1,0 +1,30 @@
+[coverage] /usr/bin/python3 scripts/check_formal_coverage.py
+[coverage] PASS (0.1s); target/verification/experiment-final/verification/coverage.log
+[gate-tests] /usr/bin/python3 scripts/test_formal_gate.py
+[gate-tests] PASS (0.4s); target/verification/experiment-final/verification/gate-tests.log
+[adapter-tests] /usr/bin/python3 verification/verus/test_generate.py
+[adapter-tests] PASS (0.0s); target/verification/experiment-final/verification/adapter-tests.log
+[verus] /usr/bin/python3 verification/verus/run.py --output /home/zpconn/code/aerostore/target/verification/experiment-final/verification/verus
+[verus] PASS (5.2s); target/verification/experiment-final/verification/verus.log
+[lean] /usr/bin/python3 scripts/check_lean.py --output /home/zpconn/code/aerostore/target/verification/experiment-final/verification/lean.json
+[lean] PASS (164.1s); target/verification/experiment-final/verification/lean.log
+[kernel-tests] cargo test --offline -p aerostore_verified
+[kernel-tests] PASS (0.1s); target/verification/experiment-final/verification/kernel-tests.log
+[tla-runner-tests] /usr/bin/python3 scripts/test_tla_runner.py
+[tla-runner-tests] PASS (0.1s); target/verification/experiment-final/verification/tla-runner-tests.log
+[tla] /usr/bin/python3 scripts/check_tla.py --output /home/zpconn/code/aerostore/target/verification/experiment-final/verification/tla
+[tla] PASS (10.4s); target/verification/experiment-final/verification/tla.log
+[integration-default] cargo test --offline -p aerostore_core --release --test occ_transactional_index --test transactional_query_execution --test occ_write_skew -- --test-threads=1
+[integration-default] PASS (12.3s); target/verification/experiment-final/verification/integration-default.log
+[crucible-default] cargo bench --offline -p aerostore_core --bench hyperfeed_extended_crucible -- --engine aerostore --mode all --families 8 --cycles 1 --workers 4 --shm-mib 128 --output /home/zpconn/code/aerostore/target/verification/experiment-final/verification/crucible-default.json
+[crucible-default] PASS (14.8s); target/verification/experiment-final/verification/crucible-default.log
+[integration-verified-buckets-sort] cargo test --offline -p aerostore_core --release --features verified-buckets-sort --test occ_transactional_index --test transactional_query_execution --test occ_write_skew -- --test-threads=1
+[integration-verified-buckets-sort] PASS (2.5s); target/verification/experiment-final/verification/integration-verified-buckets-sort.log
+[crucible-verified-buckets-sort] cargo bench --offline -p aerostore_core --features verified-buckets-sort --bench hyperfeed_extended_crucible -- --engine aerostore --mode all --families 8 --cycles 1 --workers 4 --shm-mib 128 --output /home/zpconn/code/aerostore/target/verification/experiment-final/verification/crucible-verified-buckets-sort.json
+[crucible-verified-buckets-sort] PASS (16.3s); target/verification/experiment-final/verification/crucible-verified-buckets-sort.log
+[integration-verified-buckets-bitmap] cargo test --offline -p aerostore_core --release --features verified-buckets-bitmap --test occ_transactional_index --test transactional_query_execution --test occ_write_skew -- --test-threads=1
+[integration-verified-buckets-bitmap] PASS (2.5s); target/verification/experiment-final/verification/integration-verified-buckets-bitmap.log
+[crucible-verified-buckets-bitmap] cargo bench --offline -p aerostore_core --features verified-buckets-bitmap --bench hyperfeed_extended_crucible -- --engine aerostore --mode all --families 8 --cycles 1 --workers 4 --shm-mib 128 --output /home/zpconn/code/aerostore/target/verification/experiment-final/verification/crucible-verified-buckets-bitmap.json
+[crucible-verified-buckets-bitmap] PASS (16.5s); target/verification/experiment-final/verification/crucible-verified-buckets-bitmap.log
+Report: /home/zpconn/code/aerostore/target/verification/experiment-final/verification/report.json
+Profile pilot: PASS; whole engine: UNPROVED
