@@ -1,0 +1,274 @@
+[
+  {
+    "arena": "2g",
+    "seconds": 120,
+    "tps": 358954.25,
+    "operations": 43076086,
+    "arena_bytes": 21730504,
+    "arena_mib": 20.72382354736328,
+    "second_half_growth_bytes": 80104,
+    "retained_interval_tps": 1.0352,
+    "elapsed": 120.004,
+    "postgres_tps_ratio": 7.0,
+    "postgres_p99_ratio": 0.125,
+    "index_postings": 50000,
+    "max_insert_attempts": 1,
+    "pressure_state": 0,
+    "allocation_failures": 0,
+    "ownership_audit": true,
+    "fresh_bytes": {
+      "general": 1306880,
+      "row_version": 5732320,
+      "skip_node": 10355664,
+      "skip_posting": 3294928,
+      "skip_tower": 958048,
+      "spill": 0
+    },
+    "post_seed_fresh_bytes": {
+      "general": 0,
+      "row_version": 1332320,
+      "skip_node": 1555488,
+      "skip_posting": 494928,
+      "skip_tower": 159288,
+      "spill": 0
+    },
+    "allocations": [
+      {
+        "profile": "profile_2g",
+        "class": "nodes",
+        "allocated": "58839",
+        "reachable": "50001",
+        "retired": "0",
+        "reusable": "8838"
+      },
+      {
+        "profile": "profile_2g",
+        "class": "postings",
+        "allocated": "58838",
+        "reachable": "50000",
+        "retired": "0",
+        "reusable": "8838"
+      },
+      {
+        "profile": "profile_2g",
+        "class": "towers",
+        "allocated": "58843",
+        "reachable": "50001",
+        "retired": "0",
+        "reusable": "8842"
+      },
+      {
+        "profile": "profile_2g",
+        "class": "tower_lanes",
+        "allocated": "119756",
+        "reachable": "99302",
+        "retired": "0",
+        "reusable": "20454"
+      }
+    ]
+  },
+  {
+    "arena": "2g",
+    "seconds": 240,
+    "tps": 376726.68,
+    "operations": 90416047,
+    "arena_bytes": 21874224,
+    "arena_mib": 20.860885620117188,
+    "second_half_growth_bytes": 17824,
+    "retained_interval_tps": 0.9342,
+    "elapsed": 240.004,
+    "postgres_tps_ratio": 7.66,
+    "postgres_p99_ratio": 0.062,
+    "index_postings": 50000,
+    "max_insert_attempts": 1,
+    "pressure_state": 0,
+    "allocation_failures": 0,
+    "ownership_audit": true,
+    "fresh_bytes": {
+      "general": 1306880,
+      "row_version": 5807648,
+      "skip_node": 10405296,
+      "skip_posting": 3310720,
+      "skip_tower": 961016,
+      "spill": 0
+    },
+    "post_seed_fresh_bytes": {
+      "general": 0,
+      "row_version": 1407648,
+      "skip_node": 1605120,
+      "skip_posting": 510720,
+      "skip_tower": 162256,
+      "spill": 0
+    },
+    "allocations": [
+      {
+        "profile": "profile_2g",
+        "class": "nodes",
+        "allocated": "59121",
+        "reachable": "50001",
+        "retired": "0",
+        "reusable": "9120"
+      },
+      {
+        "profile": "profile_2g",
+        "class": "postings",
+        "allocated": "59120",
+        "reachable": "50000",
+        "retired": "0",
+        "reusable": "9120"
+      },
+      {
+        "profile": "profile_2g",
+        "class": "towers",
+        "allocated": "59232",
+        "reachable": "50001",
+        "retired": "0",
+        "reusable": "9231"
+      },
+      {
+        "profile": "profile_2g",
+        "class": "tower_lanes",
+        "allocated": "120127",
+        "reachable": "100115",
+        "retired": "0",
+        "reusable": "20012"
+      }
+    ]
+  },
+  {
+    "arena": "128m",
+    "seconds": 120,
+    "tps": 369716.42,
+    "operations": 44367587,
+    "arena_bytes": 21808384,
+    "arena_mib": 20.798095703125,
+    "second_half_growth_bytes": 96344,
+    "retained_interval_tps": 1.0136,
+    "elapsed": 120.004,
+    "postgres_tps_ratio": null,
+    "postgres_p99_ratio": null,
+    "index_postings": 50000,
+    "max_insert_attempts": 1,
+    "pressure_state": 0,
+    "allocation_failures": 0,
+    "ownership_audit": true,
+    "fresh_bytes": {
+      "general": 1306880,
+      "row_version": 5752736,
+      "skip_node": 10396320,
+      "skip_posting": 3307864,
+      "skip_tower": 961920,
+      "spill": 0
+    },
+    "post_seed_fresh_bytes": {
+      "general": 0,
+      "row_version": 1352736,
+      "skip_node": 1596144,
+      "skip_posting": 507864,
+      "skip_tower": 163160,
+      "spill": 0
+    },
+    "allocations": [
+      {
+        "profile": "diagnostic",
+        "class": "nodes",
+        "allocated": "59070",
+        "reachable": "50001",
+        "retired": "0",
+        "reusable": "9069"
+      },
+      {
+        "profile": "diagnostic",
+        "class": "postings",
+        "allocated": "59069",
+        "reachable": "50000",
+        "retired": "0",
+        "reusable": "9069"
+      },
+      {
+        "profile": "diagnostic",
+        "class": "towers",
+        "allocated": "59119",
+        "reachable": "50001",
+        "retired": "0",
+        "reusable": "9118"
+      },
+      {
+        "profile": "diagnostic",
+        "class": "tower_lanes",
+        "allocated": "120240",
+        "reachable": "100311",
+        "retired": "0",
+        "reusable": "19929"
+      }
+    ]
+  },
+  {
+    "arena": "128m",
+    "seconds": 240,
+    "tps": 371965.79,
+    "operations": 89273403,
+    "arena_bytes": 21895232,
+    "arena_mib": 20.88092041015625,
+    "second_half_growth_bytes": 34280,
+    "retained_interval_tps": 1.0046,
+    "elapsed": 240.004,
+    "postgres_tps_ratio": null,
+    "postgres_p99_ratio": null,
+    "index_postings": 50000,
+    "max_insert_attempts": 1,
+    "pressure_state": 0,
+    "allocation_failures": 0,
+    "ownership_audit": true,
+    "fresh_bytes": {
+      "general": 1306880,
+      "row_version": 5804128,
+      "skip_node": 10421488,
+      "skip_posting": 3315872,
+      "skip_tower": 964200,
+      "spill": 0
+    },
+    "post_seed_fresh_bytes": {
+      "general": 0,
+      "row_version": 1404128,
+      "skip_node": 1621312,
+      "skip_posting": 515872,
+      "skip_tower": 165440,
+      "spill": 0
+    },
+    "allocations": [
+      {
+        "profile": "diagnostic",
+        "class": "nodes",
+        "allocated": "59213",
+        "reachable": "50001",
+        "retired": "0",
+        "reusable": "9212"
+      },
+      {
+        "profile": "diagnostic",
+        "class": "postings",
+        "allocated": "59212",
+        "reachable": "50000",
+        "retired": "0",
+        "reusable": "9212"
+      },
+      {
+        "profile": "diagnostic",
+        "class": "towers",
+        "allocated": "59269",
+        "reachable": "50001",
+        "retired": "0",
+        "reusable": "9268"
+      },
+      {
+        "profile": "diagnostic",
+        "class": "tower_lanes",
+        "allocated": "120525",
+        "reachable": "100506",
+        "retired": "0",
+        "reusable": "20019"
+      }
+    ]
+  }
+]

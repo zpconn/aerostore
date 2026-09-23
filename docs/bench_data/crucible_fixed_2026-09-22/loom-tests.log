@@ -1,0 +1,12 @@
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/aerostore_core)
+    Finished `release` profile [optimized] target(s) in 1.72s
+     Running tests/shm_mutation_model.rs (/tmp/aerostore-loom-target/release/deps/shm_mutation_model-9e42e42fe1ac69e3)
+
+running 5 tests
+test model_detects_the_original_unprotected_predecessor_race - should panic ... ok
+test model_detects_missing_row_guard_even_with_serialized_index_moves - should panic ... ok
+test row_guard_preserves_commit_and_index_order ... ok
+test insertion_deletion_reader_and_gc_preserve_reachability_and_ownership ... ok
+test failed_prepublication_allocations_are_returned_before_unlock ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s

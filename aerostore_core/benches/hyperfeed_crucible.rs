@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicI64, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+use aerostore_core::shm::ARENA_CLASS_COUNT;
 use aerostore_core::{
     spawn_vacuum_daemon_with_config, spawn_wal_writer_daemon, IndexCompare, IndexValue,
     OccCommitter, OccError, OccRecycleTelemetry, OccTable, RelPtr, RetryBackoff, RetryPolicy,
@@ -40,8 +41,8 @@ const SHM_BYTES_AEROSTORE_512M: usize = 512 << 20;
 const SHM_BYTES_AEROSTORE_1G: usize = 1 << 30;
 const SHM_BYTES_AEROSTORE_2G: usize = 2 << 30;
 const SHM_BYTES_AEROSTORE_3584M: usize = 3584 << 20;
-const DEFAULT_VACUUM_INTERVAL_MS: u64 = 50;
-const DEFAULT_INDEX_GC_INTERVAL_MS: u64 = 50;
+const DEFAULT_VACUUM_INTERVAL_MS: u64 = 25;
+const DEFAULT_INDEX_GC_INTERVAL_MS: u64 = 25;
 const MEMORY_SAMPLE_INTERVAL_MS: u64 = 5_000;
 const DEFAULT_ALLOC_TELEMETRY_INTERVAL_MS: u64 = 5_000;
 const DEFAULT_ALLOC_TELEMETRY_DEPTH_SCAN_LIMIT: usize = 65_536;
@@ -130,6 +131,7 @@ struct WorkerStats {
     scan_ops: AtomicU64,
     hot_upserts: AtomicU64,
     conflicts: AtomicU64,
+    operation_failures: AtomicU64,
     index_remove_failures: AtomicU64,
     index_insert_failures: AtomicU64,
     total_latency: Histogram,
@@ -146,6 +148,7 @@ impl WorkerStats {
             scan_ops: AtomicU64::new(0),
             hot_upserts: AtomicU64::new(0),
             conflicts: AtomicU64::new(0),
+            operation_failures: AtomicU64::new(0),
             index_remove_failures: AtomicU64::new(0),
             index_insert_failures: AtomicU64::new(0),
             total_latency: Histogram::new(),
@@ -195,6 +198,7 @@ struct EngineRunResult {
     scan_ops: u64,
     hot_upserts: u64,
     conflicts: u64,
+    operation_failures: u64,
     index_remove_failures: u64,
     index_insert_failures: u64,
     tps: f64,
@@ -250,6 +254,11 @@ struct IndexRetryTelemetry {
     gc_recycle_errors: u64,
     gc_assist_calls: u64,
     gc_assist_reclaimed: u64,
+    gc_daemon_cycles: u64,
+    gc_daemon_reclaimed: u64,
+    pressure_window_failures: u64,
+    pressure_window_reclaimed: u64,
+    pressure_consecutive_healthy_windows: u32,
     retired_backlog: u64,
     pressure_state: u32,
     pressure_to_normal: u64,
@@ -265,6 +274,8 @@ struct IndexRetryTelemetry {
     reserve_tower_pushes: u64,
     reserve_tower_hits: u64,
     reserve_tower_misses: u64,
+    retry_phase_b_hits: u64,
+    retry_phase_c_hits: u64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -309,8 +320,210 @@ enum QueryKind {
     Scan,
 }
 
+#[derive(Clone, Copy, Debug)]
+struct IntervalSample {
+    elapsed: Duration,
+    total_ops: u64,
+    head_offset: u32,
+    reclaimed_nodes: u64,
+    retired_backlog: u64,
+    alloc_failures: u64,
+    fresh_by_class: [u64; ARENA_CLASS_COUNT],
+    retired_postings: u64,
+    reclaimed_postings: u64,
+}
+
+impl IntervalSample {
+    fn capture(
+        now: Instant,
+        started: Instant,
+        state: &RunState,
+        shm: &ShmArena,
+        index: &SecondaryIndex<usize>,
+    ) -> Self {
+        let telemetry = index.mutation_telemetry();
+        Self {
+            elapsed: now.saturating_duration_since(started),
+            total_ops: state
+                .workers
+                .iter()
+                .map(|w| w.total_ops.load(Ordering::Acquire))
+                .sum(),
+            head_offset: shm.chunked_arena().head_offset(),
+            reclaimed_nodes: index.reclaimed_nodes(),
+            retired_backlog: telemetry.retired_backlog,
+            alloc_failures: telemetry.alloc_failure_events,
+            fresh_by_class: shm.fresh_allocation_bytes(),
+            retired_postings: telemetry.retired_postings,
+            reclaimed_postings: telemetry.reclaimed_postings,
+        }
+    }
+
+    fn tps_since(&self, previous: &Self) -> f64 {
+        (self.total_ops - previous.total_ops) as f64
+            / self
+                .elapsed
+                .saturating_sub(previous.elapsed)
+                .as_secs_f64()
+                .max(f64::EPSILON)
+    }
+
+    fn print(&self, profile: &str, previous: &Self) {
+        println!("hyperfeed_crucible_interval: profile={} elapsed_secs={:.3} interval_secs={:.3} interval_tps={:.2} total_ops={} arena_head_bytes={} fresh_bytes={} reclaimed_nodes={} retired_backlog={} alloc_failure_events={} retired_postings={} reclaimed_postings={}",
+            profile, self.elapsed.as_secs_f64(), self.elapsed.saturating_sub(previous.elapsed).as_secs_f64(),
+            self.tps_since(previous), self.total_ops, self.head_offset,
+            self.head_offset.saturating_sub(previous.head_offset),
+            self.reclaimed_nodes.saturating_sub(previous.reclaimed_nodes),
+            self.retired_backlog, self.alloc_failures, self.retired_postings,
+            self.reclaimed_postings.saturating_sub(previous.reclaimed_postings));
+        let fresh: [u64; ARENA_CLASS_COUNT] = std::array::from_fn(|i| {
+            self.fresh_by_class[i].saturating_sub(previous.fresh_by_class[i])
+        });
+        println!("hyperfeed_crucible_fresh: profile={} elapsed_secs={:.3} general_bytes={} row_version_bytes={} skip_node_bytes={} skip_posting_bytes={} skip_tower_bytes={} spill_bytes={}",
+            profile, self.elapsed.as_secs_f64(), fresh[0], fresh[1], fresh[2], fresh[3], fresh[4], fresh[5..].iter().sum::<u64>());
+    }
+}
+
+fn validate_table_index(
+    table: &OccTable<CrucibleRow>,
+    index: &SecondaryIndex<usize>,
+    profile: &str,
+) -> Result<(), String> {
+    let rows = table
+        .snapshot_latest_rows()
+        .map_err(|err| format!("final table snapshot: {err}"))?;
+    if rows.len() != TOTAL_KEYS {
+        return Err(format!(
+            "final table row count {}, expected {TOTAL_KEYS}",
+            rows.len()
+        ));
+    }
+    let mut expected: Vec<_> = rows
+        .into_iter()
+        .map(|(row_id, row)| (IndexValue::I64(row.event_ts), row_id))
+        .collect();
+    expected.sort_unstable();
+    let actual = index
+        .try_entries()
+        .map_err(|err| format!("final index traversal: {err}"))?;
+    // Compare the raw traversal: sorting/deduplicating it would conceal corruption.
+    if actual != expected {
+        let mismatch = actual
+            .iter()
+            .zip(&expected)
+            .position(|(a, e)| a != e)
+            .unwrap_or(actual.len().min(expected.len()));
+        return Err(format!("table/index mismatch: expected={} actual={} first_mismatch={} expected_entry={:?} actual_entry={:?}",
+            expected.len(), actual.len(), mismatch, expected.get(mismatch), actual.get(mismatch)));
+    }
+    if index.distinct_key_count() != TOTAL_KEYS {
+        return Err(format!(
+            "index key accounting mismatch: reported={} reachable={TOTAL_KEYS}",
+            index.distinct_key_count()
+        ));
+    }
+    println!("hyperfeed_crucible_correctness: profile={profile} table_rows={} index_postings={} exact_match=true", expected.len(), actual.len());
+    Ok(())
+}
+
+fn validate_intervals(
+    samples: &[IntervalSample],
+    duration: Duration,
+    profile: CrucibleProfile,
+) -> Result<(), String> {
+    let first = samples.first().expect("initial sample");
+    let last = samples.last().expect("final sample");
+    // Short smoke runs verify correctness, but cannot establish a steady state.
+    if duration < Duration::from_secs(30) {
+        println!(
+            "hyperfeed_crucible_stability: profile={} status=short_run arena_head_bytes={}",
+            profile.label, last.head_offset
+        );
+        return Ok(());
+    }
+    if samples.len() < 7 {
+        return Err(format!("insufficient interval samples ({}) for a sustained run; reduce AEROSTORE_CRUCIBLE_SAMPLE_INTERVAL_MS", samples.len()));
+    }
+    let midpoint = samples.iter().find(|s| s.elapsed >= duration / 2).unwrap();
+    let tail_growth = last.head_offset.saturating_sub(midpoint.head_offset);
+    // Fixed-cardinality churn should reuse storage. Permit one additional seeded
+    // working set in the second half; this bound does not grow with arena size or
+    // host throughput, so simply raising the memory cap cannot hide a leak.
+    let growth_budget = first.head_offset;
+    let tps: Vec<f64> = samples
+        .windows(2)
+        .filter(|w| w[1].elapsed - w[0].elapsed >= interval_sample_period() * 4 / 5)
+        .map(|w| w[1].tps_since(&w[0]))
+        .collect();
+    let split = tps.len() / 2;
+    let mean = |values: &[f64]| values.iter().sum::<f64>() / values.len().max(1) as f64;
+    let early_tps = mean(&tps[..split]);
+    let late_tps = mean(&tps[split..]);
+    let retained_tps = late_tps / early_tps.max(f64::EPSILON);
+    println!("hyperfeed_crucible_stability: profile={} tail_fresh_bytes={} fresh_growth_budget_bytes={} early_interval_tps={:.2} late_interval_tps={:.2} retained_tps={:.4} arena_head_bytes={}",
+        profile.label, tail_growth, growth_budget, early_tps, late_tps, retained_tps, last.head_offset);
+    if tps.is_empty() || tps.iter().any(|value| *value == 0.0) || retained_tps < 0.5 {
+        return Err(format!(
+            "sustained throughput cliff: retained_tps={retained_tps:.4}, intervals={tps:?}"
+        ));
+    }
+    if tail_growth > growth_budget {
+        return Err(format!("unbounded arena growth: second half allocated {tail_growth} bytes, seeded footprint budget {growth_budget}"));
+    }
+    Ok(())
+}
+
+fn print_aerostore_diagnostic(result: &EngineRunResult, profile: CrucibleProfile) {
+    println!("hyperfeed_crucible_config: profile={} mode=aerostore_only aerostore_shm_bytes={} workers={}",
+        profile.label, profile.aerostore_shm_bytes, WORKERS);
+    println!("| Engine | TPS | Total Ops | p50 (us) | p90 (us) | p99 (us) | Upserts | Scans | Hot Upserts | Conflicts | Index Remove Fail | Index Insert Fail |");
+    println!(
+        "| aerostore | {:.2} | {} | {:.2} | {:.2} | {:.2} | {} | {} | {} | {} | {} | {} |",
+        result.tps,
+        result.total_ops,
+        ns_to_us(result.total_latency.p50_ns),
+        ns_to_us(result.total_latency.p90_ns),
+        ns_to_us(result.total_latency.p99_ns),
+        result.upsert_ops,
+        result.scan_ops,
+        result.hot_upserts,
+        result.conflicts,
+        result.index_remove_failures,
+        result.index_insert_failures
+    );
+    println!("hyperfeed_crucible_engine_timing: profile={} aerostore_elapsed_secs={:.3} operation_failures={}",
+        profile.label, result.elapsed.as_secs_f64(), result.operation_failures);
+    if let Some(reclaim) = result.reclaim_telemetry {
+        println!("hyperfeed_crucible_reclaim: profile={} vacuum_reclaimed_rows={} index_retired_nodes={} index_reclaimed_nodes={} free_list_pushes={} free_list_pops={}",
+            profile.label, reclaim.vacuum_reclaimed_rows, reclaim.index_retired_nodes_delta,
+            reclaim.index_reclaimed_nodes_delta, reclaim.free_list_pushes_delta, reclaim.free_list_pops_delta);
+    }
+    if let Some(recycle) = result.occ_recycle_telemetry {
+        println!(
+            "hyperfeed_crucible_occ: profile={} alloc_fresh={} reused={}",
+            profile.label,
+            recycle.alloc_fresh_delta,
+            recycle.alloc_from_starved_delta
+                + recycle.alloc_from_primary_delta
+                + recycle.alloc_from_probe_delta
+        );
+    }
+}
+
 fn bench_hyperfeed_crucible(c: &mut Criterion) {
     let duration = crucible_duration();
+    // This mode runs the identical Aerostore workload and correctness gates without
+    // requiring Docker. Comparison runs below retain all PostgreSQL performance gates.
+    if aerostore_only() {
+        for profile in selected_profiles() {
+            let result = run_aerostore_crucible(duration, profile).unwrap_or_else(|err| {
+                panic!("aerostore diagnostic failed ({}): {err}", profile.label)
+            });
+            assert_workload_mix(&result, profile.label, "aerostore");
+            print_aerostore_diagnostic(&result, profile);
+        }
+        return;
+    }
     let results = run_crucible(duration);
 
     for result in &results {
@@ -355,7 +568,28 @@ fn run_crucible(duration: Duration) -> Vec<ProfileRunResult> {
     out
 }
 
+fn aerostore_only() -> bool {
+    std::env::var("AEROSTORE_CRUCIBLE_AEROSTORE_ONLY").as_deref() == Ok("1")
+}
+
 fn selected_profiles() -> Vec<CrucibleProfile> {
+    if let Ok(raw) = std::env::var("AEROSTORE_CRUCIBLE_SHM_MIB") {
+        assert!(
+            aerostore_only(),
+            "arena overrides require AEROSTORE_CRUCIBLE_AEROSTORE_ONLY=1"
+        );
+        let mib = raw
+            .parse::<usize>()
+            .expect("AEROSTORE_CRUCIBLE_SHM_MIB must be an integer");
+        assert!(
+            (32..=3584).contains(&mib),
+            "diagnostic arena must be 32..=3584 MiB"
+        );
+        return vec![CrucibleProfile {
+            label: "diagnostic",
+            aerostore_shm_bytes: mib << 20,
+        }];
+    }
     let Some(raw) = std::env::var("AEROSTORE_CRUCIBLE_PROFILE_FILTER").ok() else {
         return PROFILES.to_vec();
     };
@@ -410,7 +644,7 @@ impl AllocTelemetryRecorder {
         let mut writer = BufWriter::new(file);
         writeln!(
             writer,
-            "elapsed_ms,head_offset,head_peak,free_list_head_offset,free_list_depth_est,free_list_depth_truncated,free_list_pushes,free_list_pops,free_list_net,free_list_pop_misses,retry_alloc,retry_loops,retry_structural,max_insert_attempts,max_remove_attempts,gc_nodes_examined,gc_nodes_requeued,gc_recycle_errors,gc_assist_calls,gc_assist_reclaimed,retired_backlog,pressure_state,pressure_to_normal,pressure_to_warm,pressure_to_hot,alloc_failure_events,reserve_node_pushes,reserve_node_hits,reserve_node_misses,reserve_posting_pushes,reserve_posting_hits,reserve_posting_misses,reserve_tower_pushes,reserve_tower_hits,reserve_tower_misses"
+            "elapsed_ms,head_offset,head_peak,free_list_head_offset,free_list_depth_est,free_list_depth_truncated,free_list_pushes,free_list_pops,free_list_net,free_list_pop_misses,retry_alloc,retry_loops,retry_structural,max_insert_attempts,max_remove_attempts,gc_nodes_examined,gc_nodes_requeued,gc_recycle_errors,gc_assist_calls,gc_assist_reclaimed,retired_backlog,pressure_state,pressure_to_normal,pressure_to_warm,pressure_to_hot,alloc_failure_events,reserve_node_pushes,reserve_node_hits,reserve_node_misses,reserve_posting_pushes,reserve_posting_hits,reserve_posting_misses,reserve_tower_pushes,reserve_tower_hits,reserve_tower_misses,fresh_general_bytes,fresh_row_version_bytes,fresh_skip_node_bytes,fresh_skip_posting_bytes,fresh_skip_tower_bytes,fresh_spill_bytes,retired_postings,reclaimed_postings"
         )
         .map_err(|err| {
             format!(
@@ -474,11 +708,12 @@ impl AllocTelemetryRecorder {
         let free_list_net = free_list_pushes.saturating_sub(free_list_pops);
         let free_list_pop_misses = shm.free_list_pop_misses();
         let retry = time_index.mutation_telemetry();
+        let fresh = shm.fresh_allocation_bytes();
         let elapsed_ms = now.saturating_duration_since(started).as_millis();
 
         writeln!(
             self.writer,
-            "{elapsed_ms},{head_offset},{head_peak},{free_list_head_offset},{free_list_depth_est},{depth_truncated},{free_list_pushes},{free_list_pops},{free_list_net},{free_list_pop_misses},{retry_alloc},{retry_loops},{retry_structural},{max_insert_attempts},{max_remove_attempts},{gc_nodes_examined},{gc_nodes_requeued},{gc_recycle_errors},{gc_assist_calls},{gc_assist_reclaimed},{retired_backlog},{pressure_state},{pressure_to_normal},{pressure_to_warm},{pressure_to_hot},{alloc_failure_events},{reserve_node_pushes},{reserve_node_hits},{reserve_node_misses},{reserve_posting_pushes},{reserve_posting_hits},{reserve_posting_misses},{reserve_tower_pushes},{reserve_tower_hits},{reserve_tower_misses}",
+            "{elapsed_ms},{head_offset},{head_peak},{free_list_head_offset},{free_list_depth_est},{depth_truncated},{free_list_pushes},{free_list_pops},{free_list_net},{free_list_pop_misses},{retry_alloc},{retry_loops},{retry_structural},{max_insert_attempts},{max_remove_attempts},{gc_nodes_examined},{gc_nodes_requeued},{gc_recycle_errors},{gc_assist_calls},{gc_assist_reclaimed},{retired_backlog},{pressure_state},{pressure_to_normal},{pressure_to_warm},{pressure_to_hot},{alloc_failure_events},{reserve_node_pushes},{reserve_node_hits},{reserve_node_misses},{reserve_posting_pushes},{reserve_posting_hits},{reserve_posting_misses},{reserve_tower_pushes},{reserve_tower_hits},{reserve_tower_misses},{fresh_general_bytes},{fresh_row_version_bytes},{fresh_skip_node_bytes},{fresh_skip_posting_bytes},{fresh_skip_tower_bytes},{fresh_spill_bytes},{retired_postings},{reclaimed_postings}",
             head_peak = self.head_peak,
             retry_alloc = retry.retry_alloc,
             retry_loops = retry.retry_loops,
@@ -505,6 +740,14 @@ impl AllocTelemetryRecorder {
             reserve_tower_pushes = retry.reserve_tower_pushes,
             reserve_tower_hits = retry.reserve_tower_hits,
             reserve_tower_misses = retry.reserve_tower_misses,
+            fresh_general_bytes = fresh[0],
+            fresh_row_version_bytes = fresh[1],
+            fresh_skip_node_bytes = fresh[2],
+            fresh_skip_posting_bytes = fresh[3],
+            fresh_skip_tower_bytes = fresh[4],
+            fresh_spill_bytes = fresh[5..].iter().sum::<u64>(),
+            retired_postings = retry.retired_postings,
+            reclaimed_postings = retry.reclaimed_postings,
         )
         .map_err(|err| format!("failed to write alloc telemetry sample: {}", err))
     }
@@ -558,7 +801,9 @@ fn run_aerostore_crucible(
     for row_id in 0..TOTAL_KEYS {
         let row = CrucibleRow::seeded(row_id);
         table.seed_row(row_id, row).map_err(|err| err.to_string())?;
-        time_index.insert(IndexValue::I64(row.event_ts), row_id);
+        time_index
+            .try_insert(IndexValue::I64(row.event_ts), row_id)
+            .map_err(|err| format!("failed to seed index row {row_id}: {err}"))?;
     }
 
     let state_ptr = shm
@@ -566,6 +811,17 @@ fn run_aerostore_crucible(
         .alloc(RunState::new(TOTAL_KEYS as i64))
         .map_err(|err| err.to_string())?;
     let state_offset = state_ptr.load(Ordering::Acquire);
+
+    // Open optional output before launching children, so a path error cannot
+    // leave workers running after the parent returns.
+    let mut alloc_telemetry = if let Some(cfg) = alloc_telemetry_cfg {
+        Some(
+            AllocTelemetryRecorder::start(cfg, Instant::now(), shm.as_ref())
+                .map_err(|err| format!("failed to start alloc telemetry: {}", err))?,
+        )
+    } else {
+        None
+    };
 
     let reclaim_start = ReclaimSnapshot {
         index_retired_nodes: time_index.retired_nodes(),
@@ -623,7 +879,7 @@ fn run_aerostore_crucible(
             terminate_children(&pids);
             let _ = ring.close();
             let _ = wal_daemon.join();
-            stop_background_daemons(&vacuum_daemon, &index_gc_daemon);
+            let _ = stop_background_daemons(&vacuum_daemon, &index_gc_daemon);
             remove_if_exists(&wal_path);
             return Err(format!(
                 "fork failed for aerostore worker {}: {}",
@@ -660,7 +916,7 @@ fn run_aerostore_crucible(
         terminate_children(&pids);
         let _ = ring.close();
         let _ = wal_daemon.join();
-        stop_background_daemons(&vacuum_daemon, &index_gc_daemon);
+        let _ = stop_background_daemons(&vacuum_daemon, &index_gc_daemon);
         remove_if_exists(&wal_path);
         return Err(err);
     }
@@ -677,14 +933,6 @@ fn run_aerostore_crucible(
 
     let started = Instant::now();
     state.go.store(1, Ordering::Release);
-    let mut alloc_telemetry = if let Some(cfg) = alloc_telemetry_cfg {
-        Some(
-            AllocTelemetryRecorder::start(cfg, started, shm.as_ref())
-                .map_err(|err| format!("failed to start alloc telemetry: {}", err))?,
-        )
-    } else {
-        None
-    };
     let mut alloc_telemetry_error: Option<String> = None;
     if let Some(recorder) = alloc_telemetry.as_mut() {
         if let Err(err) = recorder.maybe_sample(started, started, shm.as_ref(), &time_index) {
@@ -693,10 +941,18 @@ fn run_aerostore_crucible(
         }
     }
 
+    let mut intervals = vec![IntervalSample::capture(
+        started,
+        started,
+        state,
+        shm.as_ref(),
+        &time_index,
+    )];
+    let mut next_interval = started + interval_sample_period();
     let deadline = started + duration;
     let mut next_mem_sample = started;
     let mut epoch_lag_peak = reclaim_start.epoch.lag();
-    while Instant::now() < deadline {
+    while Instant::now() < deadline && state.stop.load(Ordering::Acquire) == 0 {
         let now = Instant::now();
         if now >= deadline {
             break;
@@ -714,6 +970,12 @@ fn run_aerostore_crucible(
             }
             next_mem_sample = now + Duration::from_millis(MEMORY_SAMPLE_INTERVAL_MS);
         }
+        if now >= next_interval {
+            let sample = IntervalSample::capture(now, started, state, shm.as_ref(), &time_index);
+            sample.print(profile.label, intervals.last().unwrap());
+            intervals.push(sample);
+            next_interval = now + interval_sample_period();
+        }
         if let Some(recorder) = alloc_telemetry.as_mut() {
             if let Err(err) = recorder.maybe_sample(now, started, shm.as_ref(), &time_index) {
                 alloc_telemetry_error = Some(err);
@@ -723,23 +985,43 @@ fn run_aerostore_crucible(
     }
     state.stop.store(1, Ordering::Release);
 
-    let timed_out_workers =
-        wait_for_children_or_terminate(&pids, duration + Duration::from_secs(60));
+    let workers_result = wait_for_children_or_terminate(&pids, Duration::from_secs(10));
     let elapsed = started.elapsed();
+    if let Err(err) = &workers_result {
+        // A killed/crashed worker may own a shared lock. Do not enter that arena
+        // again or join the vacuum thread: either can block forever. Reap the
+        // remaining child daemons and exit this disposable benchmark process.
+        eprintln!("fatal Aerostore worker failure: {err}");
+        let _ = index_gc_daemon.terminate(libc::SIGKILL);
+        let _ = wal_daemon.terminate(libc::SIGKILL);
+        let _ = index_gc_daemon.join();
+        let _ = wal_daemon.join_any_status();
+        remove_if_exists(&wal_path);
+        std::process::exit(1);
+    }
 
-    ring.close()
-        .map_err(|err| format!("failed to close Aerostore ring: {err}"))?;
-    wal_daemon
+    let ring_result = ring
+        .close()
+        .map_err(|err| format!("failed to close Aerostore ring: {err}"));
+    let wal_result = wal_daemon
         .join()
-        .map_err(|err| format!("Aerostore WAL daemon failed to exit cleanly: {err}"))?;
-    stop_background_daemons(&vacuum_daemon, &index_gc_daemon);
+        .map_err(|err| format!("Aerostore WAL daemon failed to exit cleanly: {err}"));
+    let daemon_result = stop_background_daemons(&vacuum_daemon, &index_gc_daemon);
+    let final_sample =
+        IntervalSample::capture(Instant::now(), started, state, shm.as_ref(), &time_index);
+    final_sample.print(profile.label, intervals.last().unwrap());
+    intervals.push(final_sample);
     if let Some(recorder) = alloc_telemetry {
         if let Err(err) = recorder.finalize(Instant::now(), started, shm.as_ref(), &time_index) {
             alloc_telemetry_error = Some(err);
         }
     }
     if let Some(err) = alloc_telemetry_error {
-        eprintln!("alloc telemetry warning ({}): {}", profile.label, err);
+        remove_if_exists(&wal_path);
+        return Err(format!(
+            "alloc telemetry failed ({}): {}",
+            profile.label, err
+        ));
     }
 
     let reclaim_end = ReclaimSnapshot {
@@ -751,9 +1033,15 @@ fn run_aerostore_crucible(
     };
     let reclaim_telemetry = ReclaimTelemetry {
         vacuum_reclaimed_rows: vacuum_reclaimed_rows.load(Ordering::Acquire),
+        // retired_nodes() is a queue depth, not a cumulative retirement count.
         index_retired_nodes_delta: reclaim_end
             .index_retired_nodes
-            .saturating_sub(reclaim_start.index_retired_nodes),
+            .saturating_add(reclaim_end.index_reclaimed_nodes)
+            .saturating_sub(
+                reclaim_start
+                    .index_retired_nodes
+                    .saturating_add(reclaim_start.index_reclaimed_nodes),
+            ),
         index_reclaimed_nodes_delta: reclaim_end
             .index_reclaimed_nodes
             .saturating_sub(reclaim_start.index_reclaimed_nodes),
@@ -788,6 +1076,11 @@ fn run_aerostore_crucible(
         gc_recycle_errors: index_retry.gc_recycle_errors,
         gc_assist_calls: index_retry.gc_assist_calls,
         gc_assist_reclaimed: index_retry.gc_assist_reclaimed,
+        gc_daemon_cycles: index_retry.gc_daemon_cycles,
+        gc_daemon_reclaimed: index_retry.gc_daemon_reclaimed,
+        pressure_window_failures: index_retry.pressure_window_failures,
+        pressure_window_reclaimed: index_retry.pressure_window_reclaimed,
+        pressure_consecutive_healthy_windows: index_retry.pressure_consecutive_healthy_windows,
         retired_backlog: index_retry.retired_backlog,
         pressure_state: index_retry.pressure_state,
         pressure_to_normal: index_retry.pressure_to_normal,
@@ -803,6 +1096,8 @@ fn run_aerostore_crucible(
         reserve_tower_pushes: index_retry.reserve_tower_pushes,
         reserve_tower_hits: index_retry.reserve_tower_hits,
         reserve_tower_misses: index_retry.reserve_tower_misses,
+        retry_phase_b_hits: index_retry.retry_phase_b_hits,
+        retry_phase_c_hits: index_retry.retry_phase_c_hits,
     };
     let memory_telemetry = if mem_samples > 0 {
         Some(MemoryTelemetry {
@@ -815,13 +1110,100 @@ fn run_aerostore_crucible(
         None
     };
 
-    if timed_out_workers > 0 {
-        remove_if_exists(&wal_path);
+    remove_if_exists(&wal_path);
+    workers_result?;
+    ring_result?;
+    wal_result?;
+    daemon_result?;
+    if reclaim_end.epoch.active_slots != 0 {
         return Err(format!(
-            "aerostore crucible timed out waiting for {} workers",
-            timed_out_workers
+            "workers left {} epoch registrations active",
+            reclaim_end.epoch.active_slots
         ));
     }
+    validate_table_index(table.as_ref(), &time_index, profile.label)?;
+    validate_intervals(&intervals, duration, profile)?;
+    // With all workers quiescent, reclamation must drain the entire retired queue.
+    for _ in 0..8 {
+        time_index.collect_garbage_once(usize::MAX);
+        let pending = time_index.mutation_telemetry();
+        if pending.retired_backlog == 0 && pending.retired_postings == 0 {
+            break;
+        }
+    }
+    let drained = time_index.mutation_telemetry();
+    if drained.retired_backlog != 0
+        || drained.retired_postings != 0
+        || drained.gc_recycle_errors != 0
+    {
+        return Err(format!(
+            "index GC failed to drain: nodes={} postings={} recycle_errors={}",
+            drained.retired_backlog, drained.retired_postings, drained.gc_recycle_errors
+        ));
+    }
+    println!(
+        "hyperfeed_crucible_gc_drain: profile={} retired_backlog={} gc_recycle_errors={} retired_postings={} reclaimed_postings={}",
+        profile.label, drained.retired_backlog, drained.gc_recycle_errors, drained.retired_postings, drained.reclaimed_postings
+    );
+
+    let audit = time_index
+        .audit_allocations()
+        .map_err(|err| format!("final index allocation audit: {err}"))?;
+    if audit.retired.nodes != 0
+        || audit.retired.postings != 0
+        || audit.retired.towers != 0
+        || audit.retired.tower_lanes != 0
+    {
+        return Err(format!(
+            "allocation audit found retired storage after GC drain: {:?}",
+            audit.retired
+        ));
+    }
+    if audit.reachable.nodes != (TOTAL_KEYS + 1) as u64
+        || audit.reachable.postings != TOTAL_KEYS as u64
+    {
+        return Err(format!(
+            "allocation audit disagrees with fixed table cardinality (including sentinel): {:?}",
+            audit.reachable
+        ));
+    }
+    for (class, allocated, reachable, retired, reusable) in [
+        (
+            "nodes",
+            audit.allocated.nodes,
+            audit.reachable.nodes,
+            audit.retired.nodes,
+            audit.reusable.nodes,
+        ),
+        (
+            "postings",
+            audit.allocated.postings,
+            audit.reachable.postings,
+            audit.retired.postings,
+            audit.reusable.postings,
+        ),
+        (
+            "towers",
+            audit.allocated.towers,
+            audit.reachable.towers,
+            audit.retired.towers,
+            audit.reusable.towers,
+        ),
+        (
+            "tower_lanes",
+            audit.allocated.tower_lanes,
+            audit.reachable.tower_lanes,
+            audit.retired.tower_lanes,
+            audit.reusable.tower_lanes,
+        ),
+    ] {
+        println!("hyperfeed_crucible_allocation_class: profile={} class={} allocated={} reachable={} retired={} reusable={}",
+            profile.label, class, allocated, reachable, retired, reusable);
+    }
+    println!(
+        "hyperfeed_crucible_allocation_audit: profile={} status=pass",
+        profile.label
+    );
 
     let result = aggregate_result(
         "aerostore",
@@ -833,7 +1215,18 @@ fn run_aerostore_crucible(
         Some(index_retry_telemetry),
         memory_telemetry,
     );
-    remove_if_exists(&wal_path);
+    println!("hyperfeed_crucible_retry: profile={} max_insert_attempts={} pressure_state={} retry_alloc={} gc_recycle_errors={}",
+        profile.label, index_retry_telemetry.max_insert_attempts, index_retry_telemetry.pressure_state,
+        index_retry_telemetry.retry_alloc, index_retry_telemetry.gc_recycle_errors);
+    if result.index_insert_failures != 0
+        || result.index_remove_failures != 0
+        || result.operation_failures != 0
+    {
+        return Err(format!(
+            "workload failures: operations={} insert={} remove={}",
+            result.operation_failures, result.index_insert_failures, result.index_remove_failures
+        ));
+    }
     Ok(result)
 }
 
@@ -919,6 +1312,17 @@ fn run_aerostore_worker(
                 let is_hot = (upsert_idx % HOT_UPSERT_EVERY) == 0;
                 let row_id = pick_row_id(worker_idx, is_hot, &mut rng);
 
+                // Keep commit order and index publication order identical for this row.
+                // This is a process-shared engine lock, also used by production callers.
+                let _indexed_update = match table.lock_indexed_rows(&[row_id]) {
+                    Ok(guard) => guard,
+                    Err(err) => {
+                        eprintln!("worker {worker_idx}: indexed row lock failed: {err}");
+                        stats.operation_failures.fetch_add(1, Ordering::AcqRel);
+                        state.stop.store(1, Ordering::Release);
+                        break 'worker;
+                    }
+                };
                 let mut attempts = 0_u32;
                 loop {
                     if state.stop.load(Ordering::Acquire) != 0 {
@@ -926,11 +1330,11 @@ fn run_aerostore_worker(
                     }
                     let mut tx = match table.begin_transaction() {
                         Ok(tx) => tx,
-                        Err(_) => {
-                            stats.conflicts.fetch_add(1, Ordering::AcqRel);
-                            attempts = attempts.saturating_add(1);
-                            retry.sleep_for_attempt(attempts.saturating_sub(1));
-                            continue;
+                        Err(err) => {
+                            eprintln!("worker {worker_idx}: begin transaction failed: {err}");
+                            stats.operation_failures.fetch_add(1, Ordering::AcqRel);
+                            state.stop.store(1, Ordering::Release);
+                            break 'worker;
                         }
                     };
 
@@ -938,10 +1342,10 @@ fn run_aerostore_worker(
                         Ok(Some(row)) => row,
                         Ok(None) => {
                             let _ = table.abort(&mut tx);
-                            stats.conflicts.fetch_add(1, Ordering::AcqRel);
-                            attempts = attempts.saturating_add(1);
-                            retry.sleep_for_attempt(attempts.saturating_sub(1));
-                            continue;
+                            eprintln!("worker {worker_idx}: seeded row {row_id} disappeared");
+                            stats.operation_failures.fetch_add(1, Ordering::AcqRel);
+                            state.stop.store(1, Ordering::Release);
+                            break 'worker;
                         }
                         Err(OccError::SerializationFailure) => {
                             let _ = table.abort(&mut tx);
@@ -950,12 +1354,12 @@ fn run_aerostore_worker(
                             retry.sleep_for_attempt(attempts.saturating_sub(1));
                             continue;
                         }
-                        Err(_) => {
+                        Err(err) => {
                             let _ = table.abort(&mut tx);
-                            stats.conflicts.fetch_add(1, Ordering::AcqRel);
-                            attempts = attempts.saturating_add(1);
-                            retry.sleep_for_attempt(attempts.saturating_sub(1));
-                            continue;
+                            eprintln!("worker {worker_idx}: read row {row_id} failed: {err}");
+                            stats.operation_failures.fetch_add(1, Ordering::AcqRel);
+                            state.stop.store(1, Ordering::Release);
+                            break 'worker;
                         }
                     };
 
@@ -966,8 +1370,14 @@ fn run_aerostore_worker(
                     next.event_ts = new_ts;
                     next.payload[0] = next.payload[0].wrapping_add(1);
 
-                    if table.write(&mut tx, row_id, next).is_err() {
+                    if let Err(err) = table.write(&mut tx, row_id, next) {
                         let _ = table.abort(&mut tx);
+                        if err != OccError::SerializationFailure {
+                            eprintln!("worker {worker_idx}: write row {row_id} failed: {err}");
+                            stats.operation_failures.fetch_add(1, Ordering::AcqRel);
+                            state.stop.store(1, Ordering::Release);
+                            break 'worker;
+                        }
                         stats.conflicts.fetch_add(1, Ordering::AcqRel);
                         attempts = attempts.saturating_add(1);
                         retry.sleep_for_attempt(attempts.saturating_sub(1));
@@ -976,16 +1386,16 @@ fn run_aerostore_worker(
 
                     match committer.commit(table, &mut tx) {
                         Ok(_) => {
-                            if !move_index_payload_with_retry(
-                                time_index,
-                                old_ts,
-                                new_ts,
-                                row_id,
-                                &state.stop,
-                            ) && state.stop.load(Ordering::Acquire) == 0
+                            // Stop prevents starting new transactions, but must never
+                            // cancel index maintenance for an already committed row.
+                            if let Err(err) =
+                                move_index_payload_with_retry(time_index, old_ts, new_ts, row_id)
                             {
+                                eprintln!("worker {worker_idx}: committed row {row_id} index move failed: {err}");
                                 stats.index_remove_failures.fetch_add(1, Ordering::AcqRel);
                                 stats.index_insert_failures.fetch_add(1, Ordering::AcqRel);
+                                state.stop.store(1, Ordering::Release);
+                                break 'worker;
                             }
                             break;
                         }
@@ -997,14 +1407,25 @@ fn run_aerostore_worker(
                                 break 'worker;
                             }
                         }
-                        Err(_) => {
-                            let _ = table.abort(&mut tx);
-                            stats.conflicts.fetch_add(1, Ordering::AcqRel);
-                            attempts = attempts.saturating_add(1);
-                            retry.sleep_for_attempt(attempts.saturating_sub(1));
-                            if state.stop.load(Ordering::Acquire) != 0 {
-                                break 'worker;
+                        Err(err) => {
+                            // OccCommitter publishes the row before WAL encoding/write.
+                            // Preserve index agreement for postcommit WAL errors, then
+                            // fail the run; retrying the transaction would commit twice.
+                            if !matches!(&err, WalWriterError::Occ(_)) {
+                                if let Err(index_err) = move_index_payload_with_retry(
+                                    time_index, old_ts, new_ts, row_id,
+                                ) {
+                                    eprintln!("worker {worker_idx}: index maintenance after WAL failure: {index_err}");
+                                    stats.index_remove_failures.fetch_add(1, Ordering::AcqRel);
+                                    stats.index_insert_failures.fetch_add(1, Ordering::AcqRel);
+                                }
+                            } else {
+                                let _ = table.abort(&mut tx);
                             }
+                            eprintln!("worker {worker_idx}: commit row {row_id} failed: {err}");
+                            stats.operation_failures.fetch_add(1, Ordering::AcqRel);
+                            state.stop.store(1, Ordering::Release);
+                            break 'worker;
                         }
                     }
                 }
@@ -1022,10 +1443,18 @@ fn run_aerostore_worker(
             QueryKind::Scan => {
                 let head_ts = state.global_event_ts.load(Ordering::Acquire);
                 let bound = head_ts.saturating_sub(SCAN_TAIL_WINDOW);
-                let hits = time_index.lookup_count_with_limit(
+                let hits = match time_index.try_lookup_count_with_limit(
                     &IndexCompare::Gt(IndexValue::I64(bound)),
                     SCAN_LIMIT as usize,
-                );
+                ) {
+                    Ok(hits) => hits,
+                    Err(err) => {
+                        eprintln!("worker {worker_idx}: index scan failed: {err}");
+                        stats.operation_failures.fetch_add(1, Ordering::AcqRel);
+                        state.stop.store(1, Ordering::Release);
+                        break 'worker;
+                    }
+                };
                 black_box(hits);
 
                 let elapsed_ns = nanos_u64(started.elapsed());
@@ -1170,16 +1599,10 @@ fn run_postgres_crucible(
     }
     state.stop.store(1, Ordering::Release);
 
-    let timed_out_workers =
-        wait_for_children_or_terminate(&pids, duration + Duration::from_secs(60));
+    let workers_result = wait_for_children_or_terminate(&pids, Duration::from_secs(10));
     let elapsed = started.elapsed();
 
-    if timed_out_workers > 0 {
-        return Err(format!(
-            "postgres crucible timed out waiting for {} workers",
-            timed_out_workers
-        ));
-    }
+    workers_result?;
 
     let memory_telemetry = if mem_samples > 0 {
         Some(MemoryTelemetry {
@@ -1566,6 +1989,7 @@ fn aggregate_result(
     let mut scan_ops = 0_u64;
     let mut hot_upserts = 0_u64;
     let mut conflicts = 0_u64;
+    let mut operation_failures = 0_u64;
     let mut index_remove_failures = 0_u64;
     let mut index_insert_failures = 0_u64;
 
@@ -1584,6 +2008,8 @@ fn aggregate_result(
         scan_ops = scan_ops.saturating_add(worker.scan_ops.load(Ordering::Acquire));
         hot_upserts = hot_upserts.saturating_add(worker.hot_upserts.load(Ordering::Acquire));
         conflicts = conflicts.saturating_add(worker.conflicts.load(Ordering::Acquire));
+        operation_failures =
+            operation_failures.saturating_add(worker.operation_failures.load(Ordering::Acquire));
         index_remove_failures = index_remove_failures
             .saturating_add(worker.index_remove_failures.load(Ordering::Acquire));
         index_insert_failures = index_insert_failures
@@ -1623,6 +2049,7 @@ fn aggregate_result(
         scan_ops,
         hot_upserts,
         conflicts,
+        operation_failures,
         index_remove_failures,
         index_insert_failures,
         tps: total_ops as f64 / elapsed.as_secs_f64().max(f64::EPSILON),
@@ -1789,11 +2216,11 @@ fn print_results(result: &ProfileRunResult, duration: Duration) {
 
     if let Some(retry) = aerostore.index_retry_telemetry {
         println!(
-            "| Aerostore Index Retry Telemetry | insert_ops | remove_ops | retry_loops | retry_alloc | retry_structural | retry_epoch | max_insert_attempts | max_remove_attempts | gc_nodes_examined | gc_nodes_requeued | gc_recycle_errors | gc_assist_calls | gc_assist_reclaimed | retired_backlog | pressure_state | pressure_to_normal | pressure_to_warm | pressure_to_hot | alloc_failure_events | reserve_node_pushes | reserve_node_hits | reserve_node_misses | reserve_posting_pushes | reserve_posting_hits | reserve_posting_misses | reserve_tower_pushes | reserve_tower_hits | reserve_tower_misses |"
+            "| Aerostore Index Retry Telemetry | insert_ops | remove_ops | retry_loops | retry_alloc | retry_structural | retry_epoch | max_insert_attempts | max_remove_attempts | gc_nodes_examined | gc_nodes_requeued | gc_recycle_errors | gc_assist_calls | gc_assist_reclaimed | gc_daemon_cycles | gc_daemon_reclaimed | pressure_window_failures | pressure_window_reclaimed | pressure_consecutive_healthy_windows | retired_backlog | pressure_state | pressure_to_normal | pressure_to_warm | pressure_to_hot | alloc_failure_events | reserve_node_pushes | reserve_node_hits | reserve_node_misses | reserve_posting_pushes | reserve_posting_hits | reserve_posting_misses | reserve_tower_pushes | reserve_tower_hits | reserve_tower_misses | retry_phase_b_hits | retry_phase_c_hits |"
         );
-        println!("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+        println!("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
         println!(
-            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |",
+            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |",
             result.profile.label,
             retry.insert_ops,
             retry.remove_ops,
@@ -1808,6 +2235,11 @@ fn print_results(result: &ProfileRunResult, duration: Duration) {
             retry.gc_recycle_errors,
             retry.gc_assist_calls,
             retry.gc_assist_reclaimed,
+            retry.gc_daemon_cycles,
+            retry.gc_daemon_reclaimed,
+            retry.pressure_window_failures,
+            retry.pressure_window_reclaimed,
+            retry.pressure_consecutive_healthy_windows,
             retry.retired_backlog,
             retry.pressure_state,
             retry.pressure_to_normal,
@@ -1823,6 +2255,8 @@ fn print_results(result: &ProfileRunResult, duration: Duration) {
             retry.reserve_tower_pushes,
             retry.reserve_tower_hits,
             retry.reserve_tower_misses,
+            retry.retry_phase_b_hits,
+            retry.retry_phase_c_hits,
         );
     }
 
@@ -2103,35 +2537,27 @@ fn move_index_payload_with_retry(
     old_ts: i64,
     new_ts: i64,
     row_id: usize,
-    stop: &AtomicU32,
-) -> bool {
+) -> Result<(), String> {
     const MOVE_RETRY_LIMIT: usize = 16;
     for attempt in 0..=MOVE_RETRY_LIMIT {
-        if stop.load(Ordering::Acquire) != 0 {
-            return false;
+        match time_index.try_move_payload(
+            &IndexValue::I64(old_ts),
+            IndexValue::I64(new_ts),
+            &row_id,
+        ) {
+            Ok(()) => return Ok(()),
+            Err(err) if attempt == MOVE_RETRY_LIMIT => return Err(err.to_string()),
+            Err(_) => {}
         }
-        if time_index
-            .try_move_payload(&IndexValue::I64(old_ts), IndexValue::I64(new_ts), &row_id)
-            .is_ok()
-        {
-            return true;
-        }
-
-        if attempt == MOVE_RETRY_LIMIT {
-            return false;
-        }
-
         if attempt < 8 {
             std::hint::spin_loop();
         } else if attempt < 12 {
             std::thread::yield_now();
         } else {
-            let shift = ((attempt - 12) / 4).min(4);
-            let sleep_us = 50_u64 << shift;
-            std::thread::sleep(Duration::from_micros(sleep_us));
+            std::thread::sleep(Duration::from_micros(50));
         }
     }
-    false
+    unreachable!()
 }
 
 #[inline]
@@ -2206,37 +2632,45 @@ where
     Ok(())
 }
 
-fn wait_for_children_or_terminate(pids: &[libc::pid_t], timeout: Duration) -> usize {
+fn wait_for_children_or_terminate(pids: &[libc::pid_t], timeout: Duration) -> Result<(), String> {
     let mut pending = pids.to_vec();
     let started = Instant::now();
-
+    let mut failures = Vec::new();
     while !pending.is_empty() {
         pending.retain(|pid| {
             let mut status: libc::c_int = 0;
-            let waited =
-                unsafe { libc::waitpid(*pid, &mut status as *mut libc::c_int, libc::WNOHANG) };
-            waited == 0
-        });
-
-        if pending.is_empty() {
-            return 0;
-        }
-
-        if started.elapsed() >= timeout {
-            let timed_out = pending.len();
-            for pid in &pending {
-                unsafe {
-                    libc::kill(*pid, libc::SIGKILL);
-                    libc::waitpid(*pid, std::ptr::null_mut(), 0);
-                }
+            let waited = unsafe { libc::waitpid(*pid, &mut status, libc::WNOHANG) };
+            if waited == 0 {
+                return true;
             }
-            return timed_out;
+            if waited < 0 {
+                let error = std::io::Error::last_os_error();
+                if error.kind() == std::io::ErrorKind::Interrupted {
+                    return true;
+                }
+                failures.push(format!("waitpid({pid}): {error}"));
+            } else if !libc::WIFEXITED(status) || libc::WEXITSTATUS(status) != 0 {
+                failures.push(format!("worker {pid} failed with raw status {status}"));
+            }
+            false
+        });
+        if started.elapsed() >= timeout && !pending.is_empty() {
+            failures.push(format!(
+                "{} workers exceeded {timeout:?} drain budget",
+                pending.len()
+            ));
+            terminate_children(&pending);
+            break;
         }
-
-        std::thread::sleep(Duration::from_millis(2));
+        if !pending.is_empty() {
+            std::thread::sleep(Duration::from_millis(2));
+        }
     }
-
-    0
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(failures.join("; "))
+    }
 }
 
 fn terminate_children(pids: &[libc::pid_t]) {
@@ -2260,6 +2694,16 @@ fn unique_temp_path(prefix: &str, ext: &str) -> PathBuf {
         .unwrap_or_default()
         .as_nanos();
     std::env::temp_dir().join(format!("{prefix}_{nonce}.{ext}"))
+}
+
+fn interval_sample_period() -> Duration {
+    Duration::from_millis(
+        std::env::var("AEROSTORE_CRUCIBLE_SAMPLE_INTERVAL_MS")
+            .ok()
+            .and_then(|value| value.parse::<u64>().ok())
+            .filter(|value| *value > 0)
+            .unwrap_or(MEMORY_SAMPLE_INTERVAL_MS),
+    )
 }
 
 fn crucible_duration() -> Duration {
@@ -2314,15 +2758,18 @@ fn read_epoch_lag_snapshot(shm: &ShmArena) -> EpochLagSnapshot {
 fn stop_background_daemons(
     vacuum_daemon: &VacuumDaemon<CrucibleRow>,
     index_gc_daemon: &ShmIndexGcDaemon,
-) {
+) -> Result<(), String> {
+    let mut failures = Vec::new();
     if let Err(err) = vacuum_daemon.stop() {
-        eprintln!("warning: failed to stop vacuum daemon cleanly: {}", err);
+        failures.push(format!("failed to stop vacuum daemon: {err}"));
     }
-    if let Err(err) = index_gc_daemon.terminate(libc::SIGTERM) {
-        eprintln!("warning: failed to signal index GC daemon: {}", err);
+    if let Err(err) = index_gc_daemon.stop() {
+        failures.push(format!("failed to stop index GC daemon: {err}"));
     }
-    if let Err(err) = index_gc_daemon.join() {
-        eprintln!("warning: failed to join index GC daemon: {}", err);
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(failures.join("; "))
     }
 }
 

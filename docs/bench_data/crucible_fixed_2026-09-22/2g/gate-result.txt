@@ -1,0 +1,3 @@
+120s: TPS=358954.25, elapsed=120.004s, tail fresh=80104 bytes, retained interval TPS=1.035
+240s: TPS=376726.68, elapsed=240.004s, tail fresh=17824 bytes, retained interval TPS=0.934
+PASS: sustained correctness, memory, throughput, and drain gates satisfied. PostgreSQL comparison gates satisfied.

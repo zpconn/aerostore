@@ -4,7 +4,7 @@ use super::{
     cleanup_reclaimed_index_entries, FlightIndexes, FlightState, VacuumReclaimedRow,
     FLIGHT_ID_BYTES,
 };
-use aerostore_core::{IndexValue, ShmArena};
+use aerostore_core::{IndexValue, OccTable, ShmArena};
 use std::sync::Arc;
 
 #[test]
@@ -18,8 +18,11 @@ fn cleanup_preserves_live_postings_for_unchanged_columns() {
     live.gs = 455;
     live.updated_at = 1_700_000_100;
 
+    let table = OccTable::new(Arc::clone(&shm), row_id + 1).unwrap();
+    table.seed_row(row_id, live).unwrap();
+
     // Current live postings.
-    indexes.insert_row(row_id, &live);
+    indexes.insert_row(row_id, &live).unwrap();
     // Simulate stale postings only for changed fields.
     indexes.gs.insert(IndexValue::I64(old.gs as i64), row_id);
     indexes
@@ -27,6 +30,7 @@ fn cleanup_preserves_live_postings_for_unchanged_columns() {
         .insert(IndexValue::I64(old.updated_at as i64), row_id);
 
     cleanup_reclaimed_index_entries(
+        &table,
         &indexes,
         &[VacuumReclaimedRow {
             row_id,
@@ -97,8 +101,10 @@ fn cleanup_drops_all_postings_when_no_live_head_exists() {
     let row_id = 19_usize;
     let old = make_row("DAL789", 35.0000, -120.1000, 28_000, 402, 1_700_100_000);
 
-    indexes.insert_row(row_id, &old);
+    let table = OccTable::new(Arc::clone(&shm), row_id + 1).unwrap();
+    indexes.insert_row(row_id, &old).unwrap();
     cleanup_reclaimed_index_entries(
+        &table,
         &indexes,
         &[VacuumReclaimedRow {
             row_id,
@@ -143,6 +149,29 @@ fn cleanup_drops_all_postings_when_no_live_head_exists() {
             .lookup_posting_count(&IndexValue::I64(old.updated_at as i64)),
         0
     );
+}
+
+#[test]
+fn cleanup_rechecks_current_row_when_reclaimed_key_becomes_live_again() {
+    let shm = Arc::new(ShmArena::new(16 << 20).unwrap());
+    let indexes = FlightIndexes::new(Arc::clone(&shm));
+    let table = OccTable::new(Arc::clone(&shm), 1).unwrap();
+    let old = make_row("UAL123", 37.6189, -122.3750, 32_000, 450, 100);
+    let mut captured_head = old;
+    captured_head.gs = 455;
+    // The writer has returned to gs=450 after vacuum captured gs=455.
+    table.seed_row(0, old).unwrap();
+    indexes.insert_row(0, &old).unwrap();
+    cleanup_reclaimed_index_entries(
+        &table,
+        &indexes,
+        &[VacuumReclaimedRow {
+            row_id: 0,
+            reclaimed_value: old,
+            live_head_value: Some(captured_head),
+        }],
+    );
+    assert_eq!(indexes.gs.lookup_posting_count(&IndexValue::I64(450)), 1);
 }
 
 fn make_row(

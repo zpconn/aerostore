@@ -4,7 +4,7 @@ use std::thread;
 use aerostore_core::{ArenaClass, ShmArena};
 
 #[test]
-fn cross_thread_recycle_visibility_requires_flush() {
+fn cross_thread_recycle_visibility_is_immediate_without_flush() {
     let shm = Arc::new(ShmArena::new(8 << 20).expect("create shm"));
     let arena = shm.chunked_arena();
 
@@ -17,16 +17,20 @@ fn cross_thread_recycle_visibility_requires_flush() {
 
     let shm_before = Arc::clone(&shm);
     let pre_flush = thread::spawn(move || {
-        shm_before
-            .chunked_arena()
+        let arena = shm_before.chunked_arena();
+        let offset = arena
             .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
-            .expect("pre-flush sibling alloc")
+            .expect("pre-flush sibling alloc");
+        arena
+            .recycle_raw_in_class(offset, 32, 8, ArenaClass::Spill32)
+            .unwrap();
+        offset
     })
     .join()
     .expect("pre-flush thread join failed");
-    assert_ne!(
+    assert_eq!(
         pre_flush, recycled,
-        "thread-local recycle cache should hide recycled block before flush"
+        "shared ownership makes recycled blocks visible immediately"
     );
 
     shm.flush_local_recycle_caches()
