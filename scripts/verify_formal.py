@@ -70,7 +70,8 @@ def collect_claim_evidence(claims: list[dict], checks: list[dict], directory: Pa
     refinements = {name: check_refinement_evidence.validate_receipt(directory / name / "receipt.json", name, ROOT)
                    for name in ["predicate", "predicate-capture", "predicate-composition", "skiplist-detach", "postings",
                                 "guards", "lifecycle", "publication-slice", "lifecycle-scenario",
-                                "lifecycle-interference", "guard-ownership", "lookup", "indexed-slice"] if name in passed}
+                                "lifecycle-interference", "guard-ownership", "lookup", "indexed-slice",
+                                "row-publication", "row-retention", "storage-slice"] if name in passed}
     if "lock-models" in passed:
         check_lock_models.validate_receipt(directory / "lock-models/receipt.json", ROOT)
     lean_mutations = {mutation["name"] for mutation in lean.get("mutation_checks", []) if mutation.get("rejected")}
@@ -252,13 +253,24 @@ def main() -> int:
                          ("lookup", [sys.executable, "verification/lookup/run.py", "--output", str(directory / "lookup")]),
                          ("indexed-slice-adapter-tests", [sys.executable, "verification/indexed_slice/test_generate.py"]),
                          ("indexed-slice", [sys.executable, "verification/indexed_slice/run.py", "--output", str(directory / "indexed-slice")]),
+                         ("row-publication-adapter-tests", [sys.executable, "verification/row_publication/test_generate.py"]),
+                         ("row-publication", [sys.executable, "verification/row_publication/run.py", "--output", str(directory / "row-publication")]),
+                         ("row-retention-adapter-tests", [sys.executable, "verification/row_retention/test_generate.py"]),
+                         ("row-retention", [sys.executable, "verification/row_retention/run.py", "--output", str(directory / "row-retention")]),
+                         ("row-initialization-adapter-tests", [sys.executable, "verification/row_initialization/test_generate.py"]),
+                         ("storage-slice-adapter-tests", [sys.executable, "verification/storage_slice/test_generate.py"]),
+                         ("storage-slice", [sys.executable, "verification/storage_slice/run.py", "--output", str(directory / "storage-slice")]),
                          ("lean", [sys.executable, "scripts/check_lean.py", "--output", str(directory / "lean.json")]),
                          ("kernel-tests", ["cargo", "test", "--offline", "-p", "aerostore_verified"])]
         if args.profile != "proofs":
             commands.append(("tla-runner-tests", [sys.executable, "scripts/test_tla_runner.py"]))
             commands.append(("tla", [sys.executable, "scripts/check_tla.py", "--output", str(directory / "tla")]))
         if args.profile in {"pilot", "full"}:
-            commands += [("lock-models", [sys.executable, "scripts/check_lock_models.py",
+            commands += [("retention-native-runner-tests", [sys.executable, "-m", "unittest", "discover", "-s", "verification/retention_native", "-p", "test_*.py"]),
+                         ("production-equivalence-checker-tests", [sys.executable, "verification/lookup_native/test_production_equivalence.py"]),
+                         ("retention-native", [sys.executable, "verification/retention_native/run.py",
+                                                "--output", str(directory / "retention-native")]),
+                         ("lock-models", [sys.executable, "scripts/check_lock_models.py",
                                          "--output", str(directory / "lock-models")]),
                          ("performance-gate-tests", [sys.executable, "scripts/test_compare_engine_performance.py"]),
                          ("core-regressions", ["cargo", "test", "--offline", "--locked", "-p", "aerostore_core",

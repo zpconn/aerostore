@@ -6,7 +6,35 @@ This is the full verification roadmap. Its first executable component pilot now 
 
 The program has two goals: establish the database's correctness, and create a verified environment for aggressive performance experiments. Each candidate implementation must preserve a stable public contract and carry evidence tied to its exact source and build configuration. Section 13 defines that experimentation workflow.
 
-Current indexed-read checkpoint, after `1e7311a`: the native lifecycle suffixes
+Current storage checkpoint, after `f3d8ec4`: source-derived prepared publication,
+acquired-row vacuum, initialization, read and validation now share one storage
+vocabulary. A symbolic three-version path derives snapshot/history correspondence
+and a safe traversal prefix, including an older active writer and a future
+writer. General finite-chain vacuum proofs establish unlink-before-recycle,
+locked-version exclusion, exact successful pruning and report provenance.
+Native schedules pause actual readers during partial multirow publication and
+after loading a cursor, then run actual pruning and allocation reuse.
+
+Closing the vacuum-horizon premise exposed a real public API bug. An excessive
+caller-supplied horizon could detach a live reader's required version, causing
+its first read to return `None` and its read-only commit to succeed. The public
+API now clamps requests to the table arena's retained horizon. Source-bound
+caller proofs derive the bound through the actual ProcArray scan; a native
+missing-clamp control reproduces the failure. The normal collector keeps its
+single horizon scan and unchanged internal row loop. This is a correctness
+repair, not an automatically promoted performance optimization.
+
+The [storage slice](../verification/storage_slice/README.md) records the exact
+cutpoints and remaining boundary: arbitrary transaction histories, physical
+load-to-image correspondence, allocator ownership, acquisition/registration
+ownership and weak memory remain open. The next step is to generalize the
+history and prefix invariant beyond the selected layout and connect its
+ownership to actual allocator operations. Full P1 remains incomplete.
+The [storage evidence archive](verification_data/row_retention_2026-09-23/README.md)
+retains the 55-check final pilot, bug reproduction, fixed and deliberately broken
+regressions, exact runtime-change audit, and all source-bound proof evidence.
+
+Previous indexed-read checkpoint, after `1e7311a`: the native lifecycle suffixes
 are composed with a finite legal acquisition-wait trace, permitting other-slot
 reuse and horizon changes while protecting only the borrowed registration.
 Source-bound CAS and Release-store proofs manage opaque affine leases; acquisition

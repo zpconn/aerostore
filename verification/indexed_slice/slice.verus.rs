@@ -800,7 +800,8 @@ pub struct Image {
     pub heads: Map<usize, u32>, pub rows: Map<u32, Row>, pub rank: Map<u32, nat>, pub capacity: usize,
 }
 pub open spec fn image_valid(s: Image) -> bool {
-    (forall|id: usize| id < s.capacity ==> s.heads.contains_key(id)
+    (forall|id: usize| #![trigger s.heads.contains_key(id)] #![trigger s.heads[id]]
+        id < s.capacity ==> s.heads.contains_key(id)
         && (s.heads[id] == 0 || s.rows.contains_key(s.heads[id])))
     && (forall|p: u32| #[trigger] s.rows.contains_key(p) ==> p != 0 && s.rank.contains_key(p)
         && (s.rows[p].next == 0 || s.rows.contains_key(s.rows[p].next)

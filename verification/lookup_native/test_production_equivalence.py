@@ -69,6 +69,46 @@ class ProductionEquivalenceTests(unittest.TestCase):
         self.assertEqual(diagnostic.rust_tokens("x/* outer /* inner */ */ + y"), ["x", "+", "y"])
         self.assertEqual(diagnostic.rust_tokens('r##"/* raw */"##'), ['r##"/* raw */"##'])
 
+    def test_current_row_hooks_are_removed_at_reviewed_positions(self):
+        source=(diagnostic.ROOT/diagnostic.OCC).read_text()
+        tokens, exclusions=diagnostic.production_tokens(diagnostic.OCC,source)
+        self.assertNotIn("ROW_TRAVERSAL_STEP_HOOK",tokens)
+        self.assertNotIn("ROW_PUBLICATION_STEP_HOOK",tokens)
+        self.assertEqual(sum("row hook call" in item for item in exclusions),5)
+        self.assertEqual(sum("STEP_HOOK declaration" in item for item in exclusions),2)
+        self.assertIn("compare_exchange",tokens)
+        self.assertIn("vacuum_reclaim_once",tokens)
+
+    def test_row_hooks_missing_cfg_modified_argument_or_wrong_phase_rejected(self):
+        source=(diagnostic.ROOT/diagnostic.OCC).read_text()
+        for old,new in [
+            ("#[cfg(test)]\n            ROW_TRAVERSAL_STEP_HOOK", "ROW_TRAVERSAL_STEP_HOOK"),
+            ("hook(row_ptr.load(Ordering::Acquire), head_offset);", "hook(0, head_offset);"),
+            ("hook(write.row_id, false);", "hook(write.row_id, true);"),
+        ]:
+            self.assertIn(old,source)
+            with self.subTest(old=old),self.assertRaises(ValueError):
+                self.project(source.replace(old,new,1),diagnostic.OCC)
+
+    def test_row_hook_relocated_in_loop_rejected(self):
+        tokens=diagnostic.rust_tokens((diagnostic.ROOT/diagnostic.OCC).read_text())
+        call=diagnostic.rust_tokens(diagnostic.ROW_TRAVERSAL_CALL)
+        at=diagnostic.locations(tokens,call)[0]
+        load=diagnostic.rust_tokens("head_offset = row.next.load(Ordering::Acquire);")
+        self.assertEqual(tokens[at-len(load):at],load)
+        tokens[at-len(load):at+len(call)]=call+load
+        with self.assertRaisesRegex(ValueError,"reviewed native cut"):
+            self.project(" ".join(tokens),diagnostic.OCC)
+
+    def test_row_hook_declaration_outside_test_block_rejected(self):
+        tokens=diagnostic.rust_tokens((diagnostic.ROOT/diagnostic.OCC).read_text())
+        declaration=diagnostic.rust_tokens(diagnostic.ROW_HOOK_DECLARATIONS["ROW_TRAVERSAL_STEP_HOOK"])
+        at=diagnostic.locations(tokens,declaration)[0]
+        del tokens[at:at+len(declaration)]
+        tokens+=declaration
+        with self.assertRaisesRegex(ValueError,"uniquely test-only"):
+            self.project(" ".join(tokens),diagnostic.OCC)
+
 
 if __name__ == "__main__":
     unittest.main()

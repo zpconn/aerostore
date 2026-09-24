@@ -640,3 +640,47 @@ fn transactional_index_child() {
     assert_eq!(scan(&table, &mut tx, &index, &eq(20)), vec![0]);
     table.commit(&mut tx).unwrap();
 }
+
+#[test]
+fn public_vacuum_clamps_caller_horizon_to_retained_snapshot() {
+    let (_arena, table, _index) = fixture(&[Row::live(42)]);
+    let mut reader = table.begin_transaction().unwrap();
+    let mut updated = Row::live(42);
+    updated.value = 99;
+    replace(&table, 0, updated);
+
+    // The reader has no recorded row yet. Losing its version here could make
+    // its first read report absence and even let that empty read commit.
+    let while_pinned = table.vacuum_reclaim_once(u64::MAX).unwrap();
+    let observed = table.read(&mut reader, 0).unwrap();
+    let reader_commit = table.commit(&mut reader);
+    assert!(
+        while_pinned.is_empty(),
+        "a caller must not advance the retained horizon"
+    );
+    assert_eq!(
+        observed,
+        Some(Row::live(42)),
+        "the first read must retain its snapshot row"
+    );
+    assert_eq!(
+        reader_commit,
+        Err(OccError::SerializationFailure),
+        "retained row validation must reject the later writer"
+    );
+
+    assert!(
+        table.vacuum_reclaim_once(0).unwrap().is_empty(),
+        "a conservative caller horizon must still delay reclamation"
+    );
+    let after_reader = table.vacuum_reclaim_once(u64::MAX).unwrap();
+    assert_eq!(
+        after_reader.len(),
+        1,
+        "ending the last reader must still permit reclamation"
+    );
+    assert_eq!(after_reader[0].reclaimed_value, Row::live(42));
+    let mut fresh = table.begin_transaction().unwrap();
+    assert_eq!(table.read(&mut fresh, 0).unwrap(), Some(updated));
+    table.commit(&mut fresh).unwrap();
+}

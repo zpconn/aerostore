@@ -550,7 +550,7 @@ class RunnerTests(unittest.TestCase):
         commands = dict(calls)
         for name in ["predicate", "predicate-capture", "predicate-composition", "skiplist-detach", "postings",
                      "guards", "lifecycle", "publication-slice", "lifecycle-scenario",
-                     "lifecycle-interference", "guard-ownership", "lookup", "indexed-slice"]:
+                     "lifecycle-interference", "guard-ownership", "lookup", "indexed-slice", "row-publication", "row-retention", "storage-slice"]:
             self.assertIn(name, commands)
             self.assertIn(name + "-adapter-tests", commands)
 

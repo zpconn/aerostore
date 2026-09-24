@@ -33,6 +33,21 @@ class LookupAdapterTests(unittest.TestCase):
         source=generate.SOURCE.read_text().replace('let candidates = index.transactional_raw_lookup(predicate)?;','drop(guards);\nlet candidates = index.transactional_raw_lookup(predicate)?;',1)
         with self.assertRaises(ValueError): generate.render(source)
 
+    def test_traversal_hook_is_exact_and_positioned_after_next_load(self):
+        source=generate.SOURCE.read_text()
+        with self.assertRaises(ValueError):
+            generate.render(source.replace('hook(row_ptr.load(Ordering::Acquire), head_offset);',
+                'hook(0, head_offset);',1))
+        start=source.index('    fn find_visible_row_ptr(')
+        end=source.index('    #[inline]',start)
+        body=source[start:end]
+        a=body.index('            #[cfg(test)]')
+        b=body.index('            });',a)+len('            });')
+        block=body[a:b]
+        moved=body.replace(block,'').replace('            head_offset = row.next.load(Ordering::Acquire);',
+            block+'\n            head_offset = row.next.load(Ordering::Acquire);')
+        with self.assertRaises(ValueError): generate.render(source[:start]+moved+source[end:])
+
     def test_commented_original_cannot_mask_changed_constant(self):
         source = generate.SOURCE.read_text()
         for original, changed in [('262_144', '262_145'), ('const EMPTY_PTR: u32 = 0;', 'const EMPTY_PTR: u32 = 1;')]:

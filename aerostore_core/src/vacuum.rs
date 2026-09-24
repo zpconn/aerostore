@@ -218,7 +218,7 @@ where
 {
     let global_xmin = compute_global_xmin(table.shared_arena().as_ref());
     table
-        .vacuum_reclaim_once(global_xmin)
+        .vacuum_reclaim_before(global_xmin)
         .map_err(VacuumError::Occ)
 }
 

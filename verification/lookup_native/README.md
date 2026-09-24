@@ -50,6 +50,12 @@ python3 -m unittest discover -s verification/lookup_native -p test_production_eq
 It compares Rust tokens after excluding only ProcArray's `cfg(test) mod tests`,
 OCC's `cfg(test) mod predicate_completion_tests`, and the exact test-only
 `SNAPSHOT_ACQUIRING_HOOK` declaration/call at the reviewed pre-acquisition site.
+The retention milestone also permits exactly the row publication hooks after
+base marking and successful head CAS in both publication paths, plus the
+traversal hook immediately after loading `row.next`. Declarations must remain
+inside the existing test-only thread-local block; all five calls must have
+their reviewed bodies and native cut positions. Missing test attributes,
+modified arguments, wrong publication phases and moved calls fail closed.
 Other test modules remain in the comparison. Comments/whitespace are discarded;
 literal spelling and joint operators remain. Cargo/config inputs are compared
 byte for byte. The receipt records the resolved baseline commit, each source

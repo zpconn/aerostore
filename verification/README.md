@@ -142,8 +142,21 @@ from exact posting replay and accepted stamp history, and native materialization
 retains read provenance. These are conditional implementation results: native
 registration ownership, physical authority, actual atomic observations and the
 raw heap's correspondence to the retained image and coherent history still need
-proof. The next step is to connect one native publication/retention path to those
-storage projections, including partial publication and vacuum interleavings.
+proof. The [native storage slice](storage_slice/README.md) now derives the
+snapshot/history mapping for a symbolic three-version path from actual prepared
+publication, acquired-row vacuum, row initialization, read and row validation.
+It proves a retained traversal prefix and exact successful tail pruning; native
+tests cover partial multirow publication and a paused cursor during real reuse.
+Generalizing that history/prefix invariant to arbitrary native transactions,
+and connecting allocator ownership and physical observations, remain the next
+requirements before extending the optimization boundary.
+Closing the horizon premise exposed a public API bug: an excessive caller
+vacuum horizon could prune a live reader's version, causing its first read to
+report absence and successfully commit. The public method now clamps requests
+to the same arena's retained horizon. The normal collector still performs one
+horizon scan and calls the unchanged internal row loop. Actual caller-dispatch
+proofs and deterministic native positive/negative checks cover this repair;
+it is a correctness change, not a performance promotion.
 The finite-clock no-wrap policy still needs native enforcement; no proof harness
 branch repairs production exhaustion.
 

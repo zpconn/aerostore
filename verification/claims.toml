@@ -308,3 +308,39 @@ implementation = ["verification/tla/Reclamation.tla", "verification/tla/Collecto
 scope = "Finite cyclic resource abstractions, conditional on explicit weak fairness; no Rust refinement or quantitative arena bound"
 status = "partial"
 required_checks = ["tla"]
+
+[[claims]]
+id = "ROW-PUBLICATION-VERUS"
+contract = "verification/row_publication/README.md"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "verification/row_publication/contracts.rs"]
+scope = "Actual prepared publication loop specialized to one validated write derives exact deletion/link/head states from individual field operations, preserves valid retained Image and old-snapshot selection through every intermediate prefix, and characterizes fallible prefixes. Guard/fresh-allocation ownership and physical atomic correspondence remain primitive obligations; arbitrary multirow and nonprepared publication refinement remain open"
+status = "partial"
+required_checks = ["row-publication", "row-publication-adapter-tests", "core-regressions"]
+refinement_roots = { row-publication = ["publish_prepared_write_set", "publication_prefix_valid", "publication_preserves_old_snapshot", "successful_publication_connects_lookup", "publication_has_live_witness", "native_publication_has_executable_witness"] }
+
+[[claims]]
+id = "ROW-RETENTION-VERUS"
+contract = "verification/row_retention/README.md"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "verification/row_retention/contracts.rs"]
+scope = "Actual public vacuum caller clamps arbitrary requests to same-arena retained horizons, and the normal collector forwards its single scan directly to a crate-private kernel. The acquired-row loop proves strict eligibility, unlink-before-recycle, exact successful pruning/report payloads, snapshot selection and conditional cursor-prefix retention. Raw recycler ownership, row-guard acquisition interference, complete registration/horizon histories and arbitrary storage histories remain open"
+status = "partial"
+required_checks = ["row-retention", "row-retention-adapter-tests", "retention-native", "core-regressions"]
+refinement_roots = { row-retention = ["splice_valid", "splice_reachable", "eligible_is_invisible", "splice_first_visible", "prefix_edges", "vacuum_row_acquired", "retained_anchor_and_later_reclaim_witness", "locked_version_survives_witness", "min_horizon", "compute_global_xmin", "public_vacuum_reclaim_once", "run_vacuum_pass"] }
+
+[[claims]]
+id = "NATIVE-STORAGE-SLICE"
+contract = "verification/storage_slice/README.md"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "aerostore_core/src/procarray.rs", "verification/storage_slice/slice.rs"]
+scope = "Selected symbolic three-version native publication, acquired-row vacuum, initializer, read and validation cutpoints derive snapshot/history correspondence and retained-prefix framing; exact successful pruning and later release are conditional on primitive ownership/observations. Arbitrary histories, concurrent load-to-image mapping, full indexed composition and full P1 remain open"
+status = "partial"
+required_checks = ["storage-slice", "storage-slice-adapter-tests", "row-publication", "row-retention", "row-initialization-adapter-tests", "retention-native", "core-regressions"]
+refinement_roots = { storage-slice = ["native_horizon_covers_reader", "publication_derives_snapshot_history", "publication_derives_completed_history", "native_publication_derives_history", "publication_derives_retained_prefix", "native_vacuum_derives_history", "pruned_tail_reuse_preserves_history", "native_initialize_preserves_reader", "native_read_after_reuse", "native_validation_rejects_invisible_writer", "old_snapshot_cases_have_witnesses", "native_vacuum_releases_anchor"] }
+
+[[claims]]
+id = "ROW-INITIALIZATION-VERUS"
+contract = "verification/row_initialization/README.md"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "verification/row_initialization/contracts.rs"]
+scope = "All seven native constructor fields and exact initialize_row pointer-write sequence refine their field projection under exclusive allocation permission, preserving protected cells; raw pointer resolution and allocator-pop ownership remain primitive contracts"
+status = "partial"
+required_checks = ["storage-slice", "row-initialization-adapter-tests", "retention-native"]
+refinement_roots = { storage-slice = ["native_constructor_clears_metadata", "native_initialize_preserves_reader"] }

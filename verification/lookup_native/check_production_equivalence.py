@@ -2,7 +2,7 @@
 """Compare reviewed Rust/Cargo inputs after narrowly excluding test-only edits.
 
 This is lexical change detection, not a compiler or semantic-equivalence proof.
-Only the named cfg(test) modules and the exact reviewed snapshot hook may differ.
+Only named cfg(test) modules and exact reviewed lifecycle/row hooks may differ.
 """
 from pathlib import Path
 import argparse
@@ -19,10 +19,23 @@ TEST_MODULES = {
     "aerostore_core/src/occ_partitioned.rs": {"predicate_completion_tests"},
 }
 PROC = "aerostore_core/src/procarray.rs"
+OCC = "aerostore_core/src/occ_partitioned.rs"
 HOOK_DECLARATION = """static SNAPSHOT_ACQUIRING_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
         std::cell::RefCell::new(None);"""
 HOOK_CALL = """#[cfg(test)] SNAPSHOT_ACQUIRING_HOOK.with(|hook| {
     if let Some(hook) = hook.borrow_mut().take() { hook(); }
+});"""
+ROW_HOOK_DECLARATIONS = {
+    "ROW_PUBLICATION_STEP_HOOK": """static ROW_PUBLICATION_STEP_HOOK:
+        std::cell::RefCell<Option<Box<dyn FnMut(usize, bool)>>> = std::cell::RefCell::new(None);""",
+    "ROW_TRAVERSAL_STEP_HOOK": """static ROW_TRAVERSAL_STEP_HOOK:
+        std::cell::RefCell<Option<Box<dyn FnOnce(u32, u32)>>> = std::cell::RefCell::new(None);""",
+}
+ROW_PUBLICATION_CALL = """#[cfg(test)] ROW_PUBLICATION_STEP_HOOK.with(|hook| {
+    if let Some(hook) = hook.borrow_mut().as_mut() { hook(write.row_id, PHASE); }
+});"""
+ROW_TRAVERSAL_CALL = """#[cfg(test)] ROW_TRAVERSAL_STEP_HOOK.with(|hook| {
+    if let Some(hook) = hook.borrow_mut().take() { hook(row_ptr.load(Ordering::Acquire), head_offset); }
 });"""
 
 
@@ -87,6 +100,75 @@ def locations(tokens, needle):
     return [i for i in range(len(tokens)) if tokens[i:i + len(needle)] == needle]
 
 
+def strip_row_hooks(tokens, exclusions):
+    """Check exact test-only declarations, bodies and native cut positions."""
+    present = {name for name in ROW_HOOK_DECLARATIONS if name in tokens}
+    if not present:
+        return tokens, exclusions
+    block_prefix = rust_tokens("#[cfg(test)] thread_local! {")
+    blocks = locations(tokens, block_prefix)
+    if len(blocks) != 1:
+        raise ValueError("reviewed OCC hook declaration block is not uniquely test-only")
+    opening = blocks[0] + len(block_prefix) - 1
+    closing = balanced_end(tokens, opening)
+    removals = []
+    for name in present:
+        declaration = rust_tokens(ROW_HOOK_DECLARATIONS[name])
+        declarations = locations(tokens, declaration)
+        if len(declarations) != 1 or not opening < declarations[0] or declarations[0] + len(declaration) > closing:
+            raise ValueError("row hook declaration is not uniquely test-only: " + name)
+        removals.append((declarations[0], len(declaration)))
+        exclusions.append("exact cfg(test) " + name + " declaration")
+
+    def function(name):
+        found = locations(tokens, ["fn", name, "("])
+        if len(found) != 1:
+            raise ValueError("row hook native method is not unique: " + name)
+        begin = tokens.index("{", found[0])
+        return begin, balanced_end(tokens, begin)
+
+    def require_cut(method, call, before, after):
+        needle = rust_tokens(call)
+        begin, end = function(method)
+        found = [p for p in locations(tokens, needle) if begin < p and p + len(needle) < end]
+        if len(found) != 1:
+            raise ValueError("row hook call missing or duplicated: " + method)
+        at = found[0]
+        # The approved cuts are statements directly in the native loop, not
+        # nested branches that merely share a neighboring expression.
+        depth = tokens[begin:at].count("{") - tokens[begin:at].count("}")
+        left, right = rust_tokens(before), rust_tokens(after)
+        if depth != 2 or (left and tokens[at-len(left):at] != left) or (right and tokens[at+len(needle):at+len(needle)+len(right)] != right):
+            raise ValueError("row hook moved from reviewed native cut: " + method)
+        removals.append((at, len(needle)))
+        exclusions.append("exact cfg(test) row hook call in " + method)
+
+    if "ROW_TRAVERSAL_STEP_HOOK" in present:
+        if len(locations(tokens, rust_tokens(ROW_TRAVERSAL_CALL))) != 1:
+            raise ValueError("cursor hook declaration/call mismatch")
+        require_cut("find_visible_row_ptr", ROW_TRAVERSAL_CALL,
+                    "head_offset = row.next.load(Ordering::Acquire);", "}")
+    if "ROW_PUBLICATION_STEP_HOOK" in present:
+        for phase in ("false", "true"):
+            if len(locations(tokens, rust_tokens(ROW_PUBLICATION_CALL.replace("PHASE", phase)))) != 2:
+                raise ValueError("publication hook declaration/call mismatch")
+        for method, new_row, base, new in [
+            ("publish_prepared_write_set", "&RelPtr::from_offset(write.new_offset)", "write.base_offset", "write.new_offset"),
+            ("publish_write_set", "&write.new_ptr", "base_offset", "new_offset"),
+        ]:
+            require_cut(method, ROW_PUBLICATION_CALL.replace("PHASE", "false"), "",
+                        "let new_row = self.resolve_row_ptr(" + new_row + ")?;")
+            require_cut(method, ROW_PUBLICATION_CALL.replace("PHASE", "true"),
+                        "if slot.head.compare_exchange(" + base + "," + new + ",Ordering::AcqRel,Ordering::Acquire"
+                        + ("," if method == "publish_prepared_write_set" else "")
+                        + ").is_err() { return Err(Error::SerializationFailure); }", "")
+    for at, length in sorted(removals, reverse=True):
+        tokens[at:at+length] = []
+    if any(name in tokens for name in present):
+        raise ValueError("unreviewed row hook reference remains")
+    return tokens, exclusions
+
+
 def production_tokens(name, source):
     tokens = rust_tokens(source)
     exclusions = []
@@ -114,6 +196,8 @@ def production_tokens(name, source):
     if level:
         raise ValueError("unclosed item nesting")
     tokens = kept
+    if name == OCC:
+        return strip_row_hooks(tokens, exclusions)
     if name != PROC:
         return tokens, exclusions
 

@@ -50,7 +50,9 @@ def frozen_paths(root: Path) -> list[str]:
                       "verification/lifecycle_scenario",
                       "verification/lifecycle_native", "verification/lifecycle_interference",
                       "verification/guard_ownership", "verification/lookup", "verification/indexed_slice",
-                      "verification/lookup_native"]:
+                      "verification/lookup_native", "verification/row_publication",
+                      "verification/row_retention", "verification/retention_native", "verification/storage_slice",
+                      "verification/row_initialization"]:
         if not (root / directory).exists():
             continue
         paths.update(str(p.relative_to(root)) for p in (root / directory).iterdir()

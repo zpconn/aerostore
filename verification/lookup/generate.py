@@ -11,6 +11,11 @@ SOURCE = ROOT / 'aerostore_core/src/occ_partitioned.rs'
 CONTRACTS = HERE / 'contracts.rs'
 HISTORY = HERE / 'history.rs'
 OUTPUT = HERE / 'lookup.verus.rs'
+TRAVERSAL_HOOK = '''#[cfg(test)] ROW_TRAVERSAL_STEP_HOOK.with(|hook| {
+    if let Some(hook) = hook.borrow_mut().take() {
+        hook(row_ptr.load(Ordering::Acquire), head_offset);
+    }
+});'''
 spec = importlib.util.spec_from_file_location('lookup_token_adapter', ROOT / 'verification/concurrent/generate.py')
 adapter = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(adapter)
@@ -63,6 +68,10 @@ def render(source=None):
     visible=method(source,'is_visible','fn is_visible(&self, row: &OccRow<T>, tx: &OccTransaction<T>) -> bool')
     locked=method(source,'row_locked_by_other_tx','fn row_locked_by_other_tx(&self, row: &OccRow<T>, txid: TxId) -> bool')
     find=method(source,'find_visible_row_ptr','fn find_visible_row_ptr(&self, tx: &OccTransaction<T>, row_id: usize) -> Result<Option<RelPtr<OccRow<T>>>, Error>')
+    # Strip only the reviewed deterministic cursor cut at its exact native site.
+    # Unknown cfg(test) blocks and moved/modified calls remain rejected.
+    find=replace(find,'head_offset = row.next.load(Ordering::Acquire); '+TRAVERSAL_HOOK,
+        'head_offset = row.next.load(Ordering::Acquire);',1)
     read=method(source,'read','fn read(&self, tx: &mut OccTransaction<T>, row_id: usize) -> Result<Option<T>, Error>')
     record=method(source,'record_read','fn record_read(&self,tx:&mut OccTransaction<T>,row_id:usize,row_ptr:RelPtr<OccRow<T>>,xmin:TxId)')
     validate=method(source,'has_serialization_conflict','fn has_serialization_conflict(&self,tx:&OccTransaction<T>) -> Result<bool,Error>')
