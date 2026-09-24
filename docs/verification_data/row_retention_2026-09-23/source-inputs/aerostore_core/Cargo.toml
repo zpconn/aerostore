@@ -1,0 +1,78 @@
+[package]
+name = "aerostore_core"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+# Opt-in implementation experiments. The default retains the measured std-sort
+# path until a verified candidate earns promotion through the performance gate.
+verified-buckets-sort = []
+verified-buckets-bitmap = []
+
+[dependencies]
+aerostore_verified = { path = "../aerostore_verified" }
+crossbeam = { workspace = true }
+crossbeam-skiplist = { workspace = true }
+aerostore_macros = { path = "../aerostore_macros" }
+serde = { version = "1.0", features = ["derive"] }
+bincode = "1.3"
+tokio = { version = "1.44", features = ["fs", "io-util", "sync", "rt", "rt-multi-thread", "time", "macros"] }
+memchr = "2.7"
+itoa = "1.0"
+ryu = "1.0"
+libc = "0.2"
+rkyv = { version = "0.7", features = ["validation"] }
+nom = "7.1"
+rustix = { version = "0.38", features = ["runtime", "process", "fs"] }
+
+[dev-dependencies]
+aerostore_macros = { path = "../aerostore_macros" }
+criterion = "0.5"
+loom = "0.7"
+tempfile = "3.15"
+proptest = "1.6"
+postgres = { version = "0.19", features = ["with-serde_json-1"] }
+testcontainers = "0.15"
+serde_json = "1.0"
+
+[target.'cfg(aerostore_loom)'.dependencies]
+loom = "0.7"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(aerostore_loom)'] }
+
+[[bench]]
+name = "procarray_snapshot"
+harness = false
+
+[[bench]]
+name = "shm_skiplist_adversarial"
+harness = false
+
+[[bench]]
+name = "wal_delta_throughput"
+harness = false
+
+[[bench]]
+name = "tmpfs_warm_restart"
+harness = false
+
+[[bench]]
+name = "shm_skiplist_seek_bounds"
+harness = false
+
+[[bench]]
+name = "hyperfeed_crucible"
+harness = false
+
+[[bench]]
+name = "hyperfeed_extended_crucible"
+harness = false
+
+[[bench]]
+name = "verified_bucket_sets"
+harness = false
+
+[[bench]]
+name = "verified_bucket_allocations"
+harness = false

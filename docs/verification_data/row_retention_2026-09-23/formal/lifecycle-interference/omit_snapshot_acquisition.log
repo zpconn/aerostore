@@ -1,0 +1,40 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lifecycle-interference/omit_snapshot_acquisition.rs:923:1
+    |
+923 | / pub fn snapshot_after_wait<D: WaitingPrimitives>(driver: &mut D, registration: ProcArrayRegistration,
+924 | |     Tracked(owner): Tracked<&OwnerToken>)
+925 | |     -> (out: (Result<ProcSnapshot, ProcArrayError>, Ghost<State>))
+    | |_________________________________________________________________^
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lifecycle-interference/omit_snapshot_acquisition.rs:929:30
+    |
+929 |         well_formed(out.1@), out.1@.lifecycle_held,
+    |                              ^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+945 |     (result, Ghost(acquired))
+    |     ------------------------- at the end of the function body
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lifecycle-interference/omit_snapshot_acquisition.rs:941:13
+    |
+656 |     requires well_formed(entry), trace_valid(entry, acquired, owner, trace),
+    |                                  ------------------------------------------ failed precondition
+...
+941 |     proof { acquisition_preserves_owned_history(entry, acquired, Some(registration), trace@); }
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lifecycle-interference/omit_snapshot_acquisition.rs:942:18
+    |
+810 |     requires well_formed(old(driver).state()), old(driver).state().lifecycle_held, registration.txid > 0,
+    |                                                ---------------------------------- failed precondition
+...
+942 |     let result = create_transaction_snapshot_acquired(driver, registration);
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 3 previous errors
+

@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/concurrent/omit_prepare_unwind_abort.rs:186:9
+    |
+186 |         self . resume_unwind ( panic )
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+222 |         requires safe_release(old(self).events());
+    |                  -------------------------------- failed precondition
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

@@ -1,0 +1,45 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lifecycle/omit_end_lock.rs:314:1
+    |
+314 | / pub fn end_transaction<D: LifecyclePrimitives>(driver: &mut D, registration: ProcArrayRegistration)
+315 | |     -> (result: Result<(), ProcArrayError>)
+    | |__________________________________________^
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lifecycle/omit_end_lock.rs:318:49
+    |
+318 |       ensures well_formed(final(driver).state()), final(driver).state().lifecycle_held,
+    |                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+345 | /     return Err ( ProcArrayError :: SlotOwnershipMismatch {
+346 | |         slot_idx : registration . slot_idx , expected_txid : registration . txid , observed_txid : observed ,
+347 | |     }
+348 | |     ) ;
+    | |_____- at this exit
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lifecycle/omit_end_lock.rs:318:49
+    |
+318 |       ensures well_formed(final(driver).state()), final(driver).state().lifecycle_held,
+    |                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+337 | /     return Err ( ProcArrayError :: InvalidSlot {
+338 | |         slot_idx : registration . slot_idx ,
+339 | |     }
+340 | |     ) ;
+    | |_____- at this exit
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lifecycle/omit_end_lock.rs:343:16
+    |
+133 |         requires self.state().lifecycle_held, slot < self.state().slots.len(),
+    |                  --------------------------- failed precondition
+...
+343 | let observed = driver . slot_txid ( slot ) ;
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 3 previous errors
+

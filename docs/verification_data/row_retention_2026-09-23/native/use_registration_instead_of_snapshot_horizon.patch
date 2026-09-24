@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/procarray.rs
++++ b/aerostore_core/src/procarray.rs
+@@ -158,7 +158,7 @@
+         let mut xmin = global_txid.load(Ordering::Acquire);
+         for slot in &self.slots {
+             if slot.load(Ordering::Acquire) != EMPTY_SLOT {
+-                xmin = xmin.min(slot.snapshot_xmin.load(Ordering::Acquire));
++                xmin = xmin.min(slot.load(Ordering::Acquire));
+             }
+         }
+         xmin

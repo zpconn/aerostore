@@ -1,0 +1,29 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lifecycle/omit_snapshot_lock.rs:407:1
+    |
+407 | pub fn create_snapshot<D: LifecyclePrimitives>(driver: &mut D) -> (result: ProcSnapshot)
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lifecycle/omit_snapshot_lock.rs:409:49
+    |
+409 |     ensures well_formed(final(driver).state()), final(driver).state().lifecycle_held,
+    |                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+415 |     let ghost initial = driver.state(); snapshot_locked ( driver )
+    |                                         -------------------------- at the end of the function body
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lifecycle/omit_snapshot_lock.rs:415:41
+    |
+357 |     requires well_formed(old(driver).state()), old(driver).state().lifecycle_held,
+    |                                                ---------------------------------- failed precondition
+...
+415 |     let ghost initial = driver.state(); snapshot_locked ( driver )
+    |                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

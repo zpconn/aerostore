@@ -1,0 +1,13 @@
+{
+  "before_is_historical_pre_fix": true,
+  "binary_omission": "Build products omitted; recorded source, commands, Cargo lock and logs retained",
+  "canonical_fixed_regression_is_in_final_pilot": true,
+  "compiler_evidence": "rustc-info.json is original Cargo build-cache output; rustc.txt extracts its version; final pilot independently pins compiler",
+  "no_unsafe_client_code_or_reuse_needed": true,
+  "post_fix_delta_receipt": "../runtime-delta.json",
+  "pre_fix_production_receipt": "../pre-fix/production-equivalence.json",
+  "reproduction_build_command": "source target/verification-tools/environment.sh; CARGO_TARGET_DIR=/tmp/aerostore-vacuum-api-target cargo run --offline --release --manifest-path /tmp/aerostore-vacuum-api-iw1_el02/Cargo.toml",
+  "reproduction_build_log": "Original build output was not persisted; before.stdout is the recorded binary rerun output, not a reconstructed build log",
+  "reproduction_source_reconstruction": "Use accepted parent and replace OCC with pre-fix/aerostore_core/src/occ_partitioned.rs; verify pre-fix/source-manifest.json",
+  "safe_public_API_missing_row_successful_commit_reproduced": true
+}

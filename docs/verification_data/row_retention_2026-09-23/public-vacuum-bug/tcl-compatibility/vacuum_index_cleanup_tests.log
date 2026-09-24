@@ -1,0 +1,104 @@
+   Compiling serde_core v1.0.228
+   Compiling syn v1.0.109
+   Compiling serde v1.0.228
+   Compiling libc v0.2.182
+   Compiling equivalent v1.0.2
+   Compiling hashbrown v0.16.1
+   Compiling cfg-if v1.0.4
+   Compiling crossbeam-utils v0.8.21
+   Compiling winnow v0.5.40
+   Compiling glob v0.3.3
+   Compiling same-file v1.0.6
+   Compiling rustix v0.38.44
+   Compiling bitflags v2.11.0
+   Compiling memchr v2.8.0
+   Compiling minimal-lexical v0.2.1
+   Compiling regex-syntax v0.8.10
+   Compiling linux-raw-sys v0.4.15
+   Compiling either v1.15.0
+   Compiling hashbrown v0.12.3
+   Compiling syn v2.0.117
+   Compiling indexmap v1.9.3
+   Compiling anyhow v1.0.102
+   Compiling home v0.5.12
+   Compiling bindgen v0.64.0
+   Compiling libloading v0.8.9
+   Compiling peeking_take_while v0.1.2
+   Compiling walkdir v2.5.0
+   Compiling bitflags v1.3.2
+   Compiling lazycell v1.3.0
+   Compiling rustc-hash v1.1.0
+   Compiling lazy_static v1.5.0
+   Compiling log v0.4.29
+   Compiling once_cell v1.21.3
+   Compiling getrandom v0.2.17
+   Compiling getrandom v0.4.1
+   Compiling pkg-config v0.3.32
+   Compiling mutf8 v0.2.0
+   Compiling tuplex v0.1.2
+   Compiling clang-sys v1.8.1
+   Compiling ahash v0.7.8
+   Compiling tempfile v3.26.0
+   Compiling nom v7.1.3
+   Compiling indexmap v2.13.0
+   Compiling crossbeam-epoch v0.9.18
+   Compiling crossbeam-queue v0.3.12
+   Compiling crossbeam-channel v0.5.15
+   Compiling crossbeam-deque v0.8.6
+   Compiling crossbeam-skiplist v0.1.3
+   Compiling crossbeam v0.8.4
+   Compiling uuid v1.21.0
+   Compiling regex-automata v0.4.14
+   Compiling which v4.4.2
+   Compiling cexpr v0.6.0
+   Compiling toml_datetime v0.6.11
+   Compiling serde_spanned v0.6.9
+   Compiling toml_edit v0.19.15
+   Compiling regex v1.12.3
+   Compiling bind_syn v0.1.0
+   Compiling serde_derive v1.0.228
+   Compiling tokio-macros v2.6.0
+   Compiling tcl_derive v0.1.5
+   Compiling aerostore_macros v0.1.0 (/home/zpconn/code/aerostore/aerostore_macros)
+   Compiling ptr_meta_derive v0.1.4
+   Compiling bytecheck_derive v0.6.12
+   Compiling enumx_derive v0.4.2
+   Compiling rkyv_derive v0.7.46
+   Compiling cex_derive v0.5.2
+   Compiling ptr_meta v0.1.4
+   Compiling tokio v1.49.0
+   Compiling bytecheck v0.6.12
+   Compiling toml v0.7.8
+   Compiling rend v0.4.2
+   Compiling enumx v0.4.3
+   Compiling inwelling v0.5.5
+   Compiling tcl v0.1.8
+   Compiling cex v0.5.2
+   Compiling bincode v1.3.3
+   Compiling clib v0.2.4
+   Compiling rkyv v0.7.46
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/aerostore_core)
+warning: method `commit_with_record_before_publish` is never used
+    --> aerostore_core/src/occ_partitioned.rs:1264:19
+     |
+ 365 | impl<T: Copy + Send + Sync + 'static> OccTable<T> {
+     | ------------------------------------------------- method in this implementation
+...
+1264 |     pub(crate) fn commit_with_record_before_publish<E, F>(
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `aerostore_core` (lib) generated 1 warning
+   Compiling aerostore_tcl v0.1.0 (/home/zpconn/code/aerostore/aerostore_tcl)
+    Finished `release` profile [optimized] target(s) in 16.71s
+     Running unittests src/lib.rs (target/release/deps/aerostore_tcl-1d4537ea47c71201)
+
+running 4 tests
+test vacuum_index_cleanup_tests::savepoint_and_abort_do_not_publish_rolled_back_index_keys ... ok
+test vacuum_index_cleanup_tests::vacuum_after_delete_never_recreates_or_removes_another_live_posting ... ok
+test vacuum_index_cleanup_tests::vacuum_keeps_current_postings_when_key_returns_to_reclaimed_value ... ok
+test vacuum_index_cleanup_tests::warm_attachment_rebinds_all_six_indexes_before_writing ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.00s
+

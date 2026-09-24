@@ -1,0 +1,2 @@
+raw=false correct_horizon=2 safe_reclaimed=0 raw_reclaimed=0 observed=Some(10) reader_commit=Err(SerializationFailure)
+raw=true correct_horizon=2 safe_reclaimed=0 raw_reclaimed=1 observed=None reader_commit=Ok(0)

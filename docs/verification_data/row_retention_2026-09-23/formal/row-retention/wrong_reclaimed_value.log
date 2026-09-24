@@ -1,0 +1,51 @@
+note: verifying root module (selected functions)
+
+note: recommendation not met
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/row-retention/wrong_reclaimed_value.rs:1671:1297
+     |
+1671 | ... ( p ) && p != head_offset ==> ! eligible ( driver . state ( ) . image . rows [ p ] , global_xmin ) , reachable ( driver . stat...
+     |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+    --> map.rs:87:12
+     |
+     = note: recommendation not met
+
+note: recommendation not met
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/row-retention/wrong_reclaimed_value.rs:1671:1681
+     |
+1671 | ...ontains ( p ) ==> p != head_offset && eligible ( initial . image . rows [ p ] , global_xmin ) , reclaimed . len ( ) == removed ...
+     |                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+    --> map.rs:87:12
+     |
+     = note: recommendation not met
+
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/row-retention/wrong_reclaimed_value.rs:1750:22
+     |
+1750 |             assert ( initial . image . rows [ curr_ptr ] . value == reclaimed [ old_reports . len ( ) as int ] . reclaimed_value ) ;
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+note: recommendation not met
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/row-retention/wrong_reclaimed_value.rs:1771:97
+     |
+1771 | ...   <==> reachable(initial.image,head_offset).contains(p) && p!=head_offset && eligible(initial.image.rows[p],global_xmin) by {
+     |                                                                                           ^^^^^^^^^^^^^^^^^^^^^
+     |
+    --> map.rs:87:12
+     |
+     = note: recommendation not met
+
+note: recommendation not met
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/row-retention/wrong_reclaimed_value.rs:1772:95
+     |
+1772 |             if reachable(initial.image,head_offset).contains(p) && p!=head_offset && eligible(initial.image.rows[p],global_xmin)
+     |                                                                                               ^^^^^^^^^^^^^^^^^^^^^
+     |
+    --> map.rs:87:12
+     |
+     = note: recommendation not met
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

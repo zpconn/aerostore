@@ -1,0 +1,11 @@
+note: verifying root module (selected functions)
+
+error: assertion failed
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/guard-ownership/freeze_foreign_state.rs:742:12
+    |
+742 |     assert(legal_environment(&before, &after, protected)) by {
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

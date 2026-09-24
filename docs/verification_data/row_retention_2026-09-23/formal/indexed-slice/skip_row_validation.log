@@ -1,0 +1,45 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/indexed-slice/skip_row_validation.rs:2320:1
+     |
+2320 | / pub fn indexed_read_then_validate<D: SlicePrimitives<P>, V: lookup::Storage, P: KeyPredicate, C: lookup::CandidateSet>(
+2321 | |     driver: &D, validation_driver: &V, tx: &mut lookup::Transaction, query: &P,
+2322 | |     binding: usize, binding_count: usize, offset: usize, bucket: usize,
+2323 | |     Tracked(authority): Tracked<&mut ownership::Authority>) -> (result: Result<Outcome, SliceError>)
+     | |___________________________________________________________________________________________________^
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/indexed-slice/skip_row_validation.rs:2342:9
+     |
+2342 | /         result.is_ok() && !result.unwrap().predicate_conflict ==>
+2343 | |             result.unwrap().row_conflict == lookup::reads_conflict(validation_driver.image(), *final(tx)),
+     | |_________________________________________________________________________________________________________^ failed this postcondition
+...
+2346 | / {
+2347 | |     let ghost initial_authority = *authority;
+2348 | |     let mut guards = Vec::new();
+2349 | |     let lease = match ownership::acquire_index_bucket(driver, binding, bucket, &guards, Tracked(&mut *authority)) {
+...    |
+2444 | |     Ok(Outcome { rows, conflict, predicate_conflict, row_conflict, captured_stamp, validation_stamp: stamp })
+2445 | | }
+     | |_- at the end of the function body
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/indexed-slice/skip_row_validation.rs:2344:9
+     |
+2344 | /         result.is_ok() ==> result.unwrap().conflict ==
+2345 | |             (result.unwrap().predicate_conflict || lookup::reads_conflict(validation_driver.image(), *final(tx))),
+     | |_________________________________________________________________________________________________________________^ failed this postcondition
+2346 | / {
+2347 | |     let ghost initial_authority = *authority;
+2348 | |     let mut guards = Vec::new();
+2349 | |     let lease = match ownership::acquire_index_bucket(driver, binding, bucket, &guards, Tracked(&mut *authority)) {
+...    |
+2444 | |     Ok(Outcome { rows, conflict, predicate_conflict, row_conflict, captured_stamp, validation_stamp: stamp })
+2445 | | }
+     | |_- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

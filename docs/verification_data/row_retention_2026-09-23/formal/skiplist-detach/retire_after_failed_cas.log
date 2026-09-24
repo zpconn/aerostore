@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+  --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/skiplist-detach/retire_after_failed_cas.rs:73:9
+   |
+73 |         r == Ok(true) ==> detached(final(engine).view()),
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+93 |     return Ok ( detached_all ) ;
+   |     -------------------------- at this exit
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "target": "x86_64-unknown-linux-gnu",
+  "lean_version": "4.31.0",
+  "rust_toolchain": "nightly-2026-09-17",
+  "charon_commit": "62585970fc75f61d83c7898ff8dfdd7edaa3c073",
+  "charon_version": "0.1.270",
+  "aeneas_release": "nightly-2026.09.23-12a018b",
+  "mathlib_commit": "fabf563a7c95a166b8d7b6efca11c8b4dc9d911f",
+  "release_binary_sha256": {
+    "lean-4.31.0-linux/bin/lean": "e8baaa71855a616dc351028f3ad2200051b0671f423a1696a100e809302d5550",
+    "lean-4.31.0-linux/bin/lake": "60330ab6f07dce20f3fa9ebb08e8b984ea9549eac172afeb15d9d2227060e2b3",
+    "aeneas/aeneas": "96d3a9feca18e808c32bcf64f5c2b0980f8bf73631ae7b41463e5c9dcf9ab06f",
+    "lean-4.31.0-linux/bin/leanchecker": "e14365bacbe81e495558ef4c64508e97416e699f6d62900be38c995f39fcb9b8",
+    "lean-4.31.0-linux/lib/lean/libInit_shared.so": "2f96493ac9046f64ec7bcb78102a4c1e7cd9a7042487f246af45eda8a96667f5",
+    "lean-4.31.0-linux/lib/lean/libLake_shared.so": "02da596e8f70c60a2aec411ed968a633d41ffada2c24617dabe04ae20df1d8c8",
+    "lean-4.31.0-linux/lib/lean/libleanshared.so": "844963455a7800b417b067a3c7ad6cb86c34286b54be596b1e2b1e3808d6b718",
+    "lean-4.31.0-linux/lib/lean/libleanshared_1.so": "2f96493ac9046f64ec7bcb78102a4c1e7cd9a7042487f246af45eda8a96667f5",
+    "lean-4.31.0-linux/lib/lean/libleanshared_2.so": "2f96493ac9046f64ec7bcb78102a4c1e7cd9a7042487f246af45eda8a96667f5"
+  },
+  "archives": [
+    {
+      "file": "lean-4.31.0-linux.tar.zst",
+      "url": "https://github.com/leanprover/lean4/releases/download/v4.31.0/lean-4.31.0-linux.tar.zst",
+      "sha256": "07a633cc8d9151cbc08825ea4cdda50d4b02a2c9cb852c0131b13046f49cad7f",
+      "directory": ".",
+      "marker": "lean-4.31.0-linux/bin/lean"
+    },
+    {
+      "file": "aeneas-linux-x86_64.tar.gz",
+      "url": "https://github.com/AeneasVerif/aeneas/releases/download/nightly-2026.09.23-12a018b/aeneas-linux-x86_64.tar.gz",
+      "sha256": "4fc954f56f2f8d53304ee12d46df5023940a083f9b42717b29ee0b233f555acb",
+      "directory": "aeneas",
+      "marker": "aeneas/aeneas"
+    },
+    {
+      "file": "charon-62585970.tar.gz",
+      "url": "https://github.com/AeneasVerif/charon/archive/62585970fc75f61d83c7898ff8dfdd7edaa3c073.tar.gz",
+      "sha256": "d4872b4e4792da0288fed3b27d61f2a9ea800e8a193cb03a1c6a463d0d239295",
+      "directory": ".",
+      "marker": "charon-62585970fc75f61d83c7898ff8dfdd7edaa3c073/charon/Cargo.toml"
+    }
+  ]
+}

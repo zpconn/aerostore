@@ -1,0 +1,1028 @@
+use std::fmt;
+use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering as AtomicOrdering};
+use std::sync::Arc;
+
+use crate::filters::compare_optional;
+use crate::occ::{OccTable, OccTransaction};
+use crate::rbo_planner::{AccessPath, CompiledPlan, PlannerError, StapiRow};
+use crate::shm::{RelPtr, ShmAllocError, ShmArena};
+use crate::{RetryBackoff, RetryPolicy};
+
+const EMPTY_OFFSET: u32 = 0;
+const PK_INLINE_BYTES: usize = 64;
+
+#[cfg(test)]
+thread_local! {
+    static PK_ABSENCE_OBSERVED_HOOK: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(test)]
+fn pk_absence_observed_hook() {
+    PK_ABSENCE_OBSERVED_HOOK.with(|hook| {
+        if let Some(hook) = hook.borrow_mut().take() {
+            hook();
+        }
+    });
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SnapshotExecutionMode {
+    StrictSnapshot,
+    ChunkedEventual { chunk_rows: usize },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PrimaryKeyMapError {
+    InvalidBucketCount(usize),
+    InvalidRowCapacity(usize),
+    KeyTooLong { len: usize, max: usize },
+    CapacityExceeded { capacity: usize },
+    InvalidHeader(u32),
+    InvalidBucket(u32),
+    InvalidEntry(u32),
+    Allocation(String),
+}
+
+impl fmt::Display for PrimaryKeyMapError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PrimaryKeyMapError::InvalidBucketCount(count) => {
+                write!(f, "primary key map bucket count {} is invalid", count)
+            }
+            PrimaryKeyMapError::InvalidRowCapacity(capacity) => {
+                write!(f, "primary key map row capacity {} is invalid", capacity)
+            }
+            PrimaryKeyMapError::KeyTooLong { len, max } => {
+                write!(f, "primary key length {} exceeds max {}", len, max)
+            }
+            PrimaryKeyMapError::CapacityExceeded { capacity } => {
+                write!(f, "primary key map capacity {} exhausted", capacity)
+            }
+            PrimaryKeyMapError::InvalidHeader(offset) => {
+                write!(f, "invalid primary key map header offset {}", offset)
+            }
+            PrimaryKeyMapError::InvalidBucket(offset) => {
+                write!(f, "invalid primary key map bucket offset {}", offset)
+            }
+            PrimaryKeyMapError::InvalidEntry(offset) => {
+                write!(f, "invalid primary key map entry offset {}", offset)
+            }
+            PrimaryKeyMapError::Allocation(msg) => write!(f, "{}", msg),
+        }
+    }
+}
+
+impl std::error::Error for PrimaryKeyMapError {}
+
+impl From<ShmAllocError> for PrimaryKeyMapError {
+    fn from(value: ShmAllocError) -> Self {
+        PrimaryKeyMapError::Allocation(value.to_string())
+    }
+}
+
+#[repr(C, align(64))]
+struct PkMapHeader {
+    bucket_count: u32,
+    row_capacity: u32,
+    next_row_id: AtomicU32,
+    distinct_key_count: AtomicUsize,
+}
+
+impl PkMapHeader {
+    #[inline]
+    fn new(bucket_count: u32, row_capacity: u32) -> Self {
+        Self {
+            bucket_count,
+            row_capacity,
+            next_row_id: AtomicU32::new(0),
+            distinct_key_count: AtomicUsize::new(0),
+        }
+    }
+}
+
+#[repr(C, align(64))]
+struct PkBucket {
+    head: AtomicU32,
+}
+
+impl PkBucket {
+    #[inline]
+    fn new() -> Self {
+        Self {
+            head: AtomicU32::new(EMPTY_OFFSET),
+        }
+    }
+}
+
+#[repr(C)]
+struct PkEntry {
+    hash: u64,
+    key_len: u16,
+    _pad: [u8; 2],
+    row_id: u32,
+    next: AtomicU32,
+    key: [u8; PK_INLINE_BYTES],
+}
+
+impl PkEntry {
+    #[inline]
+    fn new(hash: u64, key: &[u8], row_id: u32) -> Self {
+        let mut encoded = [0_u8; PK_INLINE_BYTES];
+        encoded[..key.len()].copy_from_slice(key);
+        Self {
+            hash,
+            key_len: key.len() as u16,
+            _pad: [0_u8; 2],
+            row_id,
+            next: AtomicU32::new(EMPTY_OFFSET),
+            key: encoded,
+        }
+    }
+
+    #[inline]
+    fn key_equals(&self, key: &[u8], hash: u64) -> bool {
+        if self.hash != hash {
+            return false;
+        }
+        if self.key_len as usize != key.len() {
+            return false;
+        }
+        self.key[..key.len()] == *key
+    }
+}
+
+#[derive(Clone)]
+pub struct ShmPrimaryKeyMap {
+    shm: Arc<ShmArena>,
+    header_offset: u32,
+    bucket_offsets: Arc<[u32]>,
+}
+
+impl ShmPrimaryKeyMap {
+    pub fn new_in_shared(
+        shm: Arc<ShmArena>,
+        bucket_count: usize,
+        row_capacity: usize,
+    ) -> Result<Self, PrimaryKeyMapError> {
+        if bucket_count == 0 {
+            return Err(PrimaryKeyMapError::InvalidBucketCount(bucket_count));
+        }
+        if row_capacity == 0 || row_capacity > u32::MAX as usize {
+            return Err(PrimaryKeyMapError::InvalidRowCapacity(row_capacity));
+        }
+        if bucket_count > u32::MAX as usize {
+            return Err(PrimaryKeyMapError::InvalidBucketCount(bucket_count));
+        }
+
+        let arena = shm.chunked_arena();
+        let mut bucket_offsets = Vec::with_capacity(bucket_count);
+        for _ in 0..bucket_count {
+            let offset = arena.alloc(PkBucket::new())?.load(AtomicOrdering::Acquire);
+            bucket_offsets.push(offset);
+        }
+
+        let header = PkMapHeader::new(bucket_count as u32, row_capacity as u32);
+        let header_offset = arena.alloc(header)?.load(AtomicOrdering::Acquire);
+
+        Ok(Self {
+            shm,
+            header_offset,
+            bucket_offsets: Arc::from(bucket_offsets.into_boxed_slice()),
+        })
+    }
+
+    pub fn from_existing(
+        shm: Arc<ShmArena>,
+        header_offset: u32,
+        bucket_offsets: Vec<u32>,
+    ) -> Result<Self, PrimaryKeyMapError> {
+        if bucket_offsets.is_empty() {
+            return Err(PrimaryKeyMapError::InvalidBucketCount(0));
+        }
+
+        let map = Self {
+            shm,
+            header_offset,
+            bucket_offsets: Arc::from(bucket_offsets.into_boxed_slice()),
+        };
+
+        let header = map.header_ref()?;
+        if header.bucket_count as usize != map.bucket_offsets.len() {
+            return Err(PrimaryKeyMapError::InvalidBucketCount(
+                header.bucket_count as usize,
+            ));
+        }
+        for idx in 0..map.bucket_offsets.len() {
+            let _ = map.bucket_ref(idx)?;
+        }
+        Ok(map)
+    }
+
+    #[inline]
+    pub fn row_capacity(&self) -> usize {
+        self.header_ref()
+            .map(|header| header.row_capacity as usize)
+            .unwrap_or(0)
+    }
+
+    #[inline]
+    pub fn distinct_key_count(&self) -> usize {
+        self.header_ref()
+            .map(|header| header.distinct_key_count.load(AtomicOrdering::Acquire))
+            .unwrap_or(0)
+    }
+
+    #[inline]
+    pub fn header_offset(&self) -> u32 {
+        self.header_offset
+    }
+
+    pub fn bucket_offsets(&self) -> Vec<u32> {
+        self.bucket_offsets.to_vec()
+    }
+
+    pub fn get(&self, key: &str) -> Result<Option<usize>, PrimaryKeyMapError> {
+        let key_bytes = key.as_bytes();
+        if key_bytes.len() > PK_INLINE_BYTES {
+            return Err(PrimaryKeyMapError::KeyTooLong {
+                len: key_bytes.len(),
+                max: PK_INLINE_BYTES,
+            });
+        }
+        if key_bytes.is_empty() {
+            return Ok(None);
+        }
+
+        let hash = hash_key(key_bytes);
+        let bucket = self.bucket_ref_for_hash(hash)?;
+        let head = bucket.head.load(AtomicOrdering::Acquire);
+        let row_id = self.find_from_head(head, key_bytes, hash)?;
+        Ok(row_id.map(|id| id as usize))
+    }
+
+    pub fn insert_existing(&self, key: &str, row_id: usize) -> Result<usize, PrimaryKeyMapError> {
+        let key_bytes = key.as_bytes();
+        if key_bytes.is_empty() {
+            return Ok(row_id);
+        }
+        if key_bytes.len() > PK_INLINE_BYTES {
+            return Err(PrimaryKeyMapError::KeyTooLong {
+                len: key_bytes.len(),
+                max: PK_INLINE_BYTES,
+            });
+        }
+
+        let row_id_u32 = u32::try_from(row_id)
+            .map_err(|_| PrimaryKeyMapError::CapacityExceeded { capacity: row_id })?;
+        let header = self.header_ref()?;
+        if row_id_u32 >= header.row_capacity {
+            return Err(PrimaryKeyMapError::CapacityExceeded {
+                capacity: header.row_capacity as usize,
+            });
+        }
+
+        let hash = hash_key(key_bytes);
+        let bucket = self.bucket_ref_for_hash(hash)?;
+        let mut head = bucket.head.load(AtomicOrdering::Acquire);
+        if let Some(existing) = self.find_from_head(head, key_bytes, hash)? {
+            return Ok(existing as usize);
+        }
+        #[cfg(test)]
+        pk_absence_observed_hook();
+
+        let entry_offset = self.allocate_entry(hash, key_bytes, row_id_u32)?;
+
+        loop {
+            let entry = self.entry_ref(entry_offset)?;
+            entry.next.store(head, AtomicOrdering::Release);
+
+            match bucket.head.compare_exchange(
+                head,
+                entry_offset,
+                AtomicOrdering::AcqRel,
+                AtomicOrdering::Acquire,
+            ) {
+                Ok(_) => {
+                    self.bump_next_row_id(row_id_u32.saturating_add(1))?;
+                    header
+                        .distinct_key_count
+                        .fetch_add(1, AtomicOrdering::AcqRel);
+                    return Ok(row_id_u32 as usize);
+                }
+                Err(observed) => head = observed,
+            }
+
+            if let Some(existing) = self.find_from_head(head, key_bytes, hash)? {
+                self.recycle_unpublished_entry(entry_offset)?;
+                return Ok(existing as usize);
+            }
+
+            std::hint::spin_loop();
+        }
+    }
+
+    pub fn get_or_insert(&self, key: &str) -> Result<usize, PrimaryKeyMapError> {
+        let key_bytes = key.as_bytes();
+        if key_bytes.is_empty() {
+            return Err(PrimaryKeyMapError::KeyTooLong {
+                len: 0,
+                max: PK_INLINE_BYTES,
+            });
+        }
+        if key_bytes.len() > PK_INLINE_BYTES {
+            return Err(PrimaryKeyMapError::KeyTooLong {
+                len: key_bytes.len(),
+                max: PK_INLINE_BYTES,
+            });
+        }
+
+        let hash = hash_key(key_bytes);
+        let bucket = self.bucket_ref_for_hash(hash)?;
+        let mut head = bucket.head.load(AtomicOrdering::Acquire);
+        if let Some(existing) = self.find_from_head(head, key_bytes, hash)? {
+            return Ok(existing as usize);
+        }
+        #[cfg(test)]
+        pk_absence_observed_hook();
+
+        let reserved_row_id = self.reserve_row_id()?;
+        let entry_offset = self.allocate_entry(hash, key_bytes, reserved_row_id)?;
+
+        loop {
+            let entry = self.entry_ref(entry_offset)?;
+            entry.next.store(head, AtomicOrdering::Release);
+
+            match bucket.head.compare_exchange(
+                head,
+                entry_offset,
+                AtomicOrdering::AcqRel,
+                AtomicOrdering::Acquire,
+            ) {
+                Ok(_) => {
+                    self.header_ref()?
+                        .distinct_key_count
+                        .fetch_add(1, AtomicOrdering::AcqRel);
+                    return Ok(reserved_row_id as usize);
+                }
+                Err(observed) => head = observed,
+            }
+
+            if let Some(existing) = self.find_from_head(head, key_bytes, hash)? {
+                self.recycle_unpublished_entry(entry_offset)?;
+                return Ok(existing as usize);
+            }
+
+            std::hint::spin_loop();
+        }
+    }
+
+    fn reserve_row_id(&self) -> Result<u32, PrimaryKeyMapError> {
+        let header = self.header_ref()?;
+        loop {
+            let current = header.next_row_id.load(AtomicOrdering::Acquire);
+            if current >= header.row_capacity {
+                return Err(PrimaryKeyMapError::CapacityExceeded {
+                    capacity: header.row_capacity as usize,
+                });
+            }
+
+            if header
+                .next_row_id
+                .compare_exchange(
+                    current,
+                    current + 1,
+                    AtomicOrdering::AcqRel,
+                    AtomicOrdering::Acquire,
+                )
+                .is_ok()
+            {
+                return Ok(current);
+            }
+            std::hint::spin_loop();
+        }
+    }
+
+    fn bump_next_row_id(&self, min_next: u32) -> Result<(), PrimaryKeyMapError> {
+        let header = self.header_ref()?;
+        loop {
+            let current = header.next_row_id.load(AtomicOrdering::Acquire);
+            if current >= min_next {
+                return Ok(());
+            }
+
+            if header
+                .next_row_id
+                .compare_exchange(
+                    current,
+                    min_next,
+                    AtomicOrdering::AcqRel,
+                    AtomicOrdering::Acquire,
+                )
+                .is_ok()
+            {
+                return Ok(());
+            }
+            std::hint::spin_loop();
+        }
+    }
+
+    fn allocate_entry(
+        &self,
+        hash: u64,
+        key: &[u8],
+        row_id: u32,
+    ) -> Result<u32, PrimaryKeyMapError> {
+        let entry = PkEntry::new(hash, key, row_id);
+        Ok(self
+            .shm
+            .chunked_arena()
+            .alloc(entry)?
+            .load(AtomicOrdering::Acquire))
+    }
+
+    fn recycle_unpublished_entry(&self, offset: u32) -> Result<(), PrimaryKeyMapError> {
+        // This candidate never won a head CAS, so no shared reader can hold it.
+        // PkEntry owns only inline bytes/atomics and needs no destructor.
+        self.shm.chunked_arena().recycle_raw(
+            offset,
+            std::mem::size_of::<PkEntry>(),
+            std::mem::align_of::<PkEntry>(),
+        )?;
+        Ok(())
+    }
+
+    // Published entries are immutable and never removed. Absence is therefore
+    // stable for this exact head, but not for a later head loaded before CAS.
+    // Every insert must either publish against the searched head or search the
+    // head returned by a failed CAS before retrying.
+    fn find_from_head(
+        &self,
+        mut curr: u32,
+        key: &[u8],
+        hash: u64,
+    ) -> Result<Option<u32>, PrimaryKeyMapError> {
+        while curr != EMPTY_OFFSET {
+            let entry = self.entry_ref(curr)?;
+            if entry.key_equals(key, hash) {
+                return Ok(Some(entry.row_id));
+            }
+            curr = entry.next.load(AtomicOrdering::Acquire);
+        }
+        Ok(None)
+    }
+
+    fn bucket_ref_for_hash(&self, hash: u64) -> Result<&PkBucket, PrimaryKeyMapError> {
+        let idx = (hash as usize) % self.bucket_offsets.len();
+        self.bucket_ref(idx)
+    }
+
+    fn header_ref(&self) -> Result<&PkMapHeader, PrimaryKeyMapError> {
+        RelPtr::<PkMapHeader>::from_offset(self.header_offset)
+            .as_ref(self.shm.mmap_base())
+            .ok_or(PrimaryKeyMapError::InvalidHeader(self.header_offset))
+    }
+
+    fn bucket_ref(&self, idx: usize) -> Result<&PkBucket, PrimaryKeyMapError> {
+        let offset = self
+            .bucket_offsets
+            .get(idx)
+            .copied()
+            .ok_or(PrimaryKeyMapError::InvalidBucket(EMPTY_OFFSET))?;
+        RelPtr::<PkBucket>::from_offset(offset)
+            .as_ref(self.shm.mmap_base())
+            .ok_or(PrimaryKeyMapError::InvalidBucket(offset))
+    }
+
+    fn entry_ref(&self, offset: u32) -> Result<&PkEntry, PrimaryKeyMapError> {
+        RelPtr::<PkEntry>::from_offset(offset)
+            .as_ref(self.shm.mmap_base())
+            .ok_or(PrimaryKeyMapError::InvalidEntry(offset))
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct ExecutionEngine;
+
+impl ExecutionEngine {
+    #[inline]
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn execute<T: StapiRow>(
+        &self,
+        plan: &CompiledPlan<T>,
+        table: &OccTable<T>,
+        tx: &mut OccTransaction<T>,
+    ) -> Result<Vec<T>, PlannerError> {
+        let candidate_row_ids = self.candidate_row_ids(plan, table, tx)?;
+        self.collect_rows_from_candidates(plan, table, tx, candidate_row_ids.as_slice())
+    }
+
+    fn collect_rows_from_candidates<T: StapiRow>(
+        &self,
+        plan: &CompiledPlan<T>,
+        table: &OccTable<T>,
+        tx: &mut OccTransaction<T>,
+        candidate_row_ids: &[usize],
+    ) -> Result<Vec<T>, PlannerError> {
+        let mut rows = Vec::new();
+
+        for row_id in candidate_row_ids {
+            if *row_id >= table.capacity() {
+                continue;
+            }
+            let Some(row) = table.read(tx, *row_id)? else {
+                continue;
+            };
+
+            if plan
+                .driver_filter
+                .as_ref()
+                .is_none_or(|filter| (filter.predicate)(&row))
+                && plan
+                    .residual_filters
+                    .iter()
+                    .all(|compiled| (compiled.predicate)(&row))
+            {
+                rows.push(row);
+            }
+        }
+
+        if let Some(sort_field) = &plan.sort {
+            rows.sort_unstable_by(|left, right| {
+                compare_optional(
+                    left.field_value(sort_field.as_str()),
+                    right.field_value(sort_field.as_str()),
+                )
+            });
+        }
+
+        if let Some(limit) = plan.limit {
+            rows.truncate(limit);
+        }
+
+        Ok(rows)
+    }
+
+    fn execute_chunked<T: StapiRow>(
+        &self,
+        plan: &CompiledPlan<T>,
+        table: &OccTable<T>,
+        chunk_rows: usize,
+    ) -> Result<Vec<T>, PlannerError> {
+        // This mode deliberately uses independent chunk snapshots. Scanning
+        // stable slots avoids treating a raw index scan as a snapshot predicate.
+        let candidate_row_ids: Vec<_> = (0..table.capacity()).collect();
+        let chunk_rows = chunk_rows.max(1);
+        let early_limit = if plan.sort.is_none() {
+            plan.limit.unwrap_or(usize::MAX)
+        } else {
+            usize::MAX
+        };
+
+        let mut rows = Vec::new();
+        for chunk in candidate_row_ids.chunks(chunk_rows) {
+            let mut tx = table.begin_transaction()?;
+            for row_id in chunk {
+                if *row_id >= table.capacity() {
+                    continue;
+                }
+                let row = match table.read(&mut tx, *row_id) {
+                    Ok(Some(row)) => row,
+                    Ok(None) => continue,
+                    Err(error) => {
+                        let _ = table.abort(&mut tx);
+                        return Err(error.into());
+                    }
+                };
+                if plan
+                    .driver_filter
+                    .as_ref()
+                    .is_none_or(|filter| (filter.predicate)(&row))
+                    && plan
+                        .residual_filters
+                        .iter()
+                        .all(|compiled| (compiled.predicate)(&row))
+                {
+                    rows.push(row);
+                    if rows.len() >= early_limit {
+                        break;
+                    }
+                }
+            }
+            table.abort(&mut tx)?;
+            if rows.len() >= early_limit {
+                break;
+            }
+        }
+
+        if let Some(sort_field) = &plan.sort {
+            rows.sort_unstable_by(|left, right| {
+                compare_optional(
+                    left.field_value(sort_field.as_str()),
+                    right.field_value(sort_field.as_str()),
+                )
+            });
+        }
+        if let Some(limit) = plan.limit {
+            rows.truncate(limit);
+        }
+        Ok(rows)
+    }
+
+    fn candidate_row_ids<T: StapiRow>(
+        &self,
+        plan: &CompiledPlan<T>,
+        table: &OccTable<T>,
+        tx: &mut OccTransaction<T>,
+    ) -> Result<Vec<usize>, PlannerError> {
+        let indexed = match &plan.access_path {
+            AccessPath::PrimaryKeyEq { field, .. } => {
+                // A missing primary-key-map entry has no transaction dependency.
+                // Prefer the registered equality index, including empty results.
+                plan.catalog
+                    .get_index(field)
+                    .zip(plan.primary_key_compare.clone())
+            }
+            AccessPath::Indexed { field, compare } => plan
+                .catalog
+                .get_index(field)
+                .map(|index| (index, compare.clone())),
+            AccessPath::FullScan => None,
+        };
+        if let Some((index, predicate)) = indexed {
+            if table.index_is_bound(index.as_ref()) {
+                return Ok(table.index_lookup(tx, index.as_ref(), &predicate)?);
+            }
+        }
+        // An unregistered/raw index cannot establish predicate completeness.
+        // Full slot reads enroll real row dependencies and apply every filter.
+        Ok((0..table.capacity()).collect())
+    }
+}
+
+impl<T: StapiRow> CompiledPlan<T> {
+    pub fn execute(
+        &self,
+        table: &OccTable<T>,
+        tx: &mut OccTransaction<T>,
+    ) -> Result<Vec<T>, PlannerError> {
+        ExecutionEngine::new().execute(self, table, tx)
+    }
+
+    pub fn execute_with_snapshot_mode(
+        &self,
+        table: &OccTable<T>,
+        mode: SnapshotExecutionMode,
+    ) -> Result<Vec<T>, PlannerError> {
+        match mode {
+            SnapshotExecutionMode::StrictSnapshot => {
+                let policy = RetryPolicy::hot_key_default();
+                let mut backoff = RetryBackoff::with_seed(
+                    table.current_global_txid() ^ std::process::id() as u64,
+                    policy,
+                );
+                for attempt in 0..policy.max_retries_per_unit {
+                    let mut tx = table.begin_transaction()?;
+                    let result = ExecutionEngine::new()
+                        .execute(self, table, &mut tx)
+                        .and_then(|rows| {
+                            table.commit(&mut tx)?;
+                            Ok(rows)
+                        });
+                    // This also releases registrations on query/validation errors.
+                    let _ = table.abort(&mut tx);
+                    match result {
+                        Err(PlannerError::SerializationFailure)
+                            if attempt + 1 < policy.max_retries_per_unit =>
+                        {
+                            backoff.sleep_for_attempt(attempt);
+                        }
+                        other => return other,
+                    }
+                }
+                Err(PlannerError::SerializationFailure)
+            }
+            SnapshotExecutionMode::ChunkedEventual { chunk_rows } => {
+                ExecutionEngine::new().execute_chunked(self, table, chunk_rows)
+            }
+        }
+    }
+}
+
+#[inline]
+fn hash_key(bytes: &[u8]) -> u64 {
+    const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+    const FNV_PRIME: u64 = 0x0000_0100_0000_01B3;
+
+    let mut hash = FNV_OFFSET;
+    for byte in bytes {
+        hash ^= *byte as u64;
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    hash
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ShmPrimaryKeyMap;
+    use crate::occ::OccTable;
+    use crate::rbo_planner::{RuleBasedOptimizer, SchemaCatalog, StapiRow};
+    use crate::shm::ShmArena;
+    use crate::stapi_parser::Value;
+    use std::sync::Arc;
+
+    #[derive(Clone, Copy)]
+    struct TestRow {
+        pk: [u8; 8],
+        value: i64,
+    }
+
+    impl TestRow {
+        fn new(pk: &str, value: i64) -> Self {
+            let mut buf = [0_u8; 8];
+            let bytes = pk.as_bytes();
+            let n = bytes.len().min(buf.len());
+            buf[..n].copy_from_slice(&bytes[..n]);
+            Self { pk: buf, value }
+        }
+
+        fn pk_text(&self) -> String {
+            let len = self
+                .pk
+                .iter()
+                .position(|b| *b == 0)
+                .unwrap_or(self.pk.len());
+            String::from_utf8_lossy(&self.pk[..len]).to_string()
+        }
+    }
+
+    impl StapiRow for TestRow {
+        fn has_field(field: &str) -> bool {
+            matches!(field, "pk" | "value")
+        }
+
+        fn field_value(&self, field: &str) -> Option<Value> {
+            match field {
+                "pk" => Some(Value::Text(self.pk_text())),
+                "value" => Some(Value::Int(self.value)),
+                _ => None,
+            }
+        }
+    }
+
+    fn write_row(table: &OccTable<TestRow>, row_id: usize, row: TestRow) {
+        let mut tx = table.begin_transaction().expect("begin");
+        table.write(&mut tx, row_id, row).expect("write");
+        table.commit(&mut tx).expect("commit");
+    }
+
+    #[test]
+    fn pk_map_get_or_insert_is_idempotent_for_same_key() {
+        let shm = Arc::new(ShmArena::new(8 << 20).expect("shm"));
+        let map = ShmPrimaryKeyMap::new_in_shared(Arc::clone(&shm), 32, 64).expect("pk map");
+
+        let first = map.get_or_insert("UAL123").expect("first");
+        let second = map.get_or_insert("UAL123").expect("second");
+        assert_eq!(first, second);
+        assert_eq!(map.distinct_key_count(), 1);
+    }
+
+    fn race_primary_key_publication(
+        paused_row: Option<usize>,
+        winning_row: Option<usize>,
+        winning_key: &str,
+    ) {
+        use std::sync::mpsc;
+        use std::time::Duration;
+
+        let shm = Arc::new(ShmArena::new(8 << 20).expect("shm"));
+        // One bucket includes an unrelated predecessor in every searched chain.
+        let map = Arc::new(ShmPrimaryKeyMap::new_in_shared(shm, 1, 128).expect("pk map"));
+        map.insert_existing("COLLISION", 7).expect("seed collision");
+        let (observed_tx, observed_rx) = mpsc::channel();
+        let (resume_tx, resume_rx) = mpsc::channel();
+        let paused_map = Arc::clone(&map);
+        let paused = std::thread::spawn(move || {
+            super::PK_ABSENCE_OBSERVED_HOOK.with(|hook| {
+                *hook.borrow_mut() = Some(Box::new(move || {
+                    observed_tx.send(()).expect("announce absence");
+                    resume_rx
+                        .recv_timeout(Duration::from_secs(5))
+                        .expect("resume insert");
+                }));
+            });
+            match paused_row {
+                Some(row) => paused_map.insert_existing("SAME", row),
+                None => paused_map.get_or_insert("SAME"),
+            }
+            .expect("paused insertion")
+        });
+        observed_rx
+            .recv_timeout(Duration::from_secs(5))
+            .expect("absence observed");
+        let winner = match winning_row {
+            Some(row) => map.insert_existing(winning_key, row),
+            None => map.get_or_insert(winning_key),
+        }
+        .expect("winning insertion");
+        resume_tx.send(()).expect("resume loser");
+        let loser = paused.join().expect("insertion worker");
+        assert_eq!(map.get("SAME").expect("paused lookup"), Some(loser));
+        assert_eq!(map.get(winning_key).expect("winning lookup"), Some(winner));
+        assert_eq!(map.get("COLLISION").expect("lookup collision"), Some(7));
+        if winning_key == "SAME" {
+            assert_eq!(
+                loser, winner,
+                "a checked-absent key was published before the paused CAS"
+            );
+            assert_eq!(map.distinct_key_count(), 2, "one entry per key");
+            assert_eq!(
+                map.shm.free_list_depth_estimate(4),
+                (1, false),
+                "the unpublished candidate must be recycled"
+            );
+            let allocated_before = map.shm.fresh_allocation_bytes();
+            map.get_or_insert("AFTER").expect("reuse candidate storage");
+            assert_eq!(
+                map.shm.fresh_allocation_bytes(),
+                allocated_before,
+                "a subsequent insertion should reuse the losing candidate"
+            );
+        } else {
+            assert_ne!(loser, winner, "different keys must retain their chosen IDs");
+            assert_eq!(
+                map.distinct_key_count(),
+                3,
+                "both colliding inserts survive"
+            );
+            assert_eq!(
+                map.shm.free_list_depth_estimate(4),
+                (0, false),
+                "a CAS retry should reuse its still-private candidate"
+            );
+        }
+    }
+
+    #[test]
+    fn pk_map_racing_get_or_insert_returns_existing_winner() {
+        race_primary_key_publication(None, None, "SAME");
+    }
+
+    #[test]
+    fn pk_map_racing_insert_existing_returns_existing_winner() {
+        race_primary_key_publication(Some(11), Some(23), "SAME");
+    }
+
+    #[test]
+    fn pk_map_racing_get_or_insert_observes_explicit_winner() {
+        race_primary_key_publication(None, Some(23), "SAME");
+    }
+
+    #[test]
+    fn pk_map_racing_insert_existing_observes_allocated_winner() {
+        race_primary_key_publication(Some(11), None, "SAME");
+    }
+
+    #[test]
+    fn pk_map_get_or_insert_retries_after_an_unrelated_collision() {
+        race_primary_key_publication(None, Some(23), "OTHER");
+    }
+
+    #[test]
+    fn pk_map_insert_existing_retries_after_an_unrelated_collision() {
+        race_primary_key_publication(Some(11), Some(23), "OTHER");
+    }
+
+    #[test]
+    fn pk_map_insert_existing_bumps_next_row_id_floor() {
+        let shm = Arc::new(ShmArena::new(8 << 20).expect("shm"));
+        let map = ShmPrimaryKeyMap::new_in_shared(Arc::clone(&shm), 32, 256).expect("pk map");
+
+        let inserted = map.insert_existing("DAL777", 100).expect("insert existing");
+        assert_eq!(inserted, 100);
+
+        let next = map.get_or_insert("NEW001").expect("new key");
+        assert!(
+            next >= 101,
+            "next reserved row id should be bumped above explicit insert"
+        );
+    }
+
+    #[test]
+    fn pk_map_capacity_exceeded_is_reported() {
+        let shm = Arc::new(ShmArena::new(8 << 20).expect("shm"));
+        let map = ShmPrimaryKeyMap::new_in_shared(Arc::clone(&shm), 8, 1).expect("pk map");
+        map.get_or_insert("A").expect("first insert");
+        let err = map
+            .get_or_insert("B")
+            .expect_err("capacity should be exhausted");
+        assert!(matches!(
+            err,
+            super::PrimaryKeyMapError::CapacityExceeded { .. }
+        ));
+    }
+
+    #[test]
+    fn execution_engine_primary_key_path_returns_single_candidate() {
+        let shm = Arc::new(ShmArena::new(16 << 20).expect("shm"));
+        let table = OccTable::<TestRow>::new(Arc::clone(&shm), 4).expect("table");
+        for row_id in 0..4 {
+            table
+                .seed_row(row_id, TestRow::new("", 0))
+                .expect("seed row");
+        }
+
+        write_row(&table, 1, TestRow::new("UAL123", 42));
+        write_row(&table, 2, TestRow::new("DAL456", 10));
+
+        let pk_map =
+            Arc::new(ShmPrimaryKeyMap::new_in_shared(Arc::clone(&shm), 32, 4).expect("pk map"));
+        pk_map.insert_existing("UAL123", 1).expect("insert pk");
+        pk_map.insert_existing("DAL456", 2).expect("insert pk");
+
+        let catalog = SchemaCatalog::new("pk").with_primary_key_map(Arc::clone(&pk_map));
+        let optimizer = RuleBasedOptimizer::<TestRow>::new(catalog);
+        let plan = optimizer
+            .compile_from_stapi("-compare {{= pk UAL123}}")
+            .expect("compile");
+
+        let mut tx = table.begin_transaction().expect("begin");
+        let rows = plan.execute(&table, &mut tx).expect("execute");
+        table.abort(&mut tx).expect("abort");
+
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].value, 42);
+        assert_eq!(rows[0].pk_text(), "UAL123");
+    }
+
+    #[test]
+    fn execution_engine_applies_residual_filter_then_sort_then_limit() {
+        let shm = Arc::new(ShmArena::new(16 << 20).expect("shm"));
+        let table = OccTable::<TestRow>::new(Arc::clone(&shm), 6).expect("table");
+        for row_id in 0..6 {
+            table
+                .seed_row(row_id, TestRow::new("", 0))
+                .expect("seed row");
+        }
+
+        write_row(&table, 0, TestRow::new("A", 40));
+        write_row(&table, 1, TestRow::new("B", 10));
+        write_row(&table, 2, TestRow::new("C", 30));
+        write_row(&table, 3, TestRow::new("D", 20));
+        write_row(&table, 4, TestRow::new("E", 50));
+
+        let optimizer = RuleBasedOptimizer::<TestRow>::new(SchemaCatalog::new("pk"));
+        let plan = optimizer
+            .compile_from_stapi("-compare {{> value 15}} -sort value -limit 3")
+            .expect("compile");
+
+        let mut tx = table.begin_transaction().expect("begin");
+        let rows = plan.execute(&table, &mut tx).expect("execute");
+        table.abort(&mut tx).expect("abort");
+
+        let values: Vec<i64> = rows.into_iter().map(|row| row.value).collect();
+        assert_eq!(values, vec![20, 30, 40]);
+    }
+
+    #[test]
+    fn chunked_eventual_scan_matches_strict_snapshot_on_stable_input() {
+        let shm = Arc::new(ShmArena::new(16 << 20).expect("shm"));
+        let table = OccTable::<TestRow>::new(Arc::clone(&shm), 8).expect("table");
+        for row_id in 0..8 {
+            table
+                .seed_row(row_id, TestRow::new("", 0))
+                .expect("seed row");
+        }
+
+        write_row(&table, 0, TestRow::new("A", 40));
+        write_row(&table, 1, TestRow::new("B", 10));
+        write_row(&table, 2, TestRow::new("C", 30));
+        write_row(&table, 3, TestRow::new("D", 20));
+        write_row(&table, 4, TestRow::new("E", 50));
+
+        let optimizer = RuleBasedOptimizer::<TestRow>::new(SchemaCatalog::new("pk"));
+        let plan = optimizer
+            .compile_from_stapi("-compare {{> value 15}} -sort value -limit 4")
+            .expect("compile");
+
+        let mut strict_tx = table.begin_transaction().expect("begin strict");
+        let strict = plan
+            .execute(&table, &mut strict_tx)
+            .expect("execute strict");
+        table.abort(&mut strict_tx).expect("abort strict");
+
+        let chunked = plan
+            .execute_with_snapshot_mode(
+                &table,
+                super::SnapshotExecutionMode::ChunkedEventual { chunk_rows: 2 },
+            )
+            .expect("execute chunked");
+
+        let strict_values: Vec<i64> = strict.into_iter().map(|row| row.value).collect();
+        let chunked_values: Vec<i64> = chunked.into_iter().map(|row| row.value).collect();
+        assert_eq!(chunked_values, strict_values);
+    }
+}

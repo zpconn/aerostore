@@ -1,0 +1,99 @@
+{
+  "passed": true,
+  "scope": "isolated native public horizon regression and missing-clamp control",
+  "checks": [
+    {
+      "name": "patched-positive",
+      "negative": false,
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--release",
+        "--manifest-path",
+        "/tmp/aerostore-vacuum-api-iw1_el02/patched-workspace/Cargo.toml",
+        "-p",
+        "aerostore_core",
+        "--test",
+        "occ_transactional_index",
+        "public_vacuum_clamps_caller_horizon_to_retained_snapshot",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d",
+        "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+        "aerostore_core/tests/occ_transactional_index.rs": "89846cc4760dd7592d2920d72cae574461d32e2f6e7a5b1d41d1bfcb789894e2"
+      },
+      "binary_sha256": "7335151d52eb7ae2bf08bf7849ff96dd1a8b69a68bc784aa88a795f39c09ef90",
+      "log": "/tmp/aerostore-vacuum-api-iw1_el02/patched-positive.log",
+      "log_sha256": "732ea4f33b3ecfd581cc81ecfc9c1f91ce8ffda1baebf6f981067155cf7891f1"
+    },
+    {
+      "name": "omitted-clamp-negative",
+      "negative": true,
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--release",
+        "--manifest-path",
+        "/tmp/aerostore-vacuum-api-iw1_el02/patched-workspace/Cargo.toml",
+        "-p",
+        "aerostore_core",
+        "--test",
+        "occ_transactional_index",
+        "public_vacuum_clamps_caller_horizon_to_retained_snapshot",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "exit_code": 101,
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "7077c855e955c853655e9d3bdd5453797c92a4cd49bbca4763782a42e51cc8d0",
+        "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+        "aerostore_core/tests/occ_transactional_index.rs": "89846cc4760dd7592d2920d72cae574461d32e2f6e7a5b1d41d1bfcb789894e2"
+      },
+      "binary_sha256": "db0e474379880a0f1b4d8e1647fc36c2a869906394552e1c33a511a4b2a415d5",
+      "log": "/tmp/aerostore-vacuum-api-iw1_el02/omitted-clamp-negative.log",
+      "log_sha256": "37dc0b75403a752b5c7eb7f94756bd0112062a285eba233a016d57904a4180bb"
+    },
+    {
+      "name": "restored-positive",
+      "negative": false,
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--release",
+        "--manifest-path",
+        "/tmp/aerostore-vacuum-api-iw1_el02/patched-workspace/Cargo.toml",
+        "-p",
+        "aerostore_core",
+        "--test",
+        "occ_transactional_index",
+        "public_vacuum_clamps_caller_horizon_to_retained_snapshot",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d",
+        "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+        "aerostore_core/tests/occ_transactional_index.rs": "89846cc4760dd7592d2920d72cae574461d32e2f6e7a5b1d41d1bfcb789894e2"
+      },
+      "binary_sha256": "7335151d52eb7ae2bf08bf7849ff96dd1a8b69a68bc784aa88a795f39c09ef90",
+      "log": "/tmp/aerostore-vacuum-api-iw1_el02/restored-positive.log",
+      "log_sha256": "7bb24840e4754aad02709c710f7602856fa44aff3fb6668c56473e3925ccba2b"
+    }
+  ],
+  "proposed_patch": "/tmp/aerostore-vacuum-api-iw1_el02/proposed-fix.patch",
+  "proposed_patch_sha256": "f7a626d36d5c899ebdc3a45cc44571020e2e2e5bef901c5ddaf6832069f419c6",
+  "runner_sha256": "4b86be73fe088285df416cccbdef56500f424a76623331859d84c372282ca252"
+}

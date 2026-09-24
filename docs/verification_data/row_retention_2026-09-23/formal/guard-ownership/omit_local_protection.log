@@ -1,0 +1,30 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/guard-ownership/omit_local_protection.rs:354:1
+    |
+354 | / pub fn try_lock<D: Scheduler>(driver: &D, key: Key, held: &Vec<ReadLease>,
+355 | |     Tracked(authority): Tracked<&mut Authority>) -> (result: Option<ReadLease>)
+    | |______________________________________________________________________________^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/guard-ownership/omit_local_protection.rs:381:5
+    |
+298 |     requires protected_valid(authority, larger), smaller.subset_of(larger),
+    |              ---------------------------------- failed precondition
+...
+381 |     protection_can_shrink ( & * authority , with_local , protected ) ;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/guard-ownership/omit_local_protection.rs:383:5
+    |
+302 |     requires authorized(before, lease), protected_valid(after, protected),
+    |                                         --------------------------------- failed precondition
+...
+383 |     protected_key_authorizes ( & acquired , & * authority , & guard , with_local ) ;
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

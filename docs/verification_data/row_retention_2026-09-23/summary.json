@@ -1,0 +1,54 @@
+{
+  "additional_Tcl_caller_tests": 4,
+  "additional_concurrent_mutations": [],
+  "arbitrary_native_history_refinement_proved": false,
+  "checks": 55,
+  "core_regression_tests": 266,
+  "full_P1_complete": false,
+  "initializer_semantic_controls": 8,
+  "input_files": 443,
+  "lean_roots": 34,
+  "lean_semantic_controls": 20,
+  "multirow_publication_refinement_proved": false,
+  "native_allocator_ownership_refinement_proved": false,
+  "native_heap_history_refinement_proved": false,
+  "native_mutants": 8,
+  "native_positive_selections": 5,
+  "new_campaigns": {
+    "row-publication": {
+      "mutations": 11,
+      "roots": 8
+    },
+    "row-retention": {
+      "mutations": 24,
+      "roots": 18
+    },
+    "storage-slice": {
+      "mutations": 22,
+      "roots": 14
+    }
+  },
+  "new_verus_roots": 40,
+  "new_verus_semantic_mutations": 57,
+  "ownership_type_controls": 0,
+  "parent_commit": "f3d8ec49a59d44c84bc550118751c237b714c5d1",
+  "passed": true,
+  "performance_claim": "No new timing claim; public vacuum now validates its horizon, normal collector retains one scan and unchanged kernel",
+  "production_equivalent": false,
+  "production_inputs_checked": 118,
+  "production_runtime_changed": true,
+  "promotion_eligible": false,
+  "public_vacuum_bug_reproduced": true,
+  "public_vacuum_horizon_clamped": true,
+  "reviewed_runtime_delta_verified": true,
+  "scope": "Conditional native single-row publication/retention/reuse composition; allocator, weak-memory and arbitrary-history obligations open",
+  "tla_cases": 136,
+  "tla_outcomes": {
+    "completed_finite_search": 58,
+    "intended_counterexample": 40,
+    "intended_liveness_counterexample": 3,
+    "reachable_witness": 35
+  },
+  "weak_memory_refinement_proved": false,
+  "whole_engine_verified": false
+}

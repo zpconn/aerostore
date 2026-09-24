@@ -1,0 +1,366 @@
+{
+  "aeneas_version": "nightly-2026.09.23-12a018b",
+  "charon_version": "0.1.270",
+  "crate": "aerostore_verified",
+  "functions": [
+    {
+      "def_id": 19,
+      "lean_name": "AerostoreExtracted.canonical_buckets_sort_loop0_loop0.body",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_sort",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 1,
+        "end_line": 42
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": false,
+      "loop": { "id": 1, "pos": [ 0, 0 ], "is_body": true },
+      "parent_lean_name": "AerostoreExtracted.canonical_buckets_sort"
+    },
+    {
+      "def_id": 19,
+      "lean_name": "AerostoreExtracted.canonical_buckets_sort_loop0_loop0",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_sort",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 1,
+        "end_line": 42
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": false,
+      "loop": { "id": 1, "pos": [ 0, 0 ], "is_body": false },
+      "parent_lean_name": "AerostoreExtracted.canonical_buckets_sort"
+    },
+    {
+      "def_id": 19,
+      "lean_name": "AerostoreExtracted.canonical_buckets_sort_loop0_loop1.body",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_sort",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 51,
+        "end_line": 63
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": false,
+      "loop": { "id": 2, "pos": [ 0, 1 ], "is_body": true },
+      "parent_lean_name": "AerostoreExtracted.canonical_buckets_sort"
+    },
+    {
+      "def_id": 19,
+      "lean_name": "AerostoreExtracted.canonical_buckets_sort_loop0_loop1",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_sort",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 51,
+        "end_line": 63
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": false,
+      "loop": { "id": 2, "pos": [ 0, 1 ], "is_body": false },
+      "parent_lean_name": "AerostoreExtracted.canonical_buckets_sort"
+    },
+    {
+      "def_id": 19,
+      "lean_name": "AerostoreExtracted.canonical_buckets_sort_loop0_loop2.body",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_sort",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 51,
+        "end_line": 63
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": false,
+      "loop": { "id": 3, "pos": [ 0, 2 ], "is_body": true },
+      "parent_lean_name": "AerostoreExtracted.canonical_buckets_sort"
+    },
+    {
+      "def_id": 19,
+      "lean_name": "AerostoreExtracted.canonical_buckets_sort_loop0_loop2",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_sort",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 51,
+        "end_line": 63
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": false,
+      "loop": { "id": 3, "pos": [ 0, 2 ], "is_body": false },
+      "parent_lean_name": "AerostoreExtracted.canonical_buckets_sort"
+    },
+    {
+      "def_id": 19,
+      "lean_name": "AerostoreExtracted.canonical_buckets_sort_loop0.body",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_sort",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 1,
+        "end_line": 77
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": false,
+      "loop": { "id": 0, "pos": [ 0 ], "is_body": true },
+      "parent_lean_name": "AerostoreExtracted.canonical_buckets_sort"
+    },
+    {
+      "def_id": 19,
+      "lean_name": "AerostoreExtracted.canonical_buckets_sort_loop0",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_sort",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 1,
+        "end_line": 77
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": false,
+      "loop": { "id": 0, "pos": [ 0 ], "is_body": false },
+      "parent_lean_name": "AerostoreExtracted.canonical_buckets_sort"
+    },
+    {
+      "def_id": 19,
+      "lean_name": "AerostoreExtracted.canonical_buckets_sort",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_sort",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 10,
+        "end_line": 77
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": true
+    },
+    {
+      "def_id": 20,
+      "lean_name": "AerostoreExtracted.canonical_buckets_bitmap_loop0_loop0.body",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_bitmap",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 102,
+        "end_line": 113
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": false,
+      "loop": { "id": 1, "pos": [ 0, 0 ], "is_body": true },
+      "parent_lean_name": "AerostoreExtracted.canonical_buckets_bitmap"
+    },
+    {
+      "def_id": 20,
+      "lean_name": "AerostoreExtracted.canonical_buckets_bitmap_loop0_loop0",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_bitmap",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 102,
+        "end_line": 113
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": false,
+      "loop": { "id": 1, "pos": [ 0, 0 ], "is_body": false },
+      "parent_lean_name": "AerostoreExtracted.canonical_buckets_bitmap"
+    },
+    {
+      "def_id": 20,
+      "lean_name": "AerostoreExtracted.canonical_buckets_bitmap_loop0_loop1.body",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_bitmap",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 115,
+        "end_line": 130
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": false,
+      "loop": { "id": 2, "pos": [ 0, 1 ], "is_body": true },
+      "parent_lean_name": "AerostoreExtracted.canonical_buckets_bitmap"
+    },
+    {
+      "def_id": 20,
+      "lean_name": "AerostoreExtracted.canonical_buckets_bitmap_loop0_loop1",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_bitmap",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 115,
+        "end_line": 130
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": false,
+      "loop": { "id": 2, "pos": [ 0, 1 ], "is_body": false },
+      "parent_lean_name": "AerostoreExtracted.canonical_buckets_bitmap"
+    },
+    {
+      "def_id": 20,
+      "lean_name": "AerostoreExtracted.canonical_buckets_bitmap_loop0_loop2.body",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_bitmap",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 133,
+        "end_line": 151
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": false,
+      "loop": { "id": 3, "pos": [ 0, 2 ], "is_body": true },
+      "parent_lean_name": "AerostoreExtracted.canonical_buckets_bitmap"
+    },
+    {
+      "def_id": 20,
+      "lean_name": "AerostoreExtracted.canonical_buckets_bitmap_loop0_loop2",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_bitmap",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 133,
+        "end_line": 151
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": false,
+      "loop": { "id": 3, "pos": [ 0, 2 ], "is_body": false },
+      "parent_lean_name": "AerostoreExtracted.canonical_buckets_bitmap"
+    },
+    {
+      "def_id": 20,
+      "lean_name": "AerostoreExtracted.canonical_buckets_bitmap_loop0.body",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_bitmap",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 86,
+        "end_line": 154
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": false,
+      "loop": { "id": 0, "pos": [ 0 ], "is_body": true },
+      "parent_lean_name": "AerostoreExtracted.canonical_buckets_bitmap"
+    },
+    {
+      "def_id": 20,
+      "lean_name": "AerostoreExtracted.canonical_buckets_bitmap_loop0",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_bitmap",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 86,
+        "end_line": 154
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": false,
+      "loop": { "id": 0, "pos": [ 0 ], "is_body": false },
+      "parent_lean_name": "AerostoreExtracted.canonical_buckets_bitmap"
+    },
+    {
+      "def_id": 20,
+      "lean_name": "AerostoreExtracted.canonical_buckets_bitmap",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::canonical_buckets_bitmap",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 84,
+        "end_line": 154
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": true,
+      "is_rec": false,
+      "reducible": true
+    },
+    {
+      "def_id": 21,
+      "lean_name": "AerostoreExtracted.stamp_precedes_snapshot",
+      "lean_file": "AerostoreVerified.lean",
+      "rust_name": "aerostore_verified::stamp_precedes_snapshot",
+      "is_local": true,
+      "source": {
+        "file": "aerostore_verified/src/lib.rs",
+        "begin_line": 160,
+        "end_line": 162
+      },
+      "is_opaque": false,
+      "can_fail": true,
+      "can_diverge": false,
+      "is_rec": false,
+      "reducible": false
+    }
+  ],
+  "types": [],
+  "globals": [],
+  "trait_decls": [],
+  "trait_impls": []
+}

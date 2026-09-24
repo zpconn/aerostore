@@ -1,0 +1,11 @@
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/verus/equal_stamp.verus.rs:350:10
+    |
+350 |  ensures result <==> stamp < transaction_id, /*PROOF-END*/ {
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+351 |     stamp <= transaction_id
+    |     ----------------------- at the end of the function body
+
+verification results:: 18 verified, 1 errors
+error: aborting due to 1 previous error
+

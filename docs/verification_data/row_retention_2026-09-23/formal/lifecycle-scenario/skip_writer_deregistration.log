@@ -1,0 +1,15 @@
+note: verifying root module (selected functions)
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lifecycle-scenario/skip_writer_deregistration.rs:1321:9
+     |
+1239 | /         after.slots == before.slots.update(registration.slot_idx as int,
+1240 | |             lifecycle::Slot { txid: 0, snapshot_xmin: 0 }),
+     | |__________________________________________________________- failed precondition
+...
+1321 |           cleared_writer_is_absent(before_end, driver.lifecycle.state(), writer);
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

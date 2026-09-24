@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lifecycle/stale_publication_reservation.rs:493:13
+    |
+163 |     requires well_formed(before), reservation(before, after, id),
+    |                                   ------------------------------ failed precondition
+...
+493 |     proof { reservation_preserves_clock_history(before, driver.state(), stamp); }
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/indexed-slice/omit_snapshot_context.rs:2363:13
+     |
+2209 |             lookup::snapshot(tx) == self.operation_snapshot(),
+     |             ------------------------------------------------- failed precondition
+...
+2363 |             driver.guarded_correspondence(*tx, *query, &guards[0], &*authority);
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

@@ -1,0 +1,143 @@
+name: Component verification
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      baseline_ref:
+        description: Independently reviewed base commit SHA (empty means unanchored bootstrap)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: formal-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# This workflow/required-check configuration needs independent review and branch
+# protection. A PR that can replace its own required workflow can otherwise
+# remove the gate. No pull_request_target execution or write token is used.
+jobs:
+  pilot:
+    name: Component pilot (bootstrap may be unanchored)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    outputs:
+      anchored: ${{ steps.anchor.outputs.anchored }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, pinned 2026-09-23
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check candidate using the trusted base checker
+        id: anchor
+        env:
+          FORMAL_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || inputs.baseline_ref }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, re, subprocess, tempfile
+          root = pathlib.Path(os.environ['GITHUB_WORKSPACE'])
+          output = root / 'target/verification/ci'
+          output.mkdir(parents=True, exist_ok=True)
+          baseline = os.environ.get('FORMAL_BASE_SHA', '')
+          head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          receipt = {'anchored': False, 'promotion_eligible': False,
+                     'baseline_ref': baseline, 'candidate_ref': head,
+                     'status': 'bootstrap_unanchored', 'scope': 'component pilot only'}
+          valid = bool(re.fullmatch(r'[0-9a-f]{40}', baseline)) and baseline != '0' * 40 and baseline != head
+          paths = ['scripts/check_formal_coverage.py', 'verification/frozen_boundary.json']
+          available = valid and all(subprocess.run(['git', 'cat-file', '-e', f'{baseline}:{path}'],
+                                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+                                    for path in paths)
+          code = 0
+          if available:
+              checker = subprocess.check_output(['git', 'show', f'{baseline}:scripts/check_formal_coverage.py'])
+              receipt['trusted_checker_sha256'] = hashlib.sha256(checker).hexdigest()
+              # The executed checker comes from the base, not the candidate.
+              # --root points that trusted checker at current candidate files.
+              with tempfile.TemporaryDirectory(prefix='aerostore-base-gate-') as scratch:
+                  path = pathlib.Path(scratch) / 'check_formal_coverage.py'
+                  path.write_bytes(checker)
+                  result = subprocess.run(['python3', str(path), '--root', str(root), '--baseline-ref', baseline],
+                                          text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+              (output / 'trusted-boundary.log').write_text(result.stdout)
+              print(result.stdout)
+              code = result.returncode
+              receipt.update(anchored=code == 0, status='anchored' if code == 0 else 'baseline_gate_failed')
+          else:
+              receipt['reason'] = 'No independent base with both checker and frozen boundary; bootstrap evidence cannot authorize promotion.'
+              print('::warning::BOOTSTRAP UNANCHORED: component results cannot authorize promotion.')
+          (output / 'anchoring.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
+              stream.write('anchored=' + str(receipt['anchored']).lower() + '\n')
+              stream.write('baseline_ref=' + (baseline if receipt['anchored'] else '') + '\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as stream:
+              stream.write('Formal baseline: **' + receipt['status'] + '**. No automatic promotion or whole-engine claim.\n')
+          raise SystemExit(code)
+          PY
+
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4, pinned 2026-09-23
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install host prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes zstd tcl-dev pkg-config libssl-dev
+
+      - name: Provision local pinned toolchains and Cargo dependencies
+        run: python3 scripts/setup_verification.py
+
+      - name: Verify current production component and protocol models
+        env:
+          FORMAL_BASE_SHA: ${{ steps.anchor.outputs.baseline_ref }}
+        run: |
+          source target/verification-tools/environment.sh
+          python3 - <<'PY'
+          import os, subprocess
+          command = ['python3', 'scripts/verify_formal.py', '--profile', 'pilot',
+                     '--output', 'target/verification/ci/pilot/report.json']
+          if os.environ.get('FORMAL_BASE_SHA'):
+              command += ['--baseline-ref', os.environ['FORMAL_BASE_SHA']]
+          raise SystemExit(subprocess.run(command).returncode)
+          PY
+
+      - name: Retain verification and setup evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: formal-pilot-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            target/verification/ci/
+            target/verification-tools/setup.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  baseline-anchoring:
+    name: Reviewed baseline
+    needs: pilot
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check evidence anchoring
+        env:
+          PILOT_RESULT: ${{ needs.pilot.result }}
+          BASE_ANCHORED: ${{ needs.pilot.outputs.anchored }}
+        run: |
+          python3 - <<'PY'
+          import os
+          anchored_pass = os.environ['PILOT_RESULT'] == 'success' and os.environ['BASE_ANCHORED'] == 'true'
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as stream:
+              stream.write('Passing component pilot with a reviewed baseline: ' + str(anchored_pass).lower() + '.\n')
+              stream.write('Promotion eligible: **false**. Full protocol, relevant resource, and end-to-end gates remain incomplete.\n')
+              stream.write('This check performs no merge, release, deployment, or whole-engine certification.\n')
+          if not anchored_pass:
+              raise SystemExit('No anchored passing pilot: initial bootstrap needs independent baseline review; no promotion.')
+          print('Anchored component evidence is available; this pilot cannot authorize promotion.')
+          PY

@@ -1,0 +1,11 @@
+note: verifying root module (selected functions)
+
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/storage-slice/skip_native_vacuum.rs:2517:20
+     |
+2517 |             assert(driver.state().recycled =~= Set::empty().insert(l.tail));
+     |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

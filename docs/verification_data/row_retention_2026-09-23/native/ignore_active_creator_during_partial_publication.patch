@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -1816,7 +1816,7 @@
+ 
+         if row.xmin < tx.snapshot_xmin {
+             // definitely committed before our snapshot horizon.
+-        } else if row.xmin >= tx.snapshot_xmax || tx.snapshot_active.contains(&row.xmin) {
++        } else if row.xmin >= tx.snapshot_xmax {
+             return false;
+         }
+ 

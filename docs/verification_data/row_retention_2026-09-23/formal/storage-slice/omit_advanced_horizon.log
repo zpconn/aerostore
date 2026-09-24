@@ -1,0 +1,31 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/storage-slice/omit_advanced_horizon.rs:2642:1
+     |
+2642 | / pub fn native_vacuum_releases_anchor<D:retention::Vacuum>(driver:&mut D,horizon:u64,
+2643 | |     Ghost(l):Ghost<Layout>,Ghost(birth):Ghost<u64>,Ghost(writer):Ghost<u64>,
+2644 | |     Ghost(before):Ghost<usize>,Ghost(after):Ghost<usize>,Ghost(tx):Ghost<Transaction>)
+2645 | |     ->(result:Result<Vec<retention::Reclaimed>,lookup::Error>)
+     | |_____________________________________________________________^
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/storage-slice/omit_advanced_horizon.rs:2650:13
+     |
+2650 |       ensures result.is_ok() ==> final(driver).state().recycled.contains(l.anchor)
+     |  _____________^
+2651 | |         && !final(driver).state().recycled.contains(l.fresh),
+     | |____________________________________________________________^ failed this postcondition
+...
+2661 |       retention::vacuum_row_acquired(driver,0,horizon,Ghost(lookup::snapshot(tx)))
+     |       ---------------------------------------------------------------------------- at the end of the function body
+
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/storage-slice/omit_advanced_horizon.rs:2658:16
+     |
+2658 |         assert(retention::admissible(driver.state().image,lookup::snapshot(tx),horizon));
+     |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

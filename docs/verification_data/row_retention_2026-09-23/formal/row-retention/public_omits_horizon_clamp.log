@@ -1,0 +1,15 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/row-retention/public_omits_horizon_clamp.rs:1924:9
+     |
+1924 | /         forall|i:int| 0<=i<old(driver).state().slots.len() && old(driver).state().slots[i].txid!=0 ==>
+1925 | |             final(driver).dispatched_horizon().unwrap()<=old(driver).state().slots[i].snapshot_xmin,
+     | |___________________________________________________________________________________________________^ failed this postcondition
+...
+1928 |   driver . reclaim_before ( requested_xmin )
+     |   ------------------------------------------ at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

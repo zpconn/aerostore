@@ -1,0 +1,27 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/guard-ownership/guard_from_failed_cas.rs:111:1
+    |
+111 | / pub fn try_acquire<D: Atomics>(driver: &D, key: Key, Tracked(authority): Tracked<&mut Authority>)
+112 | |     -> (result: Option<ReadLease>)
+    | |_________________________________^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/guard-ownership/guard_from_failed_cas.rs:130:33
+    |
+ 92 |         cells(old(authority))[key].owner.is_none(),
+    |         ------------------------------------------ failed precondition
+...
+130 |             let tracked token = grant(&mut *authority, key);
+    |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: assertion failed
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/guard-ownership/guard_from_failed_cas.rs:140:28
+    |
+140 |             proof { assert(cells(authority) =~= cells(&before)); }
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

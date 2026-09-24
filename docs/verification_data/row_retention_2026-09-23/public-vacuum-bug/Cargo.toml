@@ -1,0 +1,7 @@
+[package]
+name="vacuum-public-api-repro"
+version="0.0.0"
+edition="2021"
+
+[dependencies]
+aerostore_core={path="/home/zpconn/code/aerostore/aerostore_core"}

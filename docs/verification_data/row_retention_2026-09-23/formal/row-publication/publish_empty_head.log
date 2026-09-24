@@ -1,0 +1,26 @@
+note: verifying root module (selected functions)
+
+note: while loop: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/row-publication/publish_empty_head.rs:951:5
+    |
+951 |     while i<record.writes.len()
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/row-publication/publish_empty_head.rs:970:4
+    |
+928 |         requires id<old(self).image().capacity, old(self).authorized(id,value),
+    |                                                 ------------------------------ failed precondition
+...
+970 | if driver.compare_head(slot,write.base_offset,0) . is_err ( ) {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: assertion failed
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/row-publication/publish_empty_head.rs:974:23
+    |
+974 |         proof {assert(driver.image()==publication_prefix(initial,record.writes[0],record.txid,3));}
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

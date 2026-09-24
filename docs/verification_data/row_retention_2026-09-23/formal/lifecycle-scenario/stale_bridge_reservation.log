@@ -1,0 +1,30 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lifecycle-scenario/stale_bridge_reservation.rs:1199:5
+     |
+1199 |     fn reserve_stamp(&mut self) -> (stamp: u64) {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lifecycle-scenario/stale_bridge_reservation.rs:641:17
+     |
+ 641 |         ensures old(self).state().clock <= stamp < u64::MAX,
+     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+1202 |         stamp
+     |         ----- at the end of the function body
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lifecycle-scenario/stale_bridge_reservation.rs:642:13
+     |
+ 642 | /             final(self).state() == (State { clock: (stamp + 1) as u64, reserved_stamp: stamp,
+ 643 | |                 reservations: old(self).state().reservations.push(stamp), ..old(self).state() });
+     | |________________________________________________________________________________________________^ failed this postcondition
+...
+1202 |           stamp
+     |           ----- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

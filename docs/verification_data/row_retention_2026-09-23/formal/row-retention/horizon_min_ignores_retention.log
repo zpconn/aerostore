@@ -1,0 +1,29 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/row-retention/horizon_min_ignores_retention.rs:1895:1
+     |
+1895 | pub fn min_horizon(requested:u64,retained:u64)->(result:u64)
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/row-retention/horizon_min_ignores_retention.rs:1896:31
+     |
+1896 |     ensures result<=requested,result<=retained,
+     |                               ^^^^^^^^^^^^^^^^ failed this postcondition
+...
+1899 |     requested
+     |     --------- at the end of the function body
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/row-retention/horizon_min_ignores_retention.rs:1897:9
+     |
+1897 |         result==if requested<retained {requested} else {retained},
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+1898 | {
+1899 |     requested
+     |     --------- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

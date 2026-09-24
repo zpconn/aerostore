@@ -1,0 +1,34 @@
+{
+  "passed": false,
+  "errors": [
+    "candidate changed the baseline boundary lock",
+    "frozen boundary changed: aerostore_core/src/occ_partitioned.rs",
+    "frozen boundary changed: aerostore_core/src/vacuum.rs",
+    "frozen boundary changed: aerostore_core/tests/occ_transactional_index.rs",
+    "frozen boundary changed: scripts/check_formal_coverage.py",
+    "frozen boundary changed: scripts/test_formal_gate.py",
+    "frozen boundary changed: scripts/verify_formal.py",
+    "frozen boundary changed: verification/assumptions.toml",
+    "frozen boundary changed: verification/claims.toml",
+    "frozen boundary changed: verification/lookup/contracts.rs",
+    "frozen boundary changed: verification/lookup/generate.py",
+    "frozen boundary changed: verification/lookup/lookup.verus.rs",
+    "frozen boundary changed: verification/lookup/test_generate.py",
+    "frozen boundary changed: verification/lookup_native/README.md",
+    "frozen boundary changed: verification/lookup_native/check_production_equivalence.py",
+    "frozen boundary changed: verification/lookup_native/test_production_equivalence.py",
+    "frozen boundary changed: verification/refinement_campaigns.json"
+  ],
+  "scope": "change detection only; not a whole-engine refinement proof",
+  "checked_files": 266,
+  "baseline_ref": "f3d8ec49a59d44c84bc550118751c237b714c5d1",
+  "anchoring": "independent_git_baseline",
+  "open_claims": [
+    "TX-HISTORY-IMPLEMENTATION",
+    "MEMORY-OWNERSHIP",
+    "MEMORY-PROGRESS",
+    "WEAK-MEMORY-MMAP",
+    "DURABILITY-IMPLEMENTATION",
+    "QUERY-APPLICATION"
+  ]
+}

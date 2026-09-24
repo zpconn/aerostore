@@ -1,0 +1,14 @@
+{"check": "current_partial_publication", "passed": true, "exit_code": 0}
+{"check": "current_loaded_cursor", "passed": true, "exit_code": 0}
+{"check": "current_guard_retention", "passed": true, "exit_code": 0}
+{"check": "current_horizon_progress", "passed": true, "exit_code": 0}
+{"check": "current_public_horizon", "passed": true, "exit_code": 0}
+{"check": "ignore_retention_horizon", "passed": true, "exit_code": 101}
+{"check": "use_registration_instead_of_snapshot_horizon", "passed": true, "exit_code": 101}
+{"check": "recycle_without_unlinking", "passed": true, "exit_code": 101}
+{"check": "preserve_retired_xmax_on_reuse", "passed": true, "exit_code": 101}
+{"check": "reclaim_version_with_live_row_guard", "passed": true, "exit_code": 101}
+{"check": "inherit_obsolete_horizon", "passed": true, "exit_code": 101}
+{"check": "ignore_active_creator_during_partial_publication", "passed": true, "exit_code": 101}
+{"check": "omit_public_horizon_clamp", "passed": true, "exit_code": 101}
+{"passed": true, "receipt": "/home/zpconn/code/aerostore/target/verification-storage/final-fixed/retention-native/receipt.json", "error": null}

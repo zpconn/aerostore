@@ -1,0 +1,19 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/concurrent/omit_callback_error_rollback.rs:260:13
+    |
+260 | /             r.is_err() ==> (final(self).events() == (Events { destinations_prepared: false, ..old(self).events() })
+261 | |                 || (final(self).events().poisoned && safe_release(final(self).events()))),
+    | |_________________________________________________________________________________________^ failed this postcondition
+262 |       { match self . run_before_publish ( record , before_publish ) {
+    |  _______-
+263 | |     Ok ( Ok ( ( ) ) ) => Ok ( ( ) ) , Ok ( Err ( err ) ) => {
+264 | |         Err ( err )
+...   |
+270 | | } }
+    | |_- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

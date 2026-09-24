@@ -1,0 +1,26 @@
+note: verifying root module (selected functions)
+
+note: while loop: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/predicate/publish_wrong_bucket.rs:321:9
+    |
+321 |         while pi < ordered.len()
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/predicate/publish_wrong_bucket.rs:335:17
+    |
+335 |                 stamp_relation(initial.stamps, driver.state().stamps, ordered@.take(pi as int).to_set(), stamp),
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/predicate/publish_wrong_bucket.rs:347:6
+    |
+116 |         requires old(self).state().held.contains((binding, bucket)), old(self).state().deregistered,
+    |                  -------------------------------------------------- failed precondition
+...
+347 |      driver . transactional_publish_stamp ( binding , 0 , stamp ) ? ;
+    |      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 2 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

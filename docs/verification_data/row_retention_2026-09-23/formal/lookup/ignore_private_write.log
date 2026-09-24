@@ -1,0 +1,38 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lookup/ignore_private_write.rs:250:1
+    |
+250 | / pub fn read<D: Storage>(driver: &D, tx: &mut Transaction, row_id: usize)
+251 | |     -> (r: Result<Option<Option<usize>>, Error>)
+    | |_______________________________________________^
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lookup/ignore_private_write.rs:257:9
+    |
+257 | /         r.is_ok() ==> row_id < driver.image().capacity
+258 | |             && r.unwrap() == selected_value(driver.image(),*old(tx),row_id),
+    | |___________________________________________________________________________^ failed this postcondition
+...
+292 |       return Ok ( Some ( row . value ) ) ;
+    |       ---------------------------------- at this exit
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/lookup/ignore_private_write.rs:257:9
+    |
+257 | /         r.is_ok() ==> row_id < driver.image().capacity
+258 | |             && r.unwrap() == selected_value(driver.image(),*old(tx),row_id),
+    | |___________________________________________________________________________^ failed this postcondition
+...
+272 | / {
+273 | |     driver . ensure_open ( tx ) ? ;
+274 | | if row_id >= driver . capacity ( ) {
+275 | |     return Err ( Error :: RowOutOfBounds {
+...   |
+294 | | Ok ( None )
+295 | | }
+    | |_- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

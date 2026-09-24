@@ -1,0 +1,8 @@
+{
+  "native_kernel_tokens_unchanged": true,
+  "collector_only_callee_renamed": true,
+  "collector_global_horizon_computations": 1,
+  "horizon_computation_unchanged": true,
+  "public_same_arena_clamp": true,
+  "kernel_crate_private": true
+}

@@ -1,0 +1,13 @@
+note: verifying root module (selected functions)
+
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/indexed-slice/skip_native_capture.rs:2369:24
+     |
+2369 |                   assert(capture::captured(captured.index_reads@, capture::CaptureIndex::offset(&index),
+     |  ________________________^
+2370 | |                     buckets[0], capture::CaptureIndex::stamps(&index)[buckets[0]]));
+     | |__________________________________________________________________________________^ assertion failed
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

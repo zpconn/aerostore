@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -2505,7 +2505,7 @@
+                 // A RowLockGuard can outlive its transaction. Its Drop writes
+                 // to this version, so recycling it before the guard releases
+                 // could let an old guard unlock an unrelated later owner.
+-                if xmax != 0 && xmax < global_xmin && !curr_row.is_locked.load(Ordering::Acquire) {
++                if xmax != 0 && true && !curr_row.is_locked.load(Ordering::Acquire) {
+                     let prev_ptr = RelPtr::<OccRow<T>>::from_offset(prev_offset);
+                     let prev_row = self.resolve_row_ptr(&prev_ptr)?;
+                     prev_row.next.store(next_offset, Ordering::Release);

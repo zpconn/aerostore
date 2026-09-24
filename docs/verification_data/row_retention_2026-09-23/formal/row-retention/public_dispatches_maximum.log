@@ -1,0 +1,30 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/row-retention/public_dispatches_maximum.rs:1920:1
+     |
+1920 | pub fn public_vacuum_reclaim_once<D:VacuumDispatch>(driver:&mut D,requested_xmin:u64)->(result:Result<Vec<Reclaimed>,Error>)
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/row-retention/public_dispatches_maximum.rs:1923:9
+     |
+1923 |         final(driver).dispatched_horizon().unwrap()<=requested_xmin,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+1928 | driver . reclaim_before ( u64::MAX )
+     | ------------------------------------ at the end of the function body
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-storage/final-fixed/row-retention/public_dispatches_maximum.rs:1924:9
+     |
+1924 | /         forall|i:int| 0<=i<old(driver).state().slots.len() && old(driver).state().slots[i].txid!=0 ==>
+1925 | |             final(driver).dispatched_horizon().unwrap()<=old(driver).state().slots[i].snapshot_xmin,
+     | |___________________________________________________________________________________________________^ failed this postcondition
+...
+1928 |   driver . reclaim_before ( u64::MAX )
+     |   ------------------------------------ at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+
