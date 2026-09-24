@@ -379,3 +379,38 @@ scope = "One-write data publication joined to actual finish_transaction, shared-
 status = "partial"
 required_checks = ["commit-completion", "commit-completion-adapter-tests", "commit-data", "lifecycle", "predicate", "concurrent", "p1-native"]
 refinement_roots = { commit-completion = ["finish_transaction", "publication_changes", "publish_then_complete", "owned_registration_finishes", "completion_entry_has_live_witness", "completed_write_invalidates_capture"] }
+
+[[claims]]
+id = "NATIVE-FINAL-WRITE-PLANNING"
+contract = "verification/write_plan/README.md"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "verification/write_plan/generate.py"]
+scope = "Actual final_write_indices selects the last retained write per row in row order under explicit finite-map contracts; selected single-row index_changes derives exact before/after key extraction, unchanged-key omission and successful key prevalidation. The full selection loop supports symbolic write histories, while extracted changes remain one selected write and one binding. Private allocation, immutable value resolution, key callbacks, map implementation and guard acquisition remain primitive or caller obligations"
+status = "partial"
+required_checks = ["write-plan", "write-plan-adapter-tests"]
+refinement_roots = { write-plan = ["planning::prefix_insert", "planning::map_yields_selection", "planning::final_write_indices", "planning::selected_one_row", "planning::index_changes", "planning::repeated_write_selection_is_live", "planning::key_change_has_live_execution"] }
+
+[[claims]]
+id = "NATIVE-WRITE-BASE-ADMISSION"
+contract = "verification/write_admission/README.md"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "verification/write_admission/admission.rs"]
+scope = "Actual has_write_base_conflict derives selected current-head identity and zero nonempty-base xmax from guarded field loads, preserves fallible errors and characterizes conflicts; allocation facts and exact extracted changes then establish the existing publication plan precondition. Native partition ownership, stable acquired projection, pointer validity and API-entry acquisition remain explicit boundaries"
+status = "partial"
+required_checks = ["write-admission", "write-admission-adapter-tests", "commit-data"]
+refinement_roots = { write-admission = ["admission::has_write_base_conflict", "admission::validated_base_prepares_publication", "admission::validation_establishes_plan", "admission::validator_has_live_witness"] }
+
+[[claims]]
+id = "NATIVE-PLANNED-COMMIT-COMPOSITION"
+contract = "verification/planned_commit/README.md"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "verification/planned_commit/generate.py"]
+scope = "Selected ordinary single-row single-changed-key replacement with a nonempty base derives final-write selection, key extraction and successful guarded base validation before invoking existing publication/deregistration/stamp proofs. It returns exact final-write provenance and coherent postings, or unchanged data or poison. A separate field-frame lemma preserves extracted keys across head interference. Physical guard acquisition, predicate/read/owner validation, arbitrary histories, no-change branches, complete early-error cleanup and postpublication non-final private-version recycling remain open; this is not complete API-entry P1 refinement"
+status = "partial"
+required_checks = ["planned-commit", "planned-commit-adapter-tests", "write-plan", "write-admission", "commit-completion", "planning-native"]
+refinement_roots = { planned-commit = ["planned_commit", "selected_record_write", "extraction_survives_head_interference", "stale_base_cannot_enter_publication", "repeated_input_has_live_witness"] }
+
+[[claims]]
+id = "NATIVE-PLANNING-SCENARIOS"
+contract = "verification/planning_native/README.md"
+implementation = ["aerostore_core/tests/occ_transactional_index.rs", "verification/planning_native/run.py"]
+scope = "Finite public-API scenarios cover interleaved final writes, savepoint rollback, exact commit records, unchanged-key postings, stale-base rejection before any row publication and successful fresh retries. Intended native assertion failures exercise selection, key derivation, validation and report fidelity; these executions are not arbitrary-history or formal refinement evidence"
+status = "partial"
+required_checks = ["planning-native", "planning-native-runner-tests", "integration-default", "integration-verified-buckets-sort", "integration-verified-buckets-bitmap"]

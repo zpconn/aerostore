@@ -7,7 +7,8 @@ This workspace implements component proofs and model campaigns from the [verific
 | Layer | Current coverage | Boundary |
 | --- | --- | --- |
 | P0 API audit | Source-bound inventory of 425 public declarations across 32 core modules, conditional success/error contracts and 31 lock relationships | Reviewed contract coverage; does not prove enforcement, infer the complete lock graph or certify raw safe APIs |
-| Ordinary commit data | Actual prepare/remove/ordinary-publish interval, exact selected row/posting relation and returned record, rollback/poison failures | One selected write/index; validation-to-plan admission, complete final-write selection and native physical projection remain explicit |
+| Native write planning | Actual last-write selection is complete, unique and ordered by row; actual key extraction/prevalidation and current-base validation feed publication on the same row image | Key planning and joined publication use one selected row/index; map, callback and physical storage projections remain explicit |
+| Ordinary commit data | Actual prepare/remove/ordinary-publish interval, exact selected row/posting relation and returned record, rollback/poison failures | One selected write/index; guard handoff, other validation paths and native physical projection remain explicit |
 | Publication completion | Native data publication joined to actual token consumption/deregistration and same-clock stamp publication; captured dependency invalidation | Acquired cutpoint with physical identity/framing and cleanup premises; not a complete transaction entry-to-return refinement |
 | Verus | Both actual bucket canonicalization functions: exact sorted unique membership, bounds, and first-invalid-input semantics; strict stamp comparison; uniqueness of the result contract | Safe Rust functions, successful allocation and pinned collection models; not their concurrent callers |
 | Native commit Verus | Actual commit driver and callback cleanup: validation/publication/cleanup order, both policy branches, semantic negative controls | Conditional on explicit primitive event contracts; native data, history refinement and weak memory remain open |
@@ -136,18 +137,28 @@ Such measurements are diagnostic only. The fixed bucket contract and first imple
 
 ## Remaining implementation work
 
-The current P1 work connects [ordinary commit data](commit_data/README.md) to
-[transaction completion](commit_completion/README.md). Its native publication
-calls now establish the row/posting relation consumed by finish and stamping.
+The current P1 work connects [native final-write and key planning](write_plan/README.md)
+and [current-base validation](write_admission/README.md) to
+[ordinary commit data](commit_data/README.md) and
+[transaction completion](commit_completion/README.md). The
+[joined proof](planned_commit/README.md) derives the final selected write,
+key-change plan and current undeleted base, then establishes exact row/posting
+publication, the returned report, deregistration and fresh stamping. It permits
+repeated writes to one row, with one changed index key and a nonzero physical
+base. A separate frame lemma preserves extracted keys across head/deletion
+changes; the actual guard-acquisition transition is still outside the join.
+The [native planning campaign](planning_native/README.md) checks repeated writes,
+savepoint rollback, unchanged keys, stale-base rejection and fresh retries,
+including multirow cases and deliberate broken-source controls.
 The [P1 native campaign](p1_native/README.md) exercises complete competing
 empty-query creations and a key move racing a reader with a staged write,
 including fresh retries and intended broken-source controls. These checks and
 the [P0 contract audit](contracts/p0_audit.md) are mandatory in the composed gate.
 They add no production instructions, locks or proof bookkeeping.
 
-The next P1 step is to prove that native plan construction, validation and guard
-handoff establish the joined operation's entry conditions, then compose cleanup
-and reader/writer events into the declared scenario. P1 permits enumerated
+The next P1 step is to connect actual guard handoff and the remaining
+predicate/read/owner validation decisions to this joined operation, then compose
+native cleanup and reader/writer events into the declared scenario. P1 permits enumerated
 low-level storage/atomic contracts; completing all P2 history or P3 ownership
 proofs is not a prerequisite. Those later obligations remain visible and cannot
 be silently converted into whole-engine claims.

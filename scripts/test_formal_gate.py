@@ -14,6 +14,7 @@ import verify_formal
 import check_lock_models as lock_models
 import check_refinement_evidence as refinement
 import check_p1_native_evidence as p1_native
+import check_planning_native_evidence as planning_native
 
 HERE = Path(__file__).resolve().parent
 SPEC = importlib.util.spec_from_file_location("coverage", HERE / "check_formal_coverage.py")
@@ -89,6 +90,16 @@ class FrozenBoundaryTests(unittest.TestCase):
         (self.root / "verification/commit_completion/generate.py").write_text("# omit native deregistration\n")
         self.assertFalse(coverage.validate(self.root)["passed"])
 
+    def test_changed_planning_campaigns_fail(self):
+        for filename in ("verification/write_plan/generate.py", "verification/write_admission/run.py",
+                         "verification/planned_commit/generate.py", "verification/planning_native/run.py"):
+            with self.subTest(filename=filename):
+                path = self.root / filename
+                original = path.read_bytes()
+                path.write_text("# omit required planning evidence\n")
+                self.assertFalse(coverage.validate(self.root)["passed"])
+                path.write_bytes(original)
+
     def test_descriptive_flag_cannot_claim_full_p1(self):
         path = self.root / "verification/claims.toml"
         path.write_text(path.read_text().replace("full_P1_complete = false", "full_P1_complete = true", 1))
@@ -138,7 +149,7 @@ class FrozenBoundaryTests(unittest.TestCase):
 
 class EvidenceTests(unittest.TestCase):
     def test_new_commit_campaigns_reject_bare_success(self):
-        for name in ("commit-data", "commit-completion"):
+        for name in ("commit-data", "commit-completion", "write-plan", "write-admission", "planned-commit"):
             with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 (root / name).mkdir()
@@ -250,6 +261,62 @@ class RefinementEvidenceTests(unittest.TestCase):
 
     def test_complete_fixture(self):
         self.assertTrue(self.validate()["passed"])
+
+    def use_nested_module_fixture(self):
+        manifest_path = self.root / refinement.MANIFEST
+        manifest = json.loads(manifest_path.read_text())
+        campaign = manifest["campaigns"]["predicate-capture"]
+        campaign["verify_module"] = "admission"
+        campaign["roots"] = ["admission::" + root for root in campaign["roots"]]
+        campaign["mutations"] = {name: "admission::" + root if root else None
+                                 for name, root in campaign["mutations"].items()}
+        manifest_path.write_text(json.dumps(manifest))
+        self.receipt["required_roots"] = campaign["roots"]
+        for check in self.receipt["checks"]:
+            if check["required_root"]:
+                basename = check["required_root"]
+                check["required_root"] = "admission::" + basename
+                if check["name"].startswith("root_"):
+                    check["name"] = "root_admission_" + basename
+                command = check["command"]
+                start = command.index("--verify-root")
+                command[start:start + 3] = ["--verify-only-module", "admission", "--verify-function", basename]
+
+    def test_nested_module_selector_validates(self):
+        self.use_nested_module_fixture()
+        self.assertTrue(self.validate()["passed"])
+
+    def test_nested_module_cannot_use_root_selector(self):
+        self.use_nested_module_fixture()
+        command = self.receipt["checks"][1]["command"]
+        start = command.index("--verify-only-module")
+        command[start:start + 2] = ["--verify-root"]
+        with self.assertRaisesRegex(RuntimeError, "wrong verified root"):
+            self.validate()
+
+    def test_nested_module_cannot_select_different_module(self):
+        self.use_nested_module_fixture()
+        command = self.receipt["checks"][1]["command"]
+        command[command.index("--verify-only-module") + 1] = "unrelated"
+        with self.assertRaisesRegex(RuntimeError, "wrong verified root"):
+            self.validate()
+
+    def test_nested_module_function_must_be_unqualified(self):
+        self.use_nested_module_fixture()
+        check = self.receipt["checks"][1]
+        command = check["command"]
+        command[command.index("--verify-function") + 1] = check["required_root"]
+        with self.assertRaisesRegex(RuntimeError, "wrong verified root"):
+            self.validate()
+
+    def test_nested_module_declared_root_cannot_escape(self):
+        self.use_nested_module_fixture()
+        manifest_path = self.root / refinement.MANIFEST
+        manifest = json.loads(manifest_path.read_text())
+        manifest["campaigns"]["predicate-capture"]["verify_module"] = "other"
+        manifest_path.write_text(json.dumps(manifest))
+        with self.assertRaisesRegex(RuntimeError, "root outside declared verification module"):
+            self.validate()
 
     def test_empty_success_receipt(self):
         self.receipt = {"passed": True, "status": "passed"}
@@ -538,17 +605,19 @@ class LockModelEvidenceTests(unittest.TestCase):
 
 class P1NativeEvidenceTests(unittest.TestCase):
     """Synthetic fixtures test gate rejection, not real native correctness."""
+    campaign_name = "p1-native"
+    campaign_scope = "native_p1_complete_transaction_scenarios"
 
     def setUp(self):
         temporary = tempfile.TemporaryDirectory(prefix="aerostore-p1-receipt-")
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
-        self.output = self.root / "target/p1-native"
+        self.output = self.root / "target" / self.campaign_name
         self.output.mkdir(parents=True)
         self.path = self.output / "receipt.json"
-        campaign_dir = self.root / "verification/p1_native"
+        campaign_dir = self.root / "verification" / self.campaign_name.replace("-", "_")
         campaign_dir.mkdir(parents=True)
-        shutil.copyfile(coverage.ROOT / "verification/p1_native/run.py", campaign_dir / "run.py")
+        shutil.copyfile(coverage.ROOT / "verification" / self.campaign_name.replace("-", "_") / "run.py", campaign_dir / "run.py")
         for name in ("test_run.py", "README.md"):
             (campaign_dir / name).write_text("synthetic fixture " + name)
         for filename in ["Cargo.toml", "Cargo.lock", *[crate + "/Cargo.toml" for crate in
@@ -571,7 +640,7 @@ class P1NativeEvidenceTests(unittest.TestCase):
         cargo.with_name("rustc").write_text("synthetic rustc")
         controls = list(self.campaign.variants(native[self.campaign.OCC].decode()))
         self.receipt = {"passed": True, "status": "passed", "source_stable": True,
-            "scope": "native_p1_complete_transaction_scenarios", "formal_refinement_proved": False,
+            "scope": self.campaign_scope, "formal_refinement_proved": False,
             "full_P1_complete": False, "input_sha256": inputs, "final_input_sha256": dict(inputs),
             "required_positive_checks": [name for name, _ in self.campaign.TESTS],
             "required_mutations": [control[0] for control in controls],
@@ -608,7 +677,7 @@ class P1NativeEvidenceTests(unittest.TestCase):
     def validate(self):
         self.path.write_text(json.dumps(self.receipt))
         with patch.object(verify_formal, "ROOT", self.root):
-            return verify_formal.collect_claim_evidence([], [{"name": "p1-native", "passed": True}], self.output.parent)
+            return verify_formal.collect_claim_evidence([], [{"name": self.campaign_name, "passed": True}], self.output.parent)
 
     def test_complete_native_receipt_validates(self):
         self.assertEqual(self.validate(), [])
@@ -652,6 +721,11 @@ class P1NativeEvidenceTests(unittest.TestCase):
         self.receipt["full_P1_complete"] = True
         with self.assertRaisesRegex(RuntimeError, "unsupported scope"):
             self.validate()
+
+
+class PlanningNativeEvidenceTests(P1NativeEvidenceTests):
+    campaign_name = "planning-native"
+    campaign_scope = "native_final_write_planning_scenarios"
 
 
 class RunnerTests(unittest.TestCase):
@@ -711,20 +785,28 @@ class RunnerTests(unittest.TestCase):
         code, report, calls = self.run_fixture("pilot")
         self.assertEqual(code, 0)
         commands = dict(calls)
-        for name in ("p1-native", "p1-native-runner-tests", "p0-contracts", "p0-contract-tests"):
+        for name in ("p1-native", "p1-native-runner-tests", "planning-native", "planning-native-runner-tests", "p0-contracts", "p0-contract-tests"):
             self.assertIn(name, commands)
         self.assertFalse(report["p0_complete"])
         self.assertFalse(report["full_P1_complete"])
 
-    def test_proofs_require_native_predicate_campaigns(self):
-        code, _, calls = self.run_fixture("proofs")
-        self.assertEqual(code, 0)
-        commands = dict(calls)
-        for name in ["predicate", "predicate-capture", "predicate-composition", "skiplist-detach", "postings",
-                     "guards", "lifecycle", "publication-slice", "lifecycle-scenario",
-                     "lifecycle-interference", "guard-ownership", "lookup", "indexed-slice", "row-publication", "row-retention", "storage-slice", "commit-data", "commit-completion"]:
-            self.assertIn(name, commands)
-            self.assertIn(name + "-adapter-tests", commands)
+    def test_proof_profiles_require_all_native_refinement_campaigns(self):
+        for profile in ("proofs", "pilot", "full"):
+            with self.subTest(profile=profile):
+                code, report, calls = self.run_fixture(profile)
+                self.assertEqual(code, 1 if profile == "full" else 0)
+                self.assertFalse(report["full_P1_complete"])
+                commands = dict(calls)
+                for name in ["predicate", "predicate-capture", "predicate-composition", "skiplist-detach", "postings",
+                             "guards", "lifecycle", "publication-slice", "lifecycle-scenario",
+                             "lifecycle-interference", "guard-ownership", "lookup", "indexed-slice", "row-publication", "row-retention", "storage-slice", "commit-data", "commit-completion", "write-plan", "write-admission", "planned-commit"]:
+                    self.assertIn(name, commands)
+                    self.assertIn(name + "-adapter-tests", commands)
+                for name in ("planning-native", "planning-native-runner-tests"):
+                    if profile == "proofs":
+                        self.assertNotIn(name, commands)
+                    else:
+                        self.assertIn(name, commands)
 
 
 if __name__ == "__main__":

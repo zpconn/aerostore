@@ -21,6 +21,7 @@ import tomllib
 import check_lock_models
 import check_refinement_evidence
 import check_p1_native_evidence
+import check_planning_native_evidence
 import check_p0_contracts
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -78,9 +79,11 @@ def collect_claim_evidence(claims: list[dict], checks: list[dict], directory: Pa
                                 "guards", "lifecycle", "publication-slice", "lifecycle-scenario",
                                 "lifecycle-interference", "guard-ownership", "lookup", "indexed-slice",
                                 "row-publication", "row-retention", "storage-slice",
-                                "commit-data", "commit-completion"] if name in passed}
+                                "commit-data", "commit-completion", "write-plan", "write-admission", "planned-commit"] if name in passed}
     if "p1-native" in passed:
         check_p1_native_evidence.validate_receipt(directory / "p1-native/receipt.json", ROOT)
+    if "planning-native" in passed:
+        check_planning_native_evidence.validate_receipt(directory / "planning-native/receipt.json", ROOT)
     if "lock-models" in passed:
         check_lock_models.validate_receipt(directory / "lock-models/receipt.json", ROOT)
     lean_mutations = {mutation["name"] for mutation in lean.get("mutation_checks", []) if mutation.get("rejected")}
@@ -275,6 +278,12 @@ def main() -> int:
                          ("commit-data", [sys.executable, "verification/commit_data/run.py", "--output", str(directory / "commit-data")]),
                          ("commit-completion-adapter-tests", [sys.executable, "verification/commit_completion/test_generate.py"]),
                          ("commit-completion", [sys.executable, "verification/commit_completion/run.py", "--output", str(directory / "commit-completion")]),
+                         ("write-plan-adapter-tests", [sys.executable, "verification/write_plan/test_generate.py"]),
+                         ("write-plan", [sys.executable, "verification/write_plan/run.py", "--output", str(directory / "write-plan")]),
+                         ("write-admission-adapter-tests", [sys.executable, "verification/write_admission/test_generate.py"]),
+                         ("write-admission", [sys.executable, "verification/write_admission/run.py", "--output", str(directory / "write-admission")]),
+                         ("planned-commit-adapter-tests", [sys.executable, "verification/planned_commit/test_generate.py"]),
+                         ("planned-commit", [sys.executable, "verification/planned_commit/run.py", "--output", str(directory / "planned-commit")]),
                          ("lean", [sys.executable, "scripts/check_lean.py", "--output", str(directory / "lean.json")]),
                          ("kernel-tests", ["cargo", "test", "--offline", "-p", "aerostore_verified"])]
         if args.profile != "proofs":
@@ -283,6 +292,8 @@ def main() -> int:
         if args.profile in {"pilot", "full"}:
             commands += [("p1-native-runner-tests", [sys.executable, "-m", "unittest", "discover", "-s", "verification/p1_native", "-p", "test_*.py"]),
                          ("p1-native", [sys.executable, "verification/p1_native/run.py", "--output", str(directory / "p1-native")]),
+                         ("planning-native-runner-tests", [sys.executable, "-m", "unittest", "discover", "-s", "verification/planning_native", "-p", "test_*.py"]),
+                         ("planning-native", [sys.executable, "verification/planning_native/run.py", "--output", str(directory / "planning-native")]),
                          ("retention-native-runner-tests", [sys.executable, "-m", "unittest", "discover", "-s", "verification/retention_native", "-p", "test_*.py"]),
                          ("production-equivalence-checker-tests", [sys.executable, "verification/lookup_native/test_production_equivalence.py"]),
                          ("retention-native", [sys.executable, "verification/retention_native/run.py",

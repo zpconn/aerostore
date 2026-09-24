@@ -66,7 +66,17 @@ def validate_receipt(path: Path, name: str, root: Path = ROOT) -> dict:
                 "--target", pin["platform"], "--no-cheating", "--triggers-mode", "silent",
                 "--rlimit", str(campaign["rlimit"])]
             if expected_root:
-                expected_command += ["--verify-root", "--verify-function", expected_root]
+                module = campaign.get("verify_module")
+                if module is None:
+                    expected_command += ["--verify-root", "--verify-function", expected_root]
+                else:
+                    require(isinstance(module, str) and re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*(?:::[A-Za-z_][A-Za-z_0-9]*)*", module),
+                            "invalid verification module")
+                    prefix = module + "::"
+                    require(expected_root.startswith(prefix)
+                            and re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", expected_root[len(prefix):]),
+                            "root outside declared verification module")
+                    expected_command += ["--verify-only-module", module, "--verify-function", expected_root[len(prefix):]]
             expected_command += [str(expected_artifact)]
             require(command == expected_command, "wrong verified root or unsupported verifier command")
             require(digest(artifact) == check["source_sha256"], "stale proof artifact")

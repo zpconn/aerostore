@@ -119,3 +119,23 @@ statement = "The selected cutpoint supplies one changed logical key, matching ro
 id = "COMMIT-COMPLETION-CUTPOINT"
 scope = "Native one-write publication followed by deregistration and stamping"
 statement = "The admitted transaction registration and write plan denote the same writer, arena and registered index as the posting/row/stamp projections; physical same-arena identity across the independent projections is assumed, not established by this harness. Required guards remain held across the represented calls. Intervening private-set and recycle-cache cleanup preserves published projections; its native ownership and failure behavior is not newly proved by the joined harness. Prepublication data errors may leave the registration open and require caller abort; neither universal error cleanup nor a closed transaction on every Err is proved. Actual finish_transaction consumes the token and calls the existing acquired-state lifecycle algorithm; the shared-clock bridge then reserves and stores publication stamps. Existing acquired-input framing, no-wrap, native atomic/RAII and caller ownership boundaries remain explicit. The join does not establish registration/capture/validation from API entry, a complete indexed reader/writer execution or an arbitrary concurrent-history theorem."
+
+[[assumptions]]
+id = "WRITE-PLAN-MAP-AND-IMMUTABLE-VALUES"
+scope = "Source-derived native final-write and index-change planning"
+statement = "The finite map primitive implements key overwrite and value enumeration in ascending unique key order; the source-derived loop proves last-write selection using those operation contracts. Resolve/load expose immutable retained base/private key projections, and registered key callbacks correspond to those projected keys. Native BTreeMap, arbitrary payload extraction and unsafe pointer/retention correctness are not newly verified. The extracted-change slice handles one selected row and one binding; native tests separately exercise multiple rows and unchanged keys."
+
+[[assumptions]]
+id = "WRITE-ADMISSION-ACQUIRED-PROJECTION"
+scope = "Native write-base validation and publication precondition derivation"
+statement = "A held row-partition guard gives the validator and publisher a common stable row-image projection. Individual head and xmax loads expose that image and resolution remains fallible. Fresh allocation identity, exclusive ownership, creator ID, zero fresh xmax and rank are caller facts; successful native base validation derives head/base equality and zero old xmax instead of receiving them as premises. Physical acquisition, raw pointers, guard interference and allocator ownership remain open."
+
+[[assumptions]]
+id = "PLANNED-COMMIT-ACQUISITION-CUTPOINT"
+scope = "Selected final-write planning through native publication completion"
+statement = "The selected transaction replaces a nonempty base and has retained private versions for one physical row, coherent initial postings, one changed final key and already-held physical authority. Source-derived planning and guarded base validation establish the prior commit-data plan relation; the harness does not assume that plan relation directly. Immutable base/new key fields survive native pre-lock extraction and later acquisition, while head/xmax may change; the field-frame lemma transfers extraction facts but does not implement lock waiting. Predicate/read/owner validation, native cleanup on early errors, postpublication non-final private-version recycling, full multirow composition and API-entry concurrent-history induction remain obligations. The harness preserves a whole modeled image across omitted cleanup; this excludes physical recycling from its scope and does not prove allocator free/live ownership preservation. Existing same-arena projection, field primitive, lifecycle and no-wrap boundaries remain unchanged."
+
+[[assumptions]]
+id = "PLANNING-NATIVE-FINITE-EVIDENCE"
+scope = "Native public-API planning scenarios"
+statement = "Deterministic transaction interleavings and intended assertion-failing native source controls establish finite regression evidence only. Source trees, exact case selection, the pinned compiler, executables and logs are authenticated; unrelated failures and stale inputs are rejected. Sequential overlapping transactions do not establish arbitrary schedules, formal refinement, weak-memory behavior or completion of P1."
