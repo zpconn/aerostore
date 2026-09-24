@@ -1,0 +1,181 @@
+--- a/aerostore_core/tests/occ_transactional_index.rs
++++ b/aerostore_core/tests/occ_transactional_index.rs
+@@ -127,6 +127,165 @@
+     );
+     assert_eq!(index.try_entries().unwrap(), vec![(IndexValue::I64(42), 0)]);
+     assert_eq!(table.latest_value(1).unwrap(), Some(Row::vacant()));
++}
++
++#[test]
++fn p1_two_workers_empty_creation_retries_to_the_single_winner() {
++    use std::sync::mpsc;
++    use std::time::Duration;
++
++    // Registration order is fixed; either the older or newer worker may win.
++    for winner in 0..2 {
++        let (arena, table, index) = fixture(&[Row::vacant(), Row::vacant()]);
++        let table = Arc::new(table);
++        let mut workers = Vec::new();
++        let mut commands = Vec::new();
++        let mut completions = Vec::new();
++        for row_id in 0..2 {
++            let table = Arc::clone(&table);
++            let index = index.clone();
++            let (ready, ready_rx) = mpsc::channel();
++            let (command, command_rx) = mpsc::channel();
++            let (completed, completed_rx) = mpsc::channel();
++            workers.push(std::thread::spawn(move || {
++                let mut tx = table.begin_transaction().unwrap();
++                let first = scan(&table, &mut tx, &index, &eq(42));
++                let repeated = scan(&table, &mut tx, &index, &eq(42));
++                table.write(&mut tx, row_id, Row::live(42)).unwrap();
++                let own = scan(&table, &mut tx, &index, &eq(42));
++                ready.send(()).unwrap();
++                command_rx.recv_timeout(Duration::from_secs(10)).unwrap();
++                let outcome = table.commit(&mut tx);
++                completed.send(()).unwrap();
++                command_rx.recv_timeout(Duration::from_secs(10)).unwrap();
++                // The application retries from a new snapshot, observes the
++                // existing logical row, and performs no duplicate insertion.
++                let mut retry = table.begin_transaction().unwrap();
++                let observed = scan(&table, &mut retry, &index, &eq(42));
++                let retry_outcome = table.commit(&mut retry);
++                (first, repeated, own, outcome, observed, retry_outcome)
++            }));
++            // This makes row 0's transaction older without using a sleep.
++            ready_rx.recv_timeout(Duration::from_secs(10)).unwrap();
++            commands.push(command);
++            completions.push(completed_rx);
++        }
++        commands[winner].send(()).unwrap();
++        completions[winner]
++            .recv_timeout(Duration::from_secs(10))
++            .unwrap();
++        commands[1 - winner].send(()).unwrap();
++        completions[1 - winner]
++            .recv_timeout(Duration::from_secs(10))
++            .unwrap();
++        for command in commands {
++            command.send(()).unwrap();
++        }
++        // Join both threads before reporting a failed semantic assertion.
++        let observations: Vec<_> = workers
++            .into_iter()
++            .map(|worker| worker.join().unwrap())
++            .collect();
++        for (row_id, observation) in observations.iter().enumerate() {
++            assert_eq!(
++                observation.3,
++                if row_id == winner {
++                    Ok(1)
++                } else {
++                    Err(OccError::SerializationFailure)
++                },
++                "p1-native: two empty-query creators must have exactly one committed winner"
++            );
++        }
++        for (row_id, (first, repeated, own, outcome, retry, retry_outcome)) in
++            observations.into_iter().enumerate()
++        {
++            assert!(first.is_empty() && repeated.is_empty());
++            assert_eq!(
++                own,
++                vec![row_id],
++                "p1-native: indexed lookup must include this worker's pending creation"
++            );
++            let _ = outcome;
++            assert_eq!(retry, vec![winner]);
++            assert_eq!(retry_outcome, Ok(0));
++        }
++        assert_eq!(
++            index.try_entries().unwrap(),
++            vec![(IndexValue::I64(42), winner)]
++        );
++        assert_eq!(table.latest_value(1 - winner).unwrap(), Some(Row::vacant()));
++        assert!(arena.create_snapshot().in_flight_txids().is_empty());
++    }
++}
++
++#[test]
++fn p1_reader_key_move_rejects_staged_write_then_fresh_retry_commits() {
++    use std::sync::mpsc;
++    use std::time::Duration;
++
++    for older_writer in [false, true] {
++        let (arena, table, index) = fixture(&[Row::live(10), Row::vacant()]);
++        let table = Arc::new(table);
++        let writer_table = Arc::clone(&table);
++        let (begin, begin_rx) = mpsc::channel();
++        let (ready, ready_rx) = mpsc::channel();
++        let (publish, publish_rx) = mpsc::channel();
++        let writer = std::thread::spawn(move || {
++            begin_rx.recv_timeout(Duration::from_secs(10)).unwrap();
++            let mut tx = writer_table.begin_transaction().unwrap();
++            writer_table.write(&mut tx, 0, Row::live(20)).unwrap();
++            ready.send(()).unwrap();
++            publish_rx.recv_timeout(Duration::from_secs(10)).unwrap();
++            writer_table.commit(&mut tx)
++        });
++        if older_writer {
++            begin.send(()).unwrap();
++            ready_rx.recv_timeout(Duration::from_secs(10)).unwrap();
++        }
++        let mut reader = table.begin_transaction().unwrap();
++        let before = scan(&table, &mut reader, &index, &eq(10));
++        let initially_absent = scan(&table, &mut reader, &index, &eq(20));
++        table.write(&mut reader, 1, Row::live(99)).unwrap();
++        let own = scan(&table, &mut reader, &index, &eq(99));
++        let repeated = scan(&table, &mut reader, &index, &eq(10));
++        if !older_writer {
++            begin.send(()).unwrap();
++            ready_rx.recv_timeout(Duration::from_secs(10)).unwrap();
++        }
++        publish.send(()).unwrap();
++        let writer_outcome = writer.join().unwrap();
++        let reader_outcome = table.commit(&mut reader);
++        assert_eq!(writer_outcome, Ok(1));
++        assert_eq!(before, vec![0]);
++        assert!(initially_absent.is_empty());
++        assert_eq!(own, vec![1]);
++        assert_eq!(repeated, vec![0]);
++        assert_eq!(
++            reader_outcome,
++            Err(OccError::SerializationFailure),
++            "p1-native: a moved predicate must reject the reader's complete write transaction"
++        );
++        assert_eq!(table.latest_value(1).unwrap(), Some(Row::vacant()));
++        assert_eq!(
++            index.try_entries().unwrap(),
++            vec![(IndexValue::I64(20), 0)],
++            "p1-native: key move and rejected reader must leave exactly the new committed posting"
++        );
++        assert!(arena.create_snapshot().in_flight_txids().is_empty());
++        let mut retry = table.begin_transaction().unwrap();
++        assert!(scan(&table, &mut retry, &index, &eq(10)).is_empty());
++        assert_eq!(scan(&table, &mut retry, &index, &eq(20)), vec![0]);
++        table.write(&mut retry, 1, Row::live(99)).unwrap();
++        assert_eq!(scan(&table, &mut retry, &index, &eq(99)), vec![1]);
++        assert_eq!(table.commit(&mut retry), Ok(1));
++        assert_eq!(table.latest_value(1).unwrap(), Some(Row::live(99)));
++        assert_eq!(
++            index.try_entries().unwrap(),
++            vec![(IndexValue::I64(20), 0), (IndexValue::I64(99), 1)]
++        );
++        assert!(arena.create_snapshot().in_flight_txids().is_empty());
++    }
+ }
+ 
+ #[test]
+@@ -505,7 +664,11 @@
+     let result = committer.commit(&table, &mut tx);
+     assert!(matches!(result, Err(WalWriterError::Ring(_))));
+     assert_eq!(table.latest_value(0).unwrap(), Some(Row::live(10)));
+-    assert_eq!(index.try_entries().unwrap(), vec![(IndexValue::I64(10), 0)]);
++    assert_eq!(
++        index.try_entries().unwrap(),
++        vec![(IndexValue::I64(10), 0)],
++        "p1-native: rejected WAL acceptance must remove every prepared destination"
++    );
+     let mut reader = table.begin_transaction().unwrap();
+     assert_eq!(scan(&table, &mut reader, &index, &eq(10)), vec![0]);
+     assert!(scan(&table, &mut reader, &index, &eq(20)).is_empty());

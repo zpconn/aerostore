@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/storage-slice/omit_snapshot_horizon_bound.rs:2504:9
+     |
+2466 |     requires distinct(l),birth>1,writer>0,old_reader(lookup::snapshot(tx),birth,writer),horizon<=tx.snapshot_xmin,
+     |                                                                                         ------------------------- failed precondition
+...
+2504 |         publication_derives_retained_prefix(l,birth,writer,before,after,tx,horizon);
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

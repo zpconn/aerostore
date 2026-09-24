@@ -1,0 +1,24 @@
+TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 18149] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-fwsb3tl1/PredicatePublication.tla
+Parsing file /tmp/tlc-6077748189399541184/Integers.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /tmp/tlc-6077748189399541184/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-6077748189399541184/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-6077748189399541184/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module PredicatePublication
+Linting of module PredicatePublication
+Starting... (2026-09-23 22:17:38)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-09-23 22:17:38.
+Model checking completed. No error has been found.
+  Estimates of the probability that TLC did not check all reachable states
+  because two distinct states had the same fingerprint:
+  calculated (optimistic):  val = 1.2E-16
+111 states generated, 86 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 18.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 2 and the 95th percentile is 2).
+Finished in 00s at (2026-09-23 22:17:38)

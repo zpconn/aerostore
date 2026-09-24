@@ -1,0 +1,11 @@
+note: verifying root module (selected functions)
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/predicate/ignore_snapshot_boundary.rs:243:17
+    |
+243 |                 reads_good(driver.state(), tx.index_reads@, tx.txid, ri as int),
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

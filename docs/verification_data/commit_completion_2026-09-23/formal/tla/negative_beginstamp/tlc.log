@@ -1,0 +1,125 @@
+TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 16975] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-fwsb3tl1/Publication.tla
+Parsing file /tmp/tlc-2534001678798902650/Integers.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /tmp/tlc-2534001678798902650/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-2534001678798902650/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-2534001678798902650/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module Publication
+Linting of module Publication
+Starting... (2026-09-23 22:17:25)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-09-23 22:17:25.
+Error: Invariant Safety is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ active = {}
+/\ dependencies = <<(0 :> -1 @@ 1 :> -1), (0 :> -1 @@ 1 :> -1)>>
+/\ rejected = {}
+/\ snapRows = <<<<1, 0>>, <<1, 0>>>>
+/\ willWrite = <<FALSE, FALSE>>
+/\ pc = <<"Start", "Start">>
+/\ captured = <<{}, {}>>
+/\ nextId = 1
+/\ answers = <<[rows |-> {}, afterMove |-> FALSE], [rows |-> {}, afterMove |-> FALSE]>>
+/\ committed = {}
+/\ txid = <<0, 0>>
+/\ rowHeads = <<1, 0>>
+/\ postings = {<<1, 1>>}
+/\ answered = {}
+/\ logicalRows = <<1, 0>>
+/\ stamps = (0 :> 0 @@ 1 :> 0)
+/\ owner = (0 :> 0 @@ 1 :> 0)
+
+State 2: <Start(1) line 50, col 5 to line 58, col 94 of module Publication>
+/\ active = {1}
+/\ pc = <<"Snapshot", "Start">>
+/\ nextId = 2
+/\ txid = <<1, 0>>
+
+State 3: <Snapshot(1) line 61, col 5 to line 66, col 91 of module Publication>
+/\ willWrite = <<TRUE, FALSE>>
+/\ pc = <<"Acquire", "Start">>
+
+State 4: <AcquireOne(1) line 106, col 5 to line 113, col 51 of module Publication>
+/\ owner = (0 :> 1 @@ 1 :> 0)
+
+State 5: <AcquireOne(1) line 106, col 5 to line 113, col 51 of module Publication>
+/\ owner = (0 :> 1 @@ 1 :> 1)
+
+State 6: <Acquired(1) line 116, col 5 to line 120, col 61 of module Publication>
+/\ pc = <<"Validate", "Start">>
+
+State 7: <Validate(1) line 123, col 5 to line 131, col 61 of module Publication>
+/\ pc = <<"Prepare", "Start">>
+
+State 8: <Prepare(1) line 134, col 5 to line 139, col 51 of module Publication>
+/\ pc = <<"RemoveSource", "Start">>
+/\ postings = {<<1, 1>>, <<2, 1>>}
+
+State 9: <RemoveSource(1) line 142, col 5 to line 147, col 51 of module Publication>
+/\ pc = <<"PublishRow", "Start">>
+/\ postings = {<<2, 1>>}
+
+State 10: <PublishRow(1) line 150, col 5 to line 156, col 51 of module Publication>
+/\ pc = <<"Deregister", "Start">>
+/\ rowHeads = <<2, 0>>
+
+State 11: <Start(2) line 50, col 5 to line 58, col 94 of module Publication>
+/\ active = {1, 2}
+/\ pc = <<"Deregister", "Snapshot">>
+/\ nextId = 3
+/\ txid = <<1, 2>>
+
+State 12: <Snapshot(2) line 61, col 5 to line 66, col 91 of module Publication>
+/\ pc = <<"Deregister", "LookupLock">>
+
+State 13: <Deregister(1) line 159, col 5 to line 164, col 94 of module Publication>
+/\ active = {2}
+/\ pc = <<"Stamp", "LookupLock">>
+/\ logicalRows = <<2, 0>>
+
+State 14: <Stamp(1) line 167, col 5 to line 173, col 94 of module Publication>
+/\ pc = <<"Unlock", "LookupLock">>
+/\ nextId = 4
+/\ stamps = (0 :> 1 @@ 1 :> 1)
+
+State 15: <Unlock(1) line 176, col 5 to line 181, col 91 of module Publication>
+/\ pc = <<"Done", "LookupLock">>
+/\ committed = {1}
+/\ owner = (0 :> 0 @@ 1 :> 0)
+
+State 16: <LookupLock(2) line 69, col 5 to line 74, col 51 of module Publication>
+/\ pc = <<"Done", "Capture">>
+/\ owner = (0 :> 0 @@ 1 :> 2)
+
+State 17: <Capture(2) line 77, col 5 to line 87, col 78 of module Publication>
+/\ dependencies = <<(0 :> -1 @@ 1 :> -1), (0 :> -1 @@ 1 :> 1)>>
+/\ pc = <<"Done", "Materialize">>
+
+State 18: <Materialize(2) line 90, col 5 to line 98, col 79 of module Publication>
+/\ active = {2}
+/\ dependencies = <<(0 :> -1 @@ 1 :> -1), (0 :> -1 @@ 1 :> 1)>>
+/\ rejected = {}
+/\ snapRows = <<<<1, 0>>, <<1, 0>>>>
+/\ willWrite = <<TRUE, FALSE>>
+/\ pc = <<"Done", "Acquire">>
+/\ captured = <<{}, {}>>
+/\ nextId = 4
+/\ answers = <<[rows |-> {}, afterMove |-> FALSE], [rows |-> {}, afterMove |-> TRUE]>>
+/\ committed = {1}
+/\ txid = <<1, 2>>
+/\ rowHeads = <<2, 0>>
+/\ postings = {<<2, 1>>}
+/\ answered = {2}
+/\ logicalRows = <<2, 0>>
+/\ stamps = (0 :> 1 @@ 1 :> 1)
+/\ owner = (0 :> 0 @@ 1 :> 0)
+
+158 states generated, 107 distinct states found, 7 states left on queue.
+The depth of the complete state graph search is 18.
+Finished in 00s at (2026-09-23 22:17:25)

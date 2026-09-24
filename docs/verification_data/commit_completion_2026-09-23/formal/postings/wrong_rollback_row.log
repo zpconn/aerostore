@@ -1,0 +1,24 @@
+note: verifying root module (selected functions)
+
+note: while loop: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/postings/wrong_rollback_row.rs:224:9
+    |
+224 |         while ri > 0
+    |         ^^^^^^^^^^^^
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/postings/wrong_rollback_row.rs:229:17
+    |
+229 |                 removed_only(initial.postings, driver.state().postings, recorded(changes@, inserted@)),
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/postings/wrong_rollback_row.rs:230:17
+    |
+230 | /                 rollback_error.is_none() ==> driver.state().postings == initial.postings.difference(
+231 | |                     recorded(changes@, inserted@.subrange(ri as int, inserted.len() as int))),
+    | |_____________________________________________________________________________________________^
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

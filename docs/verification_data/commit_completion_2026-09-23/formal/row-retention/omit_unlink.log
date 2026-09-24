@@ -1,0 +1,66 @@
+note: verifying root module (selected functions)
+
+note: while loop: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/omit_unlink.rs:1671:1
+     |
+1671 | while curr_offset != 0 invariant initial == old ( driver ) . state ( ) , driver . no_errors ( ) == old ( driver ) . no_errors ( ) ...
+     | ^^^^^^^^^^^^^^^^^^^^^^
+
+note: recommendation not met
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/omit_unlink.rs:1671:1297
+     |
+1671 | ... ( p ) && p != head_offset ==> ! eligible ( driver . state ( ) . image . rows [ p ] , global_xmin ) , reachable ( driver . stat...
+     |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+    --> map.rs:87:12
+     |
+     = note: recommendation not met
+
+note: recommendation not met
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/omit_unlink.rs:1671:1681
+     |
+1671 | ...ontains ( p ) ==> p != head_offset && eligible ( initial . image . rows [ p ] , global_xmin ) , reclaimed . len ( ) == removed ...
+     |                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+    --> map.rs:87:12
+     |
+     = note: recommendation not met
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/omit_unlink.rs:1728:9
+     |
+1605 |             !reachable(old(self).state().image,old(self).state().image.heads[row_id]).contains(p),
+     |             ------------------------------------------------------------------------------------- failed precondition
+...
+1728 |         driver . recycle ( row_id , curr_ptr ) ? ;
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/omit_unlink.rs:1734:22
+     |
+1734 | ... ( reachable ( driver . state ( ) . image , head_offset ) =~= reachable ( initial . image , head_offset ) . difference ( removed ) ) ;
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+note: recommendation not met
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/omit_unlink.rs:1771:97
+     |
+1771 | ...   <==> reachable(initial.image,head_offset).contains(p) && p!=head_offset && eligible(initial.image.rows[p],global_xmin) by {
+     |                                                                                           ^^^^^^^^^^^^^^^^^^^^^
+     |
+    --> map.rs:87:12
+     |
+     = note: recommendation not met
+
+note: recommendation not met
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/omit_unlink.rs:1772:95
+     |
+1772 |             if reachable(initial.image,head_offset).contains(p) && p!=head_offset && eligible(initial.image.rows[p],global_xmin)
+     |                                                                                               ^^^^^^^^^^^^^^^^^^^^^
+     |
+    --> map.rs:87:12
+     |
+     = note: recommendation not met
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

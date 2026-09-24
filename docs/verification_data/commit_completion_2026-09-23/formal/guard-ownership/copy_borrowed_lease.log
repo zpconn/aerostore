@@ -1,0 +1,18 @@
+error[E0507]: cannot move out of `*lease` which is behind a shared reference
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/guard-ownership/copy_borrowed_lease.rs:774:71
+    |
+774 | pub fn misuse(lease: &ownership::ReadLease) -> ownership::ReadLease { *lease }
+    |                                                                       ^^^^^^ move occurs because `*lease` has type `ownership::ReadLease`, which does not implement the `Copy` trait
+    |
+note: if `ownership::ReadLease` implemented `Clone`, you could clone the value
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/guard-ownership/copy_borrowed_lease.rs:19:1
+    |
+ 19 | pub struct ReadLease { physical: Key, token: Tracked<LeaseToken> }
+    | ^^^^^^^^^^^^^^^^^^^^ consider implementing `Clone` for this type
+...
+774 | pub fn misuse(lease: &ownership::ReadLease) -> ownership::ReadLease { *lease }
+    |                                                                       ------ you could clone this value
+
+error: aborting due to 1 previous error
+
+For more information about this error, try `rustc --explain E0507`.

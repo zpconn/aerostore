@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/commit-completion/wrong_change_binding.rs:3400:13
+     |
+3400 |     ensures changes.len()==1 && changes[0]==translated_change(plan.changes[0]),
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+3405 |     changes
+     |     ------- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

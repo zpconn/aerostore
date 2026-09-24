@@ -1,0 +1,20 @@
+error[E0603]: function `initialize_authority` is private
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/guard-ownership/mint_second_authority.rs:775:44
+    |
+775 |         let tracked authority = ownership::initialize_authority(Set::empty());
+    |                                            ^^^^^^^^^^^^^^^^^^^^ private function
+    |
+note: the function `initialize_authority` is defined here
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/guard-ownership/mint_second_authority.rs:446:7
+    |
+446 |   proof fn initialize_authority(keys: Set<Key>) -> (tracked authority: Authority)
+    |  _______^
+447 | |     ensures valid(&authority), cells(&authority).dom() == keys,
+448 | |         forall|key: Key| keys.contains(key) ==> cells(&authority)[key].bit == 0,
+...   |
+451 | | }
+    | |_^
+
+error: aborting due to 1 previous error
+
+For more information about this error, try `rustc --explain E0603`.

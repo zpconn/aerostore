@@ -1,0 +1,124 @@
+{
+  "current_fixture_changes": {
+    "aerostore_core/tests/occ_transactional_index.rs": {
+      "after_sha256": "934278055d1374aea98a697bafd93994ed2f1ba89b01102d353414899f6c61a9",
+      "before_sha256": "89846cc4760dd7592d2920d72cae574461d32e2f6e7a5b1d41d1bfcb789894e2"
+    }
+  },
+  "current_fixture_patch": "../current-fixture.patch",
+  "current_fixture_patch_sha256": "50cef70888aba76f6ab8c37a5eed58f4011f23c1fe8d7679c72f60d9be6a5f9f",
+  "current_source": "../current-source.tar.gz",
+  "current_source_tar_sha256": "542b28c44f606903800674fba2f81d39777f1f402fa4e4baf4dbd4ee13a98b1b",
+  "mutations": [
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "15aa2ded0edea0a98bef1a13bbe1ff07db3691579b8a127eeb1b5d2c49619107",
+          "before_sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d"
+        }
+      },
+      "name": "ignore_retention_horizon",
+      "patch": "ignore_retention_horizon.patch",
+      "patch_sha256": "07f2991f4eb11f9e639bdede20dea129871aef1f7bc010e6b7c4fd37a5bca588",
+      "source_tree_sha256": "679cfaaf73bfe54f348cf30204acba882a5952fdcb39c6cb96bba6a3749292f9"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/procarray.rs": {
+          "after_sha256": "686ce96369603e754ec6294f21ce1b3a8502f687fbb8ff31d9f543c9048e0946",
+          "before_sha256": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364"
+        }
+      },
+      "name": "use_registration_instead_of_snapshot_horizon",
+      "patch": "use_registration_instead_of_snapshot_horizon.patch",
+      "patch_sha256": "74a751df87f6e7f45a99853fc7b54d48d2f90d13323fb85503a504bd817326a6",
+      "source_tree_sha256": "1d772e0732d9c82304356238da79baa87c06bff48d884dc454b6fc4bb5fa7d77"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "5405b5ab5f6f4eb2ef6d4b47221ca710c768b9ecf227949272872441fd778cba",
+          "before_sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d"
+        }
+      },
+      "name": "recycle_without_unlinking",
+      "patch": "recycle_without_unlinking.patch",
+      "patch_sha256": "1b47c3dffd31d90122248574cebf2f3722ac3a91d7f75e91d1aed33c863e5d6e",
+      "source_tree_sha256": "4f7a9a59a8caf750018ef5ee5cd12f1c63945d0355b47350d8c54f8916c7a070"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "6e4b3063d45c7134f86ec303c02db110280824ba0a44e5cf9998ed5b160b15cd",
+          "before_sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d"
+        }
+      },
+      "name": "preserve_retired_xmax_on_reuse",
+      "patch": "preserve_retired_xmax_on_reuse.patch",
+      "patch_sha256": "3d837e14433aea775996d75678883979cb501a2acd8e2197e0bbcb39034fcabb",
+      "source_tree_sha256": "d16f97c26b69c7c10b78ecd1e77b53a708631d30040fff19c89f34e29bcd50b2"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "9ebc895ac2b29c02f20ec94022bf047f81b8f7776a98b904c0cb9003273df992",
+          "before_sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d"
+        }
+      },
+      "name": "reclaim_version_with_live_row_guard",
+      "patch": "reclaim_version_with_live_row_guard.patch",
+      "patch_sha256": "4079d981545ef792c524632d90ca510b83004045500b5e81579691d1fadcac90",
+      "source_tree_sha256": "8bf9e9de321af222a1cd62868a054d207dd80e6f3fe661ea2418d1f01191f4a8"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/procarray.rs": {
+          "after_sha256": "98a13cdb5a23493cf7a7dbc9722e37d6d1d985d636484e03aaa419c21a796bb3",
+          "before_sha256": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364"
+        }
+      },
+      "name": "inherit_obsolete_horizon",
+      "patch": "inherit_obsolete_horizon.patch",
+      "patch_sha256": "623af4614604872ba9b090c68b5c91b123c5423c64c1a8fa9dde038e9b5272ab",
+      "source_tree_sha256": "f6ca27a9470921fe5fe080b6081dbd8fd9fa73ed61c622ad4b25b404d3bc9a7d"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "65190b1bc28de5ef374357f243c90bfe381e4d1df909554870da8599655e1ca9",
+          "before_sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d"
+        }
+      },
+      "name": "ignore_active_creator_during_partial_publication",
+      "patch": "ignore_active_creator_during_partial_publication.patch",
+      "patch_sha256": "7c6be078d58b96560f293bec0a37d3a38f4ea26e36dcbe22bcb88ebb4600e659",
+      "source_tree_sha256": "3f752b8d5a0899c5edec2e5a83de441b9380ed60898cb83be63d0dcd998d6b8c"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "7077c855e955c853655e9d3bdd5453797c92a4cd49bbca4763782a42e51cc8d0",
+          "before_sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d"
+        }
+      },
+      "name": "omit_public_horizon_clamp",
+      "patch": "omit_public_horizon_clamp.patch",
+      "patch_sha256": "688490b6eee4abf0a236def09a438958f6a684f9c4749c7535fc69c95d78b3fb",
+      "source_tree_sha256": "02e3cfccb6330e80f33bf2a4f9d77e4ee625743701825fa634cb3fe73f904402"
+    }
+  ],
+  "parent_archive_command": [
+    "git",
+    "archive",
+    "4619b8f465d71a263f531eac72a88ca536aa0bcb",
+    "Cargo.toml",
+    "Cargo.lock",
+    "aerostore_core",
+    "aerostore_verified",
+    "aerostore_macros",
+    "aerostore_tcl"
+  ],
+  "parent_archive_sha256": "73e2ed6f2d496eedfe41e59f6b5deb416ce8a1e888e66b96f4e35d667b546e5d",
+  "parent_commit": "4619b8f465d71a263f531eac72a88ca536aa0bcb",
+  "scope": "Deterministic native tests; not formal refinement"
+}

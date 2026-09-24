@@ -1,0 +1,31 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/storage-slice/reuse_visible_anchor.rs:2536:1
+     |
+2536 | / pub proof fn pruned_tail_reuse_preserves_history(l:Layout,birth:u64,writer:u64,before:usize,after:usize,
+2537 | |     tx:Transaction,reuser:u64,key:usize)
+     | |________________________________________^
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/storage-slice/reuse_visible_anchor.rs:2543:9
+     |
+2543 | /         forall|p:u32| retention::prefix(published(l,birth,writer,before,after),l.fresh,lookup::snapshot(tx)).contains(p) ==>
+2544 | |             retention::data_same(published(l,birth,writer,before,after).rows[p],reused(l,birth,writer,before,after,reuser,key).rows[p])
+2545 | |             && (p!=l.anchor ==> published(l,birth,writer,before,after).rows[p].next==reused(l,birth,writer,before,after,reuser,key).rows[p].next),
+     | |_________________________________________________________________________________________________________________________________________________^ failed this postcondition
+...
+2555 |       assert forall|id:usize| id<image.capacity implies initial_keys(before).contains_key(id)
+     |       ------ at the end of the function body
+
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/storage-slice/reuse_visible_anchor.rs:2555:55
+     |
+2555 |   ...city implies initial_keys(before).contains_key(id)
+     |  _________________^
+2556 | | ...age,tx,id)==lookup::snapshot_rows(initial_keys(before),Seq::empty(),0,lookup::snapshot(tx))[id] by {assert(id==0);}
+     | |__________________________________________________________________________________________________^ assertion failed
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

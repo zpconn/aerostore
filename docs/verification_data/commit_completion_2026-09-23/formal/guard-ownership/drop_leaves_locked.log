@@ -1,0 +1,11 @@
+note: verifying root module (selected functions)
+
+error: assertion failed
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/guard-ownership/drop_leaves_locked.rs:161:16
+    |
+161 |         assert(cells(authority) =~= cells(&before).insert(old_key, Cell { bit: 0, owner: None }));
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

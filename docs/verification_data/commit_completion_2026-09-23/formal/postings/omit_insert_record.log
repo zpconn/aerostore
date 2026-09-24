@@ -1,0 +1,11 @@
+note: verifying root module (selected functions)
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/postings/omit_insert_record.rs:278:17
+    |
+278 |                 prefix_record(changes@, inserted@, change_idx as int),
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

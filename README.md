@@ -98,7 +98,11 @@ describes the earlier five-case validation.
 
 The [verification workspace](verification/README.md) contains Verus proofs of production bucket kernels, conditional proofs of native commit, predicate and snapshot operations, a Rust-to-Lean extraction/proof bridge, and TLA+ protocol and resource models. Checked composition now covers an indexed-read/validation slice: guard acquisition, dependency and candidate capture, release before MVCC materialization, and later conflict validation. Separate proofs model interference while acquiring locks and derive candidate completeness from coherent histories. Physical storage, weak-memory and general concurrent-history assumptions remain explicit. Its experiment gate ties evidence to the current source and freezes the unproved engine boundary. This is a component pilot; Aerostore is not yet a formally verified database. The [full verification plan](docs/formal_verification_plan.md) tracks the remaining implementation, recovery, memory, and performance obligations.
 
-The latest [indexed-read verification checkpoint](docs/verification_data/indexed_lookup_2026-09-23/README.md) retains the passing 45-check pilot, 264 core regressions, new ownership/interference/query proofs, and Extended Crucible smoke results for all three bucket configurations. Production execution paths are unchanged; raw storage/history correspondence and whole-engine verification remain open.
+The [P0 API audit](verification/contracts/p0_audit.md) is complete for the declared scope: public success/error contracts, explicit exclusions and a reviewed lock graph. Current Verus work joins ordinary row/index publication to transaction deregistration and shared-clock stamping, with native tests for competing empty-query creations and key moves. The complete concurrent P1 slice and whole-engine verification remain open; the [current proof boundary](verification/commit_completion/README.md) explains the remaining assumptions.
+
+The latest [verification checkpoint](docs/verification_data/commit_completion_2026-09-23/README.md) retains the passing 63-check pilot, 266 core regressions and Extended Crucible smoke results for all three bucket configurations. This checkpoint adds proofs and tests without changing production execution paths.
+
+Earlier checkpoints retain [indexed-read evidence](docs/verification_data/indexed_lookup_2026-09-23/README.md) and [row retention evidence](docs/verification_data/row_retention_2026-09-23/README.md), including the reproduced and repaired public vacuum-horizon bug.
 
 The [initial verification evidence](docs/bench_data/verification_pilot_2026-09-23/README.md) includes the passing composed campaign, extended Crucible results for all three bucket configurations, and component timing/allocation measurements.
 
@@ -113,7 +117,7 @@ four-minute candidate retained 97.9% of first-half throughput. The automatic
 performance gate remains **inconclusive** because the original reference's p99
 variation exceeded the fixed noise limit. On 2026-09-23, the implementation was
 explicitly accepted as an engineering improvement, with that measurement
-limitation retained. The current source passes 441 native tests and all 19
+limitation retained. That checkpoint passed 441 native tests and all 19
 component-verification checks; native skiplist refinement remains open.
 
 ## The Crucible benchmark

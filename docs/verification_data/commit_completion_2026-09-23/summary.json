@@ -1,0 +1,49 @@
+{
+  "arbitrary_native_history_refinement_proved": false,
+  "core_regression_tests": 266,
+  "formal_semantic_equivalence_proved": false,
+  "full_P1_complete": false,
+  "gate_checks": 63,
+  "input_files": 466,
+  "lean_roots": 34,
+  "lean_semantic_controls": 20,
+  "native_allocator_ownership_refinement_proved": false,
+  "native_campaigns": {
+    "p1-native": {
+      "positive_selections": 9,
+      "semantic_controls": 7
+    },
+    "retention-native": {
+      "positive_selections": 5,
+      "semantic_controls": 8
+    }
+  },
+  "new_campaigns": {
+    "commit-completion": {
+      "roots": 6,
+      "semantic_mutations": 14
+    },
+    "commit-data": {
+      "roots": 13,
+      "semantic_mutations": 17
+    }
+  },
+  "p0_complete": true,
+  "parent_commit": "4619b8f465d71a263f531eac72a88ca536aa0bcb",
+  "passed": true,
+  "performance_claim": "No runtime change or new timing claim",
+  "production_byte_identical": true,
+  "production_runtime_changed": false,
+  "promotion_eligible": false,
+  "runtime_inputs_checked": 118,
+  "scope": "Conditional one-index/one-final-write ordinary publication, deregistration and shared-clock stamp completion; full transaction history join remains open",
+  "tla_cases": 136,
+  "tla_outcomes": {
+    "completed_finite_search": 58,
+    "intended_counterexample": 40,
+    "intended_liveness_counterexample": 3,
+    "reachable_witness": 35
+  },
+  "weak_memory_refinement_proved": false,
+  "whole_engine_verified": false
+}

@@ -1,0 +1,50 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/collector_omits_kernel_dispatch.rs:1930:1
+     |
+1930 | / pub fn run_vacuum_pass<D:VacuumDispatch>(driver:&mut D)
+1931 | |     ->(result:Result<Vec<Reclaimed>,VacuumError>)
+     | |________________________________________________^
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/collector_omits_kernel_dispatch.rs:1933:13
+     |
+1933 |       ensures final(driver).dispatched_horizon().is_some(),
+     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+1936 | / {
+1937 | |     let global_xmin = compute_global_xmin ( driver ) ;
+1938 | | match Ok::<Vec<Reclaimed>,Error>(Vec::new()) {
+1939 | |     Ok ( rows ) => Ok ( rows ) , Err ( error ) => Err ( VacuumError :: Occ ( error ) )
+1940 | | }
+1941 | | }
+     | |_- at the end of the function body
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/collector_omits_kernel_dispatch.rs:1934:9
+     |
+1934 | /         forall|i:int| 0<=i<old(driver).state().slots.len() && old(driver).state().slots[i].txid!=0 ==>
+1935 | |             final(driver).dispatched_horizon().unwrap()<=old(driver).state().slots[i].snapshot_xmin,
+     | |___________________________________________________________________________________________________^ failed this postcondition
+1936 | / {
+1937 | |     let global_xmin = compute_global_xmin ( driver ) ;
+1938 | | match Ok::<Vec<Reclaimed>,Error>(Vec::new()) {
+1939 | |     Ok ( rows ) => Ok ( rows ) , Err ( error ) => Err ( VacuumError :: Occ ( error ) )
+1940 | | }
+1941 | | }
+     | |_- at the end of the function body
+
+note: recommendation not met
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/collector_omits_kernel_dispatch.rs:1935:13
+     |
+1935 |             final(driver).dispatched_horizon().unwrap()<=old(driver).state().slots[i].snapshot_xmin,
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+    --> std_specs/option.rs:154:8
+     |
+     = note: recommendation not met
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

@@ -1,0 +1,33 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/lifecycle/wrong_slot_clear.rs:314:1
+    |
+314 | / pub fn end_transaction<D: LifecyclePrimitives>(driver: &mut D, registration: ProcArrayRegistration)
+315 | |     -> (result: Result<(), ProcArrayError>)
+    | |__________________________________________^
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/lifecycle/wrong_slot_clear.rs:318:13
+    |
+318 |     ensures well_formed(final(driver).state()), final(driver).state().lifecycle_held,
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+353 | Ok ( ( ) )
+    | ---------- at the end of the function body
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/lifecycle/wrong_slot_clear.rs:322:9
+    |
+322 | /         result.is_ok() ==> registration.slot_idx < PROCARRAY_SLOTS
+323 | |             && old(driver).state().slots[registration.slot_idx as int].txid == registration.txid
+324 | |             && final(driver).state().slots == old(driver).state().slots.update(registration.slot_idx as int,
+325 | |                 Slot { txid: 0, snapshot_xmin: 0 }),
+    | |___________________________________________________^ failed this postcondition
+...
+353 |   Ok ( ( ) )
+    |   ---------- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

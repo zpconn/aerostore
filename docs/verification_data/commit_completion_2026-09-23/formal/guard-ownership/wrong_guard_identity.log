@@ -1,0 +1,20 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/guard-ownership/wrong_guard_identity.rs:115:9
+    |
+115 |           result.is_some() ==> lease_key(&result.unwrap()) == key && authorized(final(authority), &result.unwrap()),
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+128 | /     match driver.compare_exchange(key, 0 , 1 , Ordering :: Acquire , Ordering :: Relaxed, Tracked(&mut *authority)) {
+129 | |         Ok(_) => {
+130 | |             let tracked token = grant(&mut *authority, key);
+131 | |             proof {
+...   |
+142 | |         },
+143 | |     }
+    | |_____- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

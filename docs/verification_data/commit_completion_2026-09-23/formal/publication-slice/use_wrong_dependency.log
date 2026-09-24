@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/publication-slice/use_wrong_dependency.rs:1191:5
+     |
+ 166 |         touched.contains(read_pair(before, reads[i])), stamp >= txid,
+     |         --------------------------------------------- failed precondition
+...
+1191 |     predicate::publication_invalidates_dependency(before, after, reads, reader, touched, stamp, 0);
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

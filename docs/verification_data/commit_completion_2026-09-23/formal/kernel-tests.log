@@ -1,0 +1,16 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.03s
+     Running unittests src/lib.rs (target/debug/deps/aerostore_verified-aa55a6c768c5f059)
+
+running 3 tests
+test tests::stamp_decision_covers_equality_zero_and_maximum ... ok
+test tests::canonical_sets_cover_empty_duplicates_collisions_and_boundaries ... ok
+test tests::all_short_inputs_match_standard_sort_and_reject_late_invalid_values ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests aerostore_verified
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

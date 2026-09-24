@@ -1,0 +1,15 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/commit-completion/omit_freshness.rs:3528:13
+     |
+3522 | / pub proof fn completed_write_invalidates_capture(before:predicate::State,after:predicate::State,
+3523 | |     plan:Plan,read:predicate::IndexRead,reader:u64,stamp:u64)
+     | |_____________________________________________________________- at the end of the function body
+...
+3528 |       ensures !predicate::read_good(after,read,reader),
+     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

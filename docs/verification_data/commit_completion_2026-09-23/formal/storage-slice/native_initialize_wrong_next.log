@@ -1,0 +1,18 @@
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/storage-slice/native_initialize_wrong_next.rs:2303:13
+     |
+2303 |       ensures result.is_ok() ==> final(driver).state()==initialized(old(driver).state(),row_ptr,value,xmin,next),
+     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+2310 | / {
+2311 | |     proof {
+2312 | |         initialized_preserves_protected(driver.state(),row_ptr,value,xmin,next);
+2313 | |         initialized_image_valid(driver.state(),row_ptr,value,xmin,next);
+...    |
+2318 | | Ok ( ( ) )
+2319 | | }
+     | |_- at the end of the function body
+
+verification results:: 143 verified, 1 errors
+error: aborting due to 1 previous error
+

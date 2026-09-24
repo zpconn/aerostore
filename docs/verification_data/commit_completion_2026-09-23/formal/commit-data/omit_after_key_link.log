@@ -1,0 +1,9 @@
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/commit-data/omit_after_key_link.rs:1696:12
+     |
+1696 |     assert(head_key(after.image,c.row_id)==c.after);
+     |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 110 verified, 1 errors
+error: aborting due to 1 previous error
+

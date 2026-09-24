@@ -1,0 +1,5 @@
+{
+  "canonical_runtime_receipt": "../runtime-audit.json",
+  "legacy_production_equivalence_is_not_canonical": true,
+  "reason": "Historical checker excludes only older test bodies; new integration tests trigger its fixed token comparison"
+}

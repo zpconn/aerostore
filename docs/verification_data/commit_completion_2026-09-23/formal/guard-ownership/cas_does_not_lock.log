@@ -1,0 +1,30 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/guard-ownership/cas_does_not_lock.rs:111:1
+    |
+111 | / pub fn try_acquire<D: Atomics>(driver: &D, key: Key, Tracked(authority): Tracked<&mut Authority>)
+112 | |     -> (result: Option<ReadLease>)
+    | |_________________________________^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/guard-ownership/cas_does_not_lock.rs:128:11
+    |
+ 71 |         requires valid(old(authority)), cells(old(authority)).contains_key(key), expected == 0, next == 1,
+    |                                                                                                 --------- failed precondition
+...
+128 |     match driver.compare_exchange(key, 0 , 0 , Ordering :: Acquire , Ordering :: Relaxed, Tracked(&mut *authority)) {
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/guard-ownership/cas_does_not_lock.rs:130:33
+    |
+ 91 |     requires cells(old(authority)).contains_key(key), cells(old(authority))[key].bit == 1,
+    |                                                       ----------------------------------- failed precondition
+...
+130 |             let tracked token = grant(&mut *authority, key);
+    |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

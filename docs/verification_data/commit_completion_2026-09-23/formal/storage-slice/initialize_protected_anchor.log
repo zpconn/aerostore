@@ -1,0 +1,11 @@
+note: verifying root module (selected functions)
+
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/storage-slice/initialize_protected_anchor.rs:2597:16
+     |
+2597 |         assert(initialization::permitted(driver.state(),row_ptr,0));
+     |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

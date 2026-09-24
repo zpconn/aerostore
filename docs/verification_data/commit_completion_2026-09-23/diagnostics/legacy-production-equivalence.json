@@ -1,0 +1,990 @@
+{
+  "schema": 1,
+  "passed": false,
+  "formal_semantic_equivalence_proved": false,
+  "scope": "reviewed Rust/Cargo production-token change detection",
+  "files": {
+    "Cargo.lock": {
+      "baseline_sha256": "6c0d2df18dbfba1408aaedf361cd480eb20ea629bdc6b185ce6b02fa9f31ab2d",
+      "current_sha256": "6c0d2df18dbfba1408aaedf361cd480eb20ea629bdc6b185ce6b02fa9f31ab2d",
+      "baseline_production_token_sha256": "6c0d2df18dbfba1408aaedf361cd480eb20ea629bdc6b185ce6b02fa9f31ab2d",
+      "current_production_token_sha256": "6c0d2df18dbfba1408aaedf361cd480eb20ea629bdc6b185ce6b02fa9f31ab2d",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "Cargo.toml": {
+      "baseline_sha256": "8f8878e016d2781884975dc980c2e97372d003b077f7f266d2940631fef535d0",
+      "current_sha256": "8f8878e016d2781884975dc980c2e97372d003b077f7f266d2940631fef535d0",
+      "baseline_production_token_sha256": "8f8878e016d2781884975dc980c2e97372d003b077f7f266d2940631fef535d0",
+      "current_production_token_sha256": "8f8878e016d2781884975dc980c2e97372d003b077f7f266d2940631fef535d0",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/Cargo.toml": {
+      "baseline_sha256": "a28270cdb506bef5d80d2cb379d3d28cef02cdde80b3470a802b6d7674c0918b",
+      "current_sha256": "a28270cdb506bef5d80d2cb379d3d28cef02cdde80b3470a802b6d7674c0918b",
+      "baseline_production_token_sha256": "a28270cdb506bef5d80d2cb379d3d28cef02cdde80b3470a802b6d7674c0918b",
+      "current_production_token_sha256": "a28270cdb506bef5d80d2cb379d3d28cef02cdde80b3470a802b6d7674c0918b",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/extended_crucible/aerostore.rs": {
+      "baseline_sha256": "5e626f5953784e59b8f3ed42ff32f3e39d8b65c780f5cc5055cc17f6756fde10",
+      "current_sha256": "5e626f5953784e59b8f3ed42ff32f3e39d8b65c780f5cc5055cc17f6756fde10",
+      "baseline_production_token_sha256": "c1338ce4e02ace51cdcd5160e6828f4893af449adbf985b96bbff3a3f8c38fa4",
+      "current_production_token_sha256": "c1338ce4e02ace51cdcd5160e6828f4893af449adbf985b96bbff3a3f8c38fa4",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/extended_crucible/contracts.rs": {
+      "baseline_sha256": "f3480f7271e3585f1231e43a3e7716728fe5016deb6f7ad245a9643bad74facf",
+      "current_sha256": "f3480f7271e3585f1231e43a3e7716728fe5016deb6f7ad245a9643bad74facf",
+      "baseline_production_token_sha256": "3b412298bd8a24d0a345e570a7fba1e41a91d50bbd97940149061a79f628ac97",
+      "current_production_token_sha256": "3b412298bd8a24d0a345e570a7fba1e41a91d50bbd97940149061a79f628ac97",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/extended_crucible/metrics.rs": {
+      "baseline_sha256": "0974e0d10ed2072182a3b3c0b8b5d4d4bdec86726faa31108163da395170f42f",
+      "current_sha256": "0974e0d10ed2072182a3b3c0b8b5d4d4bdec86726faa31108163da395170f42f",
+      "baseline_production_token_sha256": "87d993f34cb6cb67701fd35254c93f521f14cc91f9a73c0f45941592a66102f1",
+      "current_production_token_sha256": "87d993f34cb6cb67701fd35254c93f521f14cc91f9a73c0f45941592a66102f1",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/extended_crucible/mod.rs": {
+      "baseline_sha256": "eef78817af9947f49fa3d164e39a22a4fbf746fb371b4d8b54a4c7b6cd562ff9",
+      "current_sha256": "eef78817af9947f49fa3d164e39a22a4fbf746fb371b4d8b54a4c7b6cd562ff9",
+      "baseline_production_token_sha256": "2aee77466c0a91fdfb6e0e76ce4ce6dfbd7ae16dd5de7d26048a8104807eb45c",
+      "current_production_token_sha256": "2aee77466c0a91fdfb6e0e76ce4ce6dfbd7ae16dd5de7d26048a8104807eb45c",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/extended_crucible/model.rs": {
+      "baseline_sha256": "7ac59bbc4be37689968bd00b2a7081b842afabd04357bcbbd42ebed424c37234",
+      "current_sha256": "7ac59bbc4be37689968bd00b2a7081b842afabd04357bcbbd42ebed424c37234",
+      "baseline_production_token_sha256": "e63814e1dd97b5bacca984fdb731e9cb94d7c0750bc120f050f68aa5870eca3f",
+      "current_production_token_sha256": "e63814e1dd97b5bacca984fdb731e9cb94d7c0750bc120f050f68aa5870eca3f",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/extended_crucible/postgres.rs": {
+      "baseline_sha256": "39f3fc071cca8e7d040b00d7f5a2908eeb44ad1ae9a12b2e61ec63f1cff17b6e",
+      "current_sha256": "39f3fc071cca8e7d040b00d7f5a2908eeb44ad1ae9a12b2e61ec63f1cff17b6e",
+      "baseline_production_token_sha256": "62388c113a85644d849ca64c6eac9b9bd5517ef680774e1da8a995547aa7b1ae",
+      "current_production_token_sha256": "62388c113a85644d849ca64c6eac9b9bd5517ef680774e1da8a995547aa7b1ae",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/extended_crucible/runner.rs": {
+      "baseline_sha256": "3801a92c0418b4a250fe84cc3e787c9f6a89954a59615394de7dca3573ea8fc9",
+      "current_sha256": "3801a92c0418b4a250fe84cc3e787c9f6a89954a59615394de7dca3573ea8fc9",
+      "baseline_production_token_sha256": "501af2f99c506fa074a16fc0e9467df420fb260811a84bb273e0782ef75933b2",
+      "current_production_token_sha256": "501af2f99c506fa074a16fc0e9467df420fb260811a84bb273e0782ef75933b2",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/hyperfeed_crucible.rs": {
+      "baseline_sha256": "d8ab08776c2666cd517cb48cbe20c7b30dd0ac3dc8f42b72a3c189e3b6e3e092",
+      "current_sha256": "d8ab08776c2666cd517cb48cbe20c7b30dd0ac3dc8f42b72a3c189e3b6e3e092",
+      "baseline_production_token_sha256": "01717a0adb293f975f1e6a4257a67512555d1a2befbddd30d5d7f661eb347a2d",
+      "current_production_token_sha256": "01717a0adb293f975f1e6a4257a67512555d1a2befbddd30d5d7f661eb347a2d",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/hyperfeed_extended_crucible.rs": {
+      "baseline_sha256": "402d65ed26a990fcfd663a8afc6074bcb6ebae8dc4953b9f7731da7aee66e028",
+      "current_sha256": "402d65ed26a990fcfd663a8afc6074bcb6ebae8dc4953b9f7731da7aee66e028",
+      "baseline_production_token_sha256": "bfde4fb589aa8d120e5a7a5b6f935657643149309a665ec805fd77c115545bc3",
+      "current_production_token_sha256": "bfde4fb589aa8d120e5a7a5b6f935657643149309a665ec805fd77c115545bc3",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/procarray_snapshot.rs": {
+      "baseline_sha256": "58a99f8738cd50b9cf25351ddb0be86d3176c81ef2330bfbfdec4953e416955f",
+      "current_sha256": "58a99f8738cd50b9cf25351ddb0be86d3176c81ef2330bfbfdec4953e416955f",
+      "baseline_production_token_sha256": "1864a1d345536d61959c9161bf9732b6a4bc8905479a52752ea94d1ae1d6a82c",
+      "current_production_token_sha256": "1864a1d345536d61959c9161bf9732b6a4bc8905479a52752ea94d1ae1d6a82c",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/shm_skiplist_adversarial.rs": {
+      "baseline_sha256": "1a4b073e005a552ede210670dfe5f20a938ead249c6cb7f523edd58270db27fb",
+      "current_sha256": "1a4b073e005a552ede210670dfe5f20a938ead249c6cb7f523edd58270db27fb",
+      "baseline_production_token_sha256": "6137bf166118e8caa685c8fb0d99a8698dfdf5a64af97ffc2ea60f0a695afb78",
+      "current_production_token_sha256": "6137bf166118e8caa685c8fb0d99a8698dfdf5a64af97ffc2ea60f0a695afb78",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/shm_skiplist_seek_bounds.rs": {
+      "baseline_sha256": "570742cced22d3ac663ee4de4ec2c5fc0da651dc0a8143d3fae73704f56b537c",
+      "current_sha256": "570742cced22d3ac663ee4de4ec2c5fc0da651dc0a8143d3fae73704f56b537c",
+      "baseline_production_token_sha256": "f867577035351548e8476357a1aef7ccce7d340dbcc06cdc20e1c20b11a1c9fc",
+      "current_production_token_sha256": "f867577035351548e8476357a1aef7ccce7d340dbcc06cdc20e1c20b11a1c9fc",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/support/crucible_seed.rs": {
+      "baseline_sha256": "7039d9d0fe7210cf1afccf870d78b796a8ad15b3cced8dbf5d4d72cc924161ee",
+      "current_sha256": "7039d9d0fe7210cf1afccf870d78b796a8ad15b3cced8dbf5d4d72cc924161ee",
+      "baseline_production_token_sha256": "2b526185548fc94dfb36a69a4ee65947ad28e934405fcbeb051f8b5fa539e361",
+      "current_production_token_sha256": "2b526185548fc94dfb36a69a4ee65947ad28e934405fcbeb051f8b5fa539e361",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/support/latency_histogram.rs": {
+      "baseline_sha256": "114878f08890782b17a3bec7bda47ae2ff0e2185cc207662ecd9019c2bbf0dd3",
+      "current_sha256": "114878f08890782b17a3bec7bda47ae2ff0e2185cc207662ecd9019c2bbf0dd3",
+      "baseline_production_token_sha256": "89a2558aa72b54cf69abdeb7fe6dcaabd4c6c3df60bd88271f8ce35effe7a374",
+      "current_production_token_sha256": "89a2558aa72b54cf69abdeb7fe6dcaabd4c6c3df60bd88271f8ce35effe7a374",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/tmpfs_warm_restart.rs": {
+      "baseline_sha256": "5ec0b8d4bd6b0f6265ba8957572c7e421ba07eb0e00554937ae216854823259e",
+      "current_sha256": "5ec0b8d4bd6b0f6265ba8957572c7e421ba07eb0e00554937ae216854823259e",
+      "baseline_production_token_sha256": "14ad31811de45990404b7fe97b76fa9c532731928452a3f850d170bfa2584887",
+      "current_production_token_sha256": "14ad31811de45990404b7fe97b76fa9c532731928452a3f850d170bfa2584887",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/verified_bucket_allocations.rs": {
+      "baseline_sha256": "a32ca3cdaf470a28e99d15603a4727426ecdf215895e0feab81e26973403506e",
+      "current_sha256": "a32ca3cdaf470a28e99d15603a4727426ecdf215895e0feab81e26973403506e",
+      "baseline_production_token_sha256": "a71335a98ca43840e91acf41017232bff16d4c43eeb3fc5b600a0737ca6aa91e",
+      "current_production_token_sha256": "a71335a98ca43840e91acf41017232bff16d4c43eeb3fc5b600a0737ca6aa91e",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/verified_bucket_sets.rs": {
+      "baseline_sha256": "806c7bc23c8930735f74fddd12980a0f13aef073c6ff0fc1eab60836d2ef05e7",
+      "current_sha256": "806c7bc23c8930735f74fddd12980a0f13aef073c6ff0fc1eab60836d2ef05e7",
+      "baseline_production_token_sha256": "753eea585f673f716fc109a70e632394da8a86dd6789c1895a60c0b142fc631d",
+      "current_production_token_sha256": "753eea585f673f716fc109a70e632394da8a86dd6789c1895a60c0b142fc631d",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/benches/wal_delta_throughput.rs": {
+      "baseline_sha256": "48c5b934a05d637b74ea88e4f8b7fef133571a3a36c96b12055bc752720a049d",
+      "current_sha256": "48c5b934a05d637b74ea88e4f8b7fef133571a3a36c96b12055bc752720a049d",
+      "baseline_production_token_sha256": "754725be95b15b0ce3b45eb73041c425171ca550e038d77baee7ddbd20d665e2",
+      "current_production_token_sha256": "754725be95b15b0ce3b45eb73041c425171ca550e038d77baee7ddbd20d665e2",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/arena.rs": {
+      "baseline_sha256": "f8e1d90fef5fef613ecf3c7af5efece382a0eb2f1c91cf5b4c80de16cb50822f",
+      "current_sha256": "f8e1d90fef5fef613ecf3c7af5efece382a0eb2f1c91cf5b4c80de16cb50822f",
+      "baseline_production_token_sha256": "87cd74540f51b56c03f430e5e09d65dc2c341749836fc7bf07b734738f84ca7f",
+      "current_production_token_sha256": "87cd74540f51b56c03f430e5e09d65dc2c341749836fc7bf07b734738f84ca7f",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/bootloader.rs": {
+      "baseline_sha256": "6c29c8fd5ead2aadb61f4fb77342a0705985110b5b0b3f5354e39d1a78e3e890",
+      "current_sha256": "6c29c8fd5ead2aadb61f4fb77342a0705985110b5b0b3f5354e39d1a78e3e890",
+      "baseline_production_token_sha256": "917b3f05c7ffecb090694481941afca313bf627e945409d7b680b7cfd2363c95",
+      "current_production_token_sha256": "917b3f05c7ffecb090694481941afca313bf627e945409d7b680b7cfd2363c95",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/execution.rs": {
+      "baseline_sha256": "85d32e3d42c8629c052ba36b769ce625148b297e02c5231504efc9f5cd73d9ce",
+      "current_sha256": "85d32e3d42c8629c052ba36b769ce625148b297e02c5231504efc9f5cd73d9ce",
+      "baseline_production_token_sha256": "b9115d5684e0f5a5df45a303a0d226af991cc4deefbe8c3bed16a9839867b1e3",
+      "current_production_token_sha256": "b9115d5684e0f5a5df45a303a0d226af991cc4deefbe8c3bed16a9839867b1e3",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/filters.rs": {
+      "baseline_sha256": "862b925c524f002daaca0f2524695908e0537a44c996c165789d16678bb5c8ac",
+      "current_sha256": "862b925c524f002daaca0f2524695908e0537a44c996c165789d16678bb5c8ac",
+      "baseline_production_token_sha256": "9e8fd3cbc8d564f8bb54f105b7414c33c1e801737b5dbd2d0598b267de0da693",
+      "current_production_token_sha256": "9e8fd3cbc8d564f8bb54f105b7414c33c1e801737b5dbd2d0598b267de0da693",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/index.rs": {
+      "baseline_sha256": "3df81efcc90a842e96ec744661abcd93dee5175d03663a8c5894554e1e541e1f",
+      "current_sha256": "3df81efcc90a842e96ec744661abcd93dee5175d03663a8c5894554e1e541e1f",
+      "baseline_production_token_sha256": "657034336e8144c4ee4094d082bceee9e30da98f164b0e1b2db8dd6d57ce7bc5",
+      "current_production_token_sha256": "657034336e8144c4ee4094d082bceee9e30da98f164b0e1b2db8dd6d57ce7bc5",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/ingest.rs": {
+      "baseline_sha256": "8f4cc44d1352ee807e26fb1ed62e73d3f1a9177bc5334e3a403e733f7a04dd32",
+      "current_sha256": "8f4cc44d1352ee807e26fb1ed62e73d3f1a9177bc5334e3a403e733f7a04dd32",
+      "baseline_production_token_sha256": "720774577d463cc3d18711dfcfbc52a58024014b136b772320ac44b5fa140c8a",
+      "current_production_token_sha256": "720774577d463cc3d18711dfcfbc52a58024014b136b772320ac44b5fa140c8a",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/lib.rs": {
+      "baseline_sha256": "5dd1dd237df07e2bd055a702af67a2fcf47825de356877cd12f2b42d49f59fad",
+      "current_sha256": "5dd1dd237df07e2bd055a702af67a2fcf47825de356877cd12f2b42d49f59fad",
+      "baseline_production_token_sha256": "97fbd541c38d0c91e9cdd6ca6557a9b9a0798a0026dc1c3a01c5f7d3194c7a60",
+      "current_production_token_sha256": "97fbd541c38d0c91e9cdd6ca6557a9b9a0798a0026dc1c3a01c5f7d3194c7a60",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/mvcc.rs": {
+      "baseline_sha256": "0b888ad0889fd5d0aaf3d1fe28974fa1257d55a8a87d4e3533f4f1630f3e9f59",
+      "current_sha256": "0b888ad0889fd5d0aaf3d1fe28974fa1257d55a8a87d4e3533f4f1630f3e9f59",
+      "baseline_production_token_sha256": "75b5e7dd08d9f5a3ddea0468bbb7dae2130387b0789d847353d367c20e6c7de5",
+      "current_production_token_sha256": "75b5e7dd08d9f5a3ddea0468bbb7dae2130387b0789d847353d367c20e6c7de5",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/occ.rs": {
+      "baseline_sha256": "933c5ff6524da35ac806d8e7b03108ac09094d4a07a6784b6c130b676dc32cac",
+      "current_sha256": "933c5ff6524da35ac806d8e7b03108ac09094d4a07a6784b6c130b676dc32cac",
+      "baseline_production_token_sha256": "dadc546ea8805c4e6175e1e772ae4b31bdb2fa83c7dade26646884ea967735b7",
+      "current_production_token_sha256": "dadc546ea8805c4e6175e1e772ae4b31bdb2fa83c7dade26646884ea967735b7",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/occ_legacy.rs": {
+      "baseline_sha256": "506151b69538c42e3541cf12cc40e7f0b4a7353331e6bab4bd8236092892fadd",
+      "current_sha256": "506151b69538c42e3541cf12cc40e7f0b4a7353331e6bab4bd8236092892fadd",
+      "baseline_production_token_sha256": "541fc99f312eb4e3569a86120e9133b91222eb5b7ebbbff53187837dc8ed0cf1",
+      "current_production_token_sha256": "541fc99f312eb4e3569a86120e9133b91222eb5b7ebbbff53187837dc8ed0cf1",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/occ_partitioned.rs": {
+      "baseline_sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d",
+      "current_sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d",
+      "baseline_production_token_sha256": "858d12626348e05cae6e11c0b1dd93e1154ee14feb7fb6f55e0f0a8ce45798e2",
+      "current_production_token_sha256": "858d12626348e05cae6e11c0b1dd93e1154ee14feb7fb6f55e0f0a8ce45798e2",
+      "baseline_exclusions": [
+        "cfg(test) module predicate_completion_tests",
+        "exact cfg(test) ROW_TRAVERSAL_STEP_HOOK declaration",
+        "exact cfg(test) ROW_PUBLICATION_STEP_HOOK declaration",
+        "exact cfg(test) row hook call in find_visible_row_ptr",
+        "exact cfg(test) row hook call in publish_prepared_write_set",
+        "exact cfg(test) row hook call in publish_prepared_write_set",
+        "exact cfg(test) row hook call in publish_write_set",
+        "exact cfg(test) row hook call in publish_write_set"
+      ],
+      "current_exclusions": [
+        "cfg(test) module predicate_completion_tests",
+        "exact cfg(test) ROW_TRAVERSAL_STEP_HOOK declaration",
+        "exact cfg(test) ROW_PUBLICATION_STEP_HOOK declaration",
+        "exact cfg(test) row hook call in find_visible_row_ptr",
+        "exact cfg(test) row hook call in publish_prepared_write_set",
+        "exact cfg(test) row hook call in publish_prepared_write_set",
+        "exact cfg(test) row hook call in publish_write_set",
+        "exact cfg(test) row hook call in publish_write_set"
+      ]
+    },
+    "aerostore_core/src/planner_cardinality.rs": {
+      "baseline_sha256": "d277fe3551d1fc76813df83fa6288a5afa312738d37d417c0a930ad24dd4c546",
+      "current_sha256": "d277fe3551d1fc76813df83fa6288a5afa312738d37d417c0a930ad24dd4c546",
+      "baseline_production_token_sha256": "7bc8df3a43702ca3a93516af3546f559404587107f8096652ec577d327af57fc",
+      "current_production_token_sha256": "7bc8df3a43702ca3a93516af3546f559404587107f8096652ec577d327af57fc",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/procarray.rs": {
+      "baseline_sha256": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364",
+      "current_sha256": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364",
+      "baseline_production_token_sha256": "1f9e4f3e2c0100153f49741394be87bdad0e6581da158dc102571bbb194731bf",
+      "current_production_token_sha256": "1f9e4f3e2c0100153f49741394be87bdad0e6581da158dc102571bbb194731bf",
+      "baseline_exclusions": [
+        "cfg(test) module tests",
+        "exact cfg(test) SNAPSHOT_ACQUIRING_HOOK declaration",
+        "exact cfg(test) SNAPSHOT_ACQUIRING_HOOK call"
+      ],
+      "current_exclusions": [
+        "cfg(test) module tests",
+        "exact cfg(test) SNAPSHOT_ACQUIRING_HOOK declaration",
+        "exact cfg(test) SNAPSHOT_ACQUIRING_HOOK call"
+      ]
+    },
+    "aerostore_core/src/query.rs": {
+      "baseline_sha256": "e47567fff036e9fd13d277ee2b26692d477e2da92d107ace40ae55500d3d9685",
+      "current_sha256": "e47567fff036e9fd13d277ee2b26692d477e2da92d107ace40ae55500d3d9685",
+      "baseline_production_token_sha256": "b0831e16de2c0c64fafcc89b9544d1d39273d662d7eea0e31cc8180d3ccd8fcf",
+      "current_production_token_sha256": "b0831e16de2c0c64fafcc89b9544d1d39273d662d7eea0e31cc8180d3ccd8fcf",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/rbo_planner.rs": {
+      "baseline_sha256": "1c91ab46417bf12825c1b04ece6a163d3af3138ebd2bf8ab6ee71773e2b4d186",
+      "current_sha256": "1c91ab46417bf12825c1b04ece6a163d3af3138ebd2bf8ab6ee71773e2b4d186",
+      "baseline_production_token_sha256": "63cb4e006198df2c5366495532bdbe3d85469e1155fd2fc514d99c6ba075670a",
+      "current_production_token_sha256": "63cb4e006198df2c5366495532bdbe3d85469e1155fd2fc514d99c6ba075670a",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/recovery.rs": {
+      "baseline_sha256": "45177cd588058fe73b0aa5c5a1bdbb1cc9c2c7302014a38ae01657b6b1a84b50",
+      "current_sha256": "45177cd588058fe73b0aa5c5a1bdbb1cc9c2c7302014a38ae01657b6b1a84b50",
+      "baseline_production_token_sha256": "9dc0f42766c644fa546cd050b1a1c4f5dd8b68711466485cfb7c69224d31bafd",
+      "current_production_token_sha256": "9dc0f42766c644fa546cd050b1a1c4f5dd8b68711466485cfb7c69224d31bafd",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/recovery_delta.rs": {
+      "baseline_sha256": "b7985430386d2468eb64fe9c3651fa11405e7edb326472bbc6425ccef1e7be26",
+      "current_sha256": "b7985430386d2468eb64fe9c3651fa11405e7edb326472bbc6425ccef1e7be26",
+      "baseline_production_token_sha256": "859a95862f5d9c089964e47134fd734c74745a8175fc10631009d7cf1a917a56",
+      "current_production_token_sha256": "859a95862f5d9c089964e47134fd734c74745a8175fc10631009d7cf1a917a56",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/retry.rs": {
+      "baseline_sha256": "010a40c9e58560bbb9a1d2a9cceb858ebd290bdf25e401bacf6597d6d20b4e98",
+      "current_sha256": "010a40c9e58560bbb9a1d2a9cceb858ebd290bdf25e401bacf6597d6d20b4e98",
+      "baseline_production_token_sha256": "dad66e991cceb29648e8b22c20a5923bb63450c38e90e067768d19d2e4945ad4",
+      "current_production_token_sha256": "dad66e991cceb29648e8b22c20a5923bb63450c38e90e067768d19d2e4945ad4",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/shm.rs": {
+      "baseline_sha256": "434964bde214af5b9ca4c4828447e995edc9074f117d61ee1173fa0ae0418884",
+      "current_sha256": "434964bde214af5b9ca4c4828447e995edc9074f117d61ee1173fa0ae0418884",
+      "baseline_production_token_sha256": "8ab4297c04aaeecedeb9e644ff7b8c04c7447eda92a7fcfe0e41c9438f7450b5",
+      "current_production_token_sha256": "8ab4297c04aaeecedeb9e644ff7b8c04c7447eda92a7fcfe0e41c9438f7450b5",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/shm_index.rs": {
+      "baseline_sha256": "3ee2c2b8bb1f29e50e1f7177b238c794a12558b03fb8f948ac26c8ed6714c151",
+      "current_sha256": "3ee2c2b8bb1f29e50e1f7177b238c794a12558b03fb8f948ac26c8ed6714c151",
+      "baseline_production_token_sha256": "fc76614c7d4e66769cbb74976770b3ffe57ea6286385e89052941b03bb28ac46",
+      "current_production_token_sha256": "fc76614c7d4e66769cbb74976770b3ffe57ea6286385e89052941b03bb28ac46",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/shm_lock.rs": {
+      "baseline_sha256": "60c189fef3e17644f8470c2baf7e148c7096c06fc062ef280e315b21eb165fa2",
+      "current_sha256": "60c189fef3e17644f8470c2baf7e148c7096c06fc062ef280e315b21eb165fa2",
+      "baseline_production_token_sha256": "05de161f2a0a5c16604afc4f1a6953ab8517c652767e2fce121b053138cc18d2",
+      "current_production_token_sha256": "05de161f2a0a5c16604afc4f1a6953ab8517c652767e2fce121b053138cc18d2",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/shm_skiplist.rs": {
+      "baseline_sha256": "a3b8862e481cb9a95345d9eafc88d8f2bdb102b28f001d70c7e01fd581f7c184",
+      "current_sha256": "a3b8862e481cb9a95345d9eafc88d8f2bdb102b28f001d70c7e01fd581f7c184",
+      "baseline_production_token_sha256": "0fe9f62ab148d204566cda27c8453cf18ad1b7bedfbd269ff1ae18cfb16c7e6a",
+      "current_production_token_sha256": "0fe9f62ab148d204566cda27c8453cf18ad1b7bedfbd269ff1ae18cfb16c7e6a",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/shm_tmpfs.rs": {
+      "baseline_sha256": "08b0db51eef49a71f00ac75f16b4503927d9d52d406af0bd04b088382dbb2e74",
+      "current_sha256": "08b0db51eef49a71f00ac75f16b4503927d9d52d406af0bd04b088382dbb2e74",
+      "baseline_production_token_sha256": "1b10c5866886a3d8cbd058a09304a9b9c43564e7d73c6124e3ba9dd15efdf188",
+      "current_production_token_sha256": "1b10c5866886a3d8cbd058a09304a9b9c43564e7d73c6124e3ba9dd15efdf188",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/stapi_parser.rs": {
+      "baseline_sha256": "e786daafa895225bcabe5c73f6fc13e50a59805b98532cd1e3036a34520e49b2",
+      "current_sha256": "e786daafa895225bcabe5c73f6fc13e50a59805b98532cd1e3036a34520e49b2",
+      "baseline_production_token_sha256": "0f263084bf83d1d72e2e2bf1cfadd3bc0318cc75536f2f9bfa37a9eaaea1e167",
+      "current_production_token_sha256": "0f263084bf83d1d72e2e2bf1cfadd3bc0318cc75536f2f9bfa37a9eaaea1e167",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/txn.rs": {
+      "baseline_sha256": "c5deae698fd360e6277af2148a301539f22379389338555877cf388434467e8f",
+      "current_sha256": "c5deae698fd360e6277af2148a301539f22379389338555877cf388434467e8f",
+      "baseline_production_token_sha256": "7ed411e404477f1380c67e8192d6a3cee7e2aab1fadda5145a6a7719fdc177b7",
+      "current_production_token_sha256": "7ed411e404477f1380c67e8192d6a3cee7e2aab1fadda5145a6a7719fdc177b7",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/vacuum.rs": {
+      "baseline_sha256": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+      "current_sha256": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+      "baseline_production_token_sha256": "b88d9a9dc77cd673d5d0c7944b66639015f4bbba6186dcc2fa8d344028dfbe32",
+      "current_production_token_sha256": "b88d9a9dc77cd673d5d0c7944b66639015f4bbba6186dcc2fa8d344028dfbe32",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/wal.rs": {
+      "baseline_sha256": "1037e7db135439718b1e7733039e80eed027fc17891677fffaee6c45ecf409e9",
+      "current_sha256": "1037e7db135439718b1e7733039e80eed027fc17891677fffaee6c45ecf409e9",
+      "baseline_production_token_sha256": "208b1b09c8f01aae79afb81bc96d5a980e3f9cef4455723b7b0d17d756d9d802",
+      "current_production_token_sha256": "208b1b09c8f01aae79afb81bc96d5a980e3f9cef4455723b7b0d17d756d9d802",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/wal_delta.rs": {
+      "baseline_sha256": "72175f6a106b5880208c65f29cd2a5758819ecf93af6507a054b95889a67365e",
+      "current_sha256": "72175f6a106b5880208c65f29cd2a5758819ecf93af6507a054b95889a67365e",
+      "baseline_production_token_sha256": "2a6f850354e39c6086e79ccc0d7f7c981a00c8bf17fc2de522bb018972d88bc3",
+      "current_production_token_sha256": "2a6f850354e39c6086e79ccc0d7f7c981a00c8bf17fc2de522bb018972d88bc3",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/wal_logical.rs": {
+      "baseline_sha256": "f96011096de4b5da3af3306527b70c9bdcf1ceda7991bfb85e4117eab5cbe09d",
+      "current_sha256": "f96011096de4b5da3af3306527b70c9bdcf1ceda7991bfb85e4117eab5cbe09d",
+      "baseline_production_token_sha256": "7c2863a05e0f3f81b9a62a4c86d4a95f2d066d0d961deda1735dd2fdc54c818f",
+      "current_production_token_sha256": "7c2863a05e0f3f81b9a62a4c86d4a95f2d066d0d961deda1735dd2fdc54c818f",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/wal_ring.rs": {
+      "baseline_sha256": "c32500ea26baf0602777fcd3dce1c7ecd558b410197668564f747796fc4eab4c",
+      "current_sha256": "c32500ea26baf0602777fcd3dce1c7ecd558b410197668564f747796fc4eab4c",
+      "baseline_production_token_sha256": "7b74df9629e23ee4e8d5aa971ad88b961787de82557d6ecf0170cc362becfafc",
+      "current_production_token_sha256": "7b74df9629e23ee4e8d5aa971ad88b961787de82557d6ecf0170cc362becfafc",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/wal_writer.rs": {
+      "baseline_sha256": "619be861775b8b1942750f427d6ecef55abc5e208fb165e5dd4c6cf5d123a70a",
+      "current_sha256": "619be861775b8b1942750f427d6ecef55abc5e208fb165e5dd4c6cf5d123a70a",
+      "baseline_production_token_sha256": "dbad99d7aee277fb7d0806cd26104ab9ee2e9b6b7d8a0084547f96f4c02283bf",
+      "current_production_token_sha256": "dbad99d7aee277fb7d0806cd26104ab9ee2e9b6b7d8a0084547f96f4c02283bf",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/src/watch.rs": {
+      "baseline_sha256": "f08c3d46e7fd77bbbcff92b3a88bde8724beae28fa888a7415163a732fa3f02a",
+      "current_sha256": "f08c3d46e7fd77bbbcff92b3a88bde8724beae28fa888a7415163a732fa3f02a",
+      "baseline_production_token_sha256": "5fb1efb5b887a2c725db7c80909252e67c432561f8fac7ee2f70e68c0d90fb33",
+      "current_production_token_sha256": "5fb1efb5b887a2c725db7c80909252e67c432561f8fac7ee2f70e68c0d90fb33",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/crucible_latency_histogram.rs": {
+      "baseline_sha256": "8014fee89c0af78776df3e66c224ea59b3aefe18354799a5c8c8f9b53ad85284",
+      "current_sha256": "8014fee89c0af78776df3e66c224ea59b3aefe18354799a5c8c8f9b53ad85284",
+      "baseline_production_token_sha256": "0e52b55c2c3a2bf656e69bcbc0d0c2e60e17d9fbfe446b7955f3430f63344a01",
+      "current_production_token_sha256": "0e52b55c2c3a2bf656e69bcbc0d0c2e60e17d9fbfe446b7955f3430f63344a01",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/crucible_seed.rs": {
+      "baseline_sha256": "369465d15e784ee21b9700e57dfb26aa5e920e21818d1ae0e3a999e022bbb60a",
+      "current_sha256": "369465d15e784ee21b9700e57dfb26aa5e920e21818d1ae0e3a999e022bbb60a",
+      "baseline_production_token_sha256": "282ffde662b8af9ea5370cde58399f43ffaf2d02e84f3c6e2b5c1593ebe8ac6c",
+      "current_production_token_sha256": "282ffde662b8af9ea5370cde58399f43ffaf2d02e84f3c6e2b5c1593ebe8ac6c",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/extended_crucible_model.rs": {
+      "baseline_sha256": "d826bd40b851db9c91c0f555d629dc024d4c26cd61283ba7547d89fc894e456f",
+      "current_sha256": "d826bd40b851db9c91c0f555d629dc024d4c26cd61283ba7547d89fc894e456f",
+      "baseline_production_token_sha256": "63053d2f208e26b16449c4a9435c550bd81a8e9b8182beea6ad4d8442237b263",
+      "current_production_token_sha256": "63053d2f208e26b16449c4a9435c550bd81a8e9b8182beea6ad4d8442237b263",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/index_relink_gc_consistency.rs": {
+      "baseline_sha256": "5a56b8220439a8020dcc8fddcf9e585717caff46549f8181d65a51b269dff365",
+      "current_sha256": "5a56b8220439a8020dcc8fddcf9e585717caff46549f8181d65a51b269dff365",
+      "baseline_production_token_sha256": "bb37071a5053a199d5efd9e1e2fcd151eb5c6dca910782244e9179e63e49982a",
+      "current_production_token_sha256": "bb37071a5053a199d5efd9e1e2fcd151eb5c6dca910782244e9179e63e49982a",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/ingest_watch_ttl.rs": {
+      "baseline_sha256": "6cda1580ae6724d5d99d4b623974d53115272a93d8a7495c0724575f94b2fece",
+      "current_sha256": "6cda1580ae6724d5d99d4b623974d53115272a93d8a7495c0724575f94b2fece",
+      "baseline_production_token_sha256": "712d2f234bd1c42a8d8f68958f29bd10115118f52dfbb7dfbe212b38d91ea5c6",
+      "current_production_token_sha256": "712d2f234bd1c42a8d8f68958f29bd10115118f52dfbb7dfbe212b38d91ea5c6",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/logical_recovery.rs": {
+      "baseline_sha256": "53b9b52d701cef919f0a6ff70e2920f11bff2004c44b66559e56c1726ca19f57",
+      "current_sha256": "53b9b52d701cef919f0a6ff70e2920f11bff2004c44b66559e56c1726ca19f57",
+      "baseline_production_token_sha256": "b49f8f09e1da189406cb40a9583491b08b7224b16e7da7b5c52a8adf335dd50f",
+      "current_production_token_sha256": "b49f8f09e1da189406cb40a9583491b08b7224b16e7da7b5c52a8adf335dd50f",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/mvcc_tokio_concurrency.rs": {
+      "baseline_sha256": "3c31d15bf12a1617ce15fd1fff227d4fae5a3ab663e3f172d7b1fba35c303933",
+      "current_sha256": "3c31d15bf12a1617ce15fd1fff227d4fae5a3ab663e3f172d7b1fba35c303933",
+      "baseline_production_token_sha256": "394cb2ecf304253be3852ea6dca5621285693a9a62b2cb437ebde09ed20e03ff",
+      "current_production_token_sha256": "394cb2ecf304253be3852ea6dca5621285693a9a62b2cb437ebde09ed20e03ff",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/occ_checkpoint_benchmark.rs": {
+      "baseline_sha256": "6d95914e8d5e428cc6d86a03faeda4ddccb0ae9dee59c6059f468cecdf2f7e9a",
+      "current_sha256": "6d95914e8d5e428cc6d86a03faeda4ddccb0ae9dee59c6059f468cecdf2f7e9a",
+      "baseline_production_token_sha256": "d1d5f2b8aae19344905b4338c444dc4ec107848856ce26a1ebd9461f8b354540",
+      "current_production_token_sha256": "d1d5f2b8aae19344905b4338c444dc4ec107848856ce26a1ebd9461f8b354540",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/occ_index_ordering.rs": {
+      "baseline_sha256": "fed6792e39a176b404c187f04e3e876ad185568a652de2408b3892968613a2c2",
+      "current_sha256": "fed6792e39a176b404c187f04e3e876ad185568a652de2408b3892968613a2c2",
+      "baseline_production_token_sha256": "cd670b04f4ec059ad8b52ce849fe655f826022c0045afdfebe86efabe0e97993",
+      "current_production_token_sha256": "cd670b04f4ec059ad8b52ce849fe655f826022c0045afdfebe86efabe0e97993",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/occ_partitioned_lock_striping_benchmark.rs": {
+      "baseline_sha256": "303d50d3f531eab8c87033083c582e8d7adb66d4a4b589ba17c729925938aafa",
+      "current_sha256": "303d50d3f531eab8c87033083c582e8d7adb66d4a4b589ba17c729925938aafa",
+      "baseline_production_token_sha256": "3f0af28fe5650e58729f2c4c32ac2a97d2c0865a2899251ca85cc4fc7247f033",
+      "current_production_token_sha256": "3f0af28fe5650e58729f2c4c32ac2a97d2c0865a2899251ca85cc4fc7247f033",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/occ_recycle_invariants_single_thread.rs": {
+      "baseline_sha256": "ef47cb8b45aa53728132c38f9c07f008d931340108a31de46cf8c77d90dd98b6",
+      "current_sha256": "ef47cb8b45aa53728132c38f9c07f008d931340108a31de46cf8c77d90dd98b6",
+      "baseline_production_token_sha256": "5429a15dbbb785f08221567ba9478fc34ee3b91c587d87e7323e5fc39a2051fe",
+      "current_production_token_sha256": "5429a15dbbb785f08221567ba9478fc34ee3b91c587d87e7323e5fc39a2051fe",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/occ_recycle_progress.rs": {
+      "baseline_sha256": "7f8e6d52bff452da0d9d80adbca7d002bbed901c5af1b39e6efc35e12621a173",
+      "current_sha256": "7f8e6d52bff452da0d9d80adbca7d002bbed901c5af1b39e6efc35e12621a173",
+      "baseline_production_token_sha256": "d377261f82c751e9d54b3ec671a5abff619716e95f3e61a7400055551ecef32b",
+      "current_production_token_sha256": "d377261f82c751e9d54b3ec671a5abff619716e95f3e61a7400055551ecef32b",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/occ_row_lock_semantics.rs": {
+      "baseline_sha256": "7b6f05077926377b0076832ba37eac40f3f5380b4153e0003b1ceffb2f97e417",
+      "current_sha256": "7b6f05077926377b0076832ba37eac40f3f5380b4153e0003b1ceffb2f97e417",
+      "baseline_production_token_sha256": "17dcee44a1e6a084abaa4446eff2fafa2c91cd63030a7edd7f1fb551f4de046a",
+      "current_production_token_sha256": "17dcee44a1e6a084abaa4446eff2fafa2c91cd63030a7edd7f1fb551f4de046a",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/occ_savepoint_reclaim.rs": {
+      "baseline_sha256": "ae029721fba6a393631d8c96ee7f683960a969d0c8745e6f30a64092895b9bdc",
+      "current_sha256": "ae029721fba6a393631d8c96ee7f683960a969d0c8745e6f30a64092895b9bdc",
+      "baseline_production_token_sha256": "41bc8cd2f265dc330a0f143204ac9197f958c9a9a5a595ec6db44c7bcdc4c5c1",
+      "current_production_token_sha256": "41bc8cd2f265dc330a0f143204ac9197f958c9a9a5a595ec6db44c7bcdc4c5c1",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/occ_transactional_index.rs": {
+      "baseline_sha256": "89846cc4760dd7592d2920d72cae574461d32e2f6e7a5b1d41d1bfcb789894e2",
+      "current_sha256": "934278055d1374aea98a697bafd93994ed2f1ba89b01102d353414899f6c61a9",
+      "baseline_production_token_sha256": "95e4247a5d6cc9cd3e1d2c158a96f92216b6e76f0fffabcbeee27950ca6523a6",
+      "current_production_token_sha256": "758a2a7e3ec81a7bb6b72d192224406a58a1d0767e734094f903913bd5843cd2",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/occ_write_skew.rs": {
+      "baseline_sha256": "4e0e4a9b394a974319023c6550abe1392f1c0d9246f115c8814e7571420045f0",
+      "current_sha256": "4e0e4a9b394a974319023c6550abe1392f1c0d9246f115c8814e7571420045f0",
+      "baseline_production_token_sha256": "75132447349780cb2a194bde95e13360cdbb2adb625e08b64ba074d10ca8cd85",
+      "current_production_token_sha256": "75132447349780cb2a194bde95e13360cdbb2adb625e08b64ba074d10ca8cd85",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/planner_cardinality.rs": {
+      "baseline_sha256": "f726feb9d88a5a8b6b22f757d556a6586ea1fdd316ab0e0764523c16279ce1df",
+      "current_sha256": "f726feb9d88a5a8b6b22f757d556a6586ea1fdd316ab0e0764523c16279ce1df",
+      "baseline_production_token_sha256": "8117517d5c6b8f67a5e8e0c69d46346e239c688afa9e0577874576ba31d5480c",
+      "current_production_token_sha256": "8117517d5c6b8f67a5e8e0c69d46346e239c688afa9e0577874576ba31d5480c",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/procarray_concurrency.rs": {
+      "baseline_sha256": "1c328a40ed3a7f32070fd1113d911e83b8f41b0d18a37a5ca9b3b63b3a98ae0d",
+      "current_sha256": "1c328a40ed3a7f32070fd1113d911e83b8f41b0d18a37a5ca9b3b63b3a98ae0d",
+      "baseline_production_token_sha256": "da9f513e176e1be1a07e704623e3a29039e39144f7e8a6218c15c9490c4ace8c",
+      "current_production_token_sha256": "da9f513e176e1be1a07e704623e3a29039e39144f7e8a6218c15c9490c4ace8c",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/query_index_benchmark.rs": {
+      "baseline_sha256": "0cda9272089b077d3fe2cc4a7c9a938fec469214cb22b74f7c6314fa92f7d1c7",
+      "current_sha256": "0cda9272089b077d3fe2cc4a7c9a938fec469214cb22b74f7c6314fa92f7d1c7",
+      "baseline_production_token_sha256": "b4b169f9fdd2cced1e7054f3d03da60f731e30144d3c3e68c795af4b76117553",
+      "current_production_token_sha256": "b4b169f9fdd2cced1e7054f3d03da60f731e30144d3c3e68c795af4b76117553",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/rbo_planner_routing.rs": {
+      "baseline_sha256": "38d99684aa078ea44cd85345943636fb5b0b2ff2498f368e255292882444968d",
+      "current_sha256": "38d99684aa078ea44cd85345943636fb5b0b2ff2498f368e255292882444968d",
+      "baseline_production_token_sha256": "1a2a943c2c86df151f7097b10ce0ad4b8c32d0708fd85311456f7316b9158f93",
+      "current_production_token_sha256": "1a2a943c2c86df151f7097b10ce0ad4b8c32d0708fd85311456f7316b9158f93",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/shm_benchmark.rs": {
+      "baseline_sha256": "18f4bf69b44d6a047969ee1a8b89130e22a9506bacf043e43982f6c4da6b772a",
+      "current_sha256": "18f4bf69b44d6a047969ee1a8b89130e22a9506bacf043e43982f6c4da6b772a",
+      "baseline_production_token_sha256": "9a5be40318e6c19d5b8701371eef802a6e9d4879e22a7a53454152398719ba0a",
+      "current_production_token_sha256": "9a5be40318e6c19d5b8701371eef802a6e9d4879e22a7a53454152398719ba0a",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/shm_fork.rs": {
+      "baseline_sha256": "dbf51a01d55304c3db1b09ec57b3225711fe769caffc255adc39bce6bbce47cb",
+      "current_sha256": "dbf51a01d55304c3db1b09ec57b3225711fe769caffc255adc39bce6bbce47cb",
+      "baseline_production_token_sha256": "b073ec09e1c87bd57bd8a9c98e62691e889764bc253f8d22fb1d911f31445b92",
+      "current_production_token_sha256": "b073ec09e1c87bd57bd8a9c98e62691e889764bc253f8d22fb1d911f31445b92",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/shm_index_benchmark.rs": {
+      "baseline_sha256": "880e1aab845b423a939ab64e182f859c961aece66e7552acb396cbd74a68f157",
+      "current_sha256": "880e1aab845b423a939ab64e182f859c961aece66e7552acb396cbd74a68f157",
+      "baseline_production_token_sha256": "ac7c8b4f11a3983f0a0395e5bdf79a68e62603629650caf7dcc751cbd6b34c13",
+      "current_production_token_sha256": "ac7c8b4f11a3983f0a0395e5bdf79a68e62603629650caf7dcc751cbd6b34c13",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/shm_index_bounds.rs": {
+      "baseline_sha256": "2baeb1ed08fadd7365ee6d4d87c13e3f12bb5bdbc32bbbb40bbed5ffb745cbd0",
+      "current_sha256": "2baeb1ed08fadd7365ee6d4d87c13e3f12bb5bdbc32bbbb40bbed5ffb745cbd0",
+      "baseline_production_token_sha256": "a1efc61fb6661dad154cfe280de5769c1c63f625349dd8d79a1ec49e8a4f254b",
+      "current_production_token_sha256": "a1efc61fb6661dad154cfe280de5769c1c63f625349dd8d79a1ec49e8a4f254b",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/shm_index_churn.rs": {
+      "baseline_sha256": "73d9f9c34849dd3915edfea03a10371ec8f9cf473db45e5f8ffc033bf2ab7f08",
+      "current_sha256": "73d9f9c34849dd3915edfea03a10371ec8f9cf473db45e5f8ffc033bf2ab7f08",
+      "baseline_production_token_sha256": "b44344ba5f01ccafb10a62fe2e5f9eba3b8d72fd6d36df7f4f79b580d25dcf0e",
+      "current_production_token_sha256": "b44344ba5f01ccafb10a62fe2e5f9eba3b8d72fd6d36df7f4f79b580d25dcf0e",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/shm_index_contention.rs": {
+      "baseline_sha256": "78a76847800c0f47d1c1483dcfa4d6d2a853142bb612a41c632178f7ba664246",
+      "current_sha256": "78a76847800c0f47d1c1483dcfa4d6d2a853142bb612a41c632178f7ba664246",
+      "baseline_production_token_sha256": "110a997d0e313b9b04cf3f44a0e9d3de21c3227a382811b38cc72d883899028f",
+      "current_production_token_sha256": "110a997d0e313b9b04cf3f44a0e9d3de21c3227a382811b38cc72d883899028f",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/shm_index_fork.rs": {
+      "baseline_sha256": "bef4d06cbc028d00341cde08b350f4b75f24e4d67fb3605a706735345eecb0e6",
+      "current_sha256": "bef4d06cbc028d00341cde08b350f4b75f24e4d67fb3605a706735345eecb0e6",
+      "baseline_production_token_sha256": "66ed4801cee233e6565b29bd0c08c37379f30a34d35fe9b9594790752a2e6778",
+      "current_production_token_sha256": "66ed4801cee233e6565b29bd0c08c37379f30a34d35fe9b9594790752a2e6778",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/shm_index_gc_horizon.rs": {
+      "baseline_sha256": "4ffc1e2a86f612b5a83c42a32e67fcbc146cd55379fefafef5e5d0a5dbdbc610",
+      "current_sha256": "4ffc1e2a86f612b5a83c42a32e67fcbc146cd55379fefafef5e5d0a5dbdbc610",
+      "baseline_production_token_sha256": "b7017142bd68ff0d88db9656bc678318a3f500a229c6f04749cb29814e65273e",
+      "current_production_token_sha256": "b7017142bd68ff0d88db9656bc678318a3f500a229c6f04749cb29814e65273e",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/shm_mutation_model.rs": {
+      "baseline_sha256": "4906f6eb71a5d19088c0228a17425cfd111a25407a72ccf9f871b9aaa504049b",
+      "current_sha256": "4906f6eb71a5d19088c0228a17425cfd111a25407a72ccf9f871b9aaa504049b",
+      "baseline_production_token_sha256": "f802cb4d5f40b48f1e0e1aef1550f9a9c85c351f7eae8510134af0aa3e0ae8ba",
+      "current_production_token_sha256": "f802cb4d5f40b48f1e0e1aef1550f9a9c85c351f7eae8510134af0aa3e0ae8ba",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/shm_recycle_visibility.rs": {
+      "baseline_sha256": "8c79970f8d0b32e095227ee4ed6eb79a16015764a33d9a4b6d193fe07be15fd4",
+      "current_sha256": "8c79970f8d0b32e095227ee4ed6eb79a16015764a33d9a4b6d193fe07be15fd4",
+      "baseline_production_token_sha256": "eabde9989fd6d752600ffb8a3dd6e7c04320fb2332d721efdb014b0cb3f8238f",
+      "current_production_token_sha256": "eabde9989fd6d752600ffb8a3dd6e7c04320fb2332d721efdb014b0cb3f8238f",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/shm_shared_memory.rs": {
+      "baseline_sha256": "e0bb8d8b30280c90172debaf09c49aec68738a26e6b4406696e34404e1d8fb9d",
+      "current_sha256": "e0bb8d8b30280c90172debaf09c49aec68738a26e6b4406696e34404e1d8fb9d",
+      "baseline_production_token_sha256": "1ca65578f1a7288797750218ff75f397f2b7986ea806ea7bce0c956a2bae789f",
+      "current_production_token_sha256": "1ca65578f1a7288797750218ff75f397f2b7986ea806ea7bce0c956a2bae789f",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/speedtable_arena_perf.rs": {
+      "baseline_sha256": "9b29769667f6d77737b8062d4028a461afd16e182428071c750718aaf12900fe",
+      "current_sha256": "9b29769667f6d77737b8062d4028a461afd16e182428071c750718aaf12900fe",
+      "baseline_production_token_sha256": "5deb16d1cd7543f309fa758cda2f3ae65d956a6b8890bb58a50cb05aac6c31a9",
+      "current_production_token_sha256": "5deb16d1cd7543f309fa758cda2f3ae65d956a6b8890bb58a50cb05aac6c31a9",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/test_concurrency.rs": {
+      "baseline_sha256": "4c085b6c11aa3de52cdb010c00fce27a1325f2054a4ecbdd0d46cf6b89887f15",
+      "current_sha256": "4c085b6c11aa3de52cdb010c00fce27a1325f2054a4ecbdd0d46cf6b89887f15",
+      "baseline_production_token_sha256": "22159f655f46e2e3fda723d76ca4a5557377fd6b47d968a339b3cd5386747947",
+      "current_production_token_sha256": "22159f655f46e2e3fda723d76ca4a5557377fd6b47d968a339b3cd5386747947",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/tmpfs_warm_restart_chaos.rs": {
+      "baseline_sha256": "2ab045a61e55310a63d839264bd7c991e8f8c8d9ad1b11d9595aac330f6cd411",
+      "current_sha256": "2ab045a61e55310a63d839264bd7c991e8f8c8d9ad1b11d9595aac330f6cd411",
+      "baseline_production_token_sha256": "8f3f8b759e8d63646b298cc8d2c630931756bfc287e36c2842b77e07fda8e223",
+      "current_production_token_sha256": "8f3f8b759e8d63646b298cc8d2c630931756bfc287e36c2842b77e07fda8e223",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/tmpfs_warm_restart_expansions.rs": {
+      "baseline_sha256": "425ffa5135303bb8867f57e9ca775e24547dc270a73532e098c087555dad50d5",
+      "current_sha256": "425ffa5135303bb8867f57e9ca775e24547dc270a73532e098c087555dad50d5",
+      "baseline_production_token_sha256": "8b573aef1a885bcfc03337a9b38809ed58b0261b25d1e7e517eadf4cd0a769ff",
+      "current_production_token_sha256": "8b573aef1a885bcfc03337a9b38809ed58b0261b25d1e7e517eadf4cd0a769ff",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/transactional_query_execution.rs": {
+      "baseline_sha256": "f2fc53ff50c744d728fd813831f9b1d5641d625222344ec9b758c6ba5281a27b",
+      "current_sha256": "f2fc53ff50c744d728fd813831f9b1d5641d625222344ec9b758c6ba5281a27b",
+      "baseline_production_token_sha256": "d25393fca6fc570c66015d35ea8afc345deb3e6ef34d18715e7e058ac912278c",
+      "current_production_token_sha256": "d25393fca6fc570c66015d35ea8afc345deb3e6ef34d18715e7e058ac912278c",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/vacuum_free_list_invariants.rs": {
+      "baseline_sha256": "09555d67c7e6ddef0eb92e02e3df34ed6370fe5f455aa40e5843cc4a5b86b15a",
+      "current_sha256": "09555d67c7e6ddef0eb92e02e3df34ed6370fe5f455aa40e5843cc4a5b86b15a",
+      "baseline_production_token_sha256": "fad065b6301c4961bdf768c4e94d4bba95d70fa0cf73fe9ba1997da75612f9f7",
+      "current_production_token_sha256": "fad065b6301c4961bdf768c4e94d4bba95d70fa0cf73fe9ba1997da75612f9f7",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/vacuum_leader_handoff.rs": {
+      "baseline_sha256": "58bedb5e0f5ca4b1ef59e72acbcd29d6efb93a43eeea23933b2bc8c835805509",
+      "current_sha256": "58bedb5e0f5ca4b1ef59e72acbcd29d6efb93a43eeea23933b2bc8c835805509",
+      "baseline_production_token_sha256": "9d538e2d9843477b85504701fdbea8f4fdcb5c4c6ad01756fecf51543274b13c",
+      "current_production_token_sha256": "9d538e2d9843477b85504701fdbea8f4fdcb5c4c6ad01756fecf51543274b13c",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/vacuum_recycle_ab_benchmark.rs": {
+      "baseline_sha256": "483e259dadc4184eea2d99c7957bc1ff776348b1e177b70e37d03f2cf845cb65",
+      "current_sha256": "483e259dadc4184eea2d99c7957bc1ff776348b1e177b70e37d03f2cf845cb65",
+      "baseline_production_token_sha256": "a72884da9c807f0a8d57d6750741cf3116252e7748a3a808315368ab6fe002c2",
+      "current_production_token_sha256": "a72884da9c807f0a8d57d6750741cf3116252e7748a3a808315368ab6fe002c2",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/vacuum_recycle_stress.rs": {
+      "baseline_sha256": "a9d88f170dcdb6a28bf0326f6ca03fef1eaf301db360ae10cab60216aa20811c",
+      "current_sha256": "a9d88f170dcdb6a28bf0326f6ca03fef1eaf301db360ae10cab60216aa20811c",
+      "baseline_production_token_sha256": "04361eb911bf8b79638c27e00b6edfc03eefbe846a267662eb3bbd846349074c",
+      "current_production_token_sha256": "04361eb911bf8b79638c27e00b6edfc03eefbe846a267662eb3bbd846349074c",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/wal_crash_recovery.rs": {
+      "baseline_sha256": "69912a673b52b3a7f33f3828bbd60c54fcf58e4c7633d6dbc2cf89eae036c416",
+      "current_sha256": "69912a673b52b3a7f33f3828bbd60c54fcf58e4c7633d6dbc2cf89eae036c416",
+      "baseline_production_token_sha256": "8ebe5eb1ce1977ea5c7c48da74479296744ecb655faa9a76a14243a6a95c139b",
+      "current_production_token_sha256": "8ebe5eb1ce1977ea5c7c48da74479296744ecb655faa9a76a14243a6a95c139b",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/wal_delta_codec.rs": {
+      "baseline_sha256": "9e06d2b98ebb1f543d5f8270120c5f2c3dcd6aa146dac22b3a4c2b6df226ffaf",
+      "current_sha256": "9e06d2b98ebb1f543d5f8270120c5f2c3dcd6aa146dac22b3a4c2b6df226ffaf",
+      "baseline_production_token_sha256": "aef0308403d52b2c0dc3b7b6d021d9139aeac19a976f312ad94939cfbe0f962c",
+      "current_production_token_sha256": "aef0308403d52b2c0dc3b7b6d021d9139aeac19a976f312ad94939cfbe0f962c",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/wal_delta_recovery_pk_map.rs": {
+      "baseline_sha256": "77d5d3c5bda8b5afad19be903d7e2f0216e4d9aea287420d25122596c3847582",
+      "current_sha256": "77d5d3c5bda8b5afad19be903d7e2f0216e4d9aea287420d25122596c3847582",
+      "baseline_production_token_sha256": "75fc9da34ec195853f905e4cee0f0697889f820da98a6d1c20876db2c9aa0b17",
+      "current_production_token_sha256": "75fc9da34ec195853f905e4cee0f0697889f820da98a6d1c20876db2c9aa0b17",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/wal_protocol_regressions.rs": {
+      "baseline_sha256": "f13bba67b98c9faebcdf72eebe2ba1bbf2715e768a8b94dff4f08131b85b031b",
+      "current_sha256": "f13bba67b98c9faebcdf72eebe2ba1bbf2715e768a8b94dff4f08131b85b031b",
+      "baseline_production_token_sha256": "1b888db481d66575a6eebaa87514a3b8c4af4c6d628141e87d87529b95b82923",
+      "current_production_token_sha256": "1b888db481d66575a6eebaa87514a3b8c4af4c6d628141e87d87529b95b82923",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/wal_ring_benchmark.rs": {
+      "baseline_sha256": "f27a3b9089966ed8ea69fa8aac95d4284f299811b09149b2aa0bc15bf53ec79f",
+      "current_sha256": "f27a3b9089966ed8ea69fa8aac95d4284f299811b09149b2aa0bc15bf53ec79f",
+      "baseline_production_token_sha256": "02089f821e56bd59fa71e1bae927f009ff15751360f658bb33731475190dadc6",
+      "current_production_token_sha256": "02089f821e56bd59fa71e1bae927f009ff15751360f658bb33731475190dadc6",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_core/tests/wal_writer_lifecycle.rs": {
+      "baseline_sha256": "74d61303ac8bf4882aacd02cecf165658e977a0452b65094098d17a674ea041e",
+      "current_sha256": "74d61303ac8bf4882aacd02cecf165658e977a0452b65094098d17a674ea041e",
+      "baseline_production_token_sha256": "2639d8373fc27dc735be4ff92868758fe94070ac42b57b0728e5aa3c29f53115",
+      "current_production_token_sha256": "2639d8373fc27dc735be4ff92868758fe94070ac42b57b0728e5aa3c29f53115",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_macros/Cargo.toml": {
+      "baseline_sha256": "da7d527655c4d06ab619510ab450a9d8dcec609f4bca4990be0f12c6214aa1a9",
+      "current_sha256": "da7d527655c4d06ab619510ab450a9d8dcec609f4bca4990be0f12c6214aa1a9",
+      "baseline_production_token_sha256": "da7d527655c4d06ab619510ab450a9d8dcec609f4bca4990be0f12c6214aa1a9",
+      "current_production_token_sha256": "da7d527655c4d06ab619510ab450a9d8dcec609f4bca4990be0f12c6214aa1a9",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_macros/src/lib.rs": {
+      "baseline_sha256": "eb0747106587ce6605b396145c97c41586aee84ea250ee6e4e0f8f70ef3e9459",
+      "current_sha256": "eb0747106587ce6605b396145c97c41586aee84ea250ee6e4e0f8f70ef3e9459",
+      "baseline_production_token_sha256": "ff98299b60d231cad8e73e15ac0d70a817ff0252629be63e325a0ce36d8562ee",
+      "current_production_token_sha256": "ff98299b60d231cad8e73e15ac0d70a817ff0252629be63e325a0ce36d8562ee",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_macros/tests/ui.rs": {
+      "baseline_sha256": "c6dc3b893d1a4b6c43877a9743a0638d1a83df7d7f31f54bba40da81d6f1ee8b",
+      "current_sha256": "c6dc3b893d1a4b6c43877a9743a0638d1a83df7d7f31f54bba40da81d6f1ee8b",
+      "baseline_production_token_sha256": "8767d9fce210bc2a69efdecafa64caaf157f597d3ad3546c47f27f7d179dc70d",
+      "current_production_token_sha256": "8767d9fce210bc2a69efdecafa64caaf157f597d3ad3546c47f27f7d179dc70d",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_macros/tests/ui/compile_fail_reserved_null_bitmask.rs": {
+      "baseline_sha256": "697d1e0279d3e78f80e4af223c13d2e3576900033ce3bb1a5ef36fec977f7afc",
+      "current_sha256": "697d1e0279d3e78f80e4af223c13d2e3576900033ce3bb1a5ef36fec977f7afc",
+      "baseline_production_token_sha256": "6c1e8cc0734c7a7f913cea7a399ea07789cc0a6344a158d44d5ad07a7c89a29f",
+      "current_production_token_sha256": "6c1e8cc0734c7a7f913cea7a399ea07789cc0a6344a158d44d5ad07a7c89a29f",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_macros/tests/ui/compile_fail_reserved_nullmask_legacy.rs": {
+      "baseline_sha256": "44adb2c5f8a8a233a4bfe962f624b603ba6a0f5c3fe584f86161215fed6cd469",
+      "current_sha256": "44adb2c5f8a8a233a4bfe962f624b603ba6a0f5c3fe584f86161215fed6cd469",
+      "baseline_production_token_sha256": "b29f98ef5679bbc3f9c249a407b3217be77275cb722f323d2bbfbf4b3f232b6f",
+      "current_production_token_sha256": "b29f98ef5679bbc3f9c249a407b3217be77275cb722f323d2bbfbf4b3f232b6f",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_macros/tests/ui/compile_fail_reserved_xmax.rs": {
+      "baseline_sha256": "f243c750bfef515da7b5c5bd5fdedef8b2bf0873a74ccc59c42cf35488b43da4",
+      "current_sha256": "f243c750bfef515da7b5c5bd5fdedef8b2bf0873a74ccc59c42cf35488b43da4",
+      "baseline_production_token_sha256": "09c8c6b09d185d79201942badaef1c343c69d639b2ad753a7748d19fc8123441",
+      "current_production_token_sha256": "09c8c6b09d185d79201942badaef1c343c69d639b2ad753a7748d19fc8123441",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_macros/tests/ui/compile_fail_reserved_xmin.rs": {
+      "baseline_sha256": "d061d84cbf65c0e3df2a5173e6bda66d3ea6766d170afc859bb19f528d61e488",
+      "current_sha256": "d061d84cbf65c0e3df2a5173e6bda66d3ea6766d170afc859bb19f528d61e488",
+      "baseline_production_token_sha256": "9cefa93258ad45cdd7a1cba15e98be4aa6b7945a83195d1a2e257ffeff1fd8f9",
+      "current_production_token_sha256": "9cefa93258ad45cdd7a1cba15e98be4aa6b7945a83195d1a2e257ffeff1fd8f9",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_macros/tests/ui/compile_fail_too_many_fields.rs": {
+      "baseline_sha256": "41fbc44e274e7967fb830314bbae45625881adc8108e774193307f675eeb1e9d",
+      "current_sha256": "41fbc44e274e7967fb830314bbae45625881adc8108e774193307f675eeb1e9d",
+      "baseline_production_token_sha256": "a53ba796e37f275a2dcb34155e30981b22b2668ea4a4a28bd7f25b1bbb7cd78c",
+      "current_production_token_sha256": "a53ba796e37f275a2dcb34155e30981b22b2668ea4a4a28bd7f25b1bbb7cd78c",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_macros/tests/ui/compile_fail_tuple_struct.rs": {
+      "baseline_sha256": "6a677844babd58822581333371d3939bc00162005f3600f61e23af5e34630ef7",
+      "current_sha256": "6a677844babd58822581333371d3939bc00162005f3600f61e23af5e34630ef7",
+      "baseline_production_token_sha256": "b6fe6bd887a01a9bd789fea48858c43bdc07fabc2c4464ec6035c43c4f19b84f",
+      "current_production_token_sha256": "b6fe6bd887a01a9bd789fea48858c43bdc07fabc2c4464ec6035c43c4f19b84f",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_macros/tests/ui/compile_pass_basic.rs": {
+      "baseline_sha256": "9ec4b1a851518007fc5d00d9a1f784c40d142f085ed0643b1a989db9d5372d66",
+      "current_sha256": "9ec4b1a851518007fc5d00d9a1f784c40d142f085ed0643b1a989db9d5372d66",
+      "baseline_production_token_sha256": "b9cd0480ba8660bc700028700ed87270a77975da2895add2485e390fec700c81",
+      "current_production_token_sha256": "b9cd0480ba8660bc700028700ed87270a77975da2895add2485e390fec700c81",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_macros/tests/ui/compile_pass_generics.rs": {
+      "baseline_sha256": "be402d840fc2cc7957b1ba055412c9d34a570732157f8ed54ed0bfe8f89c47d1",
+      "current_sha256": "be402d840fc2cc7957b1ba055412c9d34a570732157f8ed54ed0bfe8f89c47d1",
+      "baseline_production_token_sha256": "77a93a0b3939d64a5a2a6330517d8c0840a4ce533a482b92cb743363968eaf55",
+      "current_production_token_sha256": "77a93a0b3939d64a5a2a6330517d8c0840a4ce533a482b92cb743363968eaf55",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_tcl/Cargo.toml": {
+      "baseline_sha256": "04e6e3cc44be7bac624003efd253ae0aa404b00fceca2511879f1e7856ebb322",
+      "current_sha256": "04e6e3cc44be7bac624003efd253ae0aa404b00fceca2511879f1e7856ebb322",
+      "baseline_production_token_sha256": "04e6e3cc44be7bac624003efd253ae0aa404b00fceca2511879f1e7856ebb322",
+      "current_production_token_sha256": "04e6e3cc44be7bac624003efd253ae0aa404b00fceca2511879f1e7856ebb322",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_tcl/src/lib.rs": {
+      "baseline_sha256": "eea972d05b27edaae37503ad4738e898faadffea8fb61a659beebbc4fffc092c",
+      "current_sha256": "eea972d05b27edaae37503ad4738e898faadffea8fb61a659beebbc4fffc092c",
+      "baseline_production_token_sha256": "17e73d5b71a0eaed8ce00a3d490fb0fcca9b004b3c90612eee9fb5c7f5b313e0",
+      "current_production_token_sha256": "17e73d5b71a0eaed8ce00a3d490fb0fcca9b004b3c90612eee9fb5c7f5b313e0",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_tcl/src/vacuum_index_cleanup_tests.rs": {
+      "baseline_sha256": "f2a1c93c552cebf6efcb146bb4d1ce24f3462976f427beb895748cdbe2b20ae8",
+      "current_sha256": "f2a1c93c552cebf6efcb146bb4d1ce24f3462976f427beb895748cdbe2b20ae8",
+      "baseline_production_token_sha256": "fd65efd7fe53e18e4e8ebbd0c7da00a9903adbb0704a47f6cc2dbc22425d5ca5",
+      "current_production_token_sha256": "fd65efd7fe53e18e4e8ebbd0c7da00a9903adbb0704a47f6cc2dbc22425d5ca5",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_tcl/tests/config_checkpoint_integration.rs": {
+      "baseline_sha256": "84e8e2f7c844f7e88e80a40cac3617bea7e456c9da55bf44d6648942e95bdec6",
+      "current_sha256": "84e8e2f7c844f7e88e80a40cac3617bea7e456c9da55bf44d6648942e95bdec6",
+      "baseline_production_token_sha256": "9bf1cdd92709b92137c6b8ae279bfe90eed3017a42df923f8c46c4f69e286537",
+      "current_production_token_sha256": "9bf1cdd92709b92137c6b8ae279bfe90eed3017a42df923f8c46c4f69e286537",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_tcl/tests/search_stapi_bridge.rs": {
+      "baseline_sha256": "4c8238afce4be2b1924190d93742ff9a1830ab40e1c56724b9a6a15253073ed4",
+      "current_sha256": "4c8238afce4be2b1924190d93742ff9a1830ab40e1c56724b9a6a15253073ed4",
+      "baseline_production_token_sha256": "b8fd4250d0c30ba078ef79ee12a17324200cd9680af5803057879571d270de30",
+      "current_production_token_sha256": "b8fd4250d0c30ba078ef79ee12a17324200cd9680af5803057879571d270de30",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_verified/Cargo.toml": {
+      "baseline_sha256": "59ac3753bb0b4be8e2fcefa4a07d8541b308d3aa9cab83d988b0228111d30c22",
+      "current_sha256": "59ac3753bb0b4be8e2fcefa4a07d8541b308d3aa9cab83d988b0228111d30c22",
+      "baseline_production_token_sha256": "59ac3753bb0b4be8e2fcefa4a07d8541b308d3aa9cab83d988b0228111d30c22",
+      "current_production_token_sha256": "59ac3753bb0b4be8e2fcefa4a07d8541b308d3aa9cab83d988b0228111d30c22",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_verified/src/lib.rs": {
+      "baseline_sha256": "4be9e28442ba0c0b25bb655caa2d2076eee92c86cc5a49264a93fcc116ab5830",
+      "current_sha256": "4be9e28442ba0c0b25bb655caa2d2076eee92c86cc5a49264a93fcc116ab5830",
+      "baseline_production_token_sha256": "8f4afd3480c77e024666a5961d607f73e96f22fd7861cddb08286170ebd3c230",
+      "current_production_token_sha256": "8f4afd3480c77e024666a5961d607f73e96f22fd7861cddb08286170ebd3c230",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    },
+    "aerostore_verified/src/tests.rs": {
+      "baseline_sha256": "ab7aacc6b35ce3deac41cba654aa834ea826f884a9d41ca6e611c6ce467e14a7",
+      "current_sha256": "ab7aacc6b35ce3deac41cba654aa834ea826f884a9d41ca6e611c6ce467e14a7",
+      "baseline_production_token_sha256": "22e0f60143be1c3c745e979cd1cb34f4f84d9e769d170cd15ac5b733690df4c4",
+      "current_production_token_sha256": "22e0f60143be1c3c745e979cd1cb34f4f84d9e769d170cd15ac5b733690df4c4",
+      "baseline_exclusions": [],
+      "current_exclusions": []
+    }
+  },
+  "baseline_commit": "4619b8f465d71a263f531eac72a88ca536aa0bcb",
+  "script_sha256": "4a59e64e8f2abdd54218d0200b4c94cf85eff4f9932d3f95647b44bbf02d18d3",
+  "checked_files": 118,
+  "changed_inputs": [
+    "aerostore_core/tests/occ_transactional_index.rs"
+  ],
+  "production_differences": [
+    "aerostore_core/tests/occ_transactional_index.rs"
+  ],
+  "script_stable": true,
+  "source_stable": true,
+  "error": "production projection differs or source changed during comparison"
+}

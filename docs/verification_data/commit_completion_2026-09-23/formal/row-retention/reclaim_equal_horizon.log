@@ -1,0 +1,69 @@
+note: verifying root module (selected functions)
+
+note: while loop: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/reclaim_equal_horizon.rs:1671:1
+     |
+1671 | while curr_offset != 0 invariant initial == old ( driver ) . state ( ) , driver . no_errors ( ) == old ( driver ) . no_errors ( ) ...
+     | ^^^^^^^^^^^^^^^^^^^^^^
+
+note: recommendation not met
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/reclaim_equal_horizon.rs:1671:1297
+     |
+1671 | ... ( p ) && p != head_offset ==> ! eligible ( driver . state ( ) . image . rows [ p ] , global_xmin ) , reachable ( driver . stat...
+     |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+    --> map.rs:87:12
+     |
+     = note: recommendation not met
+
+note: recommendation not met
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/reclaim_equal_horizon.rs:1671:1681
+     |
+1671 | ...ontains ( p ) ==> p != head_offset && eligible ( initial . image . rows [ p ] , global_xmin ) , reclaimed . len ( ) == removed ...
+     |                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+    --> map.rs:87:12
+     |
+     = note: recommendation not met
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/reclaim_equal_horizon.rs:1697:13
+     |
+1504 |     requires s.rows.contains_key(p), admissible(s,tx,horizon), eligible(s.rows[p],horizon),
+     |                                                                --------------------------- failed precondition
+...
+1697 |             eligible_is_invisible ( before . image , curr_ptr , tx , global_xmin ) ;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: loop invariant not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/reclaim_equal_horizon.rs:1758:9
+     |
+1671 | ... curr_offset != 0 invariant initial == old ( driver ) . state ( ) , driver . no_errors ( ) == old ( driver ) . no_errors ( ) , lookup :: image_valid ( initial . image ) , driver . partition_held ( row_id ) , row_id < driver . state ( ) . image . capacity , lookup :: image_valid ( driver . state ( ) . image ) , admissible ( driver . state ( ) . image , tx , global_xmin ) , safe_result ( initial , driver . state ( ) , row_id , tx ) , prefix_ineligible ( initial . image , row_id , tx , global_xmin ) ==> prefix_preserved ( initial , driver . state ( ) , row_id , tx ) , head_offset == initial . image . heads [ row_id ] , head_offset != 0 , live_head_value == initial . image . rows [ head_offset ] . value , driver . state ( ) . image . rows . contains_key ( prev_offset ) , reachable ( driver . state ( ) . image , head_offset ) . contains ( prev_offset ) , driver . state ( ) . image . rows [ prev_offset ] . next == curr_offset , reachable ( driver . state ( ) . image , head_offset ) == kept . union ( reachable ( driver . state ( ) . image , curr_offset ) ) , kept . disjoint ( reachable ( driver . state ( ) . image , curr_offset ) ) , kept . contains ( prev_offset ) , kept . contains ( head_offset ) , forall | p : u32 | kept . contains ( p ) && p != head_offset ==> ! eligible ( driver . state ( ) . image . rows [ p ] , global_xmin ) , reachable ( driver . state ( ) . image , head_offset ) == reachable ( initial . image , head_offset ) . difference ( removed ) , driver . state ( ) . recycled == initial . recycled . union ( removed ) , removed . disjoint ( initial . recycled ) , forall | p : u32 | removed . contains ( p ) ==> p != head_offset && eligible ( initial . image . rows [ p ] , global_xmin ) , ...
+     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                --------------------------------------------------------------------------------------------------------------------------- failed this invariant
+...
+1758 | ...   continue ;
+     |       ^^^^^^^^ at this continue
+
+note: recommendation not met
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/reclaim_equal_horizon.rs:1771:97
+     |
+1771 | ...   <==> reachable(initial.image,head_offset).contains(p) && p!=head_offset && eligible(initial.image.rows[p],global_xmin) by {
+     |                                                                                           ^^^^^^^^^^^^^^^^^^^^^
+     |
+    --> map.rs:87:12
+     |
+     = note: recommendation not met
+
+note: recommendation not met
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/reclaim_equal_horizon.rs:1772:95
+     |
+1772 |             if reachable(initial.image,head_offset).contains(p) && p!=head_offset && eligible(initial.image.rows[p],global_xmin)
+     |                                                                                               ^^^^^^^^^^^^^^^^^^^^^
+     |
+    --> map.rs:87:12
+     |
+     = note: recommendation not met
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

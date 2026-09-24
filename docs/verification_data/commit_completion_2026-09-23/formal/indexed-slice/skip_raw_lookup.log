@@ -1,0 +1,17 @@
+note: verifying root module (selected functions)
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/indexed-slice/skip_raw_lookup.rs:2392:22
+     |
+1564 |           raw_candidates(*predicate,posting_replay(postings(initial),events,events.len() as int)).subset_of(candidates@.to_set()),
+     |           ----------------------------------------------------------------------------------------------------------------------- failed precondition
+...
+2392 |       let rows = match lookup::materialize_after_checked_history::<D, C, P>(driver, tx, candidates, query,
+     |  ______________________^
+2393 | |         Ghost(captured_history.initial), Ghost(captured_history.events), Ghost(captured_history.protocol),
+2394 | |         Ghost(captured_history.actions), Ghost(captured_history.initial_stamps), Ghost(Set::empty().insert(bucket))) {
+     | |____________________________________________________________________________________________________________________^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

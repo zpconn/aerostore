@@ -1,0 +1,19 @@
+[workspace]
+members = [
+    "aerostore_core",
+    "aerostore_verified",
+    "aerostore_macros",
+    "aerostore_tcl",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+
+[workspace.dependencies]
+crossbeam = "0.8"
+crossbeam-skiplist = "0.1"
+
+[profile.bench]
+codegen-units = 1
+lto = "thin"

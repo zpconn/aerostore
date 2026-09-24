@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "p0_complete": true,
+  "checked_modules": 32,
+  "checked_public_apis": 425,
+  "declared_lock_edges": 31,
+  "open_semantics": [],
+  "blocking_audit_gaps": [],
+  "errors": [],
+  "scope": "Reviewed contract coverage and exact-source freshness; not semantic verification or inferred deadlock freedom."
+}

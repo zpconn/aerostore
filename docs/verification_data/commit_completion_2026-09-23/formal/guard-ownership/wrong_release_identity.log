@@ -1,0 +1,26 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/guard-ownership/wrong_release_identity.rs:146:1
+    |
+146 | pub fn drop_lease<D: Atomics>(driver: &D, lease: ReadLease, Tracked(authority): Tracked<&mut Authority>)
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/guard-ownership/wrong_release_identity.rs:159:5
+    |
+ 81 |         requires cells(old(authority)).contains_key(key), cells(old(authority))[key].bit == 1,
+    |                  --------------------------------------- failed precondition
+...
+159 |     driver.store((0, 0, 0), 0 , Ordering :: Release, Tracked(&mut *authority));
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: assertion failed
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/guard-ownership/wrong_release_identity.rs:161:16
+    |
+161 |         assert(cells(authority) =~= cells(&before).insert(old_key, Cell { bit: 0, owner: None }));
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

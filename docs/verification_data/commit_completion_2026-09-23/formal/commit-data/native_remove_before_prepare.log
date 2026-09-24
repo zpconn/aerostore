@@ -1,0 +1,37 @@
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/commit-data/native_remove_before_prepare.rs:1819:1
+     |
+1819 | / pub fn native_ordinary_data_segment<P:PostingPrimitives,R:ordinary::OrdinaryStorage>(storage:&mut Storage<P,R>,
+1820 | |     plan:&Plan,ordinary_plan:&OrdinaryPlan)->(result:Result<Vec<ordinary::PublishedWrite>,DataError>)
+     | |____________________________________________________________________________________________________^
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/commit-data/native_remove_before_prepare.rs:1826:9
+     |
+1826 |         result.is_err() ==> unchanged_data(old(storage).view(),final(storage).view()) || final(storage).view().postings.poisoned,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+1834 |     Ok ( value ) => value , Err ( err ) => return Err ( DataError :: Posting ( err ) ) ,
+     |                                            ------------------------------------------- at this exit
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/commit-data/native_remove_before_prepare.rs:1829:7
+     |
+1739 |     requires planned(before,*plan),installed(before,old(storage).view(),*plan),
+     |                                    ------------------------------------------- failed precondition
+...
+1829 | match remove_sources ( storage , plan , Ghost ( before ) ) {
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/commit-data/native_remove_before_prepare.rs:1833:22
+     |
+1705 |     requires planned(old(storage).view(),*plan),
+     |              ---------------------------------- failed precondition
+...
+1833 | let inserted = match prepare_destinations ( storage , plan ) {
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 110 verified, 1 errors
+error: aborting due to 3 previous errors
+

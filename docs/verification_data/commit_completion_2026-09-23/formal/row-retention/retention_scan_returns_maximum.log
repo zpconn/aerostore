@@ -1,0 +1,30 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/retention_scan_returns_maximum.rs:1901:1
+     |
+1901 | pub fn compute_global_xmin<D:lifecycle::LifecyclePrimitives>(driver:&mut D)->(result:u64)
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/retention_scan_returns_maximum.rs:1905:9
+     |
+1905 |         result==lifecycle::minimum_retention(final(driver).state().slots,lifecycle::PROCARRAY_SLOTS as int,final(driver).state().sampled_clock),
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+1918 |     u64::MAX
+     |     -------- at the end of the function body
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/retention_scan_returns_maximum.rs:1906:9
+     |
+1906 | /         forall|i:int| 0<=i<final(driver).state().slots.len() && final(driver).state().slots[i].txid!=0 ==>
+1907 | |             result<=final(driver).state().slots[i].snapshot_xmin,
+     | |________________________________________________________________^ failed this postcondition
+...
+1918 |       u64::MAX
+     |       -------- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

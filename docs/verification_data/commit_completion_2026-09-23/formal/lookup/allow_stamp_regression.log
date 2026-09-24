@@ -1,0 +1,11 @@
+note: verifying root module (selected functions)
+
+error: assertion failed
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/lookup/allow_stamp_regression.rs:596:20
+    |
+596 |             assert(stamp_at(initial,events,n-1,p,b)<=events[n-1].stamp);
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

@@ -1,0 +1,21 @@
+format_version = 1
+name = "bucket-set-pilot"
+contract = "verification/contracts/bucket_set.md"
+bucket_count = 4096
+production_baseline = "std-sort-dedup"
+candidate_features = ["verified-buckets-sort", "verified-buckets-bitmap"]
+required_proofs = ["verus", "lean"]
+required_models = ["tla"]
+scope = "Safe kernel variants in actual engine call sites; concurrent engine remains unproved"
+promotion = "manual reviewed decision; microbenchmark alone cannot promote"
+allow_contract_changes = false
+allow_assumption_changes = false
+allow_primitive_changes = false
+require_all_negative_controls = true
+require_matching_outputs = true
+microbenchmark_rounds = 9
+allocation_measurement = "separate untimed executable; allocator requested bytes and calls, not resident memory or arena progress"
+require_zero_retained_bytes_after_result_drop = true
+performance_promotion_gate_complete = false
+end_to_end_regressions = ["occ_transactional_index", "transactional_query_execution", "occ_write_skew"]
+extended_crucible = "aerostore, mode=all, families=8, cycles=1, workers=4, shm-mib=128; default and both candidate features"

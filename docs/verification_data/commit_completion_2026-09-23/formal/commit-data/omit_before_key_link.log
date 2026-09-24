@@ -1,0 +1,15 @@
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/commit-data/omit_before_key_link.rs:1677:16
+     |
+1677 |         assert(head_key(before.image,c.row_id)!=Some(c.after.unwrap()));
+     |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/commit-data/omit_before_key_link.rs:1699:16
+     |
+1699 |         assert(before.postings.postings.contains((c.binding,key,c.row_id)) == (c.before==Some(key)));
+     |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 109 verified, 2 errors
+error: aborting due to 2 previous errors
+

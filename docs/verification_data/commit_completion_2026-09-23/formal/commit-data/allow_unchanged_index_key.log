@@ -1,0 +1,17 @@
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/commit-data/allow_unchanged_index_key.rs:1677:16
+     |
+1677 |         assert(head_key(before.image,c.row_id)!=Some(c.after.unwrap()));
+     |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/commit-data/allow_unchanged_index_key.rs:1697:30
+     |
+1697 |       assert forall|key:usize| #[trigger] after.postings.postings.contains((c.binding,key,c.row_id))
+     |  ______________________________^
+1698 | |         <==> head_key(after.image,c.row_id)==Some(key) by {
+     | |______________________________________________________^ assertion failed
+
+verification results:: 109 verified, 2 errors
+error: aborting due to 2 previous errors
+

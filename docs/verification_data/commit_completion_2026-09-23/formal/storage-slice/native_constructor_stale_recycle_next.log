@@ -1,0 +1,12 @@
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/storage-slice/native_constructor_stale_recycle_next.rs:2273:13
+     |
+2273 |     ensures cell==fresh_cell(value,xmin,next),
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+2274 | {
+2275 |     Cell { row: Row { xmin: xmin, xmax: 0, next: next, value: value, locked: false, owner: 0 }, recycle_next: next }
+     |     ---------------------------------------------------------------------------------------------------------------- at the end of the function body
+
+verification results:: 143 verified, 1 errors
+error: aborting due to 1 previous error
+

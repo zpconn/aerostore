@@ -1,0 +1,18 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/lifecycle-interference/mint_wrong_owner_identity.rs:902:9
+    |
+902 | /         out.0.is_ok() ==> token_live(final(driver), &out.1@.unwrap())
+903 | |             && out.1@.unwrap().registration() == out.0.unwrap()
+904 | |             && out.2@.slots[out.0.unwrap().slot_idx as int].txid == 0
+905 | |             && out.0.unwrap().txid >= out.2@.clock
+906 | |             && final(driver).state().reservations == out.2@.reservations.push(out.0.unwrap().txid),
+    | |__________________________________________________________________________________________________^ failed this postcondition
+...
+920 |       (result, Tracked(token), Ghost(acquired))
+    |       ----------------------------------------- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

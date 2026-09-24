@@ -1,0 +1,28 @@
+error[E0382]: borrow of moved value: `guards`
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/indexed-slice/raw_read_after_release.rs:2383:46
+     |
+2348 |     let mut guards = Vec::new();
+     |         ---------- move occurs because `guards` has type `std::vec::Vec<ownership::ReadLease>`, which does not implement the `Copy` trait
+...
+2382 |     ownership::release_all(driver, guards, Tracked(&mut *authority));
+     |                                    ------ value moved here
+2383 |     let _invalid = driver.raw_lookup(query, &guards[0], Tracked(&*authority));
+     |                                              ^^^^^^ value borrowed here after move
+     |
+note: consider changing this parameter type in function `release_all` to borrow instead if owning the value isn't necessary
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/indexed-slice/raw_read_after_release.rs:591:54
+     |
+ 591 | pub fn release_all<D: Scheduler>(driver: &D, leases: Vec<ReadLease>, Tracked(authority): Tracked<&mut Authority>)
+     |        ----------- in this function                  ^^^^^^^^^^^^^^ this parameter takes ownership of the value
+note: if `ownership::ReadLease` implemented `Clone`, you could clone the value
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/indexed-slice/raw_read_after_release.rs:21:1
+     |
+  21 | pub struct ReadLease { physical: Key, token: Tracked<LeaseToken> }
+     | ^^^^^^^^^^^^^^^^^^^^ consider implementing `Clone` for this type
+...
+2382 |     ownership::release_all(driver, guards, Tracked(&mut *authority));
+     |                                    ------ you could clone this value
+
+error: aborting due to 1 previous error
+
+For more information about this error, try `rustc --explain E0382`.

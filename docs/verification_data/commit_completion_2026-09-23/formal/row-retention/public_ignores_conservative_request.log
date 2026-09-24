@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-retention/public_ignores_conservative_request.rs:1923:9
+     |
+1923 |         final(driver).dispatched_horizon().unwrap()<=requested_xmin,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+1928 | driver . reclaim_before ( retained_xmin )
+     | ----------------------------------------- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

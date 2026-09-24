@@ -1,0 +1,23 @@
+note: verifying root module (selected functions)
+
+note: while loop: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/lifecycle/omit_active_txid_copy.rs:370:9
+    |
+370 |         while si < PROCARRAY_SLOTS
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/lifecycle/omit_active_txid_copy.rs:374:17
+    |
+374 |                 in_flight@ == active(loaded.slots, si as int),
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/lifecycle/omit_active_txid_copy.rs:375:17
+    |
+375 |                 in_flight_len == in_flight.len(), in_flight_len <= si,
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

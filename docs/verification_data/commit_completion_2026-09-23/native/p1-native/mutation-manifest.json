@@ -1,0 +1,112 @@
+{
+  "current_fixture_changes": {
+    "aerostore_core/tests/occ_transactional_index.rs": {
+      "after_sha256": "934278055d1374aea98a697bafd93994ed2f1ba89b01102d353414899f6c61a9",
+      "before_sha256": "89846cc4760dd7592d2920d72cae574461d32e2f6e7a5b1d41d1bfcb789894e2"
+    }
+  },
+  "current_fixture_patch": "../current-fixture.patch",
+  "current_fixture_patch_sha256": "50cef70888aba76f6ab8c37a5eed58f4011f23c1fe8d7679c72f60d9be6a5f9f",
+  "current_source": "../current-source.tar.gz",
+  "current_source_tar_sha256": "542b28c44f606903800674fba2f81d39777f1f402fa4e4baf4dbd4ee13a98b1b",
+  "mutations": [
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "4b565dfa98c34b2012d2cdc4a7c858fa1a41b4c1e0fa8b6c51797d9bd9c17a40",
+          "before_sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d"
+        }
+      },
+      "name": "omit_predicate_validation",
+      "patch": "omit_predicate_validation.patch",
+      "patch_sha256": "18b7d58f28e8aebbb939c31a1b55f86a7c437eb99005fc05254d206fa6e7aa3e",
+      "source_tree_sha256": "9f0d1ad99a679d345072ad2e05e3f8a4c3041bf6c2707b01bd1eaa053894400e"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "9bb739df1efcdfca7c7f715b62487a179eaa529ed6e6d96d7de18b65672cee9f",
+          "before_sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d"
+        }
+      },
+      "name": "omit_own_write_candidates",
+      "patch": "omit_own_write_candidates.patch",
+      "patch_sha256": "b1fafc8003afa93bf0f2b0a8e7e0caffdd99218d327d3ae8e498da0d8c97cc81",
+      "source_tree_sha256": "bc3561c453fbd03f15c7a9017e36a44ec69dcd4f62b92a472ba6dcfc9abaa5a8"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "9843951991118987bffaecb5020cf34d31c5f85a52eaf7247a7731ad95c11af1",
+          "before_sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d"
+        }
+      },
+      "name": "omit_destination_preparation",
+      "patch": "omit_destination_preparation.patch",
+      "patch_sha256": "95954c966c0facb308c3742a39cedb684c5ae6773cf61b1bba0c601f41412ca3",
+      "source_tree_sha256": "bfe2783724314d039395cd9a24c50ec3b3a4f9a7d2f9547f4d27ce8682810bdb"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "e921b78ac197f29955677016323ddbaf04f9af9e366456ff78db36f40d004912",
+          "before_sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d"
+        }
+      },
+      "name": "omit_old_source_removal",
+      "patch": "omit_old_source_removal.patch",
+      "patch_sha256": "a686c2aab8741d56ea530a98ab1f1efc62e3e83e38eb1dcf6768e1d4acd03be5",
+      "source_tree_sha256": "883a24a78937764d11b5f8a243b673a8f1cb53fe9038632f3b19964ab28c4b8a"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "1492f0b87450c52614d8f827829ce6f82309a4959359c5e08de56cbb79e94b2c",
+          "before_sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d"
+        }
+      },
+      "name": "omit_prepared_destination_rollback",
+      "patch": "omit_prepared_destination_rollback.patch",
+      "patch_sha256": "a01e13931c5d3e5761f8d5d0aa4f5ac8cdabc28a3da931c6358e47bea9531f5a",
+      "source_tree_sha256": "63e3020bbbb1ab64c2ffbb8ebba61898fd62eb675f0c67cee14c70a0e0bd5365"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "99b8b3516e56c74108968a00b0ed289e3288e2d9d175d5d1859cc845231fff8a",
+          "before_sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d"
+        }
+      },
+      "name": "omit_poison_publication",
+      "patch": "omit_poison_publication.patch",
+      "patch_sha256": "c77aff2dad67c27837b15836b66accb217ad8cb2f40f09eb3076afd8b64c98b5",
+      "source_tree_sha256": "a8d1e9adb25d8300d9a93d42bcbc59ab8683934f0535854c745f01c275802db3"
+    },
+    {
+      "changes": {
+        "aerostore_core/src/occ_partitioned.rs": {
+          "after_sha256": "297c270042de35712cfc978e912ccaad9a22e0846de6b88e0f7f9cdb01a95d6d",
+          "before_sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d"
+        }
+      },
+      "name": "reuse_writer_start_as_publication_stamp",
+      "patch": "reuse_writer_start_as_publication_stamp.patch",
+      "patch_sha256": "3572cd671dd2a1a62607de8b469d9996731137d9ecfae61290affa350ac7b362",
+      "source_tree_sha256": "9b57f1f0effec5ed3d974edb3e93b869671f5885d5337cfd6e630de3ce41f181"
+    }
+  ],
+  "parent_archive_command": [
+    "git",
+    "archive",
+    "4619b8f465d71a263f531eac72a88ca536aa0bcb",
+    "Cargo.toml",
+    "Cargo.lock",
+    "aerostore_core",
+    "aerostore_verified",
+    "aerostore_macros",
+    "aerostore_tcl"
+  ],
+  "parent_archive_sha256": "73e2ed6f2d496eedfe41e59f6b5deb416ce8a1e888e66b96f4e35d667b546e5d",
+  "parent_commit": "4619b8f465d71a263f531eac72a88ca536aa0bcb",
+  "scope": "Deterministic native tests; not formal refinement"
+}

@@ -1,0 +1,29 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/lifecycle-interference/allow_owned_slot_interference.rs:621:1
+    |
+621 | pub proof fn wait_step_preserves_owner(a: State, b: State, event: WaitEvent, owner: ProcArrayRegistration)
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/lifecycle-interference/allow_owned_slot_interference.rs:623:13
+    |
+621 | pub proof fn wait_step_preserves_owner(a: State, b: State, event: WaitEvent, owner: ProcArrayRegistration)
+    | ---------------------------------------------------------------------------------------------------------- at the end of the function body
+622 |     requires wait_step(a, b, event), allowed(event, Some(owner)), live_owner(a, owner),
+623 |     ensures live_owner(b, owner), b.slots[owner.slot_idx as int] == a.slots[owner.slot_idx as int],
+    |             ^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/lifecycle-interference/allow_owned_slot_interference.rs:623:35
+    |
+621 | pub proof fn wait_step_preserves_owner(a: State, b: State, event: WaitEvent, owner: ProcArrayRegistration)
+    | ---------------------------------------------------------------------------------------------------------- at the end of the function body
+622 |     requires wait_step(a, b, event), allowed(event, Some(owner)), live_owner(a, owner),
+623 |     ensures live_owner(b, owner), b.slots[owner.slot_idx as int] == a.slots[owner.slot_idx as int],
+    |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

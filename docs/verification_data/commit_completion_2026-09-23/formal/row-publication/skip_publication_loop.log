@@ -1,0 +1,20 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-publication/skip_publication_loop.rs:940:9
+    |
+940 |           r.is_ok() ==> final(driver).image()==publication_prefix(old(driver).image(),record.writes[0],record.txid,3),
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+946 | / {
+947 | |     
+948 | |     let ghost initial=driver.image();
+949 | |     let ghost initially_infallible=driver.infallible();
+...   |
+977 | |      Ok ( ( ) )
+978 | | }
+    | |_- at the end of the function body
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

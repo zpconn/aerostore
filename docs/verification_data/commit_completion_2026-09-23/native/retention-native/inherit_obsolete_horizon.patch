@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/procarray.rs
++++ b/aerostore_core/src/procarray.rs
+@@ -179,7 +179,7 @@
+ 
+             in_flight[in_flight_len as usize].write(txid);
+             in_flight_len += 1;
+-            xmin = xmin.min(txid);
++            xmin = xmin.min(slot.snapshot_xmin.load(Ordering::Relaxed));
+             max_in_flight = max_in_flight.max(txid);
+         }
+ 

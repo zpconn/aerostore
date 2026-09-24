@@ -1,0 +1,11 @@
+note: verifying root module (selected functions)
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/guards/acquire_wrong_index.rs:104:13
+    |
+104 |             forall|i: int| 0 <= i < pos ==> guards[i].physical == physical(driver.registry(), keys[i]),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

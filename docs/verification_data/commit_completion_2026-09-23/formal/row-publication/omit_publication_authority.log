@@ -1,0 +1,11 @@
+note: verifying root module (selected functions)
+
+error: invariant not satisfied before loop
+   --> /home/zpconn/code/aerostore/target/verification-p1-completion/final/row-publication/omit_publication_authority.rs:956:13
+    |
+956 |             driver.authorized(record.writes[0].row_id,record.writes[0].new_offset),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+
