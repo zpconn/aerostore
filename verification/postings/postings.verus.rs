@@ -212,6 +212,7 @@ pub fn rollback_index_destinations<D: PostingPrimitives>(driver: &mut D, changes
     -> (result: Result<(), Error>)
     requires valid(old(driver).state(), changes@), valid_indices(changes@, inserted@),
     ensures stable(old(driver).state(), final(driver).state()),
+        result.is_ok() ==> final(driver).state().poisoned == old(driver).state().poisoned,
         result.is_ok() ==> final(driver).state().postings == old(driver).state().postings.difference(recorded(changes@, inserted@)),
         result.is_err() ==> final(driver).state().poisoned,
         removed_only(old(driver).state().postings, final(driver).state().postings, recorded(changes@, inserted@)),
@@ -222,7 +223,8 @@ pub fn rollback_index_destinations<D: PostingPrimitives>(driver: &mut D, changes
         proof { assert(recorded(changes@, inserted@.subrange(ri as int, inserted.len() as int)) =~= Set::<Posting>::empty()); }
         while ri > 0
             invariant ri <= inserted.len(), initial == old(driver).state(),
-                stable(initial, driver.state()), valid(initial, changes@), valid(driver.state(), changes@),
+                stable(initial, driver.state()), driver.state().poisoned == initial.poisoned,
+                valid(initial, changes@), valid(driver.state(), changes@),
                 valid_indices(changes@, inserted@),
                 removed_only(initial.postings, driver.state().postings, recorded(changes@, inserted@)),
                 rollback_error.is_none() ==> driver.state().postings == initial.postings.difference(
@@ -255,6 +257,7 @@ pub fn prepare_index_destinations<D: PostingPrimitives>(driver: &mut D, changes:
     requires valid(old(driver).state(), changes@), unique_destinations(changes@),
         old(driver).state().postings.disjoint(destinations(changes@, changes.len() as int)),
     ensures stable(old(driver).state(), final(driver).state()),
+        result.is_ok() ==> final(driver).state().poisoned == old(driver).state().poisoned,
         result.is_ok() ==> final(driver).state().postings == old(driver).state().postings.union(destinations(changes@, changes.len() as int)),
         result.is_ok() ==> prefix_record(changes@, result->Ok_0@, changes.len() as int),
         result.is_err() ==> final(driver).state().postings == old(driver).state().postings || final(driver).state().poisoned,
@@ -267,7 +270,8 @@ pub fn prepare_index_destinations<D: PostingPrimitives>(driver: &mut D, changes:
         proof { assert(recorded(changes@, inserted@) =~= Set::<Posting>::empty()); }
         while change_idx < changes.len()
             invariant change_idx <= changes.len(), initial == old(driver).state(),
-                stable(initial, driver.state()), valid(initial, changes@), valid(driver.state(), changes@),
+                stable(initial, driver.state()), driver.state().poisoned == initial.poisoned,
+                valid(initial, changes@), valid(driver.state(), changes@),
                 unique_destinations(changes@),
                 initial.postings.disjoint(destinations(changes@, changes.len() as int)),
                 driver.state().postings == initial.postings.union(destinations(changes@, change_idx as int)),
@@ -309,6 +313,7 @@ pub fn remove_index_sources<D: PostingPrimitives>(driver: &mut D, changes: &Vec<
     -> (result: Result<(), Error>)
     requires valid(old(driver).state(), changes@),
     ensures stable(old(driver).state(), final(driver).state()),
+        result.is_ok() ==> final(driver).state().poisoned == old(driver).state().poisoned,
         result.is_ok() ==> final(driver).state().postings == old(driver).state().postings.difference(sources(changes@, changes.len() as int)),
         result.is_err() ==> final(driver).state().poisoned,
         removed_only(old(driver).state().postings, final(driver).state().postings, sources(changes@, changes.len() as int)),
@@ -317,7 +322,8 @@ pub fn remove_index_sources<D: PostingPrimitives>(driver: &mut D, changes: &Vec<
         let mut ci: usize = 0;
         while ci < changes.len()
             invariant ci <= changes.len(), initial == old(driver).state(),
-                stable(initial, driver.state()), valid(initial, changes@), valid(driver.state(), changes@),
+                stable(initial, driver.state()), driver.state().poisoned == initial.poisoned,
+                valid(initial, changes@), valid(driver.state(), changes@),
                 driver.state().postings == initial.postings.difference(sources(changes@, ci as int)),
                 removed_only(initial.postings, driver.state().postings, sources(changes@, changes.len() as int)),
             decreases changes.len() - ci,

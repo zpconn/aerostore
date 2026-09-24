@@ -20,6 +20,8 @@ import time
 import tomllib
 import check_lock_models
 import check_refinement_evidence
+import check_p1_native_evidence
+import check_p0_contracts
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -63,6 +65,10 @@ def check_build_environment(root: Path = ROOT) -> dict:
 
 def collect_claim_evidence(claims: list[dict], checks: list[dict], directory: Path) -> list[dict]:
     passed = {check["name"] for check in checks if check["passed"]}
+    if "p0-contracts" in passed:
+        p0 = json.loads((directory / "p0-contracts.log").read_text())
+        if not p0.get("passed") or p0 != check_p0_contracts.validate(ROOT):
+            raise RuntimeError("P0 contract audit lacks current-source evidence")
     lean = json.loads((directory / "lean.json").read_text()) if "lean" in passed else {}
     verus = json.loads((directory / "verus/receipt.json").read_text()) if "verus" in passed else {}
     concurrent = json.loads((directory / "concurrent/receipt.json").read_text()) if "concurrent" in passed else {}
@@ -71,7 +77,10 @@ def collect_claim_evidence(claims: list[dict], checks: list[dict], directory: Pa
                    for name in ["predicate", "predicate-capture", "predicate-composition", "skiplist-detach", "postings",
                                 "guards", "lifecycle", "publication-slice", "lifecycle-scenario",
                                 "lifecycle-interference", "guard-ownership", "lookup", "indexed-slice",
-                                "row-publication", "row-retention", "storage-slice"] if name in passed}
+                                "row-publication", "row-retention", "storage-slice",
+                                "commit-data", "commit-completion"] if name in passed}
+    if "p1-native" in passed:
+        check_p1_native_evidence.validate_receipt(directory / "p1-native/receipt.json", ROOT)
     if "lock-models" in passed:
         check_lock_models.validate_receipt(directory / "lock-models/receipt.json", ROOT)
     lean_mutations = {mutation["name"] for mutation in lean.get("mutation_checks", []) if mutation.get("rejected")}
@@ -196,7 +205,7 @@ def main() -> int:
         parser.error("timeout must be positive")
     report = {"format_version": 1, "profile": args.profile, "completed": False,
               "passed": False, "whole_engine_verified": False,
-              "full_P1_complete": False,
+              "p0_complete": False, "full_P1_complete": False,
               "anchoring": "independent_git_baseline" if args.baseline_ref else "local_bootstrap_only",
               "baseline_ref": args.baseline_ref,
               "promotion_eligible": False,
@@ -223,6 +232,8 @@ def main() -> int:
             commands.append(("coverage", coverage))
         if args.profile != "models":
             commands += [("gate-tests", [sys.executable, "scripts/test_formal_gate.py"]),
+                         ("p0-contract-tests", [sys.executable, "scripts/test_p0_contracts.py"]),
+                         ("p0-contracts", [sys.executable, "scripts/check_p0_contracts.py"]),
                          ("adapter-tests", [sys.executable, "verification/verus/test_generate.py"]),
                          ("verus", [sys.executable, "verification/verus/run.py", "--output", str(directory / "verus")]),
                          ("concurrent-adapter-tests", [sys.executable, "verification/concurrent/test_generate.py"]),
@@ -260,13 +271,19 @@ def main() -> int:
                          ("row-initialization-adapter-tests", [sys.executable, "verification/row_initialization/test_generate.py"]),
                          ("storage-slice-adapter-tests", [sys.executable, "verification/storage_slice/test_generate.py"]),
                          ("storage-slice", [sys.executable, "verification/storage_slice/run.py", "--output", str(directory / "storage-slice")]),
+                         ("commit-data-adapter-tests", [sys.executable, "verification/commit_data/test_generate.py"]),
+                         ("commit-data", [sys.executable, "verification/commit_data/run.py", "--output", str(directory / "commit-data")]),
+                         ("commit-completion-adapter-tests", [sys.executable, "verification/commit_completion/test_generate.py"]),
+                         ("commit-completion", [sys.executable, "verification/commit_completion/run.py", "--output", str(directory / "commit-completion")]),
                          ("lean", [sys.executable, "scripts/check_lean.py", "--output", str(directory / "lean.json")]),
                          ("kernel-tests", ["cargo", "test", "--offline", "-p", "aerostore_verified"])]
         if args.profile != "proofs":
             commands.append(("tla-runner-tests", [sys.executable, "scripts/test_tla_runner.py"]))
             commands.append(("tla", [sys.executable, "scripts/check_tla.py", "--output", str(directory / "tla")]))
         if args.profile in {"pilot", "full"}:
-            commands += [("retention-native-runner-tests", [sys.executable, "-m", "unittest", "discover", "-s", "verification/retention_native", "-p", "test_*.py"]),
+            commands += [("p1-native-runner-tests", [sys.executable, "-m", "unittest", "discover", "-s", "verification/p1_native", "-p", "test_*.py"]),
+                         ("p1-native", [sys.executable, "verification/p1_native/run.py", "--output", str(directory / "p1-native")]),
+                         ("retention-native-runner-tests", [sys.executable, "-m", "unittest", "discover", "-s", "verification/retention_native", "-p", "test_*.py"]),
                          ("production-equivalence-checker-tests", [sys.executable, "verification/lookup_native/test_production_equivalence.py"]),
                          ("retention-native", [sys.executable, "verification/retention_native/run.py",
                                                 "--output", str(directory / "retention-native")]),
@@ -305,6 +322,9 @@ def main() -> int:
         if not report["source_stable"]:
             report["source_changed"] = sorted(name for name in before.keys() | after.keys() if before.get(name) != after.get(name))
         report["claim_evidence"] = collect_claim_evidence(claims["claims"], report["checks"], directory)
+        if any(check["name"] == "p0-contracts" and check["passed"] for check in report["checks"]):
+            report["p0_contract_audit"] = json.loads((directory / "p0-contracts.log").read_text())
+            report["p0_complete"] = report["p0_contract_audit"]["p0_complete"]
         report["completed"] = True
         report["passed"] = bool(commands) and all(c["passed"] for c in report["checks"]) and report["source_stable"]
         if args.profile == "full":

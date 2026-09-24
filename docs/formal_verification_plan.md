@@ -6,7 +6,35 @@ This is the full verification roadmap. Its first executable component pilot now 
 
 The program has two goals: establish the database's correctness, and create a verified environment for aggressive performance experiments. Each candidate implementation must preserve a stable public contract and carry evidence tied to its exact source and build configuration. Section 13 defines that experimentation workflow.
 
-Current storage checkpoint, after `f3d8ec4`: source-derived prepared publication,
+Current publication/completion checkpoint, after `4619b8f`: **P0 is complete for
+the declared target.** The [reviewed API audit](../verification/contracts/p0_audit.md)
+defines success/error contracts for 425 public declarations across 32 modules,
+83 contract families and 31 lock relationships. Its source-bound checker detects
+drift; this is contract coverage, not a proof that every caller obligation is
+enforced or that the native lock graph is complete.
+
+The [ordinary commit data slice](../verification/commit_data/README.md) now
+connects actual destination preparation, source removal and ordinary row
+publication. The [completion slice](../verification/commit_completion/README.md)
+joins that result to actual registration consumption, deregistration and shared
+clock stamping. Success establishes the selected row/posting relation and exact
+returned write report; errors preserve old data or poison it. Deterministic
+native scenarios exercise conflicting empty-query creation, key movement,
+rejected private writes and successful fresh retries. This checkpoint changes
+proofs, audit tools and tests without changing production execution paths.
+
+**P1 remains incomplete.** These one-write/one-index proofs begin from an
+admitted guarded plan. Next, prove that native plan construction, validation and
+guard handoff establish that entry state; compose error cleanup and the reader's
+capture/validation with writer completion. Physical identity between projected
+views and acquired-state lifecycle framing remain enumerated assumptions. P1
+permits explicit low-level primitive/storage contracts; its exit does not
+require completing P2 arbitrary-history or P3 pointer-ownership proofs first.
+The [publication/completion evidence archive](verification_data/commit_completion_2026-09-23/README.md)
+retains the passing 63-check pilot, 19 new proof roots and 31 semantic controls,
+native scenario evidence, API audit and exact runtime byte comparison.
+
+Previous storage checkpoint, after `f3d8ec4`: source-derived prepared publication,
 acquired-row vacuum, initialization, read and validation now share one storage
 vocabulary. A symbolic three-version path derives snapshot/history correspondence
 and a safe traversal prefix, including an older active writer and a future
@@ -27,9 +55,9 @@ repair, not an automatically promoted performance optimization.
 The [storage slice](../verification/storage_slice/README.md) records the exact
 cutpoints and remaining boundary: arbitrary transaction histories, physical
 load-to-image correspondence, allocator ownership, acquisition/registration
-ownership and weak memory remain open. The next step is to generalize the
-history and prefix invariant beyond the selected layout and connect its
-ownership to actual allocator operations. Full P1 remains incomplete.
+ownership and weak memory remain open. Later work must generalize the history
+and prefix invariant beyond the selected layout and connect its ownership to
+actual allocator operations. These later obligations remain distinct from P1.
 The [storage evidence archive](verification_data/row_retention_2026-09-23/README.md)
 retains the 55-check final pilot, bug reproduction, fixed and deliberately broken
 regressions, exact runtime-change audit, and all source-bound proof evidence.

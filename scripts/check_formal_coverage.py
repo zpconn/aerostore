@@ -52,7 +52,8 @@ def frozen_paths(root: Path) -> list[str]:
                       "verification/guard_ownership", "verification/lookup", "verification/indexed_slice",
                       "verification/lookup_native", "verification/row_publication",
                       "verification/row_retention", "verification/retention_native", "verification/storage_slice",
-                      "verification/row_initialization"]:
+                      "verification/row_initialization", "verification/commit_data",
+                      "verification/commit_completion", "verification/p1_native"]:
         if not (root / directory).exists():
             continue
         paths.update(str(p.relative_to(root)) for p in (root / directory).iterdir()
@@ -91,6 +92,8 @@ def validate(root: Path, baseline_ref: str | None = None) -> dict:
     claims = tomllib.loads((root / "verification/claims.toml").read_text())
     if claims.get("whole_engine_verified") is not False:
         errors.append("pilot cannot assert whole-engine verification")
+    if claims.get("full_P1_complete") is not False:
+        errors.append("component pilot cannot assert full P1 completion")
     ids = [claim["id"] for claim in claims["claims"]]
     if len(ids) != len(set(ids)):
         errors.append("duplicate claim IDs")

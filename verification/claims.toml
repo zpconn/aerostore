@@ -1,9 +1,26 @@
 format_version = 1
 baseline_revision = "a382ce3d06d4fb690ba09632d7b3a38b8902c65a"
 whole_engine_verified = false
+full_P1_complete = false
 
 # Status is descriptive; successful commands and their exact source fingerprint
 # are recorded by verify_formal.py. This ledger cannot make an absent proof pass.
+[[claims]]
+id = "P0-CONTRACT-COVERAGE"
+contract = "verification/contracts/p0_audit.md"
+implementation = ["verification/contracts/p0_inventory.json", "scripts/check_p0_contracts.py"]
+scope = "Reviewed public-core API success/error contracts, declared lock relationships and exact-source coverage; checker success is distinct from its explicit P0 completion result and is not semantic verification or inferred deadlock freedom"
+status = "partial"
+required_checks = ["p0-contracts", "p0-contract-tests"]
+
+[[claims]]
+id = "P1-NATIVE-TRANSACTION-SCENARIOS"
+contract = "verification/p1_native/README.md"
+implementation = ["aerostore_core/tests/occ_transactional_index.rs", "aerostore_core/src/occ_partitioned.rs", "aerostore_core/src/wal_writer.rs", "verification/p1_native/run.py"]
+scope = "Deterministic complete native creation/key-move transactions and fresh retries, combined with existing capture/guard/allocation/rollback/poison/stamping schedules; nine cases and seven intended assertion failures are bounded native evidence, not complete-slice refinement or exhaustive concurrency verification"
+status = "partial"
+required_checks = ["p1-native", "p1-native-runner-tests", "integration-default", "integration-verified-buckets-sort", "integration-verified-buckets-bitmap"]
+
 [[claims]]
 id = "KERNEL-BUCKETS-VERUS"
 contract = "verification/contracts/bucket_set.md"
@@ -313,7 +330,7 @@ required_checks = ["tla"]
 id = "ROW-PUBLICATION-VERUS"
 contract = "verification/row_publication/README.md"
 implementation = ["aerostore_core/src/occ_partitioned.rs", "verification/row_publication/contracts.rs"]
-scope = "Actual prepared publication loop specialized to one validated write derives exact deletion/link/head states from individual field operations, preserves valid retained Image and old-snapshot selection through every intermediate prefix, and characterizes fallible prefixes. Guard/fresh-allocation ownership and physical atomic correspondence remain primitive obligations; arbitrary multirow and nonprepared publication refinement remain open"
+scope = "Actual prepared publication loop specialized to one validated write derives exact deletion/link/head states from individual field operations, preserves valid retained Image and old-snapshot selection through every intermediate prefix, and characterizes fallible prefixes. Guard/fresh-allocation ownership and physical atomic correspondence remain primitive obligations; arbitrary multirow refinement remains open, while the nonprepared single-write path has separate commit-data evidence"
 status = "partial"
 required_checks = ["row-publication", "row-publication-adapter-tests", "core-regressions"]
 refinement_roots = { row-publication = ["publish_prepared_write_set", "publication_prefix_valid", "publication_preserves_old_snapshot", "successful_publication_connects_lookup", "publication_has_live_witness", "native_publication_has_executable_witness"] }
@@ -344,3 +361,21 @@ scope = "All seven native constructor fields and exact initialize_row pointer-wr
 status = "partial"
 required_checks = ["storage-slice", "row-initialization-adapter-tests", "retention-native"]
 refinement_roots = { storage-slice = ["native_constructor_clears_metadata", "native_initialize_preserves_reader"] }
+
+[[claims]]
+id = "COMMIT-DATA-SLICE"
+contract = "verification/commit_data/README.md"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "verification/commit_data/contracts.rs", "verification/commit_data/ordinary.rs", "verification/commit_data/commit_segment.py"]
+scope = "Actual single-write ordinary publication and the checked native prepare/remove/publish segment join posting and row effects; initial row/posting coherence derives destination absence and successful final consistency. Validated plan, held authority and field primitive correspondence remain premises; this is not complete API-entry commit, arbitrary histories or WAL refinement"
+status = "partial"
+required_checks = ["commit-data", "commit-data-adapter-tests", "postings", "row-publication"]
+refinement_roots = { commit-data = ["planned_derives_destination_ownership", "complete_postings_match_published_row", "prepare_destinations", "rollback_destinations", "remove_sources", "publish_rows_ordinary", "native_ordinary_data_segment", "create_move_delete_have_witnesses"] }
+
+[[claims]]
+id = "COMMIT-PUBLICATION-COMPLETION"
+contract = "verification/commit_completion/README.md"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "aerostore_core/src/procarray.rs", "verification/commit_completion/completion.rs"]
+scope = "One-write data publication joined to actual finish_transaction, shared-clock deregistration and predicate stamps, with returned write provenance and poisoning on late completion failures. Earlier clean data errors may leave the registration open for caller abort. Begins at a validated-plan cutpoint under enumerated lifecycle/storage/guard and cleanup contracts; full reader/writer concurrent-slice refinement, arbitrary native histories and full P1 remain open"
+status = "partial"
+required_checks = ["commit-completion", "commit-completion-adapter-tests", "commit-data", "lifecycle", "predicate", "concurrent", "p1-native"]
+refinement_roots = { commit-completion = ["finish_transaction", "publication_changes", "publish_then_complete", "owned_registration_finishes", "completion_entry_has_live_witness", "completed_write_invalidates_capture"] }

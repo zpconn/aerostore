@@ -211,6 +211,7 @@ pub fn rollback_index_destinations<D: PostingPrimitives>(driver: &mut D, changes
     -> (result: Result<(), Error>)
     requires valid(old(driver).state(), changes@), valid_indices(changes@, inserted@),
     ensures stable(old(driver).state(), final(driver).state()),
+        result.is_ok() ==> final(driver).state().poisoned == old(driver).state().poisoned,
         result.is_ok() ==> final(driver).state().postings == old(driver).state().postings.difference(recorded(changes@, inserted@)),
         result.is_err() ==> final(driver).state().poisoned,
         removed_only(old(driver).state().postings, final(driver).state().postings, recorded(changes@, inserted@)),
@@ -223,6 +224,7 @@ pub fn prepare_index_destinations<D: PostingPrimitives>(driver: &mut D, changes:
     requires valid(old(driver).state(), changes@), unique_destinations(changes@),
         old(driver).state().postings.disjoint(destinations(changes@, changes.len() as int)),
     ensures stable(old(driver).state(), final(driver).state()),
+        result.is_ok() ==> final(driver).state().poisoned == old(driver).state().poisoned,
         result.is_ok() ==> final(driver).state().postings == old(driver).state().postings.union(destinations(changes@, changes.len() as int)),
         result.is_ok() ==> prefix_record(changes@, result->Ok_0@, changes.len() as int),
         result.is_err() ==> final(driver).state().postings == old(driver).state().postings || final(driver).state().poisoned,
@@ -236,6 +238,7 @@ pub fn remove_index_sources<D: PostingPrimitives>(driver: &mut D, changes: &Vec<
     -> (result: Result<(), Error>)
     requires valid(old(driver).state(), changes@),
     ensures stable(old(driver).state(), final(driver).state()),
+        result.is_ok() ==> final(driver).state().poisoned == old(driver).state().poisoned,
         result.is_ok() ==> final(driver).state().postings == old(driver).state().postings.difference(sources(changes@, changes.len() as int)),
         result.is_err() ==> final(driver).state().poisoned,
         removed_only(old(driver).state().postings, final(driver).state().postings, sources(changes@, changes.len() as int)),

@@ -1,6 +1,16 @@
 format_version = 1
 
 [[assumptions]]
+id = "P0-REVIEWED-API-INVENTORY"
+scope = "Contract and lock-relationship coverage audit"
+statement = "The explicit inventory classifies covered, boundary and excluded public core paths and records reviewed success/error contracts. Its scanner and exact-source hashes detect drift; they do not infer all Rust semantics, prove documented caller preconditions, or establish native deadlock freedom. P0 completion depends on the inventory's separate reviewed audit-gap state, not the coverage command's success alone."
+
+[[assumptions]]
+id = "P1-NATIVE-SCHEDULE-EVIDENCE"
+scope = "Complete transaction and retry native regressions"
+statement = "Thread channels and existing test-only cutpoints select declared finite schedules in the actual engine. Positive executions and intended assertion-failing mutants support the corresponding protocol obligations without establishing arbitrary native histories, weak-memory semantics, or full P1 refinement. The native compiler, isolated fixtures, source identities, test selection, binaries and logs are pinned or authenticated by the campaign; serialization retries and resource errors retain their distinct lifecycle contracts."
+
+[[assumptions]]
 id = "TOOLCHAIN"
 scope = "All implemented proof slices"
 statement = "Pinned verifier frontends, extraction, standard models, proof erasure, Rust/LLVM, and proof checkers implement their documented semantics. Exact pins and evidence accompany each run."
@@ -58,7 +68,7 @@ statement = "The live mutation guard and epoch pin protect typed node/predecesso
 [[assumptions]]
 id = "POSTING-OWNERSHIP-PRIMITIVES"
 scope = "Native destination preparation, rollback and source removal"
-statement = "The caller supplies valid bindings, held key permissions derived from publication guards, distinct destinations and absence of every destination from the initial posting projection. These depend on final-write selection, before/after extraction, index consistency and row-base validation, whose native composition remains open. Successful insertion adds its absent target and insertion errors leave the logical posting set unchanged. Removal errors may have removed their target, but preserve unrelated postings. Poisoning sets the failure flag. These are explicit contracts on operation-local guarded projections, not proofs of the underlying unsafe index or instantaneous global poison visibility. Allocation panic, process death and arbitrary corruption remain outside this returned-Result proof."
+statement = "The caller supplies valid bindings, held key permissions derived from publication guards, distinct destinations and absence of every destination from the initial posting projection. These depend on final-write selection, before/after extraction, index consistency and row-base validation, whose general native caller composition remains open. The single-write commit-data composition separately derives destination absence from admitted row/posting coherence and key agreement. Successful insertion adds its absent target and insertion errors leave the logical posting set unchanged. Removal errors may have removed their target, but preserve unrelated postings. Poisoning sets the failure flag. These are explicit contracts on operation-local guarded projections, not proofs of the underlying unsafe index or instantaneous global poison visibility. Allocation panic, process death and arbitrary corruption remain outside this returned-Result proof."
 
 [[assumptions]]
 id = "PLATFORM"
@@ -83,7 +93,7 @@ statement = "Storage operations expose a valid retained version-chain image and 
 [[assumptions]]
 id = "ROW-PUBLICATION-FIELD-OWNERSHIP"
 scope = "Actual single-write prepared publication and concrete storage composition"
-statement = "A held native row-partition guard excludes other writers and vacuum on the projected chain; the prepared allocation is exclusively owned and unreachable from published heads. Slot and typed offset resolution identify represented fields, and individual xmax CAS, next store and head CAS have their specified atomic effects. Validated base identity, zero base xmax, coherent rank and new-version xmin are caller obligations. The actual loop derives publication states, including fallible prefixes, rather than receiving a whole-result or history-mapping contract. Physical mmap validity, pointer provenance, compiler weak-memory semantics, all native caller ownership, arbitrary multirow histories and the nonprepared publication method remain open."
+statement = "A held native row-partition guard excludes other writers and vacuum on the projected chain; the prepared allocation is exclusively owned and unreachable from published heads. Slot and typed offset resolution identify represented fields, and individual xmax CAS, next store and head CAS have their specified atomic effects. Validated base identity, zero base xmax, coherent rank and new-version xmin are caller obligations. The actual loop derives publication states, including fallible prefixes, rather than receiving a whole-result or history-mapping contract. Physical mmap validity, pointer provenance, compiler weak-memory semantics, all native caller ownership and arbitrary multirow histories remain open. The ordinary single-write publication method has separate source-bound commit-data evidence under the same field contracts."
 
 [[assumptions]]
 id = "ROW-RETENTION-ACQUIRED-FIELDS"
@@ -99,3 +109,13 @@ statement = "The selected storage slice begins from a coherent symbolic three-ve
 id = "PUBLIC-VACUUM-HORIZON-DISPATCH"
 scope = "Native public vacuum clamp and normal collector admission"
 statement = "Exact native caller bodies use the table arena accessor and same-arena ProcArray/clock pair; the embedded native oldest_snapshot_xmin algorithm derives bounds for every active slot in its acquired metadata projection. The public caller clamps the requested horizon, while the normal collector forwards its one computation directly to the crate-private kernel. The dispatch contract records only the actual kernel argument and assumes no row-retention result. Existing lifecycle acquisition-state framing, native scoped guard release, physical arena correspondence and ownership of registrations until row acquisition and throughout the pass remain explicit boundaries; complete arbitrary concurrent horizon histories are not established by this caller theorem."
+
+[[assumptions]]
+id = "COMMIT-DATA-VALIDATED-PLAN"
+scope = "Single-index single-write native posting/row composition"
+statement = "The selected cutpoint supplies one changed logical key, matching row identity, a validated base and prepared private version, existing row/posting consistency and the required row/index authority. These are caller invariants, not conclusions supplied by a publication primitive. Under them the composed native helpers derive absent owned destinations, exact successful postings/row publication and all-or-poison returned failure semantics. The independent posting and row projections must denote disjoint fields of the same native storage; raw insert/remove and row atomic/pointer operations still satisfy their enumerated contracts. Projected key values do not prove full arbitrary payload or key-extractor correspondence. General final-write/change planning and every API-entry validation path remain outside this composition."
+
+[[assumptions]]
+id = "COMMIT-COMPLETION-CUTPOINT"
+scope = "Native one-write publication followed by deregistration and stamping"
+statement = "The admitted transaction registration and write plan denote the same writer, arena and registered index as the posting/row/stamp projections; physical same-arena identity across the independent projections is assumed, not established by this harness. Required guards remain held across the represented calls. Intervening private-set and recycle-cache cleanup preserves published projections; its native ownership and failure behavior is not newly proved by the joined harness. Prepublication data errors may leave the registration open and require caller abort; neither universal error cleanup nor a closed transaction on every Err is proved. Actual finish_transaction consumes the token and calls the existing acquired-state lifecycle algorithm; the shared-clock bridge then reserves and stores publication stamps. Existing acquired-input framing, no-wrap, native atomic/RAII and caller ownership boundaries remain explicit. The join does not establish registration/capture/validation from API entry, a complete indexed reader/writer execution or an arbitrary concurrent-history theorem."

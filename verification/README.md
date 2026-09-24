@@ -6,6 +6,9 @@ This workspace implements component proofs and model campaigns from the [verific
 
 | Layer | Current coverage | Boundary |
 | --- | --- | --- |
+| P0 API audit | Source-bound inventory of 425 public declarations across 32 core modules, conditional success/error contracts and 31 lock relationships | Reviewed contract coverage; does not prove enforcement, infer the complete lock graph or certify raw safe APIs |
+| Ordinary commit data | Actual prepare/remove/ordinary-publish interval, exact selected row/posting relation and returned record, rollback/poison failures | One selected write/index; validation-to-plan admission, complete final-write selection and native physical projection remain explicit |
+| Publication completion | Native data publication joined to actual token consumption/deregistration and same-clock stamp publication; captured dependency invalidation | Acquired cutpoint with physical identity/framing and cleanup premises; not a complete transaction entry-to-return refinement |
 | Verus | Both actual bucket canonicalization functions: exact sorted unique membership, bounds, and first-invalid-input semantics; strict stamp comparison; uniqueness of the result contract | Safe Rust functions, successful allocation and pinned collection models; not their concurrent callers |
 | Native commit Verus | Actual commit driver and callback cleanup: validation/publication/cleanup order, both policy branches, semantic negative controls | Conditional on explicit primitive event contracts; native data, history refinement and weak memory remain open |
 | Native predicate Verus | Actual lock-key union, conflict checks, stamp publication, and lookup dependency capture; data contracts include empty queries, repeat reads, dependency provenance and bounded growth | Restricted source adaptation; registry, hashing, collection semantics, guard visibility and ownership remain primitive contracts |
@@ -133,6 +136,22 @@ Such measurements are diagnostic only. The fixed bucket contract and first imple
 
 ## Remaining implementation work
 
+The current P1 work connects [ordinary commit data](commit_data/README.md) to
+[transaction completion](commit_completion/README.md). Its native publication
+calls now establish the row/posting relation consumed by finish and stamping.
+The [P1 native campaign](p1_native/README.md) exercises complete competing
+empty-query creations and a key move racing a reader with a staged write,
+including fresh retries and intended broken-source controls. These checks and
+the [P0 contract audit](contracts/p0_audit.md) are mandatory in the composed gate.
+They add no production instructions, locks or proof bookkeeping.
+
+The next P1 step is to prove that native plan construction, validation and guard
+handoff establish the joined operation's entry conditions, then compose cleanup
+and reader/writer events into the declared scenario. P1 permits enumerated
+low-level storage/atomic contracts; completing all P2 history or P3 ownership
+proofs is not a prerequisite. Those later obligations remain visible and cannot
+be silently converted into whole-engine claims.
+
 The complete concurrent native predicate/publication operation needs an implementation-refinement theorem connecting actual Rust executions to legal histories. General serializability, unsafe arena/guard ownership, acquire/release/relaxed atomics, process-shared mappings, quantitative reclamation bounds, durability/recovery, and query/application composition remain open. Freezing these files prevents this experiment from silently changing them; it does not prove them correct.
 
 The newest slice models metadata changes during lifecycle acquisition and legal
@@ -148,8 +167,8 @@ publication, acquired-row vacuum, row initialization, read and row validation.
 It proves a retained traversal prefix and exact successful tail pruning; native
 tests cover partial multirow publication and a paused cursor during real reuse.
 Generalizing that history/prefix invariant to arbitrary native transactions,
-and connecting allocator ownership and physical observations, remain the next
-requirements before extending the optimization boundary.
+and connecting allocator ownership and physical observations, remain later
+requirements before extending the optimization boundary to those operations.
 Closing the horizon premise exposed a public API bug: an excessive caller
 vacuum horizon could prune a live reader's version, causing its first read to
 report absence and successfully commit. The public method now clamps requests

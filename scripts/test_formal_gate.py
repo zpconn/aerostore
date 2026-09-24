@@ -13,6 +13,7 @@ from unittest.mock import patch
 import verify_formal
 import check_lock_models as lock_models
 import check_refinement_evidence as refinement
+import check_p1_native_evidence as p1_native
 
 HERE = Path(__file__).resolve().parent
 SPEC = importlib.util.spec_from_file_location("coverage", HERE / "check_formal_coverage.py")
@@ -72,6 +73,32 @@ class FrozenBoundaryTests(unittest.TestCase):
         (self.root / "verification/predicate_capture/contracts.rs").write_text("// drop captured dependency\n")
         self.assertFalse(coverage.validate(self.root)["passed"])
 
+    def test_changed_p1_native_runner_fails(self):
+        (self.root / "verification/p1_native/run.py").write_text("raise SystemExit(0)\n")
+        self.assertFalse(coverage.validate(self.root)["passed"])
+
+    def test_changed_p0_api_inventory_fails(self):
+        (self.root / "verification/contracts/p0_inventory.json").write_text('{"p0_complete": true}')
+        self.assertFalse(coverage.validate(self.root)["passed"])
+
+    def test_weakened_commit_data_relation_fails(self):
+        (self.root / "verification/commit_data/contracts.rs").write_text("// omit row/posting agreement\n")
+        self.assertFalse(coverage.validate(self.root)["passed"])
+
+    def test_changed_completion_adapter_fails(self):
+        (self.root / "verification/commit_completion/generate.py").write_text("# omit native deregistration\n")
+        self.assertFalse(coverage.validate(self.root)["passed"])
+
+    def test_descriptive_flag_cannot_claim_full_p1(self):
+        path = self.root / "verification/claims.toml"
+        path.write_text(path.read_text().replace("full_P1_complete = false", "full_P1_complete = true", 1))
+        lock = json.loads((self.root / coverage.LOCK).read_text())
+        lock["files"]["verification/claims.toml"] = coverage.digest(path)
+        (self.root / coverage.LOCK).write_text(json.dumps(lock))
+        report = coverage.validate(self.root)
+        self.assertFalse(report["passed"])
+        self.assertIn("component pilot cannot assert full P1 completion", report["errors"])
+
     def test_omitted_refinement_campaign_fails(self):
         (self.root / "verification/refinement_campaigns.json").write_text('{"campaigns": {}}')
         self.assertFalse(coverage.validate(self.root)["passed"])
@@ -110,6 +137,22 @@ class FrozenBoundaryTests(unittest.TestCase):
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_new_commit_campaigns_reject_bare_success(self):
+        for name in ("commit-data", "commit-completion"):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / name).mkdir()
+                (root / name / "receipt.json").write_text('{"passed":true,"status":"passed","source_stable":true}')
+                with self.assertRaisesRegex(RuntimeError, "unsupported proof scope"):
+                    verify_formal.collect_claim_evidence([], [{"name": name, "passed": True}], root)
+
+    def test_p0_success_without_current_audit_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "p0-contracts.log").write_text('{"passed": true, "p0_complete": true}')
+            with patch.object(verify_formal.check_p0_contracts, "validate", return_value={"passed": True, "p0_complete": False}), self.assertRaisesRegex(RuntimeError, "current-source evidence"):
+                verify_formal.collect_claim_evidence([], [{"name": "p0-contracts", "passed": True}], root)
+
     def test_concurrent_success_without_negative_controls_fails(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -493,6 +536,124 @@ class LockModelEvidenceTests(unittest.TestCase):
             self.validate()
 
 
+class P1NativeEvidenceTests(unittest.TestCase):
+    """Synthetic fixtures test gate rejection, not real native correctness."""
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix="aerostore-p1-receipt-")
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.output = self.root / "target/p1-native"
+        self.output.mkdir(parents=True)
+        self.path = self.output / "receipt.json"
+        campaign_dir = self.root / "verification/p1_native"
+        campaign_dir.mkdir(parents=True)
+        shutil.copyfile(coverage.ROOT / "verification/p1_native/run.py", campaign_dir / "run.py")
+        for name in ("test_run.py", "README.md"):
+            (campaign_dir / name).write_text("synthetic fixture " + name)
+        for filename in ["Cargo.toml", "Cargo.lock", *[crate + "/Cargo.toml" for crate in
+                         ("aerostore_core", "aerostore_verified", "aerostore_macros", "aerostore_tcl")]]:
+            path = self.root / filename
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("synthetic native input")
+        occ = self.root / "aerostore_core/src/occ_partitioned.rs"
+        occ.parent.mkdir(parents=True)
+        shutil.copyfile(coverage.ROOT / "aerostore_core/src/occ_partitioned.rs", occ)
+        spec = importlib.util.spec_from_file_location("p1_native_fixture", campaign_dir / "run.py")
+        self.campaign = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.campaign)
+        native = {str(p.relative_to(self.root)): p.read_bytes() for p in self.campaign.native_paths()}
+        inputs = {name: p1_native.digest(self.root / name) for name in native}
+        inputs.update({str(p.relative_to(self.root)): p1_native.digest(p) for p in campaign_dir.iterdir() if p.is_file()})
+        cargo = self.output / "tools/cargo"
+        cargo.parent.mkdir()
+        cargo.write_text("synthetic cargo")
+        cargo.with_name("rustc").write_text("synthetic rustc")
+        controls = list(self.campaign.variants(native[self.campaign.OCC].decode()))
+        self.receipt = {"passed": True, "status": "passed", "source_stable": True,
+            "scope": "native_p1_complete_transaction_scenarios", "formal_refinement_proved": False,
+            "full_P1_complete": False, "input_sha256": inputs, "final_input_sha256": dict(inputs),
+            "required_positive_checks": [name for name, _ in self.campaign.TESTS],
+            "required_mutations": [control[0] for control in controls],
+            "rustc": "commit-hash: " + self.campaign.PINNED_RUST + "\nrelease: 1.93.1\n",
+            "tool_sha256": {str(p): p1_native.digest(p) for p in (cargo, cargo.with_name("rustc"))}, "checks": []}
+        expected = [(name, selection, None, None) for name, selection in self.campaign.TESTS]
+        expected += [(name, selection, (filename, changed), assertion)
+                     for name, filename, changed, selection, assertion in controls]
+        for name, selection, changed, assertion in expected:
+            negative = changed is not None
+            source = self.output / (name if negative else "current") / "source"
+            contents = dict(native)
+            if changed:
+                contents[changed[0]] = changed[1].encode()
+            for filename, content in contents.items():
+                path = source / filename
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(content)
+            executable = source.parent / "cargo-target/test-binary"
+            executable.parent.mkdir(exist_ok=True)
+            executable.write_text("synthetic native test binary")
+            log = self.output / (name + ".log")
+            log.write_text("Running tests (" + str(executable) + ")\ntest " + selection[-1] + " ... "
+                           + ("FAILED\npanicked at selected.rs: " + assertion + "\ntest result: FAILED. 0 passed; 1 failed"
+                              if negative else "ok\ntest result: ok. 1 passed; 0 failed"))
+            self.receipt["checks"].append({"name": name, "expected_assertion_failure": negative,
+                "required_assertion": assertion, "passed": True, "exit_code": 101 if negative else 0,
+                "cwd": str(source), "command": [str(cargo), "test", "--offline", "--locked", "--target-dir",
+                    str(executable.parent), "-p", "aerostore_core", *selection, "--", "--test-threads=1", "--nocapture"],
+                "source_sha256": {filename: p1_native.digest(source / filename) for filename in native},
+                "binary_sha256": {str(executable): p1_native.digest(executable)},
+                "log": str(log.relative_to(self.root)), "log_sha256": p1_native.digest(log)})
+
+    def validate(self):
+        self.path.write_text(json.dumps(self.receipt))
+        with patch.object(verify_formal, "ROOT", self.root):
+            return verify_formal.collect_claim_evidence([], [{"name": "p1-native", "passed": True}], self.output.parent)
+
+    def test_complete_native_receipt_validates(self):
+        self.assertEqual(self.validate(), [])
+
+    def test_forged_native_success_fails(self):
+        self.receipt = {"passed": True, "status": "passed"}
+        with self.assertRaisesRegex(RuntimeError, "incomplete campaign"):
+            self.validate()
+
+    def test_missing_native_mutation_fails(self):
+        self.receipt["checks"].pop()
+        with self.assertRaisesRegex(RuntimeError, "missing, duplicate"):
+            self.validate()
+
+    def test_stale_native_input_fails(self):
+        (self.root / "Cargo.lock").write_text("substituted dependency")
+        with self.assertRaisesRegex(RuntimeError, "stale source"):
+            self.validate()
+
+    def test_changed_native_fixture_fails(self):
+        check = self.receipt["checks"][-1]
+        (Path(check["cwd"]) / self.campaign.OCC).write_text("substituted mutation")
+        with self.assertRaisesRegex(RuntimeError, "substituted native fixture"):
+            self.validate()
+
+    def test_unrelated_native_failure_fails(self):
+        check = self.receipt["checks"][-1]
+        log = self.root / check["log"]
+        log.write_text(log.read_text().replace(check["required_assertion"], "unrelated panic"))
+        check["log_sha256"] = p1_native.digest(log)
+        with self.assertRaisesRegex(RuntimeError, "wrong-kind native failure"):
+            self.validate()
+
+    def test_substituted_native_binary_fails(self):
+        binary = next(iter(self.receipt["checks"][0]["binary_sha256"]))
+        Path(binary).write_text("substituted binary")
+        with self.assertRaisesRegex(RuntimeError, "substituted native executable"):
+            self.validate()
+
+    def test_native_tests_cannot_claim_full_p1(self):
+        self.receipt["full_P1_complete"] = True
+        with self.assertRaisesRegex(RuntimeError, "unsupported scope"):
+            self.validate()
+
+
 class RunnerTests(unittest.TestCase):
     def run_fixture(self, profile, coverage_pass=True, baseline=False):
         with tempfile.TemporaryDirectory() as temporary:
@@ -507,6 +668,8 @@ class RunnerTests(unittest.TestCase):
 
             def check(name, command, directory, timeout):
                 calls.append((name, command))
+                if name == "p0-contracts":
+                    (directory / "p0-contracts.log").write_text('{"passed": true, "p0_complete": false}')
                 return {"name": name, "passed": coverage_pass if name == "coverage" else True}
 
             with patch.object(verify_formal, "ROOT", root), \
@@ -544,13 +707,22 @@ class RunnerTests(unittest.TestCase):
         self.assertIn("lock-models", commands)
         self.assertIn("scripts/check_lock_models.py", commands["lock-models"])
 
+    def test_pilot_requires_p1_native_and_p0_audit(self):
+        code, report, calls = self.run_fixture("pilot")
+        self.assertEqual(code, 0)
+        commands = dict(calls)
+        for name in ("p1-native", "p1-native-runner-tests", "p0-contracts", "p0-contract-tests"):
+            self.assertIn(name, commands)
+        self.assertFalse(report["p0_complete"])
+        self.assertFalse(report["full_P1_complete"])
+
     def test_proofs_require_native_predicate_campaigns(self):
         code, _, calls = self.run_fixture("proofs")
         self.assertEqual(code, 0)
         commands = dict(calls)
         for name in ["predicate", "predicate-capture", "predicate-composition", "skiplist-detach", "postings",
                      "guards", "lifecycle", "publication-slice", "lifecycle-scenario",
-                     "lifecycle-interference", "guard-ownership", "lookup", "indexed-slice", "row-publication", "row-retention", "storage-slice"]:
+                     "lifecycle-interference", "guard-ownership", "lookup", "indexed-slice", "row-publication", "row-retention", "storage-slice", "commit-data", "commit-completion"]:
             self.assertIn(name, commands)
             self.assertIn(name + "-adapter-tests", commands)
 

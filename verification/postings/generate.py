@@ -72,7 +72,8 @@ def render(source: str) -> str:
         proof { assert(recorded(changes@, inserted@.subrange(ri as int, inserted.len() as int)) =~= Set::<Posting>::empty()); }
         while ri > 0
             invariant ri <= inserted.len(), initial == old(driver).state(),
-                stable(initial, driver.state()), valid(initial, changes@), valid(driver.state(), changes@),
+                stable(initial, driver.state()), driver.state().poisoned == initial.poisoned,
+                valid(initial, changes@), valid(driver.state(), changes@),
                 valid_indices(changes@, inserted@),
                 removed_only(initial.postings, driver.state().postings, recorded(changes@, inserted@)),
                 rollback_error.is_none() ==> driver.state().postings == initial.postings.difference(
@@ -95,7 +96,8 @@ def render(source: str) -> str:
         proof { assert(recorded(changes@, inserted@) =~= Set::<Posting>::empty()); }
         while change_idx < changes.len()
             invariant change_idx <= changes.len(), initial == old(driver).state(),
-                stable(initial, driver.state()), valid(initial, changes@), valid(driver.state(), changes@),
+                stable(initial, driver.state()), driver.state().poisoned == initial.poisoned,
+                valid(initial, changes@), valid(driver.state(), changes@),
                 unique_destinations(changes@),
                 initial.postings.disjoint(destinations(changes@, changes.len() as int)),
                 driver.state().postings == initial.postings.union(destinations(changes@, change_idx as int)),
@@ -145,7 +147,8 @@ def render(source: str) -> str:
         let mut ci: usize = 0;
         while ci < changes.len()
             invariant ci <= changes.len(), initial == old(driver).state(),
-                stable(initial, driver.state()), valid(initial, changes@), valid(driver.state(), changes@),
+                stable(initial, driver.state()), driver.state().poisoned == initial.poisoned,
+                valid(initial, changes@), valid(driver.state(), changes@),
                 driver.state().postings == initial.postings.difference(sources(changes@, ci as int)),
                 removed_only(initial.postings, driver.state().postings, sources(changes@, changes.len() as int)),
             decreases changes.len() - ci,
