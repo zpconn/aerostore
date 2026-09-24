@@ -1,0 +1,12 @@
+note: verifying root module (selected functions)
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lookup/ignore_predicate_filter.rs:424:13
+    |
+424 | /             forall|id:usize| result@.contains(id) <==>
+425 | |                 ordered@.take(ci as int).contains(id) && matches_row(driver.image(),initial,*predicate,id),
+    | |__________________________________________________________________________________________________________^
+
+verification results:: 2 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

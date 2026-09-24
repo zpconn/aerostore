@@ -1,0 +1,34 @@
+note: verifying root module (selected functions)
+
+note: recommendation not met
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-completion/omit_plan_agreement.rs:3440:13
+     |
+3440 |             ordinary_plan.tx.write_set[ordinary_plan.indices[0] as int]),
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+    --> std_specs/vec.rs:29:12
+     |
+     = note: recommendation not met
+
+note: recommendation not met
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-completion/omit_plan_agreement.rs:3440:40
+     |
+3440 |             ordinary_plan.tx.write_set[ordinary_plan.indices[0] as int]),
+     |                                        ^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+    --> std_specs/vec.rs:29:12
+     |
+     = note: recommendation not met
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-completion/omit_plan_agreement.rs:3452:22
+     |
+1822 |     requires planned(old(storage).view(),*plan),ordinary_matches(*plan,*ordinary_plan),
+     |                                                 -------------------------------------- failed precondition
+...
+3452 |     let writes=match native_ordinary_data_segment(storage,plan,ordinary_plan) {
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

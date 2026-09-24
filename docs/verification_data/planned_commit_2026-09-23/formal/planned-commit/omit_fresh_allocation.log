@@ -1,0 +1,27 @@
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/planned-commit/omit_fresh_allocation.rs:4025:1
+     |
+4025 | / pub fn planned_commit<P:postings::PostingPrimitives,R:PlanningPrimitives+GuardedRead,
+4026 | |     M:planning::RowMapPrimitives,L:scenario::ScenarioClock,I:scenario::IndexPrimitives,C:predicate::PairSet>(
+4027 | |     storage:&mut Storage<P,R>,publisher:&mut scenario::Bridge<L,I>,token:&mut FinishToken,
+4028 | |     tx:ordinary::Transaction)->(result:Result<Completion,PlannedError>)
+     | |______________________________________________________________________^
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/planned-commit/omit_fresh_allocation.rs:4050:23
+     |
+3715 |     requires admissible(driver.image(),*tx,indices@),driver.bindings()==1,
+     |              --------------------------------------- failed precondition
+...
+4050 |     let changes=match planning::index_changes(&storage.rows,&tx,&indices) {
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/planned-commit/omit_fresh_allocation.rs:4055:16
+     |
+4055 |         assert(admission::selection_input(&storage.rows,tx,indices@));
+     |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 213 verified, 1 errors
+error: aborting due to 2 previous errors
+

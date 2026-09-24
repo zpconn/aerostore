@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -1359,7 +1359,7 @@
+         // All index destinations are allocated before any source is removed;
+         // no table version is published until that preparation has succeeded.
+         // Readers of affected predicates reject the held bucket latches.
+-        let inserted = self.prepare_index_destinations(&index_changes)?;
++        let inserted = Vec::new();
+         let prepared = match prepared {
+             Some((record, before_publish)) => {
+                 self.invoke_before_publish(tx, &index_changes, &inserted, &record, before_publish)?;

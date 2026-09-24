@@ -1,0 +1,11 @@
+note: verifying module planning (selected functions)
+
+error: invariant not satisfied at end of loop body
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/write-plan/overwrite_wrong_row.rs:2052:47
+     |
+2052 |             invariant idx<=tx.write_set.len(),prefix_map(tx.write_set@,idx as int,by_row.map()),
+     |                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -1722,7 +1722,7 @@
+     fn final_write_indices(&self, tx: &OccTransaction<T>) -> Vec<usize> {
+         let mut by_row = BTreeMap::<usize, usize>::new();
+         for (idx, write) in tx.write_set.iter().enumerate() {
+-            by_row.insert(write.row_id, idx);
++            by_row.entry(write.row_id).or_insert(idx);
+         }
+         by_row.into_values().collect()
+     }

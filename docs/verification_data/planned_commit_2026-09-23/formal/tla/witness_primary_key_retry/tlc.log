@@ -1,0 +1,91 @@
+TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 19898] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-p7jeyk75/PrimaryKeyInsert.tla
+Parsing file /tmp/tlc-9908722271839261307/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-9908722271839261307/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-9908722271839261307/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module PrimaryKeyInsert
+Linting of module PrimaryKeyInsert
+Starting... (2026-09-23 23:34:57)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-09-23 23:34:57.
+Error: Invariant WitnessNotReached is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ result = <<0, 0>>
+/\ expectedHead = <<0, 0>>
+/\ nextRowId = 1
+/\ proposed = <<0, 0>>
+/\ published = {}
+/\ retried = {}
+/\ pc = <<"Capture", "Capture">>
+/\ head = 0
+/\ winner = <<0, 0>>
+/\ allocated = {}
+/\ link = <<0, 0>>
+/\ searchedHead = <<0, 0>>
+/\ foundAfterRetry = {}
+
+State 2: <Capture(1) line 32, col 5 to line 36, col 74 of module PrimaryKeyInsert>
+/\ pc = <<"Search", "Capture">>
+
+State 3: <Search(1) line 39, col 5 to line 50, col 49 of module PrimaryKeyInsert>
+/\ pc = <<"Allocate", "Capture">>
+
+State 4: <Allocate(1) line 53, col 5 to line 61, col 52 of module PrimaryKeyInsert>
+/\ nextRowId = 2
+/\ proposed = <<1, 0>>
+/\ pc = <<"Prepare", "Capture">>
+/\ allocated = {1}
+
+State 5: <Prepare(1) line 64, col 5 to line 70, col 63 of module PrimaryKeyInsert>
+/\ pc = <<"CAS", "Capture">>
+
+State 6: <Capture(2) line 32, col 5 to line 36, col 74 of module PrimaryKeyInsert>
+/\ pc = <<"CAS", "Search">>
+
+State 7: <CompareAndSwap(1) line 73, col 5 to line 89, col 38 of module PrimaryKeyInsert>
+/\ result = <<1, 0>>
+/\ published = {1}
+/\ pc = <<"Done", "Search">>
+/\ head = 1
+/\ winner = <<1, 0>>
+
+State 8: <Search(2) line 39, col 5 to line 50, col 49 of module PrimaryKeyInsert>
+/\ pc = <<"Done", "Allocate">>
+
+State 9: <Allocate(2) line 53, col 5 to line 61, col 52 of module PrimaryKeyInsert>
+/\ nextRowId = 3
+/\ proposed = <<1, 2>>
+/\ pc = <<"Done", "Prepare">>
+/\ allocated = {1, 2}
+
+State 10: <Prepare(2) line 64, col 5 to line 70, col 63 of module PrimaryKeyInsert>
+/\ pc = <<"Done", "CAS">>
+
+State 11: <CompareAndSwap(2) line 73, col 5 to line 89, col 38 of module PrimaryKeyInsert>
+/\ retried = {2}
+/\ pc = <<"Done", "Search">>
+/\ searchedHead = <<0, 1>>
+
+State 12: <Search(2) line 39, col 5 to line 50, col 49 of module PrimaryKeyInsert>
+/\ result = <<1, 1>>
+/\ expectedHead = <<0, 0>>
+/\ nextRowId = 3
+/\ proposed = <<1, 2>>
+/\ published = {1}
+/\ retried = {2}
+/\ pc = <<"Done", "Done">>
+/\ head = 1
+/\ winner = <<1, 0>>
+/\ allocated = {1, 2}
+/\ link = <<0, 0>>
+/\ searchedHead = <<0, 1>>
+/\ foundAfterRetry = {2}
+
+78 states generated, 52 distinct states found, 3 states left on queue.
+The depth of the complete state graph search is 12.
+Finished in 00s at (2026-09-23 23:34:57)

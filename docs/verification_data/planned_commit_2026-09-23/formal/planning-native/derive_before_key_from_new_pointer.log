@@ -1,0 +1,208 @@
+   Compiling proc-macro2 v1.0.106
+   Compiling quote v1.0.44
+   Compiling unicode-ident v1.0.24
+   Compiling libc v0.2.182
+   Compiling cfg-if v1.0.4
+   Compiling version_check v0.9.5
+   Compiling syn v1.0.109
+   Compiling zerocopy v0.8.40
+   Compiling serde_core v1.0.228
+   Compiling typenum v1.19.0
+   Compiling memchr v2.8.0
+   Compiling once_cell v1.21.3
+   Compiling crossbeam-utils v0.8.21
+   Compiling pin-project-lite v0.2.16
+   Compiling getrandom v0.3.4
+   Compiling serde v1.0.228
+   Compiling fnv v1.0.7
+   Compiling subtle v2.6.1
+   Compiling zmij v1.0.21
+   Compiling serde_json v1.0.149
+   Compiling futures-core v0.3.32
+   Compiling futures-sink v0.3.32
+   Compiling itoa v1.0.17
+   Compiling log v0.4.29
+   Compiling strsim v0.10.0
+   Compiling tinyvec_macros v0.1.1
+   Compiling bytes v1.11.1
+   Compiling regex-syntax v0.8.10
+   Compiling ident_case v1.0.1
+   Compiling tinyvec v1.10.0
+   Compiling cpufeatures v0.2.17
+   Compiling futures-channel v0.3.32
+   Compiling bitflags v2.11.0
+   Compiling autocfg v1.5.0
+   Compiling futures-io v0.3.32
+   Compiling futures-task v0.3.32
+   Compiling smallvec v1.15.1
+   Compiling rustversion v1.0.22
+   Compiling slab v0.4.12
+   Compiling getrandom v0.4.1
+   Compiling generic-array v0.14.7
+   Compiling ahash v0.7.8
+   Compiling rustix v1.1.4
+   Compiling find-msvc-tools v0.1.9
+   Compiling unicode-properties v0.1.4
+   Compiling shlex v1.3.0
+   Compiling parking_lot_core v0.9.12
+   Compiling bytecheck v0.6.12
+   Compiling unicode-bidi v0.3.18
+   Compiling tracing-core v0.1.36
+   Compiling base64 v0.22.1
+   Compiling unicode-normalization v0.1.25
+   Compiling cc v1.2.56
+   Compiling rend v0.4.2
+   Compiling simdutf8 v0.1.5
+   Compiling fallible-iterator v0.2.0
+   Compiling scopeguard v1.2.0
+   Compiling siphasher v1.0.2
+   Compiling byteorder v1.5.0
+   Compiling either v1.15.0
+   Compiling linux-raw-sys v0.12.1
+   Compiling num-traits v0.2.19
+   Compiling rayon-core v1.13.0
+   Compiling crossbeam-epoch v0.9.18
+   Compiling phf_shared v0.13.1
+   Compiling lock_api v0.4.14
+   Compiling lazy_static v1.5.0
+   Compiling anstyle v1.0.13
+   Compiling rustix v0.38.44
+   Compiling clap_lex v1.0.0
+   Compiling fastrand v2.3.0
+   Compiling rkyv v0.7.46
+   Compiling ciborium-io v0.2.2
+   Compiling plotters-backend v0.3.7
+   Compiling stringprep v0.1.5
+   Compiling tracing v0.1.44
+   Compiling crossbeam-deque v0.8.6
+   Compiling phf v0.13.1
+   Compiling clap_builder v4.5.60
+   Compiling tracing-log v0.2.0
+   Compiling syn v2.0.117
+   Compiling sharded-slab v0.1.7
+   Compiling plotters-svg v0.3.7
+   Compiling itertools v0.10.5
+   Compiling crossbeam-queue v0.3.12
+   Compiling crossbeam-channel v0.5.15
+   Compiling thread_local v1.1.9
+   Compiling percent-encoding v2.3.2
+   Compiling linux-raw-sys v0.4.15
+   Compiling same-file v1.0.6
+   Compiling nu-ansi-term v0.50.3
+   Compiling quick-error v1.2.3
+   Compiling minimal-lexical v0.2.1
+   Compiling seahash v4.1.0
+   Compiling bit-vec v0.8.0
+   Compiling cast v0.3.0
+   Compiling walkdir v2.5.0
+   Compiling crossbeam-skiplist v0.1.3
+   Compiling oorandom v11.1.5
+   Compiling getrandom v0.2.17
+   Compiling mio v1.1.1
+   Compiling socket2 v0.6.2
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling whoami v2.1.1
+   Compiling rand_core v0.9.5
+   Compiling digest v0.10.7
+   Compiling rand_core v0.6.4
+   Compiling wait-timeout v0.2.1
+   Compiling rayon v1.11.0
+   Compiling crossbeam v0.8.4
+   Compiling plotters v0.3.7
+   Compiling bit-set v0.8.0
+   Compiling nom v7.1.3
+   Compiling parking_lot v0.12.5
+   Compiling sha2 v0.10.9
+   Compiling hmac v0.12.1
+   Compiling md-5 v0.10.6
+   Compiling hashbrown v0.12.3
+   Compiling rand_xorshift v0.4.0
+   Compiling is-terminal v0.4.17
+   Compiling scoped-tls v1.0.1
+   Compiling ryu v1.0.23
+   Compiling hex v0.4.3
+   Compiling aerostore_verified v0.1.0 (/home/zpconn/code/aerostore/target/verification-planning/final/planning-native/derive_before_key_from_new_pointer/source/aerostore_verified)
+   Compiling unarray v0.1.4
+   Compiling anes v0.1.6
+   Compiling regex-automata v0.4.14
+   Compiling generator v0.8.8
+   Compiling criterion-plot v0.5.0
+   Compiling tempfile v3.26.0
+   Compiling rusty-fork v0.3.1
+   Compiling clap v4.5.60
+   Compiling zerocopy-derive v0.8.40
+   Compiling serde_derive v1.0.228
+   Compiling futures-macro v0.3.32
+   Compiling tokio-macros v2.6.0
+   Compiling async-trait v0.1.89
+   Compiling aerostore_macros v0.1.0 (/home/zpconn/code/aerostore/target/verification-planning/final/planning-native/derive_before_key_from_new_pointer/source/aerostore_macros)
+   Compiling darling_core v0.13.4
+   Compiling ptr_meta_derive v0.1.4
+   Compiling bytecheck_derive v0.6.12
+   Compiling rkyv_derive v0.7.46
+   Compiling tokio v1.49.0
+   Compiling futures-util v0.3.32
+   Compiling matchers v0.2.0
+   Compiling regex v1.12.3
+   Compiling tracing-subscriber v0.3.22
+   Compiling ptr_meta v0.1.4
+   Compiling darling_macro v0.13.4
+   Compiling darling v0.13.4
+   Compiling serde_with_macros v1.5.2
+   Compiling loom v0.7.2
+   Compiling serde_with v1.14.0
+   Compiling tinytemplate v1.2.1
+   Compiling bincode v1.3.3
+   Compiling futures-executor v0.3.32
+   Compiling futures v0.3.32
+   Compiling bollard-stubs v1.42.0-rc.3
+   Compiling ppv-lite86 v0.2.21
+   Compiling half v2.7.1
+   Compiling tokio-util v0.7.18
+   Compiling ciborium-ll v0.2.2
+   Compiling rand_chacha v0.9.0
+   Compiling rand_chacha v0.3.1
+   Compiling ciborium v0.2.2
+   Compiling rand v0.9.2
+   Compiling rand v0.8.5
+   Compiling criterion v0.5.1
+   Compiling postgres-protocol v0.6.10
+   Compiling proptest v1.10.0
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/target/verification-planning/final/planning-native/derive_before_key_from_new_pointer/source/aerostore_core)
+   Compiling postgres-types v0.2.12
+   Compiling tokio-postgres v0.7.16
+   Compiling postgres v0.19.12
+warning: method `commit_with_record_before_publish` is never used
+    --> aerostore_core/src/occ_partitioned.rs:1264:19
+     |
+ 365 | impl<T: Copy + Send + Sync + 'static> OccTable<T> {
+     | ------------------------------------------------- method in this implementation
+...
+1264 |     pub(crate) fn commit_with_record_before_publish<E, F>(
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `aerostore_core` (lib) generated 1 warning
+   Compiling testcontainers v0.15.0
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.25s
+     Running tests/occ_transactional_index.rs (/home/zpconn/code/aerostore/target/verification-planning/final/planning-native/derive_before_key_from_new_pointer/cargo-target/debug/deps/occ_transactional_index-e7acc5b379590bc5)
+
+running 1 test
+test planning_final_writes_preserve_exact_report_after_savepoint_rollback ... 
+thread 'planning_final_writes_preserve_exact_report_after_savepoint_rollback' (63302) panicked at aerostore_core/tests/occ_transactional_index.rs:618:5:
+assertion `left == right` failed: planning-native: only original-to-final key changes may affect postings
+  left: [(I64(10), 0), (I64(20), 1)]
+ right: [(I64(12), 0), (I64(22), 1), (I64(70), 2)]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+
+failures:
+
+failures:
+    planning_final_writes_preserve_exact_report_after_savepoint_rollback
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p aerostore_core --test occ_transactional_index`

@@ -1,0 +1,45 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/storage-slice/skip_native_publication.rs:2427:1
+     |
+2427 | / pub fn native_publication_derives_history<D:publication::PublicationStorage>(driver:&mut D,
+2428 | |     record:&publication::CommitRecord,Ghost(l):Ghost<Layout>,Ghost(birth):Ghost<u64>,
+2429 | |     Ghost(before):Ghost<usize>,Ghost(after):Ghost<usize>,Ghost(tx):Ghost<Transaction>)
+2430 | |     ->(r:Result<(),lookup::Error>)
+     | |_________________________________^
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/storage-slice/skip_native_publication.rs:2437:9
+     |
+2437 | /         r.is_ok() ==> final(driver).image()==publication::publication_prefix(
+2438 | |             seeded(l,birth,record.txid,before,after),write(l),record.txid,3),
+     | |____________________________________________________________________________^ failed this postcondition
+2439 |           old(driver).infallible() ==> r.is_ok(),
+2440 | / {
+2441 | |     proof { seeded_native_preconditions(l,birth,record.txid,before,after); }
+2442 | |     let r=Ok::<(),lookup::Error>(());
+2443 | |     proof {
+...    |
+2448 | |     r
+2449 | | }
+     | |_- at the end of the function body
+
+note: recommendation not met: cannot prove that there exists values that satisfy the condition of the choose expression
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/storage-slice/skip_native_publication.rs:2445:37
+     |
+2445 |         let phase=choose|phase:nat| phase<=3 && driver.image()==publication::publication_prefix(initial,write(l),record.txid,phase);
+     |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/storage-slice/skip_native_publication.rs:2446:9
+     |
+2384 |     requires distinct(l),birth>1,writer>0,old_reader(lookup::snapshot(tx),birth,writer),phase<=3,
+     |                                                                                         -------- failed precondition
+...
+2446 |         publication_derives_snapshot_history(l,birth,record.txid,before,after,tx,phase);
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

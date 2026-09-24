@@ -1,0 +1,20 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/indexed-slice/accept_predicate_conflict.rs:2344:9
+     |
+2344 | /         result.is_ok() ==> result.unwrap().conflict ==
+2345 | |             (result.unwrap().predicate_conflict || lookup::reads_conflict(validation_driver.image(), *final(tx))),
+     | |_________________________________________________________________________________________________________________^ failed this postcondition
+2346 | / {
+2347 | |     let ghost initial_authority = *authority;
+2348 | |     let mut guards = Vec::new();
+2349 | |     let lease = match ownership::acquire_index_bucket(driver, binding, bucket, &guards, Tracked(&mut *authority)) {
+...    |
+2444 | |     Ok(Outcome { rows, conflict, predicate_conflict, row_conflict, captured_stamp, validation_stamp: stamp })
+2445 | | }
+     | |_- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

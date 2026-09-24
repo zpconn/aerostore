@@ -1,0 +1,28 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -900,7 +900,7 @@
+         self.poison_indexes();
+     }
+ 
+-    fn publish_index_stamps(&self, changes: &[IndexChange]) -> Result<(), Error> {
++    fn publish_index_stamps(&self, changes: &[IndexChange], stamp: TxId) -> Result<(), Error> {
+         if changes.is_empty() {
+             return Ok(());
+         }
+@@ -908,7 +908,6 @@
+         // AFTER deregistration. Thus even an older, late-committing writer gets
+         // a stamp newer than every transaction whose snapshot might exclude it.
+         // Bucket latches remain held until all stamps have been published.
+-        let stamp = self.shm.global_txid().fetch_add(1, Ordering::AcqRel);
+         let mut touched = BTreeSet::new();
+         for change in changes {
+             for key in [change.before.as_ref(), change.after.as_ref()]
+@@ -1414,7 +1413,7 @@
+         tx.savepoints.clear();
+         let _ = self.shm.flush_local_recycle_caches();
+         let finish = match self.finish_transaction(tx) {
+-            Ok(()) => self.publish_index_stamps(&index_changes),
++            Ok(()) => self.publish_index_stamps(&index_changes, tx.txid),
+             Err(err) => Err(err),
+         };
+         if let Err(err) = finish {

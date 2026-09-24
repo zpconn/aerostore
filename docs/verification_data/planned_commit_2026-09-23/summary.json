@@ -1,0 +1,57 @@
+{
+  "arbitrary_native_history_refinement_proved": false,
+  "core_regression_tests": 266,
+  "formal_semantic_equivalence_proved": false,
+  "full_P1_complete": false,
+  "gate_checks": 71,
+  "input_files": 488,
+  "lean_roots": 34,
+  "lean_semantic_controls": 20,
+  "native_allocator_ownership_refinement_proved": false,
+  "native_campaigns": {
+    "p1-native": {
+      "positive_selections": 9,
+      "semantic_controls": 7
+    },
+    "planning-native": {
+      "positive_selections": 4,
+      "semantic_controls": 11
+    },
+    "retention-native": {
+      "positive_selections": 5,
+      "semantic_controls": 8
+    }
+  },
+  "new_campaigns": {
+    "planned-commit": {
+      "roots": 5,
+      "semantic_mutations": 12
+    },
+    "write-admission": {
+      "roots": 4,
+      "semantic_mutations": 11
+    },
+    "write-plan": {
+      "roots": 7,
+      "semantic_mutations": 13
+    }
+  },
+  "p0_complete": true,
+  "parent_commit": "f82788073224f833873f57c25243a553b4c4d511",
+  "passed": true,
+  "performance_claim": "No runtime change or new timing claim",
+  "production_byte_identical": true,
+  "production_runtime_changed": false,
+  "promotion_eligible": false,
+  "runtime_inputs_checked": 118,
+  "scope": "Conditional native final-write selection, key extraction, guarded write-base admission, one-row changed-key replacement publication and completion; guard acquisition and full transaction history join remain open",
+  "tla_cases": 136,
+  "tla_outcomes": {
+    "completed_finite_search": 58,
+    "intended_counterexample": 40,
+    "intended_liveness_counterexample": 3,
+    "reachable_witness": 35
+  },
+  "weak_memory_refinement_proved": false,
+  "whole_engine_verified": false
+}

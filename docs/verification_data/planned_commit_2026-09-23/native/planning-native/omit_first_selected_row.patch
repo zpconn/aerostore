@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -1724,7 +1724,7 @@
+         for (idx, write) in tx.write_set.iter().enumerate() {
+             by_row.insert(write.row_id, idx);
+         }
+-        by_row.into_values().collect()
++        by_row.into_values().skip(1).collect()
+     }
+ 
+     fn recycle_non_final_writes(

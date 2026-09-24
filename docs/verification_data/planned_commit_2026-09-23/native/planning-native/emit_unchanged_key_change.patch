@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -722,7 +722,7 @@
+             for (binding, bound) in self.indexes.iter().enumerate() {
+                 let before = (bound.key)(before);
+                 let after = (bound.key)(after);
+-                if before == after {
++                if false {
+                     continue;
+                 }
+                 if let Some(key) = &before {

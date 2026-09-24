@@ -6,31 +6,41 @@ This is the full verification roadmap. Its first executable component pilot now 
 
 The program has two goals: establish the database's correctness, and create a verified environment for aggressive performance experiments. Each candidate implementation must preserve a stable public contract and carry evidence tied to its exact source and build configuration. Section 13 defines that experimentation workflow.
 
-Current publication/completion checkpoint, after `4619b8f`: **P0 is complete for
+Current planning/admission checkpoint, after `f827880`: **P0 is complete for
 the declared target.** The [reviewed API audit](../verification/contracts/p0_audit.md)
 defines success/error contracts for 425 public declarations across 32 modules,
 83 contract families and 31 lock relationships. Its source-bound checker detects
 drift; this is contract coverage, not a proof that every caller obligation is
 enforced or that the native lock graph is complete.
 
-The [ordinary commit data slice](../verification/commit_data/README.md) now
-connects actual destination preparation, source removal and ordinary row
-publication. The [completion slice](../verification/commit_completion/README.md)
-joins that result to actual registration consumption, deregistration and shared
-clock stamping. Success establishes the selected row/posting relation and exact
-returned write report; errors preserve old data or poison it. Deterministic
-native scenarios exercise conflicting empty-query creation, key movement,
-rejected private writes and successful fresh retries. This checkpoint changes
-proofs, audit tools and tests without changing production execution paths.
+The [native planning proof](../verification/write_plan/README.md) derives complete
+last-write selection for arbitrary pending write sets, plus exact key extraction
+and prevalidation for one selected row/index. The
+[base validator](../verification/write_admission/README.md) derives current-head
+equality and zero base deletion ID from the actual native checks. The
+[joined slice](../verification/planned_commit/README.md) connects these results
+to ordinary row/index publication, exact returned write reports, deregistration
+and shared-clock stamping on the same row image. It accepts repeated writes to
+one row with a changed key and a nonzero physical base, including preseeded
+logical vacancy. Errors preserve old data or poison it; early planning/validation
+errors describe the interval before native caller cleanup. Native regressions
+cover repeated writes, savepoint rollback, unchanged keys, stale-base rejection
+before any multirow publication, and fresh retries. Production paths are unchanged.
 
-**P1 remains incomplete.** These one-write/one-index proofs begin from an
-admitted guarded plan. Next, prove that native plan construction, validation and
-guard handoff establish that entry state; compose error cleanup and the reader's
-capture/validation with writer completion. Physical identity between projected
+**P1 remains incomplete.** The joined proof operates on an acquired image. A
+separate immutable-value frame lemma preserves extraction across head/deletion
+changes, but does not execute the native guard-acquisition transition. Next,
+connect that handoff and the remaining predicate/read/owner checks, then compose
+native error cleanup and reader capture/validation with writer completion.
+Physical identity between projected
 views and acquired-state lifecycle framing remain enumerated assumptions. P1
 permits explicit low-level primitive/storage contracts; its exit does not
 require completing P2 arbitrary-history or P3 pointer-ownership proofs first.
-The [publication/completion evidence archive](verification_data/commit_completion_2026-09-23/README.md)
+The [planning/admission evidence archive](verification_data/planned_commit_2026-09-23/README.md)
+retains the passing 71-check pilot against 488 stable inputs, 16 new proof roots
+and 36 semantic controls, native planning regressions, API audit and exact
+runtime byte comparison.
+The preceding [publication/completion archive](verification_data/commit_completion_2026-09-23/README.md)
 retains the passing 63-check pilot, 19 new proof roots and 31 semantic controls,
 native scenario evidence, API audit and exact runtime byte comparison.
 

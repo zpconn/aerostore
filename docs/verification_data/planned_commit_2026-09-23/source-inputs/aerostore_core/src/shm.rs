@@ -1,0 +1,1378 @@
+//! Shared arena storage with per-class, process-shared recycling pools.
+//!
+//! Recycled offsets remain owned by their arena. Thread-local caches previously
+//! lost blocks across arenas, mixed sizes, and thread exits, and could duplicate
+//! ownership after reset or fork. Class locks protect in-band metadata together
+//! with pool links, preventing a stale pop from resurrecting an allocated slot.
+
+use std::fmt;
+use std::marker::PhantomData;
+use std::mem::{align_of, size_of};
+use std::ptr::{self, NonNull};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicU64, Ordering};
+
+use crate::shm_lock::ShmMutex;
+
+use crate::procarray::{
+    ProcArray, ProcArrayError, ProcArrayRegistration, ProcSnapshot, PROCARRAY_SLOTS,
+};
+
+const SHM_HEADER_MAGIC: u32 = 0xAEB0_B007;
+const SHM_LAYOUT_VERSION: u32 = 5;
+const SHM_HEADER_ALIGN: u32 = 64;
+pub(crate) const OCC_PARTITION_LOCKS: usize = 1024;
+const FREE_LIST_NODE_MAGIC: u32 = 0xAEB0_F1E5;
+
+pub const ARENA_CLASS_COUNT: usize = 9;
+
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ArenaClass {
+    General = 0,
+    RowVersion = 1,
+    SkipNode = 2,
+    SkipPosting = 3,
+    SkipTower = 4,
+    Spill32 = 5,
+    Spill64 = 6,
+    Spill128 = 7,
+    Spill256 = 8,
+}
+
+impl ArenaClass {
+    #[inline]
+    pub const fn as_index(self) -> usize {
+        self as usize
+    }
+
+    #[inline]
+    const fn extended_index(self) -> Option<usize> {
+        let idx = self.as_index();
+        if idx == 0 {
+            None
+        } else {
+            Some(idx - 1)
+        }
+    }
+}
+
+const EXTENDED_ARENA_CLASS_COUNT: usize = ARENA_CLASS_COUNT - 1;
+
+#[repr(C, align(64))]
+pub(crate) struct OccPartitionLock {
+    state: AtomicBool,
+}
+
+impl OccPartitionLock {
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            state: AtomicBool::new(false),
+        }
+    }
+
+    #[inline]
+    pub fn try_lock(&self) -> bool {
+        self.state
+            .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+            .is_ok()
+    }
+
+    #[inline]
+    pub fn unlock(&self) {
+        self.state.store(false, Ordering::Release);
+    }
+}
+
+#[derive(Debug)]
+pub enum ShmError {
+    InvalidSize(usize),
+    SizeExceedsRelPtrLimit(usize),
+    MmapFailed(std::io::Error),
+}
+
+impl fmt::Display for ShmError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ShmError::InvalidSize(size) => write!(f, "shared memory size {} is invalid", size),
+            ShmError::SizeExceedsRelPtrLimit(size) => write!(
+                f,
+                "shared memory size {} exceeds RelPtr<u32> addressable range",
+                size
+            ),
+            ShmError::MmapFailed(err) => write!(f, "mmap failed: {}", err),
+        }
+    }
+}
+
+impl std::error::Error for ShmError {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShmAllocError {
+    ZeroSizedType,
+    SizeOverflow,
+    OutOfMemory { requested: usize, remaining: usize },
+}
+
+impl fmt::Display for ShmAllocError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ShmAllocError::ZeroSizedType => {
+                write!(f, "zero-sized types are not supported in ShmArena")
+            }
+            ShmAllocError::SizeOverflow => write!(f, "allocation size overflow"),
+            ShmAllocError::OutOfMemory {
+                requested,
+                remaining,
+            } => write!(
+                f,
+                "shared arena out of memory (requested {}, remaining {})",
+                requested, remaining
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ShmAllocError {}
+
+#[derive(Clone, Copy)]
+pub struct MmapBase<'a> {
+    ptr: NonNull<u8>,
+    len: usize,
+    _marker: PhantomData<&'a [u8]>,
+}
+
+impl<'a> MmapBase<'a> {
+    #[inline]
+    pub fn as_ptr(self) -> *mut u8 {
+        self.ptr.as_ptr()
+    }
+
+    #[inline]
+    pub fn len(self) -> usize {
+        self.len
+    }
+}
+
+#[repr(transparent)]
+pub struct RelPtr<T> {
+    offset: AtomicU32,
+    _marker: PhantomData<fn() -> T>,
+}
+
+impl<T> RelPtr<T> {
+    #[inline]
+    pub const fn null() -> Self {
+        Self {
+            offset: AtomicU32::new(0),
+            _marker: PhantomData,
+        }
+    }
+
+    #[inline]
+    pub fn from_offset(offset: u32) -> Self {
+        Self {
+            offset: AtomicU32::new(offset),
+            _marker: PhantomData,
+        }
+    }
+
+    #[inline]
+    pub fn is_null(&self, order: Ordering) -> bool {
+        self.offset.load(order) == 0
+    }
+
+    #[inline]
+    pub fn load(&self, order: Ordering) -> u32 {
+        self.offset.load(order)
+    }
+
+    #[inline]
+    pub fn store(&self, offset: u32, order: Ordering) {
+        self.offset.store(offset, order);
+    }
+
+    #[inline]
+    pub fn compare_exchange(
+        &self,
+        current: u32,
+        new: u32,
+        success: Ordering,
+        failure: Ordering,
+    ) -> Result<u32, u32> {
+        self.offset.compare_exchange(current, new, success, failure)
+    }
+
+    #[inline]
+    pub fn swap(&self, offset: u32, order: Ordering) -> u32 {
+        self.offset.swap(offset, order)
+    }
+
+    #[inline]
+    pub fn as_ref<'a>(&self, mmap_base: MmapBase<'a>) -> Option<&'a T> {
+        let ptr = self.resolve_ptr(mmap_base, Ordering::Acquire)?;
+        // SAFETY:
+        // 1) `resolve_ptr` validates offset bounds and alignment against this mapped region.
+        // 2) `mmap_base` lifetime ties the returned reference to the mapped segment lifetime.
+        Some(unsafe { ptr.as_ref() })
+    }
+
+    fn resolve_ptr<'a>(&self, mmap_base: MmapBase<'a>, order: Ordering) -> Option<NonNull<T>> {
+        let offset = self.offset.load(order);
+        if offset == 0 {
+            return None;
+        }
+
+        let size = size_of::<T>();
+        if size == 0 {
+            return None;
+        }
+
+        let offset_usize = offset as usize;
+        let end = offset_usize.checked_add(size)?;
+        if end > mmap_base.len {
+            return None;
+        }
+
+        let addr = (mmap_base.ptr.as_ptr() as usize).checked_add(offset_usize)?;
+        if addr % align_of::<T>() != 0 {
+            return None;
+        }
+
+        NonNull::new(addr as *mut T)
+    }
+}
+
+impl<T> Clone for RelPtr<T> {
+    fn clone(&self) -> Self {
+        Self::from_offset(self.load(Ordering::Acquire))
+    }
+}
+
+impl<T> Default for RelPtr<T> {
+    fn default() -> Self {
+        Self::null()
+    }
+}
+
+impl<T> fmt::Debug for RelPtr<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RelPtr")
+            .field("offset", &self.load(Ordering::Relaxed))
+            .finish()
+    }
+}
+
+#[repr(C)]
+struct SharedFreeListNode {
+    next: AtomicU32,
+    block_size: AtomicU32,
+    block_align: AtomicU32,
+    class_id: AtomicU32,
+    magic: AtomicU32,
+}
+
+impl SharedFreeListNode {
+    #[inline]
+    fn initialize(&self, next: u32, block_size: u32, block_align: u32, class_id: u32) {
+        self.next.store(next, Ordering::Release);
+        self.block_size.store(block_size, Ordering::Release);
+        self.block_align.store(block_align, Ordering::Release);
+        self.class_id.store(class_id, Ordering::Release);
+        self.magic.store(FREE_LIST_NODE_MAGIC, Ordering::Release);
+    }
+}
+
+#[repr(C)]
+struct ShmHeader {
+    magic: u32,
+    layout_version: u32,
+    capacity: u32,
+    data_start: u32,
+    clean_shutdown: AtomicBool,
+    boot_layout_offset: AtomicU32,
+    next_txid: AtomicU64,
+    proc_array: ProcArray,
+    occ_partition_locks: [OccPartitionLock; OCC_PARTITION_LOCKS],
+    // Protect both pool links and in-band metadata until ownership transfers.
+    free_list_locks: [ShmMutex; ARENA_CLASS_COUNT],
+    free_list_head: AtomicU32,
+    free_list_class_heads: [AtomicU32; EXTENDED_ARENA_CLASS_COUNT],
+    free_list_pushes: AtomicU64,
+    free_list_pops: AtomicU64,
+    free_list_pop_misses: AtomicU64,
+    free_list_class_pushes: [AtomicU64; EXTENDED_ARENA_CLASS_COUNT],
+    free_list_class_pops: [AtomicU64; EXTENDED_ARENA_CLASS_COUNT],
+    free_list_class_pop_misses: [AtomicU64; EXTENDED_ARENA_CLASS_COUNT],
+    local_cache_hits: [AtomicU64; ARENA_CLASS_COUNT],
+    local_cache_misses: [AtomicU64; ARENA_CLASS_COUNT],
+    local_cache_flushes: [AtomicU64; ARENA_CLASS_COUNT],
+    vacuum_daemon_pid: AtomicI32,
+    fresh_allocation_bytes: [AtomicU64; ARENA_CLASS_COUNT],
+    head: AtomicU32,
+}
+
+pub struct ShmArena {
+    base: NonNull<u8>,
+    len: usize,
+    header: NonNull<ShmHeader>,
+}
+
+unsafe impl Send for ShmArena {}
+unsafe impl Sync for ShmArena {}
+
+impl ShmArena {
+    pub fn new(byte_len: usize) -> Result<Self, ShmError> {
+        Self::validate_size(byte_len)?;
+
+        // SAFETY:
+        // - `mmap` is called with MAP_SHARED to ensure visibility across forked processes.
+        // - `MAP_ANONYMOUS` gives us a process-shared anonymous segment without filesystem state.
+        let map_ptr = unsafe {
+            libc::mmap(
+                ptr::null_mut(),
+                byte_len,
+                libc::PROT_READ | libc::PROT_WRITE,
+                libc::MAP_SHARED | libc::MAP_ANONYMOUS,
+                -1,
+                0,
+            )
+        };
+
+        if map_ptr == libc::MAP_FAILED {
+            return Err(ShmError::MmapFailed(std::io::Error::last_os_error()));
+        }
+
+        let base = NonNull::new(map_ptr.cast::<u8>()).ok_or(ShmError::MmapFailed(
+            std::io::Error::new(std::io::ErrorKind::Other, "mmap returned null"),
+        ))?;
+        // SAFETY:
+        // `mmap` returned a writable region of length `byte_len`.
+        unsafe { Self::from_mapped_region(base, byte_len, true) }
+    }
+
+    /// # Safety
+    /// Caller must guarantee `base..base+byte_len` points to a valid writable mapping.
+    pub(crate) unsafe fn from_mapped_region(
+        base: NonNull<u8>,
+        byte_len: usize,
+        initialize_header: bool,
+    ) -> Result<Self, ShmError> {
+        Self::validate_size(byte_len)?;
+        let arena = Self {
+            base,
+            len: byte_len,
+            header: base.cast::<ShmHeader>(),
+        };
+        if initialize_header {
+            arena.reinitialize_header()?;
+        }
+        Ok(arena)
+    }
+
+    pub fn reinitialize_header(&self) -> Result<(), ShmError> {
+        let data_start = Self::validate_size(self.len)?;
+        // SAFETY:
+        // This writes allocator metadata at offset 0 of the mapped region.
+        unsafe {
+            self.header.as_ptr().write(ShmHeader {
+                magic: SHM_HEADER_MAGIC,
+                layout_version: SHM_LAYOUT_VERSION,
+                capacity: self.len as u32,
+                data_start,
+                clean_shutdown: AtomicBool::new(true),
+                boot_layout_offset: AtomicU32::new(0),
+                next_txid: AtomicU64::new(1),
+                proc_array: ProcArray::new(),
+                occ_partition_locks: std::array::from_fn(|_| OccPartitionLock::new()),
+                free_list_locks: std::array::from_fn(|_| ShmMutex::new()),
+                free_list_head: AtomicU32::new(0),
+                free_list_class_heads: std::array::from_fn(|_| AtomicU32::new(0)),
+                free_list_pushes: AtomicU64::new(0),
+                free_list_pops: AtomicU64::new(0),
+                free_list_pop_misses: AtomicU64::new(0),
+                free_list_class_pushes: std::array::from_fn(|_| AtomicU64::new(0)),
+                free_list_class_pops: std::array::from_fn(|_| AtomicU64::new(0)),
+                free_list_class_pop_misses: std::array::from_fn(|_| AtomicU64::new(0)),
+                local_cache_hits: std::array::from_fn(|_| AtomicU64::new(0)),
+                local_cache_misses: std::array::from_fn(|_| AtomicU64::new(0)),
+                local_cache_flushes: std::array::from_fn(|_| AtomicU64::new(0)),
+                vacuum_daemon_pid: AtomicI32::new(0),
+                fresh_allocation_bytes: std::array::from_fn(|_| AtomicU64::new(0)),
+                head: AtomicU32::new(data_start),
+            });
+        }
+        Ok(())
+    }
+
+    fn validate_size(byte_len: usize) -> Result<u32, ShmError> {
+        if byte_len == 0 {
+            return Err(ShmError::InvalidSize(byte_len));
+        }
+        if byte_len > u32::MAX as usize {
+            return Err(ShmError::SizeExceedsRelPtrLimit(byte_len));
+        }
+        let data_start = align_up(size_of::<ShmHeader>() as u32, SHM_HEADER_ALIGN)
+            .ok_or(ShmError::InvalidSize(byte_len))?;
+        if data_start as usize >= byte_len {
+            return Err(ShmError::InvalidSize(byte_len));
+        }
+        Ok(data_start)
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    #[inline]
+    pub fn mmap_base(&self) -> MmapBase<'_> {
+        MmapBase {
+            ptr: self.base,
+            len: self.len,
+            _marker: PhantomData,
+        }
+    }
+
+    #[inline]
+    pub fn chunked_arena(&self) -> ChunkedArena<'_> {
+        let header = self
+            .header_ref()
+            .expect("shared memory header was unexpectedly invalid");
+        ChunkedArena {
+            mmap_base: self.mmap_base(),
+            header,
+        }
+    }
+
+    #[inline]
+    pub fn flush_local_recycle_caches(&self) -> Result<(), ShmAllocError> {
+        self.chunked_arena().flush_local_recycle_caches()
+    }
+
+    #[inline]
+    fn header_ref(&self) -> Option<&ShmHeader> {
+        // SAFETY:
+        // `header` points into the current mapping. We verify the magic before use.
+        let header = unsafe { self.header.as_ref() };
+        if header.magic != SHM_HEADER_MAGIC {
+            None
+        } else if header.layout_version != SHM_LAYOUT_VERSION {
+            None
+        } else if header.capacity as usize != self.len {
+            None
+        } else if header.data_start
+            != align_up(size_of::<ShmHeader>() as u32, SHM_HEADER_ALIGN).unwrap_or(0)
+        {
+            None
+        } else if header.data_start as usize >= self.len {
+            None
+        } else {
+            Some(header)
+        }
+    }
+
+    #[inline]
+    pub fn is_header_valid(&self) -> bool {
+        self.header_ref().is_some()
+    }
+
+    #[inline]
+    pub fn proc_array(&self) -> &ProcArray {
+        &self
+            .header_ref()
+            .expect("shared memory header was unexpectedly invalid")
+            .proc_array
+    }
+
+    #[inline]
+    pub fn global_txid(&self) -> &AtomicU64 {
+        &self
+            .header_ref()
+            .expect("shared memory header was unexpectedly invalid")
+            .next_txid
+    }
+
+    #[inline]
+    pub(crate) fn occ_partition_locks(&self) -> &[OccPartitionLock; OCC_PARTITION_LOCKS] {
+        &self
+            .header_ref()
+            .expect("shared memory header was unexpectedly invalid")
+            .occ_partition_locks
+    }
+
+    #[inline]
+    pub fn begin_transaction(&self) -> Result<ProcArrayRegistration, ProcArrayError> {
+        self.proc_array().begin_transaction(self.global_txid())
+    }
+
+    #[inline]
+    pub fn end_transaction(
+        &self,
+        registration: ProcArrayRegistration,
+    ) -> Result<(), ProcArrayError> {
+        self.proc_array().end_transaction(registration)
+    }
+
+    #[inline]
+    pub fn create_snapshot(&self) -> ProcSnapshot {
+        self.proc_array().create_snapshot(self.global_txid())
+    }
+
+    #[inline]
+    pub fn create_transaction_snapshot(
+        &self,
+        registration: ProcArrayRegistration,
+    ) -> Result<ProcSnapshot, ProcArrayError> {
+        self.proc_array()
+            .create_transaction_snapshot(registration, self.global_txid())
+    }
+
+    #[inline]
+    pub fn max_workers(&self) -> usize {
+        PROCARRAY_SLOTS
+    }
+
+    #[inline]
+    pub fn set_clean_shutdown_flag(&self, value: bool) {
+        if let Some(header) = self.header_ref() {
+            header.clean_shutdown.store(value, Ordering::Release);
+        }
+    }
+
+    #[inline]
+    pub fn clean_shutdown_flag(&self) -> bool {
+        self.header_ref()
+            .map(|header| header.clean_shutdown.load(Ordering::Acquire))
+            .unwrap_or(false)
+    }
+
+    #[inline]
+    pub fn boot_layout_offset(&self) -> u32 {
+        self.header_ref()
+            .map(|header| header.boot_layout_offset.load(Ordering::Acquire))
+            .unwrap_or(0)
+    }
+
+    #[inline]
+    pub fn set_boot_layout_offset(&self, offset: u32) {
+        if let Some(header) = self.header_ref() {
+            header.boot_layout_offset.store(offset, Ordering::Release);
+        }
+    }
+
+    #[inline]
+    pub fn free_list_pushes(&self) -> u64 {
+        self.header_ref()
+            .map(|header| header.free_list_pushes.load(Ordering::Acquire))
+            .unwrap_or(0)
+    }
+
+    #[inline]
+    pub fn free_list_pops(&self) -> u64 {
+        self.header_ref()
+            .map(|header| header.free_list_pops.load(Ordering::Acquire))
+            .unwrap_or(0)
+    }
+
+    #[inline]
+    pub fn free_list_pop_misses(&self) -> u64 {
+        self.header_ref()
+            .map(|header| header.free_list_pop_misses.load(Ordering::Acquire))
+            .unwrap_or(0)
+    }
+
+    /// Successful bump-allocation bytes by `ArenaClass::as_index()`.
+    /// Reused blocks and failed attempts do not increment these counters.
+    pub fn fresh_allocation_bytes(&self) -> [u64; ARENA_CLASS_COUNT] {
+        self.header_ref()
+            .map(|header| {
+                std::array::from_fn(|i| header.fresh_allocation_bytes[i].load(Ordering::Relaxed))
+            })
+            .unwrap_or([0; ARENA_CLASS_COUNT])
+    }
+
+    #[inline]
+    pub fn free_list_head_offset(&self) -> u32 {
+        self.header_ref()
+            .map(|header| header.free_list_head.load(Ordering::Acquire))
+            .unwrap_or(0)
+    }
+
+    /// Bounded depth estimate of the shared general-class free list.
+    ///
+    /// The estimate is bounded by `max_nodes` to keep sampling predictable.
+    /// Returns `(depth, truncated)` where `truncated=true` means traversal hit
+    /// `max_nodes` before reaching the end of the list.
+    #[inline]
+    pub fn free_list_depth_estimate(&self, max_nodes: usize) -> (u64, bool) {
+        let Some(header) = self.header_ref() else {
+            return (0, false);
+        };
+        let _guard = header.free_list_locks[ArenaClass::General.as_index()].lock();
+        if max_nodes == 0 {
+            return (0, header.free_list_head.load(Ordering::Acquire) != 0);
+        }
+
+        let mut depth = 0_u64;
+        let mut current = header.free_list_head.load(Ordering::Acquire);
+        let limit = max_nodes as u64;
+
+        while current != 0 && depth < limit {
+            let Some(node) = self.free_list_node_ref(current) else {
+                break;
+            };
+            if node.magic.load(Ordering::Acquire) != FREE_LIST_NODE_MAGIC {
+                break;
+            }
+            current = node.next.load(Ordering::Acquire);
+            depth = depth.saturating_add(1);
+        }
+
+        (depth, current != 0 && depth >= limit)
+    }
+
+    #[inline]
+    pub fn vacuum_daemon_pid(&self) -> i32 {
+        self.header_ref()
+            .map(|header| header.vacuum_daemon_pid.load(Ordering::Acquire))
+            .unwrap_or(0)
+    }
+
+    #[inline]
+    pub fn compare_exchange_vacuum_daemon_pid(&self, current: i32, new: i32) -> Result<i32, i32> {
+        let Some(header) = self.header_ref() else {
+            return Err(current);
+        };
+        header
+            .vacuum_daemon_pid
+            .compare_exchange(current, new, Ordering::AcqRel, Ordering::Acquire)
+    }
+
+    #[inline]
+    pub fn set_vacuum_daemon_pid(&self, pid: i32) {
+        if let Some(header) = self.header_ref() {
+            header.vacuum_daemon_pid.store(pid, Ordering::Release);
+        }
+    }
+
+    fn free_list_node_ref(&self, offset: u32) -> Option<&SharedFreeListNode> {
+        let start = offset as usize;
+        let end = start.checked_add(size_of::<SharedFreeListNode>())?;
+        if end > self.len {
+            return None;
+        }
+        let addr = (self.base.as_ptr() as usize).checked_add(start)?;
+        if addr % align_of::<SharedFreeListNode>() != 0 {
+            return None;
+        }
+        // SAFETY:
+        // Bounds and alignment are validated above against this mapped region.
+        Some(unsafe { &*(addr as *const SharedFreeListNode) })
+    }
+}
+
+impl Drop for ShmArena {
+    fn drop(&mut self) {
+        if let Some(header) = self.header_ref() {
+            header.clean_shutdown.store(true, Ordering::Release);
+        }
+        // SAFETY:
+        // `self.base` and `self.len` originate from successful `mmap`.
+        let rc = unsafe { libc::munmap(self.base.as_ptr().cast(), self.len) };
+        debug_assert_eq!(rc, 0, "munmap failed: {}", std::io::Error::last_os_error());
+    }
+}
+
+pub struct ChunkedArena<'a> {
+    mmap_base: MmapBase<'a>,
+    header: &'a ShmHeader,
+}
+
+impl<'a> ChunkedArena<'a> {
+    #[inline]
+    pub fn head_offset(&self) -> u32 {
+        self.header.head.load(Ordering::Acquire)
+    }
+
+    #[inline]
+    pub fn remaining_bytes(&self) -> usize {
+        self.header.capacity.saturating_sub(self.head_offset()) as usize
+    }
+
+    pub fn alloc_raw(&self, size: usize, align: usize) -> Result<u32, ShmAllocError> {
+        self.alloc_raw_in_class(size, align, ArenaClass::General)
+    }
+
+    pub fn alloc_raw_in_class(
+        &self,
+        size: usize,
+        align: usize,
+        class: ArenaClass,
+    ) -> Result<u32, ShmAllocError> {
+        if size == 0 {
+            return Err(ShmAllocError::ZeroSizedType);
+        }
+        if align == 0 || !align.is_power_of_two() {
+            return Err(ShmAllocError::SizeOverflow);
+        }
+
+        let size_u32 = u32::try_from(size).map_err(|_| ShmAllocError::SizeOverflow)?;
+        let align_u32 = u32::try_from(align).map_err(|_| ShmAllocError::SizeOverflow)?;
+
+        if let Some(offset) = self.try_pop_recycled_in_class(size, align, class)? {
+            return Ok(offset);
+        }
+
+        let size = size_u32;
+        let align = align_u32;
+        let mut spins = 0_u32;
+
+        loop {
+            let head = self.header.head.load(Ordering::Acquire);
+            let start = align_up(head, align).ok_or(ShmAllocError::SizeOverflow)?;
+            let end = start.checked_add(size).ok_or(ShmAllocError::SizeOverflow)?;
+
+            if end > self.header.capacity {
+                let remaining = self.header.capacity.saturating_sub(head) as usize;
+                return Err(ShmAllocError::OutOfMemory {
+                    requested: size as usize,
+                    remaining,
+                });
+            }
+
+            if self
+                .header
+                .head
+                .compare_exchange(head, end, Ordering::AcqRel, Ordering::Acquire)
+                .is_ok()
+            {
+                self.header.fresh_allocation_bytes[class.as_index()]
+                    .fetch_add(size as u64, Ordering::Relaxed);
+                return Ok(start);
+            }
+
+            spins = spins.wrapping_add(1);
+            if spins & 0x3f == 0 {
+                std::thread::yield_now();
+            }
+            if spins & 0x3ff == 0 {
+                std::thread::sleep(std::time::Duration::from_micros(25));
+            }
+            std::hint::spin_loop();
+        }
+    }
+
+    pub fn alloc<T>(&self, value: T) -> Result<RelPtr<T>, ShmAllocError> {
+        self.alloc_in_class(value, ArenaClass::General)
+    }
+
+    pub fn alloc_in_class<T>(
+        &self,
+        value: T,
+        class: ArenaClass,
+    ) -> Result<RelPtr<T>, ShmAllocError> {
+        if size_of::<T>() == 0 {
+            return Err(ShmAllocError::ZeroSizedType);
+        }
+
+        let start = self.alloc_raw_in_class(size_of::<T>(), align_of::<T>(), class)?;
+        let addr = (self.mmap_base.as_ptr() as usize)
+            .checked_add(start as usize)
+            .ok_or(ShmAllocError::SizeOverflow)?;
+        let ptr = addr as *mut T;
+
+        // SAFETY:
+        // `ptr` points into a unique range reserved by `alloc_raw`.
+        unsafe {
+            ptr.write(value);
+        }
+
+        Ok(RelPtr::from_offset(start))
+    }
+
+    pub fn recycle_raw(&self, offset: u32, size: usize, align: usize) -> Result<(), ShmAllocError> {
+        self.recycle_raw_in_class(offset, size, align, ArenaClass::General)
+    }
+
+    pub fn recycle_raw_in_class(
+        &self,
+        offset: u32,
+        size: usize,
+        align: usize,
+        class: ArenaClass,
+    ) -> Result<(), ShmAllocError> {
+        if offset == 0 || size == 0 {
+            return Ok(());
+        }
+        if align == 0 || !align.is_power_of_two() {
+            return Err(ShmAllocError::SizeOverflow);
+        }
+
+        let size_u32 = u32::try_from(size).map_err(|_| ShmAllocError::SizeOverflow)?;
+        let align_u32 = u32::try_from(align).map_err(|_| ShmAllocError::SizeOverflow)?;
+        let end = (offset as usize)
+            .checked_add(size)
+            .ok_or(ShmAllocError::SizeOverflow)?;
+        if end > self.header.capacity as usize {
+            return Err(ShmAllocError::SizeOverflow);
+        }
+        if size < size_of::<SharedFreeListNode>()
+            || (offset as usize) % align_of::<SharedFreeListNode>() != 0
+        {
+            return Ok(());
+        }
+
+        self.push_shared_recycled(offset, size_u32, align_u32, class)
+    }
+
+    /// Compatibility hook: recycled blocks are immediately shared. Keeping no
+    /// process/thread-local offset ownership avoids cross-arena, remap, fork, and
+    /// thread-exit leaks; callers no longer need an explicit cache flush.
+    pub fn flush_local_recycle_caches(&self) -> Result<(), ShmAllocError> {
+        Ok(())
+    }
+
+    fn push_shared_recycled(
+        &self,
+        offset: u32,
+        size_u32: u32,
+        align_u32: u32,
+        class: ArenaClass,
+    ) -> Result<(), ShmAllocError> {
+        let _guard = self.header.free_list_locks[class.as_index()].lock();
+        let head_slot = self.class_head_slot(class);
+        let node = self
+            .free_list_node_ref(offset)
+            .ok_or(ShmAllocError::SizeOverflow)?;
+        node.initialize(
+            head_slot.load(Ordering::Relaxed),
+            size_u32,
+            align_u32,
+            class.as_index() as u32,
+        );
+        head_slot.store(offset, Ordering::Release);
+        self.bump_shared_push(class);
+        Ok(())
+    }
+
+    fn try_pop_recycled_in_class(
+        &self,
+        size: usize,
+        align: usize,
+        class: ArenaClass,
+    ) -> Result<Option<u32>, ShmAllocError> {
+        let size_u32 = u32::try_from(size).map_err(|_| ShmAllocError::SizeOverflow)?;
+        let align_u32 = u32::try_from(align).map_err(|_| ShmAllocError::SizeOverflow)?;
+        let _guard = self.header.free_list_locks[class.as_index()].lock();
+        let head_slot = self.class_head_slot(class);
+        let mut current = head_slot.load(Ordering::Acquire);
+        let mut previous: Option<&SharedFreeListNode> = None;
+        // A class can contain different row/key sizes. Leave nonmatching blocks
+        // owned by the pool and search for an exact size/alignment match.
+        while current != 0 {
+            let node = self
+                .free_list_node_ref(current)
+                .ok_or(ShmAllocError::SizeOverflow)?;
+            if node.magic.load(Ordering::Acquire) != FREE_LIST_NODE_MAGIC
+                || node.class_id.load(Ordering::Acquire) != class.as_index() as u32
+            {
+                return Err(ShmAllocError::SizeOverflow);
+            }
+            let next = node.next.load(Ordering::Acquire);
+            if node.block_size.load(Ordering::Acquire) == size_u32
+                && node.block_align.load(Ordering::Acquire) == align_u32
+            {
+                #[cfg(test)]
+                tests::pause_free_pop_if_armed();
+                match previous {
+                    Some(previous) => previous.next.store(next, Ordering::Release),
+                    None => head_slot.store(next, Ordering::Release),
+                }
+                self.bump_shared_pop(class);
+                return Ok(Some(current));
+            }
+            previous = Some(node);
+            current = next;
+        }
+        self.bump_shared_pop_miss(class);
+        Ok(None)
+    }
+
+    #[inline]
+    fn class_head_slot(&self, class: ArenaClass) -> &AtomicU32 {
+        if let Some(idx) = class.extended_index() {
+            &self.header.free_list_class_heads[idx]
+        } else {
+            &self.header.free_list_head
+        }
+    }
+
+    #[inline]
+    fn bump_shared_push(&self, class: ArenaClass) {
+        self.header.free_list_pushes.fetch_add(1, Ordering::AcqRel);
+        if let Some(idx) = class.extended_index() {
+            self.header.free_list_class_pushes[idx].fetch_add(1, Ordering::AcqRel);
+        }
+    }
+
+    #[inline]
+    fn bump_shared_pop(&self, class: ArenaClass) {
+        self.header.free_list_pops.fetch_add(1, Ordering::AcqRel);
+        if let Some(idx) = class.extended_index() {
+            self.header.free_list_class_pops[idx].fetch_add(1, Ordering::AcqRel);
+        }
+    }
+
+    #[inline]
+    fn bump_shared_pop_miss(&self, class: ArenaClass) {
+        self.header
+            .free_list_pop_misses
+            .fetch_add(1, Ordering::AcqRel);
+        if let Some(idx) = class.extended_index() {
+            self.header.free_list_class_pop_misses[idx].fetch_add(1, Ordering::AcqRel);
+        }
+    }
+
+    fn free_list_node_ref(&self, offset: u32) -> Option<&SharedFreeListNode> {
+        let start = offset as usize;
+        let end = start.checked_add(size_of::<SharedFreeListNode>())?;
+        if end > self.mmap_base.len() {
+            return None;
+        }
+        let addr = (self.mmap_base.as_ptr() as usize).checked_add(start)?;
+        if addr % align_of::<SharedFreeListNode>() != 0 {
+            return None;
+        }
+        // SAFETY:
+        // Bounds and alignment are validated above against this mapped region.
+        Some(unsafe { &*(addr as *const SharedFreeListNode) })
+    }
+}
+
+#[inline]
+fn align_up(value: u32, align: u32) -> Option<u32> {
+    if align == 0 || !align.is_power_of_two() {
+        return None;
+    }
+    let mask = align - 1;
+    value.checked_add(mask).map(|v| v & !mask)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ArenaClass, ShmArena};
+    use std::sync::atomic::Ordering;
+    use std::sync::Arc;
+    use std::thread;
+
+    thread_local! {
+        static POP_PAUSE: std::cell::RefCell<Option<(std::sync::mpsc::SyncSender<()>, std::sync::mpsc::Receiver<()>)>> = const { std::cell::RefCell::new(None) };
+    }
+
+    pub(super) fn pause_free_pop_if_armed() {
+        if let Some((observed, resume)) = POP_PAUSE.with(|pause| pause.borrow_mut().take()) {
+            observed.send(()).unwrap();
+            resume.recv().unwrap();
+        }
+    }
+
+    #[test]
+    fn free_pool_pop_cannot_resurrect_a_slot_owned_by_another_thread() {
+        use std::sync::mpsc::sync_channel;
+        use std::time::Duration;
+        let shm = Arc::new(ShmArena::new(1 << 20).unwrap());
+        let arena = shm.chunked_arena();
+        let slots = (0..3)
+            .map(|_| arena.alloc_raw(64, 8).unwrap())
+            .collect::<Vec<_>>();
+        for offset in slots.iter().rev() {
+            arena.recycle_raw(*offset, 64, 8).unwrap();
+        }
+        let (observed_tx, observed_rx) = sync_channel(0);
+        let (resume_tx, resume_rx) = sync_channel(0);
+        let first_shm = Arc::clone(&shm);
+        let first = thread::spawn(move || {
+            POP_PAUSE.with(|pause| *pause.borrow_mut() = Some((observed_tx, resume_rx)));
+            first_shm.chunked_arena().alloc_raw(64, 8).unwrap()
+        });
+        observed_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        let (cycled_tx, cycled_rx) = sync_channel(1);
+        let second_shm = Arc::clone(&shm);
+        let second = thread::spawn(move || {
+            let arena = second_shm.chunked_arena();
+            let recycled = arena.alloc_raw(64, 8).unwrap();
+            let owned = arena.alloc_raw(64, 8).unwrap();
+            arena.recycle_raw(recycled, 64, 8).unwrap();
+            cycled_tx.send(owned).unwrap();
+            owned
+        });
+        // Old untagged protocol completes A->B->A here while the first pop retains
+        // B as successor. The shared lock prevents this ABA interleave entirely.
+        let _ = cycled_rx.recv_timeout(Duration::from_millis(30));
+        resume_tx.send(()).unwrap();
+        let first_owned = first.join().unwrap();
+        let second_owned = second.join().unwrap();
+        let third_owned = arena.alloc_raw(64, 8).unwrap();
+        assert_ne!(
+            third_owned, second_owned,
+            "stale pop resurrected an allocated successor"
+        );
+        assert_ne!(first_owned, third_owned);
+        assert_ne!(first_owned, second_owned);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn forked_allocators_do_not_inherit_duplicate_cached_ownership() {
+        let shm = ShmArena::new(1 << 20).unwrap();
+        let arena = shm.chunked_arena();
+        let child_result = arena.alloc(std::sync::atomic::AtomicU32::new(0)).unwrap();
+        let slot = arena
+            .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+            .unwrap();
+        arena
+            .recycle_raw_in_class(slot, 32, 8, ArenaClass::Spill32)
+            .unwrap();
+        // This arena has no other users at fork; the child exits without unwinding.
+        let child = unsafe { libc::fork() };
+        assert!(child >= 0);
+        if child == 0 {
+            let status = match arena.alloc_raw_in_class(32, 8, ArenaClass::Spill32) {
+                Ok(offset) => {
+                    child_result
+                        .as_ref(shm.mmap_base())
+                        .unwrap()
+                        .store(offset, Ordering::Release);
+                    0
+                }
+                Err(_) => 1,
+            };
+            unsafe { libc::_exit(status) };
+        }
+        let mut status = 0;
+        assert_eq!(unsafe { libc::waitpid(child, &mut status, 0) }, child);
+        assert_eq!(status, 0);
+        let child_owned = child_result
+            .as_ref(shm.mmap_base())
+            .unwrap()
+            .load(Ordering::Acquire);
+        let parent_owned = arena
+            .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+            .unwrap();
+        assert_eq!(child_owned, slot);
+        assert_ne!(
+            parent_owned, child_owned,
+            "fork must not duplicate ownership of a cached offset"
+        );
+    }
+
+    #[test]
+    fn recycling_in_one_arena_survives_allocating_from_another_arena() {
+        let first = ShmArena::new(1 << 20).unwrap();
+        let second = ShmArena::new(1 << 20).unwrap();
+        let offset = first
+            .chunked_arena()
+            .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+            .unwrap();
+        first
+            .chunked_arena()
+            .recycle_raw_in_class(offset, 32, 8, ArenaClass::Spill32)
+            .unwrap();
+        second
+            .chunked_arena()
+            .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+            .unwrap();
+        assert_eq!(
+            first
+                .chunked_arena()
+                .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+                .unwrap(),
+            offset,
+            "another arena must not steal/discard this arena's cached offset"
+        );
+    }
+
+    #[test]
+    fn arena_reinitialization_cannot_reuse_cached_offsets_outside_the_new_allocator() {
+        let shm = ShmArena::new(1 << 20).unwrap();
+        let offset = shm
+            .chunked_arena()
+            .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+            .unwrap();
+        shm.chunked_arena()
+            .recycle_raw_in_class(offset, 32, 8, ArenaClass::Spill32)
+            .unwrap();
+        shm.reinitialize_header().unwrap();
+        let first = shm
+            .chunked_arena()
+            .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+            .unwrap();
+        let second = shm
+            .chunked_arena()
+            .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+            .unwrap();
+        assert_ne!(
+            first, second,
+            "reset/recreated mappings must not inherit stale local ownership"
+        );
+    }
+
+    #[test]
+    fn mixed_sizes_in_one_class_retain_every_recycled_block() {
+        let shm = ShmArena::new(1 << 20).unwrap();
+        let arena = shm.chunked_arena();
+        let small = arena
+            .alloc_raw_in_class(32, 8, ArenaClass::RowVersion)
+            .unwrap();
+        let large = arena
+            .alloc_raw_in_class(64, 8, ArenaClass::RowVersion)
+            .unwrap();
+        arena
+            .recycle_raw_in_class(small, 32, 8, ArenaClass::RowVersion)
+            .unwrap();
+        arena
+            .recycle_raw_in_class(large, 64, 8, ArenaClass::RowVersion)
+            .unwrap();
+        let head = arena.head_offset();
+        assert_eq!(
+            arena
+                .alloc_raw_in_class(32, 8, ArenaClass::RowVersion)
+                .unwrap(),
+            small
+        );
+        assert_eq!(
+            arena
+                .alloc_raw_in_class(64, 8, ArenaClass::RowVersion)
+                .unwrap(),
+            large,
+            "size mismatch must retain the larger block for its next caller"
+        );
+        assert_eq!(arena.head_offset(), head);
+    }
+
+    #[test]
+    fn exiting_thread_returns_recycled_blocks_to_other_allocators() {
+        let shm = Arc::new(ShmArena::new(1 << 20).unwrap());
+        let child_shm = Arc::clone(&shm);
+        let offset = thread::spawn(move || {
+            let arena = child_shm.chunked_arena();
+            let offset = arena
+                .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+                .unwrap();
+            arena
+                .recycle_raw_in_class(offset, 32, 8, ArenaClass::Spill32)
+                .unwrap();
+            offset
+        })
+        .join()
+        .unwrap();
+        assert_eq!(
+            shm.chunked_arena()
+                .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+                .unwrap(),
+            offset,
+            "thread exit must not orphan its free blocks"
+        );
+    }
+
+    #[test]
+    fn class_segregated_reuse_does_not_cross_allocate_between_bins() {
+        let shm = ShmArena::new(8 << 20).expect("shm");
+        let arena = shm.chunked_arena();
+
+        let spill32 = arena
+            .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+            .expect("alloc spill32");
+        arena
+            .recycle_raw_in_class(spill32, 32, 8, ArenaClass::Spill32)
+            .expect("recycle spill32");
+
+        let spill64 = arena
+            .alloc_raw_in_class(64, 8, ArenaClass::Spill64)
+            .expect("alloc spill64");
+        assert_ne!(
+            spill64, spill32,
+            "spill64 should not consume spill32 free-list entries"
+        );
+
+        let spill32_reused = arena
+            .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+            .expect("alloc spill32 reused");
+        assert_eq!(
+            spill32_reused, spill32,
+            "spill32 class should recycle its own offsets"
+        );
+    }
+
+    #[test]
+    fn shared_recycle_pool_round_trips_same_class_offsets() {
+        let shm = ShmArena::new(8 << 20).expect("shm");
+        let arena = shm.chunked_arena();
+
+        let first = arena
+            .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+            .expect("alloc spill32");
+        arena
+            .recycle_raw_in_class(first, 32, 8, ArenaClass::Spill32)
+            .expect("recycle spill32");
+
+        let second = arena
+            .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+            .expect("realloc spill32");
+        assert_eq!(second, first);
+
+        shm.flush_local_recycle_caches()
+            .expect("flush local recycle caches");
+    }
+
+    #[test]
+    fn recycled_offsets_are_visible_cross_thread_without_an_explicit_flush() {
+        let shm = Arc::new(ShmArena::new(8 << 20).expect("shm"));
+        let arena = shm.chunked_arena();
+
+        let recycled = arena
+            .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+            .expect("alloc spill32");
+        arena
+            .recycle_raw_in_class(recycled, 32, 8, ArenaClass::Spill32)
+            .expect("recycle spill32");
+
+        let shm_for_thread = Arc::clone(&shm);
+        let pre_flush = thread::spawn(move || {
+            let arena = shm_for_thread.chunked_arena();
+            let offset = arena
+                .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+                .expect("sibling allocation");
+            arena
+                .recycle_raw_in_class(offset, 32, 8, ArenaClass::Spill32)
+                .unwrap();
+            offset
+        })
+        .join()
+        .expect("pre-flush thread join failed");
+        assert_eq!(
+            pre_flush, recycled,
+            "recycled ownership is shared immediately"
+        );
+
+        shm.flush_local_recycle_caches()
+            .expect("flush local recycle caches");
+
+        let shm_for_thread = Arc::clone(&shm);
+        let post_flush = thread::spawn(move || {
+            shm_for_thread
+                .chunked_arena()
+                .alloc_raw_in_class(32, 8, ArenaClass::Spill32)
+                .expect("post-flush alloc in sibling thread")
+        })
+        .join()
+        .expect("post-flush thread join failed");
+        assert_eq!(
+            post_flush, recycled,
+            "shared class freelist should expose flushed recycled offset cross-thread"
+        );
+    }
+
+    #[test]
+    fn free_list_depth_estimate_reports_truncation_when_scan_limit_hit() {
+        let shm = ShmArena::new(8 << 20).expect("shm");
+        let arena = shm.chunked_arena();
+
+        let mut offsets = Vec::new();
+        for _ in 0..8 {
+            let offset = arena.alloc_raw(64, 8).expect("alloc general block (setup)");
+            offsets.push(offset);
+        }
+        for offset in offsets {
+            arena
+                .recycle_raw(offset, 64, 8)
+                .expect("recycle general block");
+        }
+
+        let (depth, truncated) = shm.free_list_depth_estimate(3);
+        assert_eq!(depth, 3);
+        assert!(
+            truncated,
+            "depth estimate should report truncation at scan limit"
+        );
+    }
+
+    #[test]
+    fn recycle_raw_in_class_invalid_block_does_not_mutate_free_list_counters() {
+        let shm = ShmArena::new(8 << 20).expect("shm");
+        let arena = shm.chunked_arena();
+        let header = shm.header_ref().expect("missing shm header");
+        let tiny = arena
+            .alloc_raw_in_class(8, 8, ArenaClass::Spill32)
+            .expect("alloc tiny spill block");
+
+        let before_pushes = shm.free_list_pushes();
+        let before_pops = shm.free_list_pops();
+        let before_misses = shm.free_list_pop_misses();
+        let before_head = shm.free_list_head_offset();
+        let before_spill32_pushes = header.free_list_class_pushes
+            [ArenaClass::Spill32.extended_index().unwrap()]
+        .load(Ordering::Acquire);
+        arena
+            .recycle_raw_in_class(tiny, 8, 8, ArenaClass::Spill32)
+            .expect("recycle tiny spill block should be ignored");
+        let bad_align = arena.recycle_raw_in_class(tiny, 8, 3, ArenaClass::Spill32);
+        assert!(
+            bad_align.is_err(),
+            "non-power-of-two alignment should error"
+        );
+
+        assert_eq!(shm.free_list_pushes(), before_pushes);
+        assert_eq!(shm.free_list_pops(), before_pops);
+        assert_eq!(shm.free_list_pop_misses(), before_misses);
+        assert_eq!(shm.free_list_head_offset(), before_head);
+        assert_eq!(
+            header.free_list_class_pushes[ArenaClass::Spill32.extended_index().unwrap()]
+                .load(Ordering::Acquire),
+            before_spill32_pushes
+        );
+    }
+
+    #[test]
+    fn general_class_path_bypasses_local_cache_behavior() {
+        let shm = ShmArena::new(8 << 20).expect("shm");
+        let arena = shm.chunked_arena();
+        let header = shm.header_ref().expect("missing shm header");
+        let general_idx = ArenaClass::General.as_index();
+        let before_hits = header.local_cache_hits[general_idx].load(Ordering::Acquire);
+        let before_misses = header.local_cache_misses[general_idx].load(Ordering::Acquire);
+        let before_flushes = header.local_cache_flushes[general_idx].load(Ordering::Acquire);
+
+        let offset = arena
+            .alloc_raw_in_class(64, 8, ArenaClass::General)
+            .expect("alloc general block");
+        arena
+            .recycle_raw_in_class(offset, 64, 8, ArenaClass::General)
+            .expect("recycle general block");
+
+        let reused = arena
+            .alloc_raw_in_class(64, 8, ArenaClass::General)
+            .expect("realloc general block");
+        assert_eq!(
+            reused, offset,
+            "general class should reuse shared freelist entry"
+        );
+
+        let after_hits = header.local_cache_hits[general_idx].load(Ordering::Acquire);
+        let after_misses = header.local_cache_misses[general_idx].load(Ordering::Acquire);
+        let after_flushes = header.local_cache_flushes[general_idx].load(Ordering::Acquire);
+        assert_eq!(
+            after_hits, before_hits,
+            "general class should not hit local cache"
+        );
+        assert_eq!(
+            after_misses, before_misses,
+            "general class should not record local-cache misses"
+        );
+        assert_eq!(
+            after_flushes, before_flushes,
+            "general class should not flush local cache bins"
+        );
+    }
+}

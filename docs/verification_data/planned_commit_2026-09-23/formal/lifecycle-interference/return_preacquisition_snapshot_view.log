@@ -1,0 +1,34 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lifecycle-interference/return_preacquisition_snapshot_view.rs:923:1
+    |
+923 | / pub fn snapshot_after_wait<D: WaitingPrimitives>(driver: &mut D, registration: ProcArrayRegistration,
+924 | |     Tracked(owner): Tracked<&OwnerToken>)
+925 | |     -> (out: (Result<ProcSnapshot, ProcArrayError>, Ghost<State>))
+    | |_________________________________________________________________^
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lifecycle-interference/return_preacquisition_snapshot_view.rs:929:30
+    |
+929 |         well_formed(out.1@), out.1@.lifecycle_held,
+    |                              ^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+945 |     (result, Ghost(entry))
+    |     ---------------------- at the end of the function body
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lifecycle-interference/return_preacquisition_snapshot_view.rs:933:9
+    |
+933 | /         out.0.is_ok() ==> coherent_snapshot(final(driver).state(), out.0->Ok_0)
+934 | |             && out.0->Ok_0.in_flight@ == active(out.1@.slots, PROCARRAY_SLOTS as int)
+935 | |             && final(driver).state().slots == out.1@.slots.update(registration.slot_idx as int,
+936 | |                 Slot { snapshot_xmin: out.0->Ok_0.xmin, ..out.1@.slots[registration.slot_idx as int] }),
+    | |_______________________________________________________________________________________________________^ failed this postcondition
+...
+945 |       (result, Ghost(entry))
+    |       ---------------------- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

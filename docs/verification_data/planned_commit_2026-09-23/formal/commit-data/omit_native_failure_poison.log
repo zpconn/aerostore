@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-data/omit_native_failure_poison.rs:1826:9
+     |
+1826 |         result.is_err() ==> unchanged_data(old(storage).view(),final(storage).view()) || final(storage).view().postings.poisoned,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+1841 |         return Err ( DataError :: Publication ( err ) ) ;
+     |         ----------------------------------------------- at this exit
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

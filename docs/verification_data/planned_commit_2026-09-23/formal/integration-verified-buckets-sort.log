@@ -1,0 +1,72 @@
+warning: method `commit_with_record_before_publish` is never used
+    --> aerostore_core/src/occ_partitioned.rs:1264:19
+     |
+ 365 | impl<T: Copy + Send + Sync + 'static> OccTable<T> {
+     | ------------------------------------------------- method in this implementation
+...
+1264 |     pub(crate) fn commit_with_record_before_publish<E, F>(
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `aerostore_core` (lib) generated 1 warning
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/aerostore_core)
+    Finished `release` profile [optimized] target(s) in 1.29s
+     Running tests/occ_transactional_index.rs (target/release/deps/occ_transactional_index-1017d183b4cea892)
+
+running 26 tests
+test absent_candidate_creation_rejects_one_disjoint_slot_writer ... ok
+test all_predicate_forms_detect_a_row_entering_their_result ... ok
+test attached_table_cannot_begin_without_complete_registered_index_set ... ok
+test concurrent_multirow_key_moves_never_return_a_mixed_successful_snapshot ... ok
+test different_equality_keys_do_not_force_table_wide_serialization ... ok
+test ignored_lookup_conflict_cannot_be_cleared_by_savepoint_rollback ... ok
+test invalid_later_index_key_cannot_partially_publish_rows_or_earlier_indexes ... ok
+test managed_indexes_reject_raw_mutations_through_attached_handles ... ok
+test newer_overlapping_reader_does_not_inherit_an_obsolete_vacuum_horizon ... ok
+test old_snapshot_first_lookup_after_delete_is_complete_or_rejected ... ok
+test old_snapshot_first_lookup_after_key_move_is_complete_or_rejected ... ok
+test older_writer_committing_after_newer_writer_invalidates_later_snapshot ... ok
+test own_writes_nested_savepoints_and_abort_preserve_exact_index_state ... ok
+test p1_reader_key_move_rejects_staged_write_then_fresh_retry_commits ... ok
+test p1_two_workers_empty_creation_retries_to_the_single_winner ... ok
+test planning_final_writes_preserve_exact_report_after_savepoint_rollback ... ok
+test planning_stale_base_rejects_all_staged_rows_before_publication ... ok
+test planning_unchanged_key_keeps_posting_and_empty_predicate_valid ... ok
+test predicate_publication_is_visible_across_independently_mapped_processes ... ok
+test public_vacuum_clamps_caller_horizon_to_retained_snapshot ... ok
+test rejected_wal_frame_preserves_row_and_managed_index ... ok
+test repeated_in_members_and_many_colliding_keys_preserve_exact_candidates ... ok
+test rollback_to_savepoint_cannot_erase_an_outer_empty_predicate_dependency ... ok
+test row_guard_outliving_commit_pins_its_version_without_unlocking_a_later_owner ... ok
+test transactional_index_child ... ok
+test vacuum_preserves_snapshot_excluding_an_older_late_committing_writer ... ok
+
+test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests/occ_write_skew.rs (target/release/deps/occ_write_skew-0ed1c8de989280ba)
+
+running 6 tests
+test ssi_rejects_write_skew_across_distinct_partition_lock_buckets ... ok
+test ssi_rejects_write_skew_and_returns_serialization_failure ... ok
+test ssi_rejects_write_skew_for_tcl_like_keyed_upserts ... ok
+test ssi_rejects_write_skew_when_reads_flow_through_pk_rbo_route ... ok
+test ssi_rejects_write_skew_when_reads_flow_through_stapi_planner ... ok
+test ssi_rejects_write_skew_with_savepoint_heavy_write_paths ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests/transactional_query_execution.rs (target/release/deps/transactional_query_execution-17cda12fa6566939)
+
+running 8 tests
+test chunked_query_read_error_releases_only_its_own_registration ... ok
+test indexed_plan_cannot_silently_lose_an_old_snapshots_moved_key ... ok
+test missing_primary_map_entry_still_enrolls_the_empty_predicate ... ok
+test numeric_primary_key_keeps_its_type_when_using_a_registered_index ... ok
+test primary_key_plan_uses_registered_predicate_when_map_is_stale ... ok
+test strict_query_errors_release_transaction_registrations ... ok
+test strict_snapshot_retries_a_filter_time_write_before_returning_results ... ok
+test unbound_stale_index_falls_back_and_rechecks_its_driving_filter ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

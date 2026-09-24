@@ -1,0 +1,33 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-completion/omit_deregistration_poison.rs:3427:1
+     |
+3427 | / pub fn publish_then_complete<P:postings::PostingPrimitives,R:ordinary::OrdinaryStorage,
+3428 | |     L:scenario::ScenarioClock,I:scenario::IndexPrimitives,C:predicate::PairSet>(
+3429 | |     storage:&mut Storage<P,R>,publisher:&mut scenario::Bridge<L,I>,token:&mut FinishToken,
+3430 | |     plan:&Plan,ordinary_plan:&OrdinaryPlan)->(result:Result<Completion,CompletionError>)
+     | |_______________________________________________________________________________________^
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-completion/omit_deregistration_poison.rs:3445:9
+     |
+3445 |         result.is_err() ==> unchanged_data(old(storage).view(),final(storage).view()) || final(storage).view().postings.poisoned,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+3460 |         Err(_)=>{return Err(CompletionError::Deregistration);},
+     |                  ------------------------------------------- at this exit
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-completion/omit_deregistration_poison.rs:3446:9
+     |
+3446 | /         result==Err(CompletionError::Deregistration) || result==Err(CompletionError::Stamp) ==>
+3447 | |             final(storage).view().postings.poisoned && final(token).registration.is_none(),
+     | |__________________________________________________________________________________________^ failed this postcondition
+...
+3460 |           Err(_)=>{return Err(CompletionError::Deregistration);},
+     |                    ------------------------------------------- at this exit
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

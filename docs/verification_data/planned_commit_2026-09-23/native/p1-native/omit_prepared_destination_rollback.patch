@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -861,7 +861,7 @@
+         inserted: &[usize],
+     ) -> Result<(), Error> {
+         let mut rollback_error = None;
+-        for idx in inserted.iter().rev() {
++        for idx in inserted.iter().rev().take(0) {
+             let previous = &changes[*idx];
+             if let Err(undo) = self.indexes[previous.binding].index.transactional_remove(
+                 previous.after.as_ref().expect("inserted destination"),

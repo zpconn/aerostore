@@ -1,0 +1,68 @@
+TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 18983] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-p7jeyk75/Durability.tla
+Parsing file /tmp/tlc-3515558183176986068/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-3515558183176986068/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-3515558183176986068/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module Durability
+Linting of module Durability
+Starting... (2026-09-23 23:34:47)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-09-23 23:34:47.
+Error: Invariant DurabilitySafety is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ sampledCut = 0
+/\ checkpointPc = "Idle"
+/\ crashed = FALSE
+/\ durableCut = 0
+/\ checkpointImage = {}
+/\ pc = <<"Start", "Start">>
+/\ acknowledged = {}
+/\ durableLog = {}
+/\ visible = {}
+/\ allocated = {}
+/\ recovered = {}
+/\ snapshotRows = {}
+
+State 2: <Start(1) line 25, col 13 to line 30, col 92 of module Durability>
+/\ pc = <<"Publish", "Start">>
+/\ allocated = {1}
+
+State 3: <Publish(1) line 38, col 5 to line 42, col 81 of module Durability>
+/\ pc = <<"Log", "Start">>
+/\ visible = {1}
+
+State 4: <Start(2) line 25, col 13 to line 30, col 92 of module Durability>
+/\ pc = <<"Log", "Publish">>
+/\ allocated = {1, 2}
+
+State 5: <Publish(2) line 38, col 5 to line 42, col 81 of module Durability>
+/\ pc = <<"Log", "Log">>
+/\ visible = {1, 2}
+
+State 6: <DurableAppend(2) line 32, col 5 to line 36, col 81 of module Durability>
+/\ pc = <<"Log", "Ack">>
+/\ durableLog = {2}
+/\ visible = {1, 2}
+
+State 7: <Crash line 76, col 5 to line 81, col 75 of module Durability>
+/\ sampledCut = 0
+/\ checkpointPc = "Idle"
+/\ crashed = TRUE
+/\ durableCut = 0
+/\ checkpointImage = {}
+/\ pc = <<"Log", "Ack">>
+/\ acknowledged = {}
+/\ durableLog = {2}
+/\ visible = {1, 2}
+/\ allocated = {1, 2}
+/\ recovered = {2}
+/\ snapshotRows = {}
+
+37 states generated, 25 distinct states found, 6 states left on queue.
+The depth of the complete state graph search is 7.
+Finished in 00s at (2026-09-23 23:34:47)

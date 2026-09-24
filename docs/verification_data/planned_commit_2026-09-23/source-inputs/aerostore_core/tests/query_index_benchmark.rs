@@ -1,0 +1,955 @@
+use std::sync::Arc;
+use std::time::Instant;
+
+use crossbeam::epoch;
+
+use aerostore_core::{
+    Field, IndexValue, MvccTable, OccTable, QueryEngine, RouteKind, RuleBasedOptimizer,
+    SchemaCatalog, SecondaryIndex, ShmArena, ShmPrimaryKeyMap, SortDirection, StapiRow, StapiValue,
+    TransactionManager,
+};
+
+#[derive(Clone, Copy, Debug)]
+struct FlightPosition {
+    lat: f64,
+    lon: f64,
+    altitude: i32,
+    groundspeed: u16,
+}
+
+fn altitude(row: &FlightPosition) -> i32 {
+    row.altitude
+}
+
+fn altitude_field() -> Field<FlightPosition, i32> {
+    Field::new("altitude", altitude)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct StapiFlightRow {
+    null_bitmask: u64,
+    alt: i64,
+    flight: [u8; 8],
+    dest: [u8; 4],
+    typ: [u8; 4],
+}
+
+impl StapiFlightRow {
+    const NULLBIT_ALT: u8 = 0;
+    const NULLBIT_FLIGHT: u8 = 1;
+    const NULLBIT_DEST: u8 = 2;
+    const NULLBIT_TYP: u8 = 3;
+
+    fn new(alt: i64, flight: &str, typ: &str) -> Self {
+        Self::new_with_dest(alt, flight, typ, "KORD")
+    }
+
+    fn new_with_dest(alt: i64, flight: &str, typ: &str, dest: &str) -> Self {
+        Self {
+            null_bitmask: 0,
+            alt,
+            flight: fixed_ascii::<8>(flight),
+            dest: fixed_ascii::<4>(dest),
+            typ: fixed_ascii::<4>(typ),
+        }
+    }
+
+    fn null_index_for_field(field: &str) -> Option<u8> {
+        match field {
+            "alt" | "altitude" => Some(Self::NULLBIT_ALT),
+            "flight" | "flight_id" | "ident" => Some(Self::NULLBIT_FLIGHT),
+            "dest" => Some(Self::NULLBIT_DEST),
+            "typ" | "type" => Some(Self::NULLBIT_TYP),
+            _ => None,
+        }
+    }
+
+    fn set_field_null(&mut self, field: &str, is_null: bool) {
+        let Some(idx) = Self::null_index_for_field(field) else {
+            return;
+        };
+        let bit = 1_u64 << idx;
+        if is_null {
+            self.null_bitmask |= bit;
+        } else {
+            self.null_bitmask &= !bit;
+        }
+    }
+}
+
+impl StapiRow for StapiFlightRow {
+    fn has_field(field: &str) -> bool {
+        matches!(
+            field,
+            "alt" | "altitude" | "flight" | "flight_id" | "ident" | "dest" | "typ" | "type"
+        )
+    }
+
+    fn field_value(&self, field: &str) -> Option<StapiValue> {
+        match field {
+            "alt" | "altitude" => Some(StapiValue::Int(self.alt)),
+            "flight" | "flight_id" | "ident" => Some(StapiValue::Text(decode_ascii(&self.flight))),
+            "dest" => Some(StapiValue::Text(decode_ascii(&self.dest))),
+            "typ" | "type" => Some(StapiValue::Text(decode_ascii(&self.typ))),
+            _ => None,
+        }
+    }
+
+    fn is_field_null(&self, field: &str) -> bool {
+        Self::null_index_for_field(field)
+            .map(|idx| (self.null_bitmask & (1_u64 << idx)) != 0)
+            .unwrap_or(false)
+    }
+}
+
+fn fixed_ascii<const N: usize>(value: &str) -> [u8; N] {
+    let mut out = [0_u8; N];
+    let bytes = value.as_bytes();
+    let len = bytes.len().min(N);
+    out[..len].copy_from_slice(&bytes[..len]);
+    out
+}
+
+fn decode_ascii(bytes: &[u8]) -> String {
+    let end = bytes.iter().position(|v| *v == 0).unwrap_or(bytes.len());
+    String::from_utf8_lossy(&bytes[..end]).to_string()
+}
+
+#[test]
+fn benchmark_shared_index_indexed_range_scan_with_sort_and_limit() {
+    const ROWS: usize = 100_000;
+    const READERS: usize = 8;
+    const SCANS_PER_READER: usize = 64;
+    const LIMIT: usize = 20;
+
+    let tx_manager = Arc::new(TransactionManager::new());
+    let table = Arc::new(MvccTable::<u64, FlightPosition>::new(1 << 14));
+
+    let mut engine = QueryEngine::new(Arc::clone(&table));
+    engine.create_index("altitude", altitude);
+    let engine = Arc::new(engine);
+
+    let ingest_start = Instant::now();
+    let ingest_tx = tx_manager.begin();
+    for i in 0..ROWS {
+        let row = FlightPosition {
+            lat: 37.0 + (i as f64 * 0.000_01),
+            lon: -122.0 - (i as f64 * 0.000_01),
+            altitude: ((i % 45_000) as i32) + 500,
+            groundspeed: 250 + ((i % 250) as u16),
+        };
+        engine
+            .insert(i as u64, row, &ingest_tx)
+            .expect("ingest insert must succeed");
+    }
+    let _ = engine.commit(&tx_manager, &ingest_tx);
+    let ingest_elapsed = ingest_start.elapsed();
+
+    let query_start = Instant::now();
+    std::thread::scope(|scope| {
+        for _ in 0..READERS {
+            let tx_manager = Arc::clone(&tx_manager);
+            let engine = Arc::clone(&engine);
+
+            scope.spawn(move || {
+                for _ in 0..SCANS_PER_READER {
+                    let tx = tx_manager.begin();
+                    let guard = epoch::pin();
+
+                    let rows = engine
+                        .query()
+                        .gt(altitude_field(), 10_000_i32)
+                        .sort_by(altitude_field(), SortDirection::Asc)
+                        .limit(LIMIT)
+                        .execute(&tx, &guard);
+
+                    assert_eq!(rows.len(), LIMIT);
+                    assert!(rows.iter().all(|row| row.altitude > 10_000));
+                    assert!(rows.iter().all(|row| row.groundspeed >= 250));
+                    assert!(rows
+                        .iter()
+                        .all(|row| row.lat.is_finite() && row.lon.is_finite()));
+                    assert!(rows.windows(2).all(|w| w[0].altitude <= w[1].altitude));
+
+                    tx_manager.commit(&tx);
+                }
+            });
+        }
+    });
+    let query_elapsed = query_start.elapsed();
+
+    eprintln!(
+        "ingest={} rows in {:?}; concurrent indexed scans={} in {:?}",
+        ROWS,
+        ingest_elapsed,
+        READERS * SCANS_PER_READER,
+        query_elapsed
+    );
+}
+
+#[test]
+fn benchmark_stapi_parse_compile_execute_vs_typed_query_path() {
+    const ROWS: usize = 50_000;
+    const PASSES: usize = 32;
+    const LIMIT: usize = 20;
+
+    // Baseline typed query path (existing MVCC query engine).
+    let tx_manager = Arc::new(TransactionManager::new());
+    let table = Arc::new(MvccTable::<u64, FlightPosition>::new(1 << 14));
+
+    let mut engine = QueryEngine::new(Arc::clone(&table));
+    engine.create_index("altitude", altitude);
+    let engine = Arc::new(engine);
+
+    let ingest_tx = tx_manager.begin();
+    for i in 0..ROWS {
+        let row = FlightPosition {
+            lat: 37.0 + (i as f64 * 0.000_01),
+            lon: -122.0 - (i as f64 * 0.000_01),
+            altitude: ((i % 45_000) as i32) + 500,
+            groundspeed: 250 + ((i % 250) as u16),
+        };
+        engine
+            .insert(i as u64, row, &ingest_tx)
+            .expect("typed path ingest insert must succeed");
+    }
+    let _ = engine.commit(&tx_manager, &ingest_tx);
+
+    let typed_start = Instant::now();
+    for _ in 0..PASSES {
+        let tx = tx_manager.begin();
+        let guard = epoch::pin();
+
+        let rows = engine
+            .query()
+            .gt(altitude_field(), 10_000_i32)
+            .sort_by(altitude_field(), SortDirection::Asc)
+            .limit(LIMIT)
+            .execute(&tx, &guard);
+
+        assert_eq!(rows.len(), LIMIT);
+        assert!(rows.windows(2).all(|w| w[0].altitude <= w[1].altitude));
+        tx_manager.abort(&tx);
+    }
+    let typed_elapsed = typed_start.elapsed();
+
+    // STAPI parser + planner path over OCC table/indexes.
+    let shm = Arc::new(ShmArena::new(64 << 20).expect("failed to create shared arena"));
+    let mut occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+        .expect("failed to create OCC table");
+    let alt_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "alt",
+        Arc::clone(&shm),
+    ));
+
+    for row_id in 0..ROWS {
+        let alt = ((row_id % 45_000) as i64) + 500;
+        let flight = if row_id % 2 == 0 {
+            format!("UAL{:03}", row_id % 1_000)
+        } else {
+            format!("DAL{:03}", row_id % 1_000)
+        };
+        let typ = match row_id % 3 {
+            0 => "B738",
+            1 => "A320",
+            _ => "B77W",
+        };
+
+        let row = StapiFlightRow::new(alt, flight.as_str(), typ);
+        occ_table
+            .seed_row(row_id, row)
+            .expect("failed to seed OCC row for STAPI benchmark");
+        alt_index.insert(IndexValue::I64(alt), row_id);
+    }
+
+    occ_table
+        .bind_index((*alt_index).clone(), |row| Some(IndexValue::I64(row.alt)))
+        .expect("failed to bind alt_index for indexed benchmark");
+
+    let catalog = SchemaCatalog::new("flight_id").with_index("alt", alt_index);
+    let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
+    let stapi =
+        "-compare {{match flight UAL*} {> alt 44000} {in typ {B738 A320}}} -sort alt -limit 20";
+
+    let stapi_start = Instant::now();
+    for _ in 0..PASSES {
+        let plan = planner
+            .compile_from_stapi(stapi)
+            .expect("failed to compile STAPI query");
+        let mut tx = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for STAPI benchmark");
+        let rows = plan
+            .execute(&occ_table, &mut tx)
+            .expect("STAPI plan execution failed");
+        occ_table
+            .abort(&mut tx)
+            .expect("abort failed for STAPI benchmark");
+
+        assert!(!rows.is_empty(), "expected STAPI query to return rows");
+        assert!(rows.len() <= LIMIT);
+        assert!(rows.iter().all(|row| row.alt > 44_000));
+        assert!(rows
+            .iter()
+            .all(|row| decode_ascii(&row.flight).starts_with("UAL")));
+        assert!(rows.windows(2).all(|w| w[0].alt <= w[1].alt));
+    }
+    let stapi_elapsed = stapi_start.elapsed();
+
+    eprintln!(
+        "typed_query_elapsed={:?} stapi_parse_compile_execute_elapsed={:?} passes={} rows={}",
+        typed_elapsed, stapi_elapsed, PASSES, ROWS
+    );
+}
+
+#[test]
+fn benchmark_tcl_style_alias_match_desc_offset_limit_path() {
+    const ROWS: usize = 75_000;
+    const PASSES: usize = 32;
+    const LIMIT: usize = 15;
+    const OFFSET: usize = 5;
+    const FETCH_LIMIT: usize = LIMIT + OFFSET;
+
+    let shm = Arc::new(ShmArena::new(96 << 20).expect("failed to create shared arena"));
+    let mut occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+        .expect("failed to create OCC table");
+    let alt_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "altitude",
+        Arc::clone(&shm),
+    ));
+
+    for row_id in 0..ROWS {
+        let alt = ((row_id % 45_000) as i64) + 500;
+        let flight = if row_id % 2 == 0 {
+            format!("UAL{:03}", row_id % 1_000)
+        } else {
+            format!("DAL{:03}", row_id % 1_000)
+        };
+        let typ = match row_id % 3 {
+            0 => "B738",
+            1 => "A320",
+            _ => "B77W",
+        };
+        let row = StapiFlightRow::new(alt, flight.as_str(), typ);
+        occ_table
+            .seed_row(row_id, row)
+            .expect("failed to seed OCC row for alias benchmark");
+        alt_index.insert(IndexValue::I64(alt), row_id);
+    }
+
+    occ_table
+        .bind_index((*alt_index).clone(), |row| Some(IndexValue::I64(row.alt)))
+        .expect("failed to bind alt_index for indexed benchmark");
+
+    let catalog = SchemaCatalog::new("flight_id")
+        .with_index("alt", Arc::clone(&alt_index))
+        .with_index("altitude", alt_index);
+    let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
+    let stapi =
+        "-compare {{match ident UAL*} {> altitude 10000} {in typ {B738 A320}}} -sort altitude";
+
+    let start = Instant::now();
+    for _ in 0..PASSES {
+        let plan = planner
+            .compile_from_stapi(stapi)
+            .expect("failed to compile alias STAPI query");
+        let mut tx = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for alias benchmark");
+        let mut rows = plan
+            .execute(&occ_table, &mut tx)
+            .expect("alias STAPI plan execution failed");
+        occ_table
+            .abort(&mut tx)
+            .expect("abort failed for alias benchmark");
+
+        rows.reverse(); // Tcl `-desc`.
+        if rows.len() > FETCH_LIMIT {
+            rows.truncate(FETCH_LIMIT);
+        }
+        let start_idx = OFFSET.min(rows.len()); // Tcl `-offset`.
+        let end_idx = (start_idx + LIMIT).min(rows.len()); // Tcl `-limit`.
+        let window = &rows[start_idx..end_idx];
+
+        assert_eq!(window.len(), LIMIT);
+        assert!(window.iter().all(|row| row.alt > 10_000));
+        assert!(window
+            .iter()
+            .all(|row| decode_ascii(&row.flight).starts_with("UAL")));
+        assert!(window
+            .iter()
+            .all(|row| matches!(decode_ascii(&row.typ).as_str(), "B738" | "A320")));
+        assert!(window.windows(2).all(|w| w[0].alt >= w[1].alt));
+    }
+    let elapsed = start.elapsed();
+
+    eprintln!(
+        "stapi_alias_match_desc_offset_limit_elapsed={:?} passes={} rows={}",
+        elapsed, PASSES, ROWS
+    );
+}
+
+#[test]
+fn benchmark_tcl_bridge_style_stapi_assembly_compile_execute() {
+    const ROWS: usize = 60_000;
+    const PASSES: usize = 48;
+    const LIMIT: usize = 20;
+    const OFFSET: usize = 4;
+
+    let shm = Arc::new(ShmArena::new(96 << 20).expect("failed to create shared arena"));
+    let mut occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+        .expect("failed to create OCC table");
+    let alt_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "altitude",
+        Arc::clone(&shm),
+    ));
+
+    for row_id in 0..ROWS {
+        let alt = ((row_id % 45_000) as i64) + 500;
+        let flight = if row_id % 2 == 0 {
+            format!("UAL{:03}", row_id % 1_000)
+        } else {
+            format!("DAL{:03}", row_id % 1_000)
+        };
+        let typ = match row_id % 3 {
+            0 => "B738",
+            1 => "A320",
+            _ => "B77W",
+        };
+        let row = StapiFlightRow::new(alt, flight.as_str(), typ);
+        occ_table
+            .seed_row(row_id, row)
+            .expect("failed to seed OCC row for Tcl bridge benchmark");
+        alt_index.insert(IndexValue::I64(alt), row_id);
+    }
+
+    occ_table
+        .bind_index((*alt_index).clone(), |row| Some(IndexValue::I64(row.alt)))
+        .expect("failed to bind alt_index for indexed benchmark");
+
+    let catalog = SchemaCatalog::new("flight_id")
+        .with_index("alt", Arc::clone(&alt_index))
+        .with_index("altitude", alt_index);
+    let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
+
+    let compare_literal = "{match ident UAL*} {> altitude 10000} {in typ {B738 A320}}";
+    let sort_field = "altitude";
+    let tcl_bridge_start = Instant::now();
+
+    for _ in 0..PASSES {
+        let stapi = format!("-compare {{{}}} -sort {{{}}}", compare_literal, sort_field);
+        let plan = planner
+            .compile_from_stapi(stapi.as_str())
+            .expect("failed to compile Tcl bridge-style STAPI query");
+
+        let mut tx = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for Tcl bridge benchmark");
+        let mut rows = plan
+            .execute(&occ_table, &mut tx)
+            .expect("Tcl bridge plan execution failed");
+        occ_table
+            .abort(&mut tx)
+            .expect("abort failed for Tcl bridge benchmark");
+
+        rows.reverse(); // Tcl `-desc`.
+        let start = OFFSET.min(rows.len()); // Tcl `-offset`.
+        let end = (start + LIMIT).min(rows.len()); // Tcl `-limit`.
+        let window = &rows[start..end];
+
+        assert_eq!(window.len(), LIMIT);
+        assert!(window.iter().all(|row| row.alt > 10_000));
+        assert!(window
+            .iter()
+            .all(|row| decode_ascii(&row.flight).starts_with("UAL")));
+        assert!(window
+            .iter()
+            .all(|row| matches!(decode_ascii(&row.typ).as_str(), "B738" | "A320")));
+        assert!(window.windows(2).all(|w| w[0].alt >= w[1].alt));
+    }
+
+    let elapsed = tcl_bridge_start.elapsed();
+    eprintln!(
+        "tcl_bridge_style_stapi_assembly_compile_execute_elapsed={:?} passes={} rows={}",
+        elapsed, PASSES, ROWS
+    );
+}
+
+#[test]
+fn benchmark_stapi_rbo_pk_point_lookup_vs_full_scan() {
+    const ROWS: usize = 40_000;
+    const PASSES: usize = 96;
+
+    let shm = Arc::new(ShmArena::new(96 << 20).expect("failed to create shared arena"));
+    let mut occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+        .expect("failed to create OCC table");
+    let pk_map = Arc::new(
+        ShmPrimaryKeyMap::new_in_shared(Arc::clone(&shm), 4096, ROWS)
+            .expect("failed to create shared primary key map"),
+    );
+
+    let flight_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "flight_id",
+        Arc::clone(&shm),
+    ));
+
+    for row_id in 0..ROWS {
+        let alt = ((row_id % 45_000) as i64) + 500;
+        let flight = format!("UAL{:05}", row_id);
+        let typ = match row_id % 3 {
+            0 => "B738",
+            1 => "A320",
+            _ => "B77W",
+        };
+        let row = StapiFlightRow::new_with_dest(alt, flight.as_str(), typ, "KORD");
+        occ_table
+            .seed_row(row_id, row)
+            .expect("failed to seed OCC row for PK benchmark");
+        flight_index
+            .try_insert(IndexValue::String(flight.clone()), row_id)
+            .expect("failed to seed flight-id predicate index");
+        pk_map
+            .insert_existing(flight.as_str(), row_id)
+            .expect("failed to seed PK map");
+    }
+
+    occ_table
+        .bind_index((*flight_index).clone(), |row| {
+            Some(IndexValue::String(decode_ascii(&row.flight)))
+        })
+        .expect("failed to bind flight-id predicate index");
+    let catalog = SchemaCatalog::new("flight_id")
+        .with_primary_key_map(Arc::clone(&pk_map))
+        .with_index("flight_id", flight_index);
+    let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
+    let key = "UAL01234";
+    let pk_stapi = format!("-compare {{{{= flight_id {key}}}}} -limit 1");
+    let scan_stapi = format!("-compare {{{{match flight {key}}}}} -limit 1");
+
+    let pk_plan = planner
+        .compile_from_stapi(pk_stapi.as_str())
+        .expect("failed to compile PK route query");
+    assert_eq!(pk_plan.route_kind(), RouteKind::PrimaryKeyLookup);
+    assert_eq!(pk_plan.driver_field(), Some("flight_id"));
+
+    let scan_plan = planner
+        .compile_from_stapi(scan_stapi.as_str())
+        .expect("failed to compile full scan query");
+    assert_eq!(scan_plan.route_kind(), RouteKind::FullScan);
+
+    let pk_start = Instant::now();
+    for _ in 0..PASSES {
+        let mut tx = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for PK benchmark");
+        let rows = pk_plan
+            .execute(&occ_table, &mut tx)
+            .expect("PK execution failed");
+        occ_table
+            .abort(&mut tx)
+            .expect("abort failed for PK benchmark");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(decode_ascii(&rows[0].flight), key);
+    }
+    let pk_elapsed = pk_start.elapsed();
+
+    let scan_start = Instant::now();
+    for _ in 0..PASSES {
+        let mut tx = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for scan benchmark");
+        let rows = scan_plan
+            .execute(&occ_table, &mut tx)
+            .expect("scan execution failed");
+        occ_table
+            .abort(&mut tx)
+            .expect("abort failed for scan benchmark");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(decode_ascii(&rows[0].flight), key);
+    }
+    let scan_elapsed = scan_start.elapsed();
+
+    eprintln!(
+        "rbo_pk_vs_scan_elapsed pk={:?} scan={:?} passes={} rows={}",
+        pk_elapsed, scan_elapsed, PASSES, ROWS
+    );
+    assert!(
+        pk_elapsed < scan_elapsed,
+        "expected PK route to outperform full scan (pk={:?}, scan={:?})",
+        pk_elapsed,
+        scan_elapsed
+    );
+}
+
+#[test]
+fn benchmark_stapi_rbo_tiebreak_dest_over_altitude() {
+    const ROWS: usize = 60_000;
+    const PASSES: usize = 64;
+    const LIMIT: usize = 50;
+
+    let shm = Arc::new(ShmArena::new(128 << 20).expect("failed to create shared arena"));
+    let mut occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+        .expect("failed to create OCC table");
+    let dest_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "dest",
+        Arc::clone(&shm),
+    ));
+    let altitude_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "altitude",
+        Arc::clone(&shm),
+    ));
+
+    for row_id in 0..ROWS {
+        let alt = ((row_id % 45_000) as i64) + 500;
+        let flight = if row_id % 2 == 0 {
+            format!("UAL{:03}", row_id % 1_000)
+        } else {
+            format!("DAL{:03}", row_id % 1_000)
+        };
+        let typ = match row_id % 3 {
+            0 => "B738",
+            1 => "B739",
+            _ => "A320",
+        };
+        let dest = match row_id % 4 {
+            0 => "KORD",
+            1 => "KATL",
+            2 => "KLAX",
+            _ => "KDEN",
+        };
+
+        let row = StapiFlightRow::new_with_dest(alt, flight.as_str(), typ, dest);
+        occ_table
+            .seed_row(row_id, row)
+            .expect("failed to seed OCC row for tie-break benchmark");
+        dest_index.insert(IndexValue::String(dest.to_string()), row_id);
+        altitude_index.insert(IndexValue::I64(alt), row_id);
+    }
+
+    occ_table
+        .bind_index((*dest_index).clone(), |row| {
+            Some(IndexValue::String(decode_ascii(&row.dest)))
+        })
+        .expect("failed to bind dest_index for indexed benchmark");
+    occ_table
+        .bind_index((*altitude_index).clone(), |row| {
+            Some(IndexValue::I64(row.alt))
+        })
+        .expect("failed to bind altitude_index for indexed benchmark");
+
+    let mut catalog = SchemaCatalog::new("flight_id")
+        .with_index("dest", dest_index)
+        .with_index("altitude", altitude_index);
+    catalog.set_cardinality_rank("dest", 2);
+    catalog.set_cardinality_rank("altitude", 3);
+
+    let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
+    let stapi = "-compare {{> altitude 10000} {= dest KORD} {match typ B73*}} -limit 50";
+    let plan = planner
+        .compile_from_stapi(stapi)
+        .expect("failed to compile tie-break query");
+
+    assert_eq!(plan.route_kind(), RouteKind::IndexExactMatch);
+    assert_eq!(plan.driver_field(), Some("dest"));
+
+    let start = Instant::now();
+    for _ in 0..PASSES {
+        let mut tx = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for tie-break benchmark");
+        let rows = plan
+            .execute(&occ_table, &mut tx)
+            .expect("tie-break execution failed");
+        occ_table
+            .abort(&mut tx)
+            .expect("abort failed for tie-break benchmark");
+
+        assert!(!rows.is_empty());
+        assert!(rows.len() <= LIMIT);
+        assert!(rows.iter().all(|row| row.alt > 10_000));
+        assert!(rows.iter().all(|row| decode_ascii(&row.dest) == "KORD"));
+        assert!(rows
+            .iter()
+            .all(|row| decode_ascii(&row.typ).starts_with("B73")));
+    }
+    let elapsed = start.elapsed();
+
+    eprintln!(
+        "rbo_tiebreak_dest_over_altitude_elapsed={:?} passes={} rows={} limit={}",
+        elapsed, PASSES, ROWS, LIMIT
+    );
+}
+
+#[test]
+fn benchmark_stapi_rbo_cardinality_trap_flight_id_over_aircraft_type() {
+    const ROWS: usize = 70_000;
+    const PASSES: usize = 64;
+    const TARGET_ROW_ID: usize = 42_123;
+
+    let shm = Arc::new(ShmArena::new(128 << 20).expect("failed to create shared arena"));
+    let mut occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+        .expect("failed to create OCC table");
+    let flight_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "flight_id",
+        Arc::clone(&shm),
+    ));
+    let typ_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "typ",
+        Arc::clone(&shm),
+    ));
+
+    for row_id in 0..ROWS {
+        let alt = ((row_id % 45_000) as i64) + 500;
+        let flight = format!("U{:07}", row_id);
+        let typ = match row_id % 5 {
+            0 => "B738",
+            1 => "A320",
+            2 => "E190",
+            3 => "B77W",
+            _ => "CRJ9",
+        };
+
+        let row = StapiFlightRow::new(alt, flight.as_str(), typ);
+        occ_table
+            .seed_row(row_id, row)
+            .expect("failed to seed OCC row for cardinality-trap benchmark");
+        flight_index.insert(IndexValue::String(flight), row_id);
+        typ_index.insert(IndexValue::String(typ.to_string()), row_id);
+    }
+
+    assert_eq!(flight_index.distinct_key_count(), ROWS);
+    assert_eq!(typ_index.distinct_key_count(), 5);
+
+    occ_table
+        .bind_index((*flight_index).clone(), |row| {
+            Some(IndexValue::String(decode_ascii(&row.flight)))
+        })
+        .expect("failed to bind flight_index for indexed benchmark");
+    occ_table
+        .bind_index((*typ_index).clone(), |row| {
+            Some(IndexValue::String(decode_ascii(&row.typ)))
+        })
+        .expect("failed to bind typ_index for indexed benchmark");
+
+    let catalog = SchemaCatalog::new("pk_unused")
+        .with_index("flight_id", Arc::clone(&flight_index))
+        .with_index("typ", Arc::clone(&typ_index))
+        .with_index("type", typ_index);
+    let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
+
+    let target_flight = format!("U{:07}", TARGET_ROW_ID);
+    let target_typ = match TARGET_ROW_ID % 5 {
+        0 => "B738",
+        1 => "A320",
+        2 => "E190",
+        3 => "B77W",
+        _ => "CRJ9",
+    };
+    let stapi = format!(
+        "-compare {{{{= typ {}}} {{= flight_id {}}}}} -limit 1",
+        target_typ, target_flight
+    );
+    let plan = planner
+        .compile_from_stapi(stapi.as_str())
+        .expect("failed to compile cardinality-trap query");
+
+    assert_eq!(plan.route_kind(), RouteKind::IndexExactMatch);
+    assert_eq!(plan.driver_field(), Some("flight_id"));
+    assert_eq!(plan.residual_filter_fields(), vec!["typ"]);
+
+    let start = Instant::now();
+    for _ in 0..PASSES {
+        let mut tx = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for cardinality-trap benchmark");
+        let rows = plan
+            .execute(&occ_table, &mut tx)
+            .expect("cardinality-trap execution failed");
+        occ_table
+            .abort(&mut tx)
+            .expect("abort failed for cardinality-trap benchmark");
+
+        assert_eq!(rows.len(), 1);
+        assert_eq!(decode_ascii(&rows[0].flight), target_flight);
+        assert_eq!(decode_ascii(&rows[0].typ), target_typ);
+    }
+    let elapsed = start.elapsed();
+
+    eprintln!(
+        "rbo_cardinality_trap_flight_id_over_typ_elapsed={:?} passes={} rows={}",
+        elapsed, PASSES, ROWS
+    );
+}
+
+#[test]
+fn benchmark_stapi_residual_negative_filters_with_index_driver() {
+    const ROWS: usize = 50_000;
+    const PASSES: usize = 48;
+    const LIMIT: usize = 25;
+
+    let shm = Arc::new(ShmArena::new(128 << 20).expect("failed to create shared arena"));
+    let mut occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+        .expect("failed to create OCC table");
+    let altitude_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "altitude",
+        Arc::clone(&shm),
+    ));
+
+    for row_id in 0..ROWS {
+        let alt = ((row_id % 45_000) as i64) + 500;
+        let flight = if row_id % 2 == 0 {
+            format!("UAL{:03}", row_id % 1_000)
+        } else {
+            format!("DAL{:03}", row_id % 1_000)
+        };
+        let typ = match row_id % 4 {
+            0 => "B738",
+            1 => "B739",
+            2 => "A320",
+            _ => "E190",
+        };
+        let row = StapiFlightRow::new(alt, flight.as_str(), typ);
+        occ_table
+            .seed_row(row_id, row)
+            .expect("failed to seed OCC row for residual negative benchmark");
+        altitude_index.insert(IndexValue::I64(alt), row_id);
+    }
+
+    occ_table
+        .bind_index((*altitude_index).clone(), |row| {
+            Some(IndexValue::I64(row.alt))
+        })
+        .expect("failed to bind altitude_index for indexed benchmark");
+
+    let catalog = SchemaCatalog::new("flight_id")
+        .with_index("altitude", Arc::clone(&altitude_index))
+        .with_index("alt", altitude_index);
+    let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
+    let stapi =
+        "-compare {{<= altitude 14000} {!= typ B739} {notmatch typ A3*}} -sort altitude -limit 25";
+
+    let start = Instant::now();
+    for _ in 0..PASSES {
+        let plan = planner
+            .compile_from_stapi(stapi)
+            .expect("failed to compile residual negative benchmark query");
+        let mut tx = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for residual negative benchmark");
+        let rows = plan
+            .execute(&occ_table, &mut tx)
+            .expect("residual negative benchmark execution failed");
+        occ_table
+            .abort(&mut tx)
+            .expect("abort failed for residual negative benchmark");
+
+        assert!(!rows.is_empty());
+        assert!(rows.len() <= LIMIT);
+        assert!(rows.iter().all(|row| row.alt <= 14_000));
+        assert!(rows.iter().all(|row| decode_ascii(&row.typ) != "B739"));
+        assert!(rows
+            .iter()
+            .all(|row| !decode_ascii(&row.typ).starts_with("A3")));
+        assert!(rows.windows(2).all(|w| w[0].alt <= w[1].alt));
+    }
+    let elapsed = start.elapsed();
+
+    eprintln!(
+        "stapi_residual_negative_filters_with_index_driver_elapsed={:?} passes={} rows={} limit={}",
+        elapsed, PASSES, ROWS, LIMIT
+    );
+}
+
+#[test]
+fn benchmark_stapi_null_notnull_residual_filters() {
+    const ROWS: usize = 40_000;
+    const PASSES: usize = 40;
+    const LIMIT: usize = 100;
+
+    let shm = Arc::new(ShmArena::new(128 << 20).expect("failed to create shared arena"));
+    let mut occ_table = OccTable::<StapiFlightRow>::new(Arc::clone(&shm), ROWS)
+        .expect("failed to create OCC table");
+    let altitude_index = Arc::new(SecondaryIndex::<usize>::new_in_shared(
+        "altitude",
+        Arc::clone(&shm),
+    ));
+
+    for row_id in 0..ROWS {
+        let alt = ((row_id % 45_000) as i64) + 500;
+        let flight = if row_id % 2 == 0 {
+            format!("UAL{:03}", row_id % 1_000)
+        } else {
+            format!("DAL{:03}", row_id % 1_000)
+        };
+        let typ = if row_id % 3 == 0 { "B738" } else { "A320" };
+        let mut row = StapiFlightRow::new(alt, flight.as_str(), typ);
+        if row_id % 5 == 0 {
+            row.typ = fixed_ascii::<4>("JUNK");
+            row.set_field_null("typ", true);
+        }
+        occ_table
+            .seed_row(row_id, row)
+            .expect("failed to seed OCC row for null/notnull benchmark");
+        altitude_index.insert(IndexValue::I64(alt), row_id);
+    }
+
+    occ_table
+        .bind_index((*altitude_index).clone(), |row| {
+            Some(IndexValue::I64(row.alt))
+        })
+        .expect("failed to bind altitude_index for indexed benchmark");
+
+    let catalog = SchemaCatalog::new("flight_id")
+        .with_index("altitude", Arc::clone(&altitude_index))
+        .with_index("alt", altitude_index);
+    let planner = RuleBasedOptimizer::<StapiFlightRow>::new(catalog);
+    let null_stapi = "-compare {{<= altitude 12000} {null typ}} -sort altitude -limit 100";
+    let notnull_stapi = "-compare {{<= altitude 12000} {notnull typ}} -sort altitude -limit 100";
+
+    let start = Instant::now();
+    for _ in 0..PASSES {
+        let null_plan = planner
+            .compile_from_stapi(null_stapi)
+            .expect("failed to compile null benchmark query");
+        let mut tx_null = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for null benchmark");
+        let null_rows = null_plan
+            .execute(&occ_table, &mut tx_null)
+            .expect("null benchmark execution failed");
+        occ_table
+            .abort(&mut tx_null)
+            .expect("abort failed for null benchmark");
+
+        assert!(!null_rows.is_empty());
+        assert!(null_rows.len() <= LIMIT);
+        assert!(null_rows.iter().all(|row| row.alt <= 12_000));
+        assert!(null_rows.iter().all(|row| row.is_field_null("typ")));
+        assert!(null_rows.windows(2).all(|w| w[0].alt <= w[1].alt));
+
+        let notnull_plan = planner
+            .compile_from_stapi(notnull_stapi)
+            .expect("failed to compile notnull benchmark query");
+        let mut tx_notnull = occ_table
+            .begin_transaction()
+            .expect("begin_transaction failed for notnull benchmark");
+        let notnull_rows = notnull_plan
+            .execute(&occ_table, &mut tx_notnull)
+            .expect("notnull benchmark execution failed");
+        occ_table
+            .abort(&mut tx_notnull)
+            .expect("abort failed for notnull benchmark");
+
+        assert!(!notnull_rows.is_empty());
+        assert!(notnull_rows.len() <= LIMIT);
+        assert!(notnull_rows.iter().all(|row| row.alt <= 12_000));
+        assert!(notnull_rows.iter().all(|row| !row.is_field_null("typ")));
+        assert!(notnull_rows.windows(2).all(|w| w[0].alt <= w[1].alt));
+    }
+    let elapsed = start.elapsed();
+
+    eprintln!(
+        "stapi_null_notnull_residual_filters_elapsed={:?} passes={} rows={} limit={}",
+        elapsed, PASSES, ROWS, LIMIT
+    );
+}

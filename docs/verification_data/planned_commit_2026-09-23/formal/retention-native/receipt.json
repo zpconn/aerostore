@@ -1,0 +1,442 @@
+{
+  "schema": 1,
+  "scope": "native_publication_retention_reuse_regressions",
+  "formal_refinement_proved": false,
+  "passed": true,
+  "status": "passed",
+  "checks": [
+    {
+      "name": "current_partial_publication",
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/current/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "retention_native_partial_publication_retains_snapshot_until_reuse",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/current/source",
+      "exit_code": 0,
+      "elapsed_seconds": 11.653193363992614,
+      "expected_assertion_failure": false,
+      "required_assertion": null,
+      "passed": true,
+      "log": "target/verification-planning/final/retention-native/current_partial_publication.log",
+      "log_sha256": "dc030a8b6518c1f3f2e6a5a07a9a5e7fde003c0c66b9f3119305da78d921e096",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d",
+        "aerostore_core/src/procarray.rs": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364",
+        "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+        "aerostore_core/tests/occ_transactional_index.rs": "5677a165dba8cec6feae5ea88044de7a8a434fbf086605c7e19eddf28fe52141"
+      }
+    },
+    {
+      "name": "current_loaded_cursor",
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/current/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "retention_native_loaded_cursor_survives_pruned_tail_reuse",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/current/source",
+      "exit_code": 0,
+      "elapsed_seconds": 0.10093867100658827,
+      "expected_assertion_failure": false,
+      "required_assertion": null,
+      "passed": true,
+      "log": "target/verification-planning/final/retention-native/current_loaded_cursor.log",
+      "log_sha256": "f9dd8af719d35c5599e5ae0a17710e608052b084c898f6d29eacbfcb68a3b246",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d",
+        "aerostore_core/src/procarray.rs": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364",
+        "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+        "aerostore_core/tests/occ_transactional_index.rs": "5677a165dba8cec6feae5ea88044de7a8a434fbf086605c7e19eddf28fe52141"
+      }
+    },
+    {
+      "name": "current_guard_retention",
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/current/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--test",
+        "occ_transactional_index",
+        "row_guard_outliving_commit_pins_its_version_without_unlocking_a_later_owner",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/current/source",
+      "exit_code": 0,
+      "elapsed_seconds": 2.3066334879986243,
+      "expected_assertion_failure": false,
+      "required_assertion": null,
+      "passed": true,
+      "log": "target/verification-planning/final/retention-native/current_guard_retention.log",
+      "log_sha256": "c3dc44594215c05a2b5628c935089669da01fc16b5706c1fa78c0efdef8b8baa",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d",
+        "aerostore_core/src/procarray.rs": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364",
+        "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+        "aerostore_core/tests/occ_transactional_index.rs": "5677a165dba8cec6feae5ea88044de7a8a434fbf086605c7e19eddf28fe52141"
+      }
+    },
+    {
+      "name": "current_horizon_progress",
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/current/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--test",
+        "occ_transactional_index",
+        "newer_overlapping_reader_does_not_inherit_an_obsolete_vacuum_horizon",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/current/source",
+      "exit_code": 0,
+      "elapsed_seconds": 0.101248177990783,
+      "expected_assertion_failure": false,
+      "required_assertion": null,
+      "passed": true,
+      "log": "target/verification-planning/final/retention-native/current_horizon_progress.log",
+      "log_sha256": "a46c25a4e9c04ff53bb674ae5f97cfefa2050cf0ac1a12dcce38389ecc6fb675",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d",
+        "aerostore_core/src/procarray.rs": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364",
+        "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+        "aerostore_core/tests/occ_transactional_index.rs": "5677a165dba8cec6feae5ea88044de7a8a434fbf086605c7e19eddf28fe52141"
+      }
+    },
+    {
+      "name": "current_public_horizon",
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/current/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--test",
+        "occ_transactional_index",
+        "public_vacuum_clamps_caller_horizon_to_retained_snapshot",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/current/source",
+      "exit_code": 0,
+      "elapsed_seconds": 0.10034641399397515,
+      "expected_assertion_failure": false,
+      "required_assertion": null,
+      "passed": true,
+      "log": "target/verification-planning/final/retention-native/current_public_horizon.log",
+      "log_sha256": "30699853282add9d5bc43df4f9f39e4c22751e180e498b422543e1885118a6cb",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d",
+        "aerostore_core/src/procarray.rs": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364",
+        "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+        "aerostore_core/tests/occ_transactional_index.rs": "5677a165dba8cec6feae5ea88044de7a8a434fbf086605c7e19eddf28fe52141"
+      }
+    },
+    {
+      "name": "ignore_retention_horizon",
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/ignore_retention_horizon/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "retention_native_loaded_cursor_survives_pruned_tail_reuse",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/ignore_retention_horizon/source",
+      "exit_code": 101,
+      "elapsed_seconds": 11.553648945991881,
+      "expected_assertion_failure": true,
+      "required_assertion": "retention-native: vacuum may prune only below the retained visible anchor",
+      "passed": true,
+      "log": "target/verification-planning/final/retention-native/ignore_retention_horizon.log",
+      "log_sha256": "842f97349513814b7316789a877c2df31616a29aa952a7cb663178d3122fd070",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "15aa2ded0edea0a98bef1a13bbe1ff07db3691579b8a127eeb1b5d2c49619107",
+        "aerostore_core/src/procarray.rs": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364",
+        "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+        "aerostore_core/tests/occ_transactional_index.rs": "5677a165dba8cec6feae5ea88044de7a8a434fbf086605c7e19eddf28fe52141"
+      }
+    },
+    {
+      "name": "use_registration_instead_of_snapshot_horizon",
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/use_registration_instead_of_snapshot_horizon/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "retention_native_partial_publication_retains_snapshot_until_reuse",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/use_registration_instead_of_snapshot_horizon/source",
+      "exit_code": 101,
+      "elapsed_seconds": 11.709414290002314,
+      "expected_assertion_failure": true,
+      "required_assertion": "retention-native: older active writer horizon must retain both bases",
+      "passed": true,
+      "log": "target/verification-planning/final/retention-native/use_registration_instead_of_snapshot_horizon.log",
+      "log_sha256": "571a8d11a4c8212d778def968d2fffbdc016da5150ad58becaca5007bc446811",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d",
+        "aerostore_core/src/procarray.rs": "686ce96369603e754ec6294f21ce1b3a8502f687fbb8ff31d9f543c9048e0946",
+        "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+        "aerostore_core/tests/occ_transactional_index.rs": "5677a165dba8cec6feae5ea88044de7a8a434fbf086605c7e19eddf28fe52141"
+      }
+    },
+    {
+      "name": "recycle_without_unlinking",
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/recycle_without_unlinking/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "retention_native_loaded_cursor_survives_pruned_tail_reuse",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/recycle_without_unlinking/source",
+      "exit_code": 101,
+      "elapsed_seconds": 11.542491161992075,
+      "expected_assertion_failure": true,
+      "required_assertion": "retention-native: vacuum must unlink a retired tail before reuse",
+      "passed": true,
+      "log": "target/verification-planning/final/retention-native/recycle_without_unlinking.log",
+      "log_sha256": "0575ecb59a7c4275f5fbf056e9d17fe82558d6c905ec19c33916a9808d9c6372",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "5405b5ab5f6f4eb2ef6d4b47221ca710c768b9ecf227949272872441fd778cba",
+        "aerostore_core/src/procarray.rs": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364",
+        "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+        "aerostore_core/tests/occ_transactional_index.rs": "5677a165dba8cec6feae5ea88044de7a8a434fbf086605c7e19eddf28fe52141"
+      }
+    },
+    {
+      "name": "preserve_retired_xmax_on_reuse",
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/preserve_retired_xmax_on_reuse/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "retention_native_loaded_cursor_survives_pruned_tail_reuse",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/preserve_retired_xmax_on_reuse/source",
+      "exit_code": 101,
+      "elapsed_seconds": 11.545189279000624,
+      "expected_assertion_failure": true,
+      "required_assertion": "retention-native: reused storage must clear retired deletion metadata",
+      "passed": true,
+      "log": "target/verification-planning/final/retention-native/preserve_retired_xmax_on_reuse.log",
+      "log_sha256": "626b2bc555f4ce73d9460d7db28bd33595496ebd83e41064d3a7c0fb907fb693",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "6e4b3063d45c7134f86ec303c02db110280824ba0a44e5cf9998ed5b160b15cd",
+        "aerostore_core/src/procarray.rs": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364",
+        "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+        "aerostore_core/tests/occ_transactional_index.rs": "5677a165dba8cec6feae5ea88044de7a8a434fbf086605c7e19eddf28fe52141"
+      }
+    },
+    {
+      "name": "reclaim_version_with_live_row_guard",
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/reclaim_version_with_live_row_guard/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--test",
+        "occ_transactional_index",
+        "row_guard_outliving_commit_pins_its_version_without_unlocking_a_later_owner",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/reclaim_version_with_live_row_guard/source",
+      "exit_code": 101,
+      "elapsed_seconds": 8.437855994998245,
+      "expected_assertion_failure": true,
+      "required_assertion": "a guard still refers to the retired row even after its transaction commits",
+      "passed": true,
+      "log": "target/verification-planning/final/retention-native/reclaim_version_with_live_row_guard.log",
+      "log_sha256": "6a9f153654c0e5717ff614cc7b936e08fcea95bea3474606568ba407d2842b6f",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "9ebc895ac2b29c02f20ec94022bf047f81b8f7776a98b904c0cb9003273df992",
+        "aerostore_core/src/procarray.rs": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364",
+        "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+        "aerostore_core/tests/occ_transactional_index.rs": "5677a165dba8cec6feae5ea88044de7a8a434fbf086605c7e19eddf28fe52141"
+      }
+    },
+    {
+      "name": "inherit_obsolete_horizon",
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/inherit_obsolete_horizon/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--test",
+        "occ_transactional_index",
+        "newer_overlapping_reader_does_not_inherit_an_obsolete_vacuum_horizon",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/inherit_obsolete_horizon/source",
+      "exit_code": 101,
+      "elapsed_seconds": 8.421700182007044,
+      "expected_assertion_failure": true,
+      "required_assertion": "assertion failed: !aerostore_core::run_vacuum_pass(&table).unwrap().is_empty()",
+      "passed": true,
+      "log": "target/verification-planning/final/retention-native/inherit_obsolete_horizon.log",
+      "log_sha256": "36dc8b70f6c666a92bca5ab7bd5e3bbfb168524fcffb1aa1992465d895fdb216",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d",
+        "aerostore_core/src/procarray.rs": "98a13cdb5a23493cf7a7dbc9722e37d6d1d985d636484e03aaa419c21a796bb3",
+        "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+        "aerostore_core/tests/occ_transactional_index.rs": "5677a165dba8cec6feae5ea88044de7a8a434fbf086605c7e19eddf28fe52141"
+      }
+    },
+    {
+      "name": "ignore_active_creator_during_partial_publication",
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/ignore_active_creator_during_partial_publication/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--lib",
+        "retention_native_partial_publication_retains_snapshot_until_reuse",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/ignore_active_creator_during_partial_publication/source",
+      "exit_code": 101,
+      "elapsed_seconds": 11.688722013001097,
+      "expected_assertion_failure": true,
+      "required_assertion": "retention-native: partial publication must expose one old snapshot",
+      "passed": true,
+      "log": "target/verification-planning/final/retention-native/ignore_active_creator_during_partial_publication.log",
+      "log_sha256": "945c99e3ebe5d22846bc9bf1ee3cb05b0ff960794650a8cff1e5927bad10228f",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "65190b1bc28de5ef374357f243c90bfe381e4d1df909554870da8599655e1ca9",
+        "aerostore_core/src/procarray.rs": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364",
+        "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+        "aerostore_core/tests/occ_transactional_index.rs": "5677a165dba8cec6feae5ea88044de7a8a434fbf086605c7e19eddf28fe52141"
+      }
+    },
+    {
+      "name": "omit_public_horizon_clamp",
+      "command": [
+        "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo",
+        "test",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/omit_public_horizon_clamp/cargo-target",
+        "-p",
+        "aerostore_core",
+        "--test",
+        "occ_transactional_index",
+        "public_vacuum_clamps_caller_horizon_to_retained_snapshot",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/home/zpconn/code/aerostore/target/verification-planning/final/retention-native/omit_public_horizon_clamp/source",
+      "exit_code": 101,
+      "elapsed_seconds": 8.504196194000542,
+      "expected_assertion_failure": true,
+      "required_assertion": "a caller must not advance the retained horizon",
+      "passed": true,
+      "log": "target/verification-planning/final/retention-native/omit_public_horizon_clamp.log",
+      "log_sha256": "a1ffe8cfb124d00017ff2559fed2e737fb6e315568698bfe4beebe841b150a9a",
+      "source_sha256": {
+        "aerostore_core/src/occ_partitioned.rs": "7077c855e955c853655e9d3bdd5453797c92a4cd49bbca4763782a42e51cc8d0",
+        "aerostore_core/src/procarray.rs": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364",
+        "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+        "aerostore_core/tests/occ_transactional_index.rs": "5677a165dba8cec6feae5ea88044de7a8a434fbf086605c7e19eddf28fe52141"
+      }
+    }
+  ],
+  "input_sha256": {
+    "aerostore_core/src/occ_partitioned.rs": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d",
+    "aerostore_core/src/procarray.rs": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364",
+    "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+    "aerostore_core/tests/occ_transactional_index.rs": "5677a165dba8cec6feae5ea88044de7a8a434fbf086605c7e19eddf28fe52141",
+    "verification/retention_native/run.py": "2f5f3d6db5b4f9cae81a73fb836d796e4d7c9f87114c3fff9f606c3ae8c26acf",
+    "verification/retention_native/test_run.py": "bbe2edd54d9bf5a8d498784ec9508bfdcd1eb1334e9c7bab536f6ad8018a28fe"
+  },
+  "parent_commit": "f82788073224f833873f57c25243a553b4c4d511",
+  "parent_archive_sha256": "7d60c943525b4097f6a6deb58348f2ac731858e6f27c206dd016d7fe3999f2cd",
+  "rustc": "rustc 1.93.1 (01f6ddf75 2026-02-11)\nbinary: rustc\ncommit-hash: 01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf\ncommit-date: 2026-02-11\nhost: x86_64-unknown-linux-gnu\nrelease: 1.93.1\nLLVM version: 21.1.8\n",
+  "tool_sha256": {
+    "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/cargo": "6bbe4f5601b419b69ec2001b5e64c997770f620e1493ad7007b78e505457796f",
+    "/home/zpconn/code/aerostore/target/verification-tools/production-rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu/bin/rustc": "bd1875234c27f9f0c9f9c700ade69f7e83d25e368f38407d32b4b0e2cbc2426d"
+  },
+  "final_input_sha256": {
+    "aerostore_core/src/occ_partitioned.rs": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d",
+    "aerostore_core/src/procarray.rs": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364",
+    "aerostore_core/src/vacuum.rs": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385",
+    "aerostore_core/tests/occ_transactional_index.rs": "5677a165dba8cec6feae5ea88044de7a8a434fbf086605c7e19eddf28fe52141",
+    "verification/retention_native/run.py": "2f5f3d6db5b4f9cae81a73fb836d796e4d7c9f87114c3fff9f606c3ae8c26acf",
+    "verification/retention_native/test_run.py": "bbe2edd54d9bf5a8d498784ec9508bfdcd1eb1334e9c7bab536f6ad8018a28fe"
+  },
+  "source_stable": true
+}

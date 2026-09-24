@@ -1,0 +1,29 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lookup/ignore_creator_active.rs:135:1
+    |
+135 | pub fn is_visible(row: &Row, tx: &Transaction) -> (r: bool)
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lookup/ignore_creator_active.rs:136:13
+    |
+136 |     ensures r == visible(*row, snapshot(*tx)),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+153 | xmax >= tx . snapshot_xmax || active_contains ( & tx . snapshot_active , xmax )
+    | ------------------------------------------------------------------------------- at the end of the function body
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lookup/ignore_creator_active.rs:136:13
+    |
+136 |     ensures r == visible(*row, snapshot(*tx)),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+148 |     return true ;
+    |     ----------- at this exit
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

@@ -1,0 +1,11 @@
+note: verifying root module (selected functions)
+
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-completion/skip_native_data.rs:3458:19
+     |
+3458 |     proof {assert(committed(initial_data,storage.view(),*plan));}
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

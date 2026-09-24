@@ -1,0 +1,12 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -2107,7 +2107,9 @@
+         // Recycled rows are only reused after being removed from the free list and are not
+         // reachable from table heads or any live transaction write-set at this point.
+         unsafe {
++            let stale_xmax = (*row_mut).xmax.load(Ordering::Acquire);
+             std::ptr::write(row_mut, OccRow::new(value, xmin, next));
++            (*row_mut).xmax.store(stale_xmax, Ordering::Release);
+         }
+         Ok(())
+     }

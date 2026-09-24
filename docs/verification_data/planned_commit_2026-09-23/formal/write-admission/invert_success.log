@@ -1,0 +1,20 @@
+note: verifying module admission (selected functions)
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/write-admission/invert_success.rs:1978:13
+     |
+1978 |       ensures result.is_ok() ==> (!result->Ok_0 <==> selected_valid(driver.image(),*tx,indices@)),
+     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+1979 |           driver.infallible() ==> result.is_ok(),
+1980 | / {
+1981 | |     
+1982 | |         let mut i=0;
+1983 | |         while i<indices.len()
+...    |
+2006 | |      Ok ( true )
+2007 | | }
+     | |_- at the end of the function body
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

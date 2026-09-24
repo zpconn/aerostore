@@ -1,0 +1,37 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/concurrent/skip_wal_binding_check.rs:316:4
+    |
+316 |      result.is_ok() ==> completed(final(driver).events()),
+    |      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+317 |      result.is_err() && final(driver).events().rows_published ==> final(driver).events().poisoned,
+318 | / {
+319 | | driver . ensure_open ( tx ) ? ;
+320 | | let final_write_indices = driver . final_write_indices ( tx ) ;
+321 | | let index_changes = driver . index_changes ( tx , & final_write_indices ) ? ;
+...   |
+412 | | Ok ( commit_record )
+413 | | }
+    | |_- at the end of the function body
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/concurrent/skip_wal_binding_check.rs:361:16
+    |
+208 | /             !old(self).events().write_ahead && old(self).events().has_writes
+209 | |                 ==> (old(self).events().unlogged_write_checked && !old(self).events().durably_bound),
+    | |____________________________________________________________________________________________________- failed precondition
+...
+361 |   let inserted = driver . prepare_index_destinations ( & index_changes ) ? ;
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/concurrent/skip_wal_binding_check.rs:311:1
+    |
+311 | / pub fn commit_with_record_impl<T, D: CommitPrimitives<T>, const WRITE_AHEAD: bool, P, F>(driver: &mut D, tx: &mut OccTransaction<...
+312 | |  -> (result: Result<OccCommitRecord<T>, Error>)
+    | |______________________________________________^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

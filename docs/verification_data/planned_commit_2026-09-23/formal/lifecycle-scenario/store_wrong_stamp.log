@@ -1,0 +1,18 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/lifecycle-scenario/store_wrong_stamp.rs:647:17
+     |
+ 647 |           ensures final(self).state() == (State {
+     |  _________________^
+ 648 | |             stamps: if r.is_ok() { old(self).state().stamps.insert((binding, bucket), stamp) } else { old(self).state().stamps },
+ 649 | |             ..old(self).state()
+ 650 | |         });
+     | |__________^ failed this postcondition
+...
+1207 |           self.index.store_stamp(binding, bucket, 0)
+     |           ------------------------------------------ at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

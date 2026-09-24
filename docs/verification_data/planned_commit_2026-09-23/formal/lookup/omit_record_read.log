@@ -1,0 +1,37 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lookup/omit_record_read.rs:250:1
+    |
+250 | / pub fn read<D: Storage>(driver: &D, tx: &mut Transaction, row_id: usize)
+251 | |     -> (r: Result<Option<Option<usize>>, Error>)
+    | |_______________________________________________^
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lookup/omit_record_read.rs:259:9
+    |
+259 | /         r.is_ok() && r.unwrap().is_some()
+260 | |             && last_write(old(tx).write_set@,row_id,old(tx).write_set.len() as int).is_none() ==>
+261 | |             exists|i:int| 0<=i<final(tx).read_set.len()
+262 | |                 && final(tx).read_set[i].row_ptr == first_visible(driver.image(),driver.image().heads[row_id],snapshot(*old(tx))).unwrap(),
+    | |__________________________________________________________________________________________________________________________________________^ failed this postcondition
+...
+292 |       return Ok ( Some ( row . value ) ) ;
+    |       ---------------------------------- at this exit
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lookup/omit_record_read.rs:263:9
+    |
+263 | /         r.is_ok() && r.unwrap().is_some()
+264 | |             && last_write(old(tx).write_set@,row_id,old(tx).write_set.len() as int).is_none() ==>
+265 | |             final(tx).read_set@ == recording(old(tx).read_set@,row_id,
+266 | |                 first_visible(driver.image(),driver.image().heads[row_id],snapshot(*old(tx))).unwrap(),
+267 | |                 driver.image().rows[first_visible(driver.image(),driver.image().heads[row_id],snapshot(*old(tx))).unwrap()].xmin),
+    | |_________________________________________________________________________________________________________________________________^ failed this postcondition
+...
+292 |       return Ok ( Some ( row . value ) ) ;
+    |       ---------------------------------- at this exit
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

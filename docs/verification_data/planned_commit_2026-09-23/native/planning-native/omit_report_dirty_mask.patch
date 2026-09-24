@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -1642,7 +1642,7 @@
+                 new_offset,
+                 base_value,
+                 value: new_row.value,
+-                dirty_columns_bitmask: write.dirty_columns_bitmask,
++                dirty_columns_bitmask: 0,
+             });
+         }
+ 

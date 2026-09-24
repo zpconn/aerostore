@@ -1,0 +1,11 @@
+note: verifying root module (selected functions)
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lifecycle/skip_registration.rs:295:17
+    |
+295 |                 forall|i: int| 0 <= i < slot_idx ==> initial.slots[i].txid != 0,
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

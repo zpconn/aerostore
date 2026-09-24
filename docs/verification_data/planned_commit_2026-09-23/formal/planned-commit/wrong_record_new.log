@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/planned-commit/wrong_record_new.rs:4011:13
+     |
+4011 |     ensures write==ordinary::row_write(*selected),
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+4012 | {
+4013 |     publication::CommittedWrite{row_id:selected.row_id,base_offset:selected.base_offset,new_offset:selected.base_offset}
+     |     -------------------------------------------------------------------------------------------------------------------- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

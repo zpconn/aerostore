@@ -1,0 +1,20 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lookup/reuse_writer_stamp.rs:534:13
+    |
+534 |       ensures protocol_valid(b),
+    |               ^^^^^^^^^^^^^^^^^ failed this postcondition
+535 |   {
+536 | /     match action {
+537 | |         Action::Start{txid} => {
+538 | |             assert(!a.ended.contains(txid));
+539 | |             assert(b.active.disjoint(b.ended));
+...   |
+550 | |         _ => {},
+551 | |     }
+    | |_____- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

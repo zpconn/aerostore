@@ -1,0 +1,16 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/lifecycle-scenario/skip_native_validation.rs:1279:13
+     |
+1279 |       ensures result.is_ok() ==> result.unwrap().conflict
+     |  _____________^
+1280 | |         && result.unwrap().publication_stamp > result.unwrap().reader_txid,
+     | |__________________________________________________________________________^ failed this postcondition
+...
+1356 |       Ok(Outcome { reader_txid: reader.txid, publication_stamp, conflict, reader_snapshot: snapshot })
+     |       ------------------------------------------------------------------------------------------------ at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

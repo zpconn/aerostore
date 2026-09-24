@@ -1,0 +1,23 @@
+note: verifying module planning (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/write-plan/omit_one_row_premise.rs:2069:1
+     |
+2069 | pub proof fn selected_one_row(tx:ordinary::Transaction,indices:Seq<usize>)
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/write-plan/omit_one_row_premise.rs:2078:16
+     |
+2078 |         assert(tx.write_set[indices[0] as int].row_id==tx.write_set[0].row_id);
+     |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/write-plan/omit_one_row_premise.rs:2079:16
+     |
+2079 |         assert(tx.write_set[indices[1] as int].row_id==tx.write_set[0].row_id);
+     |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

@@ -1,0 +1,199 @@
+--- a/aerostore_core/tests/occ_transactional_index.rs
++++ b/aerostore_core/tests/occ_transactional_index.rs
+@@ -11,6 +11,7 @@
+     IndexCompare, IndexValue, OccCommitter, OccError, OccTable, OccTransaction, SecondaryIndex,
+     SharedWalRing, ShmArena, WalDeltaCodec, WalWriterError,
+ };
++use aerostore_core::occ_partitioned::OccCommittedWrite;
+ use serde::{Deserialize, Serialize};
+ 
+ #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+@@ -163,6 +164,7 @@
+                 let mut retry = table.begin_transaction().unwrap();
+                 let observed = scan(&table, &mut retry, &index, &eq(42));
+                 let retry_outcome = table.commit(&mut retry);
++                completed.send(()).unwrap();
+                 (first, repeated, own, outcome, observed, retry_outcome)
+             }));
+             // This makes row 0's transaction older without using a sleep.
+@@ -178,8 +180,11 @@
+         completions[1 - winner]
+             .recv_timeout(Duration::from_secs(10))
+             .unwrap();
+-        for command in commands {
++        for (row_id, command) in commands.into_iter().enumerate() {
+             command.send(()).unwrap();
++            completions[row_id]
++                .recv_timeout(Duration::from_secs(10))
++                .unwrap();
+         }
+         // Join both threads before reporting a failed semantic assertion.
+         let observations: Vec<_> = workers
+@@ -555,6 +560,167 @@
+ }
+ 
+ #[test]
++fn planning_final_writes_preserve_exact_report_after_savepoint_rollback() {
++    let (arena, table, index) = fixture(&[Row::live(10), Row::live(20), Row::vacant()]);
++    let originals = [Row::live(10), Row::live(20), Row::vacant()];
++    let bases: Vec<_> = (0..3)
++        .map(|id| table.row_head_offset(id).unwrap())
++        .collect();
++    let mut tx = table.begin_transaction().unwrap();
++    let txid = tx.txid();
++    // Interleave rows so final selection must use the last retained write for
++    // each row, then emit row order independently of staging order.
++    table
++        .write_with_dirty_mask(&mut tx, 2, Row::live(70), 2)
++        .unwrap();
++    table
++        .write_with_dirty_mask(&mut tx, 0, Row::live(11), 1)
++        .unwrap();
++    table
++        .write_with_dirty_mask(&mut tx, 1, Row::live(21), 4)
++        .unwrap();
++    table
++        .write_with_dirty_mask(&mut tx, 0, Row::live(12), 8)
++        .unwrap();
++    table.savepoint(&mut tx, "retained").unwrap();
++    table
++        .write_with_dirty_mask(&mut tx, 0, Row::live(99), 32)
++        .unwrap();
++    table
++        .write_with_dirty_mask(&mut tx, 2, Row::vacant(), 64)
++        .unwrap();
++    table
++        .write_with_dirty_mask(&mut tx, 1, Row::live(91), 128)
++        .unwrap();
++    table.rollback_to(&mut tx, "retained").unwrap();
++    table
++        .write_with_dirty_mask(&mut tx, 1, Row::live(22), 16)
++        .unwrap();
++    let final_rows = [Row::live(12), Row::live(22), Row::live(70)];
++    let record = table.commit_with_record(&mut tx).unwrap();
++    let expected: Vec<_> = (0..3)
++        .map(|row_id| OccCommittedWrite {
++            row_id,
++            base_offset: bases[row_id],
++            new_offset: table.row_head_offset(row_id).unwrap(),
++            base_value: originals[row_id],
++            value: final_rows[row_id],
++            dirty_columns_bitmask: [8, 16, 2][row_id],
++        })
++        .collect();
++    assert_eq!(record.txid, txid);
++    assert_eq!(record.writes, expected,
++        "planning-native: report must contain exactly each row's last retained write and original base");
++    for (row_id, value) in final_rows.into_iter().enumerate() {
++        assert_eq!(table.latest_value(row_id).unwrap(), Some(value));
++        assert_ne!(table.row_head_offset(row_id).unwrap(), bases[row_id]);
++    }
++    assert_eq!(
++        index.try_entries().unwrap(),
++        vec![
++            (IndexValue::I64(12), 0),
++            (IndexValue::I64(22), 1),
++            (IndexValue::I64(70), 2)
++        ],
++        "planning-native: only original-to-final key changes may affect postings"
++    );
++    assert!(arena.create_snapshot().in_flight_txids().is_empty());
++}
++
++#[test]
++fn planning_unchanged_key_keeps_posting_and_empty_predicate_valid() {
++    let (arena, table, index) = fixture(&[Row::live(10)]);
++    let base = table.row_head_offset(0).unwrap();
++    let mut absent = table.begin_transaction().unwrap();
++    assert!(scan(&table, &mut absent, &index, &eq(99)).is_empty());
++    let mut writer = table.begin_transaction().unwrap();
++    table
++        .write_with_dirty_mask(&mut writer, 0, Row::live(99), 1)
++        .unwrap();
++    let final_row = Row {
++        key: 10,
++        active: true,
++        value: 123,
++    };
++    table
++        .write_with_dirty_mask(&mut writer, 0, final_row, 4)
++        .unwrap();
++    let record = table.commit_with_record(&mut writer).unwrap();
++    assert_eq!(
++        record.writes,
++        vec![OccCommittedWrite {
++            row_id: 0,
++            base_offset: base,
++            new_offset: table.row_head_offset(0).unwrap(),
++            base_value: Row::live(10),
++            value: final_row,
++            dirty_columns_bitmask: 4,
++        }]
++    );
++    assert_eq!(
++        index.try_entries().unwrap(),
++        vec![(IndexValue::I64(10), 0)],
++        "planning-native: unchanged final key must retain exactly the original posting"
++    );
++    assert_eq!(
++        table.commit(&mut absent),
++        Ok(0),
++        "planning-native: abandoned intermediate key must not invalidate its empty predicate"
++    );
++    assert_eq!(table.latest_value(0).unwrap(), Some(final_row));
++    assert!(arena.create_snapshot().in_flight_txids().is_empty());
++}
++
++#[test]
++fn planning_stale_base_rejects_all_staged_rows_before_publication() {
++    for older_winner in [false, true] {
++        let (arena, table, index) = fixture(&[Row::live(10), Row::live(20)]);
++        let mut winner = older_winner.then(|| table.begin_transaction().unwrap());
++        let mut stale = table.begin_transaction().unwrap();
++        // No explicit row/index reads: this case isolates write-base validation.
++        // The uncontested row sorts before the stale row, so skipping validation
++        // would publish a prefix before the later stale-base CAS fails.
++        table.write(&mut stale, 0, Row::live(11)).unwrap();
++        table.write(&mut stale, 1, Row::live(21)).unwrap();
++        table.write(&mut stale, 1, Row::live(22)).unwrap();
++        let winner = winner.get_or_insert_with(|| table.begin_transaction().unwrap());
++        table.write(winner, 1, Row::live(25)).unwrap();
++        table.commit(winner).unwrap();
++        let heads: Vec<_> = (0..2)
++            .map(|id| table.row_head_offset(id).unwrap())
++            .collect();
++        let outcome = table.commit_with_record(&mut stale);
++        assert_eq!(
++            table.row_head_offset(0).unwrap(),
++            heads[0],
++            "planning-native: stale base must reject before publishing any staged row"
++        );
++        assert_eq!(table.row_head_offset(1).unwrap(), heads[1]);
++        assert_eq!(
++            outcome,
++            Err(OccError::SerializationFailure),
++            "planning-native: stale base must be a clean serialization rejection"
++        );
++        assert_eq!(
++            index.try_entries().unwrap(),
++            vec![(IndexValue::I64(10), 0), (IndexValue::I64(25), 1)]
++        );
++        assert_eq!(table.latest_value(0).unwrap(), Some(Row::live(10)));
++        assert_eq!(table.latest_value(1).unwrap(), Some(Row::live(25)));
++        assert!(arena.create_snapshot().in_flight_txids().is_empty());
++        let mut fresh = table.begin_transaction().unwrap();
++        table.write(&mut fresh, 0, Row::live(11)).unwrap();
++        table.write(&mut fresh, 1, Row::live(22)).unwrap();
++        assert_eq!(table.commit(&mut fresh), Ok(2));
++        assert_eq!(
++            index.try_entries().unwrap(),
++            vec![(IndexValue::I64(11), 0), (IndexValue::I64(22), 1)]
++        );
++        assert!(arena.create_snapshot().in_flight_txids().is_empty());
++    }
++}
++
++#[test]
+ fn rollback_to_savepoint_cannot_erase_an_outer_empty_predicate_dependency() {
+     let (_arena, table, index) = fixture(&[Row::vacant(), Row::vacant()]);
+     let mut reader = table.begin_transaction().unwrap();

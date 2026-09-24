@@ -1,0 +1,23 @@
+note: verifying module planning (selected functions)
+
+note: while loop: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/write-plan/wrong_change_row.rs:2146:9
+     |
+2146 |         while binding<driver.binding_count()
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: invariant not satisfied at end of loop body
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/write-plan/wrong_change_row.rs:2153:17
+     |
+2153 |                 binding==1 ==> extracted(driver.image(),*tx,indices@,changes@),
+     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: invariant not satisfied at end of loop body
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/write-plan/wrong_change_row.rs:2154:17
+     |
+2154 |                 checked(*driver,changes@),
+     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 2 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

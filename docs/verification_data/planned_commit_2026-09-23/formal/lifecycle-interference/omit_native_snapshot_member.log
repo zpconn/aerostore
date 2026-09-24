@@ -1,0 +1,23 @@
+note: verifying root module (selected functions)
+
+note: while loop: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lifecycle-interference/omit_native_snapshot_member.rs:853:9
+    |
+853 |         while si < PROCARRAY_SLOTS
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lifecycle-interference/omit_native_snapshot_member.rs:857:17
+    |
+857 |                 in_flight@ == active(loaded.slots, si as int),
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lifecycle-interference/omit_native_snapshot_member.rs:858:17
+    |
+858 |                 in_flight_len == in_flight.len(), in_flight_len <= si,
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

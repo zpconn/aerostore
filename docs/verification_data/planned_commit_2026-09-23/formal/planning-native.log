@@ -1,0 +1,16 @@
+{"check": "current_final_write_report", "passed": true, "exit_code": 0}
+{"check": "current_unchanged_key", "passed": true, "exit_code": 0}
+{"check": "current_stale_write_base", "passed": true, "exit_code": 0}
+{"check": "current_nested_savepoint_abort", "passed": true, "exit_code": 0}
+{"check": "select_first_write_per_row", "passed": true, "exit_code": 101}
+{"check": "omit_first_selected_row", "passed": true, "exit_code": 101}
+{"check": "derive_before_key_from_new_pointer", "passed": true, "exit_code": 101}
+{"check": "derive_after_key_from_base_pointer", "passed": true, "exit_code": 101}
+{"check": "emit_unchanged_key_change", "passed": true, "exit_code": 101}
+{"check": "bypass_write_base_validation", "passed": true, "exit_code": 101}
+{"check": "report_wrong_base_offset", "passed": true, "exit_code": 101}
+{"check": "report_wrong_new_offset", "passed": true, "exit_code": 101}
+{"check": "report_wrong_base_value", "passed": true, "exit_code": 101}
+{"check": "report_wrong_final_value", "passed": true, "exit_code": 101}
+{"check": "omit_report_dirty_mask", "passed": true, "exit_code": 101}
+{"passed": true, "receipt": "/home/zpconn/code/aerostore/target/verification-planning/final/planning-native/receipt.json", "error": null}

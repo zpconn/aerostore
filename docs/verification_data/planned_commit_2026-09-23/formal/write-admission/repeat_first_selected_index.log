@@ -1,0 +1,11 @@
+note: verifying module admission (selected functions)
+
+error: invariant not satisfied at end of loop body
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/write-admission/repeat_first_selected_index.rs:1985:17
+     |
+1985 |                 forall|j:int| 0<=j<i ==> base_valid(driver.image(),tx.write_set[indices[j] as int]),
+     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

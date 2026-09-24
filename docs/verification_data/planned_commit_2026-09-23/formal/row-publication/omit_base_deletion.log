@@ -1,0 +1,11 @@
+note: verifying root module (selected functions)
+
+error: assertion failed
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/row-publication/omit_base_deletion.rs:974:23
+    |
+974 |         proof {assert(driver.image()==publication_prefix(initial,record.writes[0],record.txid,3));}
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

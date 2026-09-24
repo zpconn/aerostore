@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/storage-slice/accept_invisible_writer.rs:2616:13
+     |
+2616 |     ensures result.is_ok() ==> result.unwrap(),
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+2619 |     Ok::<bool,lookup::Error>(false)
+     |     ------------------------------- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

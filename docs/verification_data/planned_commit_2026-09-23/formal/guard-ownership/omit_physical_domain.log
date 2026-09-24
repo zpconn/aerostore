@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/guard-ownership/omit_physical_domain.rs:544:14
+    |
+476 |         requires bucket_request_valid(self.arena(), self.bucket_count(), header, bucket, authority),
+    |                  ---------------------------------------------------------------------------------- failed precondition
+...
+544 | let bucket = driver . bucket ( header , bucket , Tracked ( & * authority ) ) . ok_or ( IndexError :: InvalidBucket ( bucket ) ) ? ;
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

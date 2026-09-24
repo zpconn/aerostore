@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -1638,7 +1638,7 @@
+             });
+             published.push(OccCommittedWrite {
+                 row_id: write.row_id,
+-                base_offset,
++                base_offset: new_offset,
+                 new_offset,
+                 base_value,
+                 value: new_row.value,

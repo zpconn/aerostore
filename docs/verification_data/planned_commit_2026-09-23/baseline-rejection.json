@@ -1,0 +1,27 @@
+{
+  "passed": false,
+  "errors": [
+    "candidate changed the baseline boundary lock",
+    "frozen boundary path set changed; review new/deleted engine or contract files",
+    "frozen boundary changed: aerostore_core/tests/occ_transactional_index.rs",
+    "frozen boundary changed: scripts/check_formal_coverage.py",
+    "frozen boundary changed: scripts/check_refinement_evidence.py",
+    "frozen boundary changed: scripts/test_formal_gate.py",
+    "frozen boundary changed: scripts/verify_formal.py",
+    "frozen boundary changed: verification/assumptions.toml",
+    "frozen boundary changed: verification/claims.toml",
+    "frozen boundary changed: verification/refinement_campaigns.json"
+  ],
+  "scope": "change detection only; not a whole-engine refinement proof",
+  "checked_files": 317,
+  "baseline_ref": "f82788073224f833873f57c25243a553b4c4d511",
+  "anchoring": "independent_git_baseline",
+  "open_claims": [
+    "TX-HISTORY-IMPLEMENTATION",
+    "MEMORY-OWNERSHIP",
+    "MEMORY-PROGRESS",
+    "WEAK-MEMORY-MMAP",
+    "DURABILITY-IMPLEMENTATION",
+    "QUERY-APPLICATION"
+  ]
+}

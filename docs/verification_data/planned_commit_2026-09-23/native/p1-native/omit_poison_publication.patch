@@ -1,0 +1,10 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -897,7 +897,6 @@
+     }
+ 
+     pub(crate) fn poison_after_wal_failure(&self) {
+-        self.poison_indexes();
+     }
+ 
+     fn publish_index_stamps(&self, changes: &[IndexChange]) -> Result<(), Error> {

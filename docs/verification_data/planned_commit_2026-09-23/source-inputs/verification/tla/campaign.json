@@ -1,0 +1,1830 @@
+{
+  "format_version": 1,
+  "scope": [
+    "Finite abstract protocol models; no production Rust refinement proof",
+    "Publication model: exactly two one-shot transactions, two rows, two nonzero keys; one index with one or two publication buckets",
+    "Publication/durability enumerate all interleavings in explicit finite one-shot configurations; no depth/state constraints",
+    "Earlier publication models assume exact snapshot row materialization; QueryMaterialization evaluates explicit version visibility. Native allocator, process-sharing and weak-memory implementations are not modeled",
+    "Durability.tla retains historical candidate-ordering models; CheckpointCut.tla models the implemented partition-exclusion plus active-cut alternative, still without Rust refinement",
+    "Resource pilots use finite cyclic scenario abstractions with explicitly stated weak fairness; conditional liveness only, no general timestamp-abstraction or Rust-refinement proof",
+    "PrimaryKeyInsert models two one-shot insertions into one append-only bucket, same-key exclusion and distinct colliding keys; captured-chain search/CAS and row-ID reservation are abstract primitives, not a Rust refinement",
+    "PredicatePublication adds two repeated equality lookups, local insert/move/delete overlay, a one-shot older writer, and separate post-deregister publication stamps; exact pinned MVCC and raw candidate capture remain abstract primitives",
+    "LifecyclePublication splits reserve/register under lifecycle exclusion, captures snapshot active IDs/xmax, and derives late publication ordering with one or two bucket guards; two one-shot transactions, no machine wrap or native atomic refinement",
+    "QueryMaterialization derives single-writer/two-row complete-or-retry results from actual xmin/xmax/active branches, explicit old/new row versions and posting publication, acquisition-time metadata and retained history; exact raw posting enumeration, mutex primitives and physical retention remain abstract, not native refinement"
+  ],
+  "cases": [
+    {
+      "name": "publication_empty_b1",
+      "model": "Publication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "publication_empty_b2",
+      "model": "Publication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "publication_move_b1",
+      "model": "Publication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "publication_move_b2",
+      "model": "Publication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "publication_disjoint_b1",
+      "model": "Publication",
+      "constants": {
+        "Scenario": "Disjoint",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "publication_disjoint_b2",
+      "model": "Publication",
+      "constants": {
+        "Scenario": "Disjoint",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "negative_omitempty",
+      "model": "Publication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "OmitEmpty",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "Safety",
+      "failure_property": "Safety"
+    },
+    {
+      "name": "negative_skipvalidation",
+      "model": "Publication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "SkipValidation",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "Safety",
+      "failure_property": "Safety"
+    },
+    {
+      "name": "negative_beginstamp",
+      "model": "Publication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "BeginStamp",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "Safety",
+      "failure_property": "Safety"
+    },
+    {
+      "name": "negative_earlyunlock",
+      "model": "Publication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "EarlyUnlock",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "Safety",
+      "failure_property": "Safety"
+    },
+    {
+      "name": "witness_creator_conflict",
+      "model": "Publication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "creator_conflict"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "witness_both_commit",
+      "model": "Publication",
+      "constants": {
+        "Scenario": "Disjoint",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "both_commit"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "witness_old_snapshot_retry",
+      "model": "Publication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "old_snapshot_retry"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "witness_captured_old_read",
+      "model": "Publication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "captured_old_read"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "durability_dependent_unsafe_candidate",
+      "model": "Durability",
+      "constants": {
+        "Scenario": "Dependent",
+        "SafeProtocol": false,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "DurabilitySafety",
+      "failure_property": "DurabilitySafety"
+    },
+    {
+      "name": "durability_dependent_safe_design",
+      "model": "Durability",
+      "constants": {
+        "Scenario": "Dependent",
+        "SafeProtocol": true,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "DurabilitySafety"
+    },
+    {
+      "name": "durability_checkpoint_unsafe_candidate",
+      "model": "Durability",
+      "constants": {
+        "Scenario": "Checkpoint",
+        "SafeProtocol": false,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "DurabilitySafety",
+      "failure_property": "DurabilitySafety"
+    },
+    {
+      "name": "durability_checkpoint_safe_design",
+      "model": "Durability",
+      "constants": {
+        "Scenario": "Checkpoint",
+        "SafeProtocol": true,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "DurabilitySafety"
+    },
+    {
+      "name": "witness_nonempty_recovery",
+      "model": "Durability",
+      "constants": {
+        "Scenario": "Dependent",
+        "SafeProtocol": true,
+        "Witness": "nonempty_recovery"
+      },
+      "expected": "witness",
+      "safety_property": "DurabilitySafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "witness_checkpoint_recovery",
+      "model": "Durability",
+      "constants": {
+        "Scenario": "Checkpoint",
+        "SafeProtocol": true,
+        "Witness": "checkpoint_recovery"
+      },
+      "expected": "witness",
+      "safety_property": "DurabilitySafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "durability_acknowledged_dependency_loss",
+      "model": "Durability",
+      "constants": {
+        "Scenario": "Dependent",
+        "SafeProtocol": false,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "AcknowledgedSafety",
+      "failure_property": "AcknowledgedSafety"
+    },
+    {
+      "name": "witness_dependent_recovery",
+      "model": "Durability",
+      "constants": {
+        "Scenario": "Dependent",
+        "SafeProtocol": true,
+        "Witness": "dependent_recovery"
+      },
+      "expected": "witness",
+      "safety_property": "DurabilitySafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "reclamation_safe_snapshot",
+      "model": "Reclamation",
+      "constants": {
+        "Mutation": "None",
+        "Witness": "none",
+        "UseGuard": false
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "use_spec": true,
+      "temporal_property": "ReclaimedEventually"
+    },
+    {
+      "name": "reclamation_safe_guard",
+      "model": "Reclamation",
+      "constants": {
+        "Mutation": "None",
+        "Witness": "none",
+        "UseGuard": true
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "use_spec": true,
+      "temporal_property": "ReclaimedEventually"
+    },
+    {
+      "name": "reclamation_active_ids_only",
+      "model": "Reclamation",
+      "constants": {
+        "Mutation": "ActiveOnly",
+        "Witness": "none",
+        "UseGuard": false
+      },
+      "expected": "counterexample",
+      "safety_property": "Safety",
+      "use_spec": true,
+      "failure_property": "Safety"
+    },
+    {
+      "name": "reclamation_ignores_guard",
+      "model": "Reclamation",
+      "constants": {
+        "Mutation": "IgnoreGuard",
+        "Witness": "none",
+        "UseGuard": true
+      },
+      "expected": "counterexample",
+      "safety_property": "Safety",
+      "use_spec": true,
+      "failure_property": "Safety"
+    },
+    {
+      "name": "reclamation_inherited_horizon",
+      "model": "Reclamation",
+      "constants": {
+        "Mutation": "InheritedHorizon",
+        "Witness": "none",
+        "UseGuard": false
+      },
+      "expected": "liveness_counterexample",
+      "safety_property": "Safety",
+      "use_spec": true,
+      "temporal_property": "ReclaimedEventually"
+    },
+    {
+      "name": "witness_reclamation_with_readers",
+      "model": "Reclamation",
+      "constants": {
+        "Mutation": "None",
+        "Witness": "reused_with_continuous_readers",
+        "UseGuard": true
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "use_spec": true,
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "collector_priority_safe",
+      "model": "CollectorPriority",
+      "constants": {
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "AdmissionSafety",
+      "use_spec": true,
+      "temporal_property": "CollectorEventuallyRuns"
+    },
+    {
+      "name": "collector_no_priority",
+      "model": "CollectorPriority",
+      "constants": {
+        "Mutation": "NoPriority",
+        "Witness": "none"
+      },
+      "expected": "liveness_counterexample",
+      "safety_property": "Safety",
+      "use_spec": true,
+      "temporal_property": "CollectorEventuallyRuns"
+    },
+    {
+      "name": "collector_no_recheck",
+      "model": "CollectorPriority",
+      "constants": {
+        "Mutation": "NoRecheck",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "AdmissionSafety",
+      "use_spec": true,
+      "failure_property": "AdmissionSafety"
+    },
+    {
+      "name": "witness_collector_runs",
+      "model": "CollectorPriority",
+      "constants": {
+        "Mutation": "None",
+        "Witness": "collector_runs"
+      },
+      "expected": "witness",
+      "safety_property": "AdmissionSafety",
+      "use_spec": true,
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "live_key_posting_safe",
+      "model": "LiveKeyPosting",
+      "constants": {
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "use_spec": true,
+      "temporal_property": "RetiredEventuallyReusable"
+    },
+    {
+      "name": "live_key_posting_empty_keys_only",
+      "model": "LiveKeyPosting",
+      "constants": {
+        "Mutation": "OnlyEmptyKeys",
+        "Witness": "none"
+      },
+      "expected": "liveness_counterexample",
+      "safety_property": "Safety",
+      "use_spec": true,
+      "temporal_property": "RetiredEventuallyReusable"
+    },
+    {
+      "name": "witness_live_key_posting_reclaimed",
+      "model": "LiveKeyPosting",
+      "constants": {
+        "Mutation": "None",
+        "Witness": "reclaims_live_key_posting"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "use_spec": true,
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "checkpoint_active_cut_safe",
+      "model": "CheckpointCut",
+      "constants": {
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "CheckpointSafety"
+    },
+    {
+      "name": "checkpoint_omit_active_cut",
+      "model": "CheckpointCut",
+      "constants": {
+        "Mutation": "OmitActive",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "CheckpointSafety",
+      "failure_property": "CheckpointSafety"
+    },
+    {
+      "name": "checkpoint_release_after_snapshot",
+      "model": "CheckpointCut",
+      "constants": {
+        "Mutation": "ReleaseAfterSnapshot",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "CheckpointSafety",
+      "failure_property": "CheckpointSafety"
+    },
+    {
+      "name": "checkpoint_truncate_before_persist",
+      "model": "CheckpointCut",
+      "constants": {
+        "Mutation": "TruncateBeforePersist",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "CheckpointSafety",
+      "failure_property": "CheckpointSafety"
+    },
+    {
+      "name": "witness_checkpoint_old_start",
+      "model": "CheckpointCut",
+      "constants": {
+        "Mutation": "None",
+        "Witness": "old_start_late_commit"
+      },
+      "expected": "witness",
+      "safety_property": "CheckpointSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "witness_checkpoint_concurrent_start",
+      "model": "CheckpointCut",
+      "constants": {
+        "Mutation": "None",
+        "Witness": "start_during_checkpoint"
+      },
+      "expected": "witness",
+      "safety_property": "CheckpointSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "primary_key_allocate_same_key",
+      "model": "PrimaryKeyInsert",
+      "constants": {
+        "Scenario": "SameKey",
+        "Api": "Allocate",
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "primary_key_allocate_colliding_keys",
+      "model": "PrimaryKeyInsert",
+      "constants": {
+        "Scenario": "CollidingKeys",
+        "Api": "Allocate",
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "primary_key_allocate_late_head",
+      "model": "PrimaryKeyInsert",
+      "constants": {
+        "Scenario": "SameKey",
+        "Api": "Allocate",
+        "Mutation": "LateHead",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "Safety",
+      "failure_property": "Safety"
+    },
+    {
+      "name": "primary_key_existing_same_key",
+      "model": "PrimaryKeyInsert",
+      "constants": {
+        "Scenario": "SameKey",
+        "Api": "Existing",
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "primary_key_existing_colliding_keys",
+      "model": "PrimaryKeyInsert",
+      "constants": {
+        "Scenario": "CollidingKeys",
+        "Api": "Existing",
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "primary_key_existing_late_head",
+      "model": "PrimaryKeyInsert",
+      "constants": {
+        "Scenario": "SameKey",
+        "Api": "Existing",
+        "Mutation": "LateHead",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "Safety",
+      "failure_property": "Safety"
+    },
+    {
+      "name": "witness_primary_key_retry",
+      "model": "PrimaryKeyInsert",
+      "constants": {
+        "Scenario": "SameKey",
+        "Api": "Allocate",
+        "Mutation": "None",
+        "Witness": "retry_finds_winner"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "witness_primary_key_collisions",
+      "model": "PrimaryKeyInsert",
+      "constants": {
+        "Scenario": "CollidingKeys",
+        "Api": "Existing",
+        "Mutation": "None",
+        "Witness": "colliding_keys_commit"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "predicate_empty_b1",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_empty_b2",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_move_b1",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_move_b2",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_owninsert_b1",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnInsert",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_owninsert_b2",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnInsert",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_ownmovein_b1",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnMoveIn",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_ownmovein_b2",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnMoveIn",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_ownmoveout_b1",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnMoveOut",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_ownmoveout_b2",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnMoveOut",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_owndelete_b1",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnDelete",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_owndelete_b2",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnDelete",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_negative_empty_omitempty",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "OmitEmpty",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "PredicateSafety",
+      "failure_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_negative_move_skiprepeatvalidation",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "SkipRepeatValidation",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "PredicateSafety",
+      "failure_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_negative_owninsert_omitowncandidates",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnInsert",
+        "Mutation": "OmitOwnCandidates",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "PredicateSafety",
+      "failure_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_negative_ownmovein_omitowncandidates",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnMoveIn",
+        "Mutation": "OmitOwnCandidates",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "PredicateSafety",
+      "failure_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_negative_move_beginstamp",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "BeginStamp",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "PredicateSafety",
+      "failure_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_negative_move_earlyunlock",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "EarlyUnlock",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "PredicateSafety",
+      "failure_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_negative_move_omitoldbucket",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "OmitOldBucket",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "PredicateSafety",
+      "failure_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_negative_empty_unlockaftervalidation",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "UnlockAfterValidation",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "PredicateSafety",
+      "failure_property": "PredicateSafety"
+    },
+    {
+      "name": "predicate_witness_own_insert",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "OwnInsert",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "own_insert"
+      },
+      "expected": "witness",
+      "safety_property": "PredicateSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "predicate_witness_repeat_success",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "repeat_success"
+      },
+      "expected": "witness",
+      "safety_property": "PredicateSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "predicate_witness_repeat_retry",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "repeat_retry"
+      },
+      "expected": "witness",
+      "safety_property": "PredicateSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "predicate_witness_start_between_deregister_and_stamp",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "start_between_deregister_and_stamp"
+      },
+      "expected": "witness",
+      "safety_property": "PredicateSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "predicate_witness_captured_before_move",
+      "model": "PredicatePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "captured_before_move"
+      },
+      "expected": "witness",
+      "safety_property": "PredicateSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "lifecycle_empty_b1",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "LifecycleSafety"
+    },
+    {
+      "name": "lifecycle_empty_b2",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "LifecycleSafety"
+    },
+    {
+      "name": "lifecycle_move_b1",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "LifecycleSafety"
+    },
+    {
+      "name": "lifecycle_move_b2",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "LifecycleSafety"
+    },
+    {
+      "name": "lifecycle_disjoint_b1",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Disjoint",
+        "Mutation": "None",
+        "BucketCount": 1,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "LifecycleSafety"
+    },
+    {
+      "name": "lifecycle_disjoint_b2",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Disjoint",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "LifecycleSafety"
+    },
+    {
+      "name": "lifecycle_negative_nolifecycle",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "NoLifecycle",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "RegistrationSafety",
+      "failure_property": "RegistrationSafety"
+    },
+    {
+      "name": "lifecycle_negative_earlyunlock",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "EarlyUnlock",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete"
+    },
+    {
+      "name": "lifecycle_negative_prematurestamp",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "PrematureStamp",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LatePublication",
+      "failure_property": "LatePublication"
+    },
+    {
+      "name": "lifecycle_negative_beginstamp",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "BeginStamp",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LatePublication",
+      "failure_property": "LatePublication"
+    },
+    {
+      "name": "lifecycle_negative_omitempty",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "OmitEmpty",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "UniqueCreation",
+      "failure_property": "UniqueCreation"
+    },
+    {
+      "name": "lifecycle_negative_skipvalidation",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "SkipValidation",
+        "BucketCount": 2,
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "UniqueCreation",
+      "failure_property": "UniqueCreation"
+    },
+    {
+      "name": "lifecycle_witness_reserved_gap_blocks_snapshot",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "reserved_gap_blocks_snapshot"
+      },
+      "expected": "witness",
+      "safety_property": "LifecycleSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "lifecycle_witness_late_older_writer",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "late_older_writer"
+      },
+      "expected": "witness",
+      "safety_property": "LifecycleSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "lifecycle_witness_reader_after_deregister_before_stamp",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "reader_after_deregister_before_stamp"
+      },
+      "expected": "witness",
+      "safety_property": "LifecycleSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "lifecycle_witness_creator_conflict",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Empty",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "creator_conflict"
+      },
+      "expected": "witness",
+      "safety_property": "LifecycleSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "lifecycle_witness_both_commit",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Disjoint",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "both_commit"
+      },
+      "expected": "witness",
+      "safety_property": "LifecycleSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "lifecycle_witness_captured_old_read",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "captured_old_read"
+      },
+      "expected": "witness",
+      "safety_property": "LifecycleSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "lifecycle_witness_reader_between_reservation_and_store",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Move",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "reader_between_reservation_and_store"
+      },
+      "expected": "witness",
+      "safety_property": "LifecycleSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "lifecycle_witness_disjoint_store_reordering",
+      "model": "LifecyclePublication",
+      "constants": {
+        "Scenario": "Disjoint",
+        "Mutation": "None",
+        "BucketCount": 2,
+        "Witness": "disjoint_store_reordering"
+      },
+      "expected": "witness",
+      "safety_property": "LifecycleSafety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "query_move_old_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_move_old_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_move_new_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "New",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_move_new_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "New",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_move_all_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "All",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_move_all_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "All",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_create_old_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Create",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_create_old_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Create",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_create_new_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Create",
+        "Query": "New",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_create_new_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Create",
+        "Query": "New",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_create_all_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Create",
+        "Query": "All",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_create_all_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Create",
+        "Query": "All",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_delete_old_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Delete",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_delete_old_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Delete",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_delete_new_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Delete",
+        "Query": "New",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_delete_new_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Delete",
+        "Query": "New",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_delete_all_b1",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Delete",
+        "Query": "All",
+        "Own": "None",
+        "BucketCount": 1,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_delete_all_b2",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Delete",
+        "Query": "All",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_own_insert",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "Insert",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_own_movein",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "MoveIn",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_own_moveout",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "MoveOut",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_own_delete",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "Delete",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_stale_candidates",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": true,
+        "Mutation": "None",
+        "Witness": "none"
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "query_negative_cachedsnapshotbeforewait",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "CachedSnapshotBeforeWait",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "SnapshotAcquired",
+      "failure_property": "SnapshotAcquired"
+    },
+    {
+      "name": "query_negative_earlyunlock",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "EarlyUnlock",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete"
+    },
+    {
+      "name": "query_negative_dropretainedversion",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "DropRetainedVersion",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete"
+    },
+    {
+      "name": "query_negative_beginstamp",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "BeginStamp",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete"
+    },
+    {
+      "name": "query_negative_omitoldstamp",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "OmitOldStamp",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete"
+    },
+    {
+      "name": "query_negative_skipcapturecheck",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "SkipCaptureCheck",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete"
+    },
+    {
+      "name": "query_negative_ignorecreatoractive",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "IgnoreCreatorActive",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete"
+    },
+    {
+      "name": "query_negative_ignorecreatorxmax",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "IgnoreCreatorXmax",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete"
+    },
+    {
+      "name": "query_negative_omitowncandidates",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "Insert",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "OmitOwnCandidates",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete"
+    },
+    {
+      "name": "query_negative_skipkeyfilter",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": true,
+        "Mutation": "SkipKeyFilter",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "LookupComplete",
+      "failure_property": "LookupComplete"
+    },
+    {
+      "name": "query_negative_skipcommitvalidation",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "SkipCommitValidation",
+        "Witness": "none"
+      },
+      "expected": "counterexample",
+      "safety_property": "CommitStable",
+      "failure_property": "CommitStable"
+    },
+    {
+      "name": "query_witness_old_row_after_release",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "old_row_after_release"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "query_witness_writer_ends_while_waiting",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "writer_ends_while_waiting"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "query_witness_acquisition_refresh",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "acquisition_refresh"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "query_witness_reader_after_reservation",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "New",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "reader_after_reservation"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "query_witness_private_insert",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "Insert",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "private_insert"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "query_witness_stale_filtered",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": true,
+        "Mutation": "None",
+        "Witness": "stale_filtered"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "query_witness_empty_success",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Create",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "empty_success"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached"
+    },
+    {
+      "name": "query_witness_capture_then_commit_retry",
+      "model": "QueryMaterialization",
+      "constants": {
+        "Scenario": "Move",
+        "Query": "Old",
+        "Own": "None",
+        "BucketCount": 2,
+        "ExtraPosting": false,
+        "Mutation": "None",
+        "Witness": "capture_then_commit_retry"
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "WitnessNotReached"
+    }
+  ]
+}

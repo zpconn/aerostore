@@ -1,0 +1,13 @@
+note: verifying root module (selected functions)
+
+error: invariant not satisfied at end of loop body
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/predicate-capture/skip_snapshot_check.rs:109:13
+    |
+109 | /             forall|j: int| 0 <= j < bucket_pos ==>
+110 | |                 captured(tx.index_reads@, index.offset(), buckets[j], index.stamps()[buckets[j]])
+111 | |                     && index.stamps()[buckets[j]] < tx.txid,
+    | |___________________________________________________________^
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

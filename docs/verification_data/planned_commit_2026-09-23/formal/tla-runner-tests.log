@@ -1,0 +1,14 @@
+test_committed_campaign_logs_classify_as_declared (__main__.EvidenceClassificationTests.test_committed_campaign_logs_classify_as_declared) ... ok
+test_complete_requires_success_marker_and_empty_queue (__main__.EvidenceClassificationTests.test_complete_requires_success_marker_and_empty_queue) ... ok
+test_liveness_requires_named_property_trace_and_actual_lasso (__main__.EvidenceClassificationTests.test_liveness_requires_named_property_trace_and_actual_lasso) ... ok
+test_named_safety_failure_and_witness_have_distinct_result_classes (__main__.EvidenceClassificationTests.test_named_safety_failure_and_witness_have_distinct_result_classes) ... ok
+test_safety_and_temporal_counterexamples_cannot_substitute_for_each_other (__main__.EvidenceClassificationTests.test_safety_and_temporal_counterexamples_cannot_substitute_for_each_other) ... ok
+test_timeouts_signals_and_wrong_exit_codes_reject_even_a_printed_trace (__main__.EvidenceClassificationTests.test_timeouts_signals_and_wrong_exit_codes_reject_even_a_printed_trace) ... ok
+test_unknown_expected_class_is_configuration_error (__main__.EvidenceClassificationTests.test_unknown_expected_class_is_configuration_error) ... ok
+test_wrong_property_and_unrelated_errors_never_count_as_expected_failure (__main__.EvidenceClassificationTests.test_wrong_property_and_unrelated_errors_never_count_as_expected_failure) ... ok
+test_module_override_environment_rejected_and_stale_pass_cleared (__main__.RunnerFailureTests.test_module_override_environment_rejected_and_stale_pass_cleared) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.038s
+
+OK

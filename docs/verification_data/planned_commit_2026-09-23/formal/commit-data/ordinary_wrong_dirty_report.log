@@ -1,0 +1,9 @@
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-data/ordinary_wrong_dirty_report.rs:1584:27
+     |
+1584 |             proof {assert(published[0]==report(initial,tx.write_set[indices[0] as int]));}
+     |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 110 verified, 1 errors
+error: aborting due to 1 previous error
+

@@ -1,0 +1,10 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -590,7 +590,6 @@
+             }
+         });
+         let mut candidates: BTreeSet<usize> = candidates.into_iter().collect();
+-        candidates.extend(tx.write_set.iter().map(|write| write.row_id));
+         let mut result = Vec::new();
+         for row_id in candidates {
+             if let Some(value) = self.read(tx, row_id)? {

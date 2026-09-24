@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -2471,7 +2471,7 @@
+         requested_xmin: TxId,
+     ) -> Result<Vec<VacuumReclaimedRow<T>>, Error> {
+         let retained_xmin = crate::vacuum::compute_global_xmin(self.shm.as_ref());
+-        self.vacuum_reclaim_before(requested_xmin.min(retained_xmin))
++        self.vacuum_reclaim_before(requested_xmin)
+     }
+ 
+     /// Internal collector kernel. The caller must derive `global_xmin` from

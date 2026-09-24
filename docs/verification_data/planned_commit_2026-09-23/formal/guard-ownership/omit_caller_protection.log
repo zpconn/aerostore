@@ -1,0 +1,30 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/guard-ownership/omit_caller_protection.rs:354:1
+    |
+354 | / pub fn try_lock<D: Scheduler>(driver: &D, key: Key, held: &Vec<ReadLease>,
+355 | |     Tracked(authority): Tracked<&mut Authority>) -> (result: Option<ReadLease>)
+    | |______________________________________________________________________________^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/guard-ownership/omit_caller_protection.rs:367:9
+    |
+287 |     requires leases_authorized(before, leases), protected_valid(after, held_ids(leases)),
+    |                                                 ---------------------------------------- failed precondition
+...
+367 |         protected_borrows_remain_authorized ( & entry , & * authority , held @ ) ;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/guard-ownership/omit_caller_protection.rs:371:1
+    |
+262 |     requires valid(old(authority)), protected_valid(old(authority), protected),
+    |                                     ------------------------------------------ failed precondition
+...
+371 | environment ( driver , Ghost ( protected ) , Tracked ( & mut * authority ) ) ;
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

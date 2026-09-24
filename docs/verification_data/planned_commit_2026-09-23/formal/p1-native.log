@@ -1,0 +1,17 @@
+{"check": "current_empty_creation", "passed": true, "exit_code": 0}
+{"check": "current_key_move", "passed": true, "exit_code": 0}
+{"check": "current_capture_then_move", "passed": true, "exit_code": 0}
+{"check": "current_crossed_guards", "passed": true, "exit_code": 0}
+{"check": "current_destination_allocation_failure", "passed": true, "exit_code": 0}
+{"check": "current_callback_rollback", "passed": true, "exit_code": 0}
+{"check": "current_wal_rejection", "passed": true, "exit_code": 0}
+{"check": "current_poison_admission", "passed": true, "exit_code": 0}
+{"check": "current_deregistration_stamping", "passed": true, "exit_code": 0}
+{"check": "omit_predicate_validation", "passed": true, "exit_code": 101}
+{"check": "omit_own_write_candidates", "passed": true, "exit_code": 101}
+{"check": "omit_destination_preparation", "passed": true, "exit_code": 101}
+{"check": "omit_old_source_removal", "passed": true, "exit_code": 101}
+{"check": "omit_prepared_destination_rollback", "passed": true, "exit_code": 101}
+{"check": "omit_poison_publication", "passed": true, "exit_code": 101}
+{"check": "reuse_writer_start_as_publication_stamp", "passed": true, "exit_code": 101}
+{"passed": true, "receipt": "/home/zpconn/code/aerostore/target/verification-planning/final/p1-native/receipt.json", "error": null}

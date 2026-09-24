@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -1348,7 +1348,7 @@
+         if self.index_read_conflict(tx)?
+             || self.has_row_lock_conflict(tx)?
+             || self.has_serialization_conflict(tx)?
+-            || self.has_write_base_conflict(tx, &final_write_indices)?
++            || false
+         {
+             drop(locks);
+             drop(index_locks);

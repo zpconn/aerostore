@@ -1,0 +1,17 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/lifecycle-scenario/translate_wrong_stamp.rs:1123:13
+     |
+1123 |       ensures r.is_ok() ==> r.unwrap().index_offset == offset && r.unwrap().bucket == bucket
+     |  _____________^
+1124 | |         && r.unwrap().stamp == index.projection().stamps[(index.projection().bindings[offset], bucket)]
+1125 | |         && r.unwrap().stamp < txid,
+     | |__________________________________^ failed this postcondition
+...
+1151 |       Ok(predicate::IndexRead { index_offset: read.index_offset, bucket: read.bucket, stamp: 0 })
+     |       ------------------------------------------------------------------------------------------- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

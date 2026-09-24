@@ -1,0 +1,15 @@
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-data/omit_initial_posting_coherence.rs:1674:17
+     |
+1674 |         implies !before.postings.postings.contains(p) by {
+     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+error: assertion failed
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-data/omit_initial_posting_coherence.rs:1699:16
+     |
+1699 |         assert(before.postings.postings.contains((c.binding,key,c.row_id)) == (c.before==Some(key)));
+     |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ assertion failed
+
+verification results:: 109 verified, 2 errors
+error: aborting due to 2 previous errors
+

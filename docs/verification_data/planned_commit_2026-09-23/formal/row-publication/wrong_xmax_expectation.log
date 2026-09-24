@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/row-publication/wrong_xmax_expectation.rs:943:9
+    |
+943 |         old(driver).infallible() ==> r.is_ok(),
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+965 |         return Err ( Error :: SerializationFailure ) ;
+    |         -------------------------------------------- at this exit
+
+verification results:: 1 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

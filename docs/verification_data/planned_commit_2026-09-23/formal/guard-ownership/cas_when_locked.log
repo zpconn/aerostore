@@ -1,0 +1,45 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/guard-ownership/cas_when_locked.rs:111:1
+    |
+111 | / pub fn try_acquire<D: Atomics>(driver: &D, key: Key, Tracked(authority): Tracked<&mut Authority>)
+112 | |     -> (result: Option<ReadLease>)
+    | |_________________________________^
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/guard-ownership/cas_when_locked.rs:120:9
+    |
+120 |           cells(old(authority))[key].bit == 0 ==> result.is_some(),
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+128 | /     match driver.compare_exchange(key, 1 , 1 , Ordering :: Acquire , Ordering :: Relaxed, Tracked(&mut *authority)) {
+129 | |         Ok(_) => {
+130 | |             let tracked token = grant(&mut *authority, key);
+131 | |             proof {
+...   |
+142 | |         },
+143 | |     }
+    | |_____- at the end of the function body
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/guard-ownership/cas_when_locked.rs:128:11
+    |
+ 71 |         requires valid(old(authority)), cells(old(authority)).contains_key(key), expected == 0, next == 1,
+    |                                                                                  ------------- failed precondition
+...
+128 |     match driver.compare_exchange(key, 1 , 1 , Ordering :: Acquire , Ordering :: Relaxed, Tracked(&mut *authority)) {
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/guard-ownership/cas_when_locked.rs:130:33
+    |
+ 92 |         cells(old(authority))[key].owner.is_none(),
+    |         ------------------------------------------ failed precondition
+...
+130 |             let tracked token = grant(&mut *authority, key);
+    |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 3 previous errors
+

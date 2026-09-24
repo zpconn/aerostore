@@ -1,0 +1,11 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -717,7 +717,7 @@
+         let mut changes = Vec::new();
+         for write_idx in final_writes {
+             let write = &tx.write_set[*write_idx];
+-            let before = &self.resolve_row_ptr(&write.base_ptr)?.value;
++            let before = &self.resolve_row_ptr(&write.new_ptr)?.value;
+             let after = &self.resolve_row_ptr(&write.new_ptr)?.value;
+             for (binding, bound) in self.indexes.iter().enumerate() {
+                 let before = (bound.key)(before);

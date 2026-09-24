@@ -1,0 +1,121 @@
+TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 19675] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-p7jeyk75/CheckpointCut.tla
+Parsing file /tmp/tlc-16634109860342798341/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-16634109860342798341/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-16634109860342798341/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module CheckpointCut
+Linting of module CheckpointCut
+Starting... (2026-09-23 23:34:55)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-09-23 23:34:55.
+Error: Invariant WitnessNotReached is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ sampledCut = 0
+/\ txid = <<0, 0>>
+/\ checkpointPc = "Idle"
+/\ crashed = FALSE
+/\ durableActive = {}
+/\ sampledActive = {}
+/\ active = {}
+/\ owners = <<0, 0>>
+/\ durableCut = 0
+/\ checkpointImage = {}
+/\ pc = <<"Idle", "Idle">>
+/\ acknowledged = {}
+/\ nextId = 1
+/\ beganDuringCheckpoint = {}
+/\ durableLog = {}
+/\ visible = {}
+/\ recovered = {}
+/\ snapshotRows = {}
+
+State 2: <Begin(1) line 33, col 5 to line 41, col 45 of module CheckpointCut>
+/\ txid = <<1, 0>>
+/\ active = {1}
+/\ pc = <<"Lock", "Idle">>
+/\ nextId = 2
+
+State 3: <CheckpointStart line 81, col 5 to line 84, col 80 of module CheckpointCut>
+/\ checkpointPc = "Lock1"
+
+State 4: <CheckpointLock(1) line 86, col 5 to line 92, col 68 of module CheckpointCut>
+/\ checkpointPc = "Lock2"
+/\ owners = <<3, 0>>
+
+State 5: <CheckpointLock(2) line 86, col 5 to line 92, col 68 of module CheckpointCut>
+/\ checkpointPc = "Snapshot"
+/\ owners = <<3, 3>>
+
+State 6: <CheckpointSnapshot line 94, col 5 to line 100, col 53 of module CheckpointCut>
+/\ checkpointPc = "SampleCut"
+
+State 7: <SampleCut line 102, col 5 to line 107, col 53 of module CheckpointCut>
+/\ sampledCut = 1
+/\ checkpointPc = "Persist"
+/\ sampledActive = {1}
+
+State 8: <PersistCheckpoint line 109, col 5 to line 115, col 53 of module CheckpointCut>
+/\ checkpointPc = "Truncate"
+/\ durableActive = {1}
+/\ durableCut = 1
+
+State 9: <Truncate line 117, col 5 to line 122, col 68 of module CheckpointCut>
+/\ checkpointPc = "Release"
+
+State 10: <CheckpointRelease line 124, col 5 to line 128, col 68 of module CheckpointCut>
+/\ checkpointPc = "Done"
+/\ owners = <<0, 0>>
+
+State 11: <Lock(1) line 44, col 5 to line 48, col 80 of module CheckpointCut>
+/\ owners = <<1, 0>>
+/\ pc = <<"Log", "Idle">>
+
+State 12: <DurableAppend(1) line 50, col 5 to line 54, col 80 of module CheckpointCut>
+/\ pc = <<"Publish", "Idle">>
+/\ durableLog = {1}
+
+State 13: <Publish(1) line 56, col 5 to line 60, col 80 of module CheckpointCut>
+/\ pc = <<"Deregister", "Idle">>
+/\ visible = {1}
+
+State 14: <Deregister(1) line 62, col 5 to line 66, col 80 of module CheckpointCut>
+/\ active = {}
+/\ pc = <<"Unlock", "Idle">>
+
+State 15: <Unlock(1) line 68, col 5 to line 72, col 80 of module CheckpointCut>
+/\ owners = <<0, 0>>
+/\ pc = <<"Ack", "Idle">>
+
+State 16: <Ack(1) line 74, col 5 to line 78, col 80 of module CheckpointCut>
+/\ owners = <<0, 0>>
+/\ pc = <<"Done", "Idle">>
+/\ acknowledged = {1}
+
+State 17: <Crash line 130, col 5 to line 135, col 77 of module CheckpointCut>
+/\ sampledCut = 1
+/\ txid = <<1, 0>>
+/\ checkpointPc = "Done"
+/\ crashed = TRUE
+/\ durableActive = {1}
+/\ sampledActive = {1}
+/\ active = {}
+/\ owners = <<0, 0>>
+/\ durableCut = 1
+/\ checkpointImage = {}
+/\ pc = <<"Done", "Idle">>
+/\ acknowledged = {1}
+/\ nextId = 2
+/\ beganDuringCheckpoint = {}
+/\ durableLog = {1}
+/\ visible = {1}
+/\ recovered = {1}
+/\ snapshotRows = {}
+
+4643 states generated, 2591 distinct states found, 371 states left on queue.
+The depth of the complete state graph search is 17.
+Finished in 00s at (2026-09-23 23:34:55)

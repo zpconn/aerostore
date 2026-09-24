@@ -1,0 +1,36 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-data/skip_destination_prepare.rs:1703:1
+     |
+1703 | / pub fn prepare_destinations<P:PostingPrimitives,R:PublicationStorage>(storage:&mut Storage<P,R>,plan:&Plan)
+1704 | |     ->(result:Result<Vec<usize>,postings::Error>)
+     | |________________________________________________^
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-data/skip_destination_prepare.rs:1709:9
+     |
+1709 |           result.is_ok() ==> installed(old(storage).view(),final(storage).view(),*plan),
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+1712 | / {
+1713 | |     proof {planned_derives_destination_ownership(old(storage).view(),*plan);}
+1714 | |     Ok::<Vec<usize>,postings::Error>(Vec::new())
+1715 | | }
+     | |_- at the end of the function body
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-data/skip_destination_prepare.rs:1710:9
+     |
+1710 |           result.is_ok() ==> postings::prefix_record(plan.changes@,result->Ok_0@,plan.changes.len() as int),
+     |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+1711 |           result.is_err() ==> unchanged_data(old(storage).view(),final(storage).view()) || final(storage).view().postings.poisoned,
+1712 | / {
+1713 | |     proof {planned_derives_destination_ownership(old(storage).view(),*plan);}
+1714 | |     Ok::<Vec<usize>,postings::Error>(Vec::new())
+1715 | | }
+     | |_- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

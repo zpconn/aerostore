@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-data/skip_ordinary_row_publication.rs:1816:31
+     |
+1685 |         after.image==publication::publication_prefix(before.image,plan.record.writes[0],plan.record.txid,3),
+     |         --------------------------------------------------------------------------------------------------- failed precondition
+...
+1816 |     proof {if result.is_ok() {complete_postings_match_published_row(before,storage.view(),*plan);}}
+     |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

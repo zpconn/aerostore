@@ -1,0 +1,41 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lifecycle-interference/rollback_registration_history.rs:603:1
+    |
+603 | pub proof fn wait_step_preserves(a: State, b: State, event: WaitEvent)
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lifecycle-interference/rollback_registration_history.rs:605:13
+    |
+605 |       ensures well_formed(b), extends(a.reservations, b.reservations), b.clock >= a.clock,
+    |               ^^^^^^^^^^^^^^ failed this postcondition
+606 |   {
+607 | /     match event {
+608 | |         WaitEvent::Reserve { txid } => { reservation_preserves_clock_history(a, b, txid); },
+609 | |         WaitEvent::Observe => { observation_preserves_state(a, b); },
+610 | |         WaitEvent::Register { slot, txid } => {
+...   |
+617 | |         _ => {},
+618 | |     }
+    | |_____- at the end of the function body
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lifecycle-interference/rollback_registration_history.rs:605:29
+    |
+605 |       ensures well_formed(b), extends(a.reservations, b.reservations), b.clock >= a.clock,
+    |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+606 |   {
+607 | /     match event {
+608 | |         WaitEvent::Reserve { txid } => { reservation_preserves_clock_history(a, b, txid); },
+609 | |         WaitEvent::Observe => { observation_preserves_state(a, b); },
+610 | |         WaitEvent::Register { slot, txid } => {
+...   |
+617 | |         _ => {},
+618 | |     }
+    | |_____- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

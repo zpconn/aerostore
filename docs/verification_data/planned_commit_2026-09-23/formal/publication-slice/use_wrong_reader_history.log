@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/publication-slice/use_wrong_reader_history.rs:1190:5
+     |
+ 724 |     requires well_formed(before), reservation(before, after, stamp), before.reservations.contains(reader),
+     |                                                                      ------------------------------------ failed precondition
+...
+1190 |     lifecycle::reservation_after_reader(clock_before, clock_after, stamp, 0);
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

@@ -1,0 +1,12 @@
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/planned-commit/omit_posting_coherence.rs:4072:9
+     |
+3913 |         crate::row_postings_match(before,plan.changes[0].binding,plan.changes[0].row_id),
+     |         -------------------------------------------------------------------------------- failed precondition
+...
+4072 |         admission::validation_establishes_plan(storage.view(),plan,ordinary_plan);
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 213 verified, 1 errors
+error: aborting due to 1 previous error
+

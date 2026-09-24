@@ -1,0 +1,10 @@
+--- a/aerostore_core/src/occ_partitioned.rs
++++ b/aerostore_core/src/occ_partitioned.rs
+@@ -1367,7 +1367,6 @@
+             }
+             None => None,
+         };
+-        self.remove_index_sources(&index_changes)?;
+         let publication = match prepared {
+             Some(record) => self
+                 .publish_prepared_write_set(&record)

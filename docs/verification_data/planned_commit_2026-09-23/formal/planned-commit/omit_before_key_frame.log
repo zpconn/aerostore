@@ -1,0 +1,13 @@
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/planned-commit/omit_before_key_frame.rs:4098:13
+     |
+4094 | / pub proof fn extraction_survives_head_interference(before:lookup::Image,after:lookup::Image,
+4095 | |     tx:ordinary::Transaction,indices:Seq<usize>,changes:Seq<postings::IndexChange>)
+     | |___________________________________________________________________________________- at the end of the function body
+...
+4098 |       ensures planning::extracted(after,tx,indices,changes),
+     |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+
+verification results:: 213 verified, 1 errors
+error: aborting due to 1 previous error
+

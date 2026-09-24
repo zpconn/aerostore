@@ -1,0 +1,21 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/guard-ownership/wrong_selected_bucket.rs:536:9
+    |
+536 | /         result.is_ok() && result.unwrap().is_some() ==>
+537 | |             authorized(final(authority), &result.unwrap().unwrap())
+538 | |             && lease_key(&result.unwrap().unwrap()) == (driver.arena(), driver.registry()[binding as int], bucket),
+    | |__________________________________________________________________________________________________________________^ failed this postcondition
+539 | / {
+540 | |     let header = driver . publication_header ( binding ) ? ;
+541 | | if driver . poisoned ( header ) {
+542 | |     return Err ( IndexError :: Poisoned ) ;
+...   |
+545 | | Ok ( try_lock ( driver , bucket , held , Tracked ( & mut * authority ) ) )
+546 | | }
+    | |_- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

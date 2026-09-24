@@ -1,0 +1,30 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lifecycle-interference/end_wrong_registration.rs:948:1
+    |
+948 | / pub fn end_after_wait<D: WaitingPrimitives>(driver: &mut D, registration: ProcArrayRegistration,
+949 | |     Tracked(owner): Tracked<OwnerToken>) -> (out: (Result<(), ProcArrayError>, Ghost<State>))
+    | |____________________________________________________________________________________________^
+
+error: postcondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lifecycle-interference/end_wrong_registration.rs:952:13
+    |
+952 |     ensures out.0.is_ok(), well_formed(final(driver).state()), final(driver).state().lifecycle_held,
+    |             ^^^^^^^^^^^^^ failed this postcondition
+...
+964 |     (result, Ghost(acquired))
+    |     ------------------------- at the end of the function body
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/lifecycle-interference/end_wrong_registration.rs:963:18
+    |
+769 |         registration.txid > 0,
+    |         --------------------- failed precondition
+...
+963 |     let result = end_transaction_acquired(driver, ProcArrayRegistration { slot_idx: registration.slot_idx, txid: 0 });
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

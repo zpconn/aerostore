@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/planned-commit/omit_final_selection.rs:4049:12
+     |
+3660 |     requires selected(tx,indices),tx.write_set.len()>0,
+     |              -------------------- failed precondition
+...
+4049 |     proof {planning::selected_one_row(tx,indices@);}
+     |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

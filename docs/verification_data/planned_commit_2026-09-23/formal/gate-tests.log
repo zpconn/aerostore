@@ -1,0 +1,21 @@
+..................................................................................
+----------------------------------------------------------------------
+Ran 82 tests in 1.771s
+
+OK
+Report: /tmp/tmpktctlem6/target/report.json
+Profile pilot: INCOMPLETE/FAIL; whole engine: UNPROVED
+Report: /tmp/tmpgina9ys3/target/report.json
+Profile full: INCOMPLETE/FAIL; whole engine: UNPROVED
+Report: /tmp/tmpu3ywgdhr/target/report.json
+Profile models: PASS; whole engine: UNPROVED
+Report: /tmp/tmp4go9swak/target/report.json
+Profile pilot: PASS; whole engine: UNPROVED
+Report: /tmp/tmp859uvgp5/target/report.json
+Profile pilot: PASS; whole engine: UNPROVED
+Report: /tmp/tmpfkka1afy/target/report.json
+Profile proofs: PASS; whole engine: UNPROVED
+Report: /tmp/tmpylmkl8tf/target/report.json
+Profile pilot: PASS; whole engine: UNPROVED
+Report: /tmp/tmpjjhabgfs/target/report.json
+Profile full: INCOMPLETE/FAIL; whole engine: UNPROVED

@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/storage-slice/omit_reader_pin.rs:2362:13
+     |
+2362 |     ensures horizon<=tx.snapshot_xmin,
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^ failed this postcondition
+...
+2366 |     horizon
+     |     ------- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

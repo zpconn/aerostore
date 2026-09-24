@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: precondition not satisfied
+   --> /home/zpconn/code/aerostore/target/verification-planning/final/guard-ownership/drop_relaxed.rs:159:5
+    |
+ 82 |             cells(old(authority))[key].owner.is_none(), ordering == Ordering::Release,
+    |                                                         ----------------------------- failed precondition
+...
+159 |     driver.store(physical, 0 , Ordering :: Relaxed, Tracked(&mut *authority));
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

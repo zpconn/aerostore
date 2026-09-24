@@ -1,0 +1,41 @@
+note: verifying root module (selected functions)
+
+note: function body check: not all errors may have been reported; rerun with a higher value for --multiple-errors to find other potential errors in this function
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-completion/finish_wrong_slot.rs:3366:1
+     |
+3366 | / pub fn finish_transaction<L:LifecyclePrimitives>(driver:&mut L,tx:&mut FinishToken)
+3367 | |     ->(result:Result<(),lifecycle::ProcArrayError>)
+     | |__________________________________________________^
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-completion/finish_wrong_slot.rs:3375:9
+     |
+3375 | /         old(tx).registration.is_some() && old(tx).registration.unwrap().slot_idx<lifecycle::PROCARRAY_SLOTS
+3376 | |             && old(driver).state().slots[old(tx).registration.unwrap().slot_idx as int].txid==old(tx).registration.unwrap().txid
+3377 | |             ==> result.is_ok(),
+     | |______________________________^ failed this postcondition
+...
+3391 |   ended ? ;
+     |         - at this exit
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/commit-completion/finish_wrong_slot.rs:3378:9
+     |
+3378 | /         result.is_ok() && old(tx).registration.is_some() ==>
+3379 | |             old(tx).registration.unwrap().slot_idx<lifecycle::PROCARRAY_SLOTS
+3380 | |             && old(driver).state().slots[old(tx).registration.unwrap().slot_idx as int].txid==old(tx).registration.unwrap().txid
+3381 | |             && final(driver).state().slots==old(driver).state().slots.update(old(tx).registration.unwrap().slot_idx as int,
+3382 | |                 lifecycle::Slot{txid:0,snapshot_xmin:0}),
+     | |________________________________________________________^ failed this postcondition
+3383 |           result.is_err() ==> final(driver).state().slots==old(driver).state().slots,
+3384 | / {
+3385 | |     let Some ( registration ) = tx . registration . take ( ) else {
+3386 | |     return Ok ( ( ) ) ;
+...    |
+3392 | | Ok ( ( ) )
+3393 | | }
+     | |_- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 2 previous errors
+

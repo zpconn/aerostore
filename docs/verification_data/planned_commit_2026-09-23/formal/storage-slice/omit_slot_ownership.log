@@ -1,0 +1,14 @@
+note: verifying root module (selected functions)
+
+error: precondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/storage-slice/omit_slot_ownership.rs:2365:12
+     |
+1935 |     requires well_formed(s), 0 <= slot < n <= s.slots.len(), s.slots[slot].txid != 0,
+     |                                                              ----------------------- failed precondition
+...
+2365 |     proof {lifecycle::retention_covers_active_snapshot(driver.state(),slot,lifecycle::PROCARRAY_SLOTS as int);}
+     |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+

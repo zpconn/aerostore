@@ -1,0 +1,17 @@
+note: verifying root module (selected functions)
+
+error: postcondition not satisfied
+    --> /home/zpconn/code/aerostore/target/verification-planning/final/storage-slice/skip_native_read.rs:2567:9
+     |
+2567 | /         result.is_ok() ==> result.unwrap()==Some(Some(before))
+2568 | |             && final(tx).read_set@==seq![lookup::ReadRecord{row_id:0,row_ptr:l.anchor,xmin:birth}],
+     | |__________________________________________________________________________________________________^ failed this postcondition
+2569 | / {
+2570 | |     proof {pruned_tail_reuse_preserves_history(l,birth,writer,before,after,*tx,reuser,key);}
+2571 | |     Ok::<Option<Option<usize>>,lookup::Error>(None)
+2572 | | }
+     | |_- at the end of the function body
+
+verification results:: 0 verified, 1 errors (partial verification with `--verify-*`)
+error: aborting due to 1 previous error
+
