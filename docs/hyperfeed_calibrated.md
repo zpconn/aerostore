@@ -6,7 +6,7 @@ The subsequent [operator calibration](hyperfeed_workload_calibration.md) adds ro
 
 ## What runs
 
-The foreground stream has a fixed offered rate independent of completion. Each logical flight routes to one foreground worker, preserving its input and processing order through retries. Different flights execute concurrently; their transactions still discover their reads and writes through queries. This routing policy is an explicit simulation assumption, not a claim that normal input ordering proves a production processing guarantee.
+The foreground stream has a fixed offered rate independent of completion. The default `--dispatch identity` routes each logical flight to one foreground worker, preserving its input and processing order through retries. The optional [temporary signature-affinity dispatcher](hyperfeed_affinity.md) instead uses visible input identifiers and an explicit TTL, allowing aliases and expiry to send the same flight to different workers. Both policies discover reads and writes through queries. Permanent identity routing remains a comparison control, not an inferred production processing guarantee.
 
 `--workers` counts foreground workers. Two additional processes run projection and housekeeping, identically for AeroStore, the interactive service and PostgreSQL. Both timers use real elapsed seconds and admit their first job after one complete interval. A job exactly at the admission endpoint is excluded. Every admitted message and timer job must finish; excess backlog, retry exhaustion or truncated work fails execution. Queued timer jobs are retained instead of coalescing or skipping them.
 
@@ -22,7 +22,7 @@ Each timer tick currently executes **one bounded transaction**, observing the co
 
 Reports separate foreground, projection, housekeeping and combined maintenance counts, retries, queue delay and end-to-end p99. Zero-job classes have null latency, rather than invented zero-latency samples. Foreground offered rate excludes timer jobs; aggregate completed messages include them. The continuous throughput denominator still covers admission through worker shutdown and confirmed drain.
 
-The coordinator reconstructs each worker's expected stream and checks each foreground flight's consecutive ordinals and nonoverlapping execution intervals. An offered-schedule file remains available when a run fails. Worker activity records occupied wall time, including retries and backoff; it is not CPU usage. Observed execution overlap does not by itself prove particular queries overlapped.
+The coordinator reconstructs each worker's expected stream. Identity mode requires consecutive per-flight ordinals and nonoverlapping execution intervals; affinity mode records same-flight inversions and overlap as diagnostics while still requiring exact dispatch, worker FIFO and a valid full history. An offered-schedule file remains available when a run fails. Worker activity records occupied wall time, including retries and backoff; it is not CPU usage. Observed execution overlap does not by itself prove particular queries overlapped.
 
 Full evidence checks every successful transaction against the independent serial-history oracle. Metrics evidence omits operation histories and remains explicitly unverified, even when paired with a full run. The qualification driver independently checks expected counts, timer deadlines/configuration, class accounting and ordering evidence. It distinguishes successful execution, useful foreground work, diagnostic latency budgets and observed maintenance cadence. Neither a short smoke nor this fixed-population, bounded-maintenance profile can qualify a capacity bound or a 10× replacement claim.
 
@@ -31,6 +31,8 @@ Full evidence checks every successful transaction against the independent serial
 The [2026-09-25 evidence archive](bench_data/calibrated_2026-09-25/README.md) contains nine accelerated full-history trials and nine matching metrics trials across direct AeroStore, the Unix service and PostgreSQL, plus TCP loopback. Two 601-second runs, one per direct engine, each completed 19,232 useful foreground messages and two jobs of each maintenance kind due at 300 and 600 seconds after admission began. Both full histories passed. The timer intervals in these runs were 300 seconds for each maintenance kind; the default 300/600-second configuration is covered by schedule tests, not a separate 1201-second run.
 
 The runs overlapped other local validation, so their timing values are diagnostic rather than a controlled engine comparison. The archive also preserves pause/backlog negative controls, model and gate tests, the existing stress scenarios and verification guardrails. Production engine code remains unchanged. See the archive for exact sources, build hashes, contracts, cleanup and claim limits.
+
+The subsequent [affinity checkpoint](bench_data/affinity_2026-09-25/README.md) validates temporary signature routing, its identity control and stale-update accounting, and retains higher-load progress failures. It extends routing coverage without changing the scope of the earlier cadence evidence.
 
 ## Commands
 

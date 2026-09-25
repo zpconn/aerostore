@@ -40,10 +40,12 @@ the transaction-boundary description above remains based on the paper.
 
 ## Current implementation and gaps
 
-The [calibrated profile](hyperfeed_calibrated.md) routes a resolved synthetic
-identity permanently to one worker using its ordinal modulo the worker count.
-This is an ordering control, not the paper's dispatcher. Its uniform cyclic input
-also makes worker balance easier than a variable-rate population of real flights.
+The [calibrated profile](hyperfeed_calibrated.md) retains permanent synthetic
+identity routing as its default control. Its optional [signature-affinity mode](hyperfeed_affinity.md)
+now implements round-robin assignment with temporary input-signature affinity,
+an explicit experimental TTL and optional mixed identifier forms. Uniform cyclic
+input and the alias distribution remain synthetic; the profile does not establish
+the load balance of a variable-rate population of real flights.
 
 The [message model](../aerostore_core/benches/contention_crucible/model.rs) already
 performs distinct updates to eligible provenance views inside one transaction.
@@ -80,12 +82,11 @@ bounds or a blindly increased constant.
 
 ## Next implementation requirements
 
-1. Retain permanent-identity routing as a control. Add the confirmed dispatcher
-   with explicit affinity lifetime, callsign/registration variation and tests
-   where different input signatures resolve to the same flight or affinity
-   expires while earlier work is still in flight. A dispatcher
-   must use information available in the incoming message, not the oracle's
-   already-resolved flight identity.
+1. Use the new temporary-affinity option and retain permanent-identity routing as
+   its control. Calibrate the affinity lifetime/refresh policy and identifier
+   distribution; compare identical message corpora and inspect actual useful
+   fork updates when valid processing orders differ. Routing uses visible input
+   fields, not the oracle's already-resolved flight identity.
 2. Parameterize provenance populations and eligibility while checking every
    distinct fork update and output. Preserve message-level commit/retry behavior.
    Confirm whether the approximate 3–8 count includes the all-provenance parent;

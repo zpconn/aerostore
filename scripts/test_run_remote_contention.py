@@ -15,10 +15,42 @@ import run_remote_contention as runner
 
 
 class RemoteHandshakeTests(unittest.TestCase):
+    def test_dispatch_setup_defaults_and_mismatched_alias_policy(self):
+        runner.validate_dispatch_setup({}, {"dispatch": "identity", "affinity_ttl_ms": 0, "signature_pattern": "both"})
+        expected = {"dispatch": "signature-affinity", "affinity_ttl_ms": 1000, "signature_pattern": "mixed"}
+        runner.validate_dispatch_setup(expected, expected)
+        for setup in ({}, {**expected, "dispatch": "identity"}, {**expected, "affinity_ttl_ms": 999},
+                      {**expected, "signature_pattern": "both"}, {**expected, "affinity_ttl_ms": True}):
+            with self.subTest(setup=setup), self.assertRaisesRegex(RuntimeError, "differs from the client"):
+                runner.validate_dispatch_setup(setup, expected)
+
+    def test_affinity_and_mixed_identity_parameters_reach_both_peer_commands(self):
+        for dispatch, ttl in (("signature-affinity", 1000), ("identity", 0)):
+            with self.subTest(dispatch=dispatch), tempfile.TemporaryDirectory() as directory:
+                binary = Path(directory) / "fixture-binary"
+                binary.write_bytes(b"fixture; never executed")
+                output = Path(directory) / "evidence"
+                argv = ["run_remote_contention.py", "--binary", str(binary), "--output-dir", str(output),
+                        "--workload", "calibrated", "--families", "16", "--hot-percent", "0",
+                        "--dispatch", dispatch, "--affinity-ttl-ms", str(ttl), "--signature-pattern", "mixed"]
+                with patch.object(sys, "argv", argv), patch.object(runner.subprocess, "Popen", side_effect=RuntimeError("stop before execution")) as start:
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        self.assertEqual(runner.main(), 1)
+                    start.assert_called_once()
+                manifest = json.loads((output / "orchestration.json").read_text())
+                for command in (manifest["server_command"], manifest["client_command"]):
+                    for flag, value in (("--dispatch", dispatch), ("--affinity-ttl-ms", str(ttl)), ("--signature-pattern", "mixed")):
+                        self.assertEqual(command[command.index(flag) + 1], value)
+                self.assertFalse(manifest["passed"])
+
     def test_invalid_calibrated_schedule_is_rejected_before_starting_any_process(self):
         for options in (["--projection-interval-seconds", "0"],
                         ["--housekeeping-interval-seconds", "3601"],
-                        ["--arrival-rate", "0"]):
+                        ["--arrival-rate", "0"],
+                        ["--dispatch", "signature-affinity"],
+                        ["--dispatch", "signature-affinity", "--affinity-ttl-ms", "3600001"],
+                        ["--affinity-ttl-ms", "1"],
+                        ["--workload", "fleet", "--signature-pattern", "mixed"]):
             with self.subTest(options=options), tempfile.TemporaryDirectory() as directory:
                 output = Path(directory) / "must-not-be-created"
                 argv = ["run_remote_contention.py", "--binary", "/nonexistent/benchmark",

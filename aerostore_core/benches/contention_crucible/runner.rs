@@ -1,5 +1,6 @@
 use super::measurement::{
-    calibrated_execution_summary, ArrivalPlan, ExecutionSample, FlightOrderAudit,
+    calibrated_execution_summary, foreground_concurrency_report, ArrivalPlan, ExecutionSample,
+    FlightOrderAudit, ForegroundExecution,
 };
 use super::supervision::{
     invalidate_previous_report, private_json, report_path_from_arguments,
@@ -27,6 +28,12 @@ struct Config {
     arrival_rate: u64,
     projection_interval_seconds: u64,
     housekeeping_interval_seconds: u64,
+    #[serde(default)]
+    dispatch: calibrated::Dispatch,
+    #[serde(default)]
+    affinity_ttl_ms: u64,
+    #[serde(default)]
+    signature_pattern: calibrated::SignaturePattern,
     max_backlog: u64,
     pg_write_mode: postgres::WriteMode,
     rpc_delay_us: u64,
@@ -56,6 +63,9 @@ impl Default for Config {
             arrival_rate: 0,
             projection_interval_seconds: 300,
             housekeeping_interval_seconds: 600,
+            dispatch: calibrated::Dispatch::Identity,
+            affinity_ttl_ms: 0,
+            signature_pattern: calibrated::SignaturePattern::Both,
             max_backlog: 1000,
             pg_write_mode: postgres::WriteMode::Buffered,
             rpc_delay_us: 0,
@@ -87,6 +97,9 @@ fn calibrated_config(config: &Config) -> calibrated::Config {
         seed: config.seed,
         projection_interval_seconds: config.projection_interval_seconds,
         housekeeping_interval_seconds: config.housekeeping_interval_seconds,
+        dispatch: config.dispatch,
+        affinity_ttl_ms: config.affinity_ttl_ms,
+        signature_pattern: config.signature_pattern,
     }
 }
 
@@ -184,6 +197,10 @@ struct Completed {
     completed_by_worker: Vec<usize>,
     calibrated_samples: Vec<ExecutionSample>,
     flight_order: FlightOrderAudit,
+    foreground_executions: Vec<ForegroundExecution>,
+    dispatch_audit: Value,
+    active_families: usize,
+    quiet_families: usize,
     offered_by_worker: Vec<u64>,
 }
 
@@ -233,6 +250,7 @@ fn exercise(
             retry_limit: 128,
             message_interval_us: cfg.message_interval_us,
             expected_parent_pid: std::process::id(),
+            calibrated_schedule: calibrated.as_ref().map(|plan| plan.worker_schedule(id)),
         };
         pool.push(Worker::spawn(
             &worker,
@@ -348,6 +366,12 @@ fn exercise(
         completed_by_worker: vec![0; count],
         calibrated_samples: Vec::new(),
         flight_order: FlightOrderAudit::default(),
+        foreground_executions: Vec::new(),
+        dispatch_audit: calibrated
+            .as_ref()
+            .map_or(Value::Null, |plan| plan.dispatch_report()),
+        active_families: calibrated.as_ref().map_or(0, |plan| plan.active_families()),
+        quiet_families: calibrated.as_ref().map_or(0, |plan| plan.quiet_families()),
         offered_by_worker,
     };
     result.samples.push(json!({"elapsed_seconds":0.0,"completed_messages":0,"storage":initial_sample,"sample_started_ns":sample_start,"sample_finished_ns":sample_end}));
@@ -434,12 +458,15 @@ fn exercise(
                                 return Err("calibrated event differs from independently reconstructed offered schedule".into());
                             }
                             match (expected.class, expected.logical_identity, expected.foreground_ordinal) {
-                                (calibrated::EventClass::Foreground, Some(identity), Some(ordinal)) => result.flight_order.observe(
-                                    identity,
-                                    ordinal,
-                                    message_started_ns,
-                                    receipt.finished,
-                                )?,
+                                (calibrated::EventClass::Foreground, Some(identity), Some(ordinal)) => {
+                                    if cfg.dispatch == calibrated::Dispatch::Identity {
+                                        result.flight_order.observe(identity, ordinal, message_started_ns, receipt.finished)?;
+                                    } else {
+                                        result.foreground_executions.push(ForegroundExecution {
+                                            identity, ordinal, started_ns: message_started_ns, finished_ns: receipt.finished,
+                                        });
+                                    }
+                                },
                                 (calibrated::EventClass::Projection | calibrated::EventClass::Housekeeping, None, None) => (),
                                 _ => return Err("calibrated event has inconsistent foreground ordering metadata".into()),
                             }
@@ -716,7 +743,6 @@ fn summarize(
         "performance_scope":"diagnostic instrumented workload; repeated matched trials, noise analysis and availability acceptance are required before architecture promotion",
         "worker_failure_availability_tested":false});
     if case.scenario.is_none() && case.config.workload == "calibrated" {
-        let plan = calibrated::Schedule::new(calibrated_config(&case.config))?;
         let measured = calibrated_execution_summary(
             &completed.calibrated_samples,
             &completed.offered_by_worker,
@@ -727,23 +753,32 @@ fn summarize(
             .as_object_mut()
             .unwrap()
             .extend(measured.as_object().unwrap().clone());
-        report["per_flight_order"] = completed.flight_order.report();
+        report["per_flight_order"] = if case.config.dispatch == calibrated::Dispatch::Identity {
+            completed.flight_order.report()
+        } else {
+            foreground_concurrency_report(&completed.foreground_executions)?
+        };
+        report["dispatch_audit"] = completed.dispatch_audit;
+        report["dispatch_audit"]["checked"] = json!(true);
+        report["dispatch_audit"]["passed"] = json!(true);
+        report["dispatch_audit"]["scope"] = json!("Coordinator matched every worker receipt to its deterministic offered signature-dispatch schedule; worker preparation precedes admission. The assignment fingerprint is a reproducibility check, not a cryptographic commitment.");
         report["arrival_mode"] = json!("calibrated_fixed_timeline");
         report["offered_messages"] = json!(completed.offered_by_worker.iter().sum::<u64>());
         report["offered_rate_scope"] = json!("foreground_only");
         report["calibrated_schedule"] = json!({
             "foreground_workers":case.config.workers,"maintenance_workers":2,
-            "active_families":plan.active_families(),"quiet_families":plan.quiet_families(),
+            "active_families":completed.active_families,"quiet_families":completed.quiet_families,
             "projection_interval_seconds":case.config.projection_interval_seconds,
             "housekeeping_interval_seconds":case.config.housekeeping_interval_seconds,
             "first_timer_tick":"after_one_interval","timer_admission":"strictly_before_end",
-            "per_flight_ordering":"stable_foreground_worker_fifo","clock":"wall_clock",
+            "per_flight_ordering":if case.config.dispatch == calibrated::Dispatch::Identity {"stable_foreground_worker_fifo"} else {"signature_affinity_worker_fifo"},"clock":"wall_clock",
+            "dispatch":case.config.dispatch,"affinity_ttl_ms":case.config.affinity_ttl_ms,"signature_pattern":case.config.signature_pattern,
             "cadence":if case.config.projection_interval_seconds<300 || case.config.housekeeping_interval_seconds<300 {"accelerated"} else if (300..=600).contains(&case.config.projection_interval_seconds) && (300..=600).contains(&case.config.housekeeping_interval_seconds) {"representative_interval_config"} else {"custom_outside_calibration"},
             "projection_batch_limit":4,"housekeeping_batch_limit":32,
             "maintenance_scope":"bounded_batch_not_full_sweep",
             "population_turnover_tested":false,"global_maintenance_sweep_complete":false,
-            "scope":"Partial calibration of declared per-flight FIFO ordering and wall-clock maintenance cadence; fixed populated cohorts, no flight lifecycle/turnover, bounded maintenance batches, no proprietary HyperFeed compatibility claim.",
-            "ordering_assumption":"Normal foreground processing order is assumed within each logical flight; stable input routing adds no database write-set prelocks."});
+            "scope":"Partial calibration of foreground dispatch and wall-clock maintenance cadence; fixed populated cohorts, no flight lifecycle/turnover, bounded maintenance batches, no proprietary HyperFeed compatibility claim.",
+            "ordering_assumption":if case.config.dispatch == calibrated::Dispatch::Identity {"Permanent identity routing is a FIFO comparison control."} else {"Only each worker's queue is FIFO; aliases or affinity expiry can overlap or reorder the same flight. TTL uses scheduled arrival time, with sliding refresh on hits; aliases and TTL are explicit synthetic parameters."}});
         report["calibrated_schedule"]["timer_event_time"] = json!("Scheduled tick time; delayed jobs retain their admitted timestamp and every tick is drained, without coalescing.");
         report["calibrated_schedule"]["backlog_measurement"] = json!("Maximum sampled due-but-unfinished jobs at worker scheduling boundaries; not a continuous queue maximum.");
         report["population_turnover_tested"] = json!(false);
@@ -771,7 +806,7 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
         .scenario
         .map(|i| model::scenarios(case.config.seed).remove(i));
     let initial = if scenario.is_none() && case.config.workload == "calibrated" {
-        calibrated::Schedule::new(calibrated_config(&case.config))?.initial_records()?
+        calibrated::initial_records(case.config.families, case.config.seed)?
     } else {
         scenario.as_ref().map_or_else(
             || {
@@ -807,6 +842,9 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
             || setup.seed != case.config.seed
             || setup.projection_interval_seconds != case.config.projection_interval_seconds
             || setup.housekeeping_interval_seconds != case.config.housekeeping_interval_seconds
+            || setup.dispatch != case.config.dispatch
+            || setup.affinity_ttl_ms != case.config.affinity_ttl_ms
+            || setup.signature_pattern != case.config.signature_pattern
             || setup.global_time_predicates != case.config.global_time_predicates
             || setup.initial_rows != initial
             || setup.max_seconds <= case.config.seconds
@@ -1073,7 +1111,7 @@ fn parse() -> Result<Option<Config>, String> {
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         if arg == "--help" {
-            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--pg-write-mode buffered|immediate --rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
+            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--pg-write-mode buffered|immediate --rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
             return Ok(None);
         }
         if arg == "--bench" || arg == "--noplot" {
@@ -1087,6 +1125,23 @@ fn parse() -> Result<Option<Config>, String> {
             "--mode" => config.mode = value,
             "--workload" => config.workload = value,
             "--evidence" => config.evidence = value,
+            "--dispatch" => {
+                config.dispatch = match value.as_str() {
+                    "identity" => calibrated::Dispatch::Identity,
+                    "signature-affinity" => calibrated::Dispatch::SignatureAffinity,
+                    _ => return Err("invalid dispatch policy".into()),
+                }
+            }
+            "--affinity-ttl-ms" => {
+                config.affinity_ttl_ms = value.parse().map_err(|_| "invalid affinity TTL")?
+            }
+            "--signature-pattern" => {
+                config.signature_pattern = match value.as_str() {
+                    "both" => calibrated::SignaturePattern::Both,
+                    "mixed" => calibrated::SignaturePattern::Mixed,
+                    _ => return Err("invalid signature pattern".into()),
+                }
+            }
             "--arrival-rate" => {
                 config.arrival_rate = value.parse().map_err(|_| "invalid arrival rate")?
             }
@@ -1171,7 +1226,13 @@ fn parse() -> Result<Option<Config>, String> {
         || !(1..=3600).contains(&config.housekeeping_interval_seconds)
         || (config.workload != "calibrated"
             && (config.projection_interval_seconds != 300
-                || config.housekeeping_interval_seconds != 600))
+                || config.housekeeping_interval_seconds != 600
+                || config.dispatch != calibrated::Dispatch::Identity
+                || config.affinity_ttl_ms != 0
+                || config.signature_pattern != calibrated::SignaturePattern::Both))
+        || (config.dispatch == calibrated::Dispatch::SignatureAffinity
+            && !(1..=3_600_000).contains(&config.affinity_ttl_ms))
+        || (config.dispatch == calibrated::Dispatch::Identity && config.affinity_ttl_ms != 0)
         || !["full", "metrics"].contains(&config.evidence.as_str())
         || (config.evidence == "metrics" && config.mode != "sustained")
         || (config.arrival_rate > 0 && config.message_interval_us > 0)
@@ -1189,7 +1250,7 @@ fn parse() -> Result<Option<Config>, String> {
         return Err("invalid configuration; use --help (bounded workers/families/duration/history capacity)".into());
     }
     if config.workload == "calibrated" && config.mode != "serve" {
-        calibrated::Schedule::new(calibrated_config(&config))?;
+        calibrated::validate_config(&calibrated_config(&config))?;
     }
     Ok(Some(config))
 }
@@ -1317,6 +1378,9 @@ pub fn run() -> Result<(), String> {
             config.seconds,
             config.projection_interval_seconds,
             config.housekeeping_interval_seconds,
+            config.dispatch,
+            config.affinity_ttl_ms,
+            config.signature_pattern,
         );
     }
     if config.engine == "service-remote" {

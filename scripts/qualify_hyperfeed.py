@@ -10,7 +10,9 @@ retained. Source hashes include dirty Rust, workload, proof and gate inputs.
 --workload fleet requires --hot-percent 0 and at least 16 configured identities;
 it starts from 16 warmup rounds and interleaves live generations across identities.
 --workload calibrated separates ordered foreground traffic from projection and
-housekeeping timers. Short/accelerated checks can validate execution, but cannot
+housekeeping timers. Optional signature affinity can reorder one flight across
+workers; the history oracle checks that order, while discarded stale updates
+remain excluded from complete useful-work evidence. Short/accelerated checks can validate execution, but cannot
 demonstrate the operator's five-to-ten-minute maintenance cadence. Its fixed
 population and bounded maintenance batches remain capacity-unqualified even
 when a longer run covers repeated jobs at representative intervals.
@@ -28,6 +30,7 @@ does not qualify real HyperFeed compatibility, recovery, or MMHF availability.
 from __future__ import annotations
 
 import argparse
+from functools import lru_cache
 from datetime import datetime, timezone
 import hashlib
 import itertools
@@ -52,6 +55,7 @@ ENGINES = ("aerostore", "service-unix", "service-tcp", "postgres")
 CORPUS_FIELDS = ("workload", "families", "hot_percent", "seed", "arrival_rate", "seconds")
 MATCH_FIELDS = CORPUS_FIELDS + ("engine", "workers", "pg_write_mode", "rpc_delay_us", "global_time_predicates", "shm_mib", "max_backlog", "max_messages", "message_interval_us")
 CALIBRATED_FIELDS = ("projection_interval_seconds", "housekeeping_interval_seconds")
+DISPATCH_DEFAULTS = {"dispatch": "identity", "affinity_ttl_ms": 0, "signature_pattern": "both"}
 EFFECT_FIELDS = ("created_views", "updated_views", "outputs", "claimed_events", "cancelled_events", "rescheduled_events", "expired_records", "expired_families")
 
 
@@ -98,11 +102,80 @@ def finite_number(value) -> bool:
 def match_fields(config: dict) -> tuple:
     # Preserve historical stress keys; irrelevant timer defaults do not change
     # the fixed lifecycle/fleet corpora or their existing assessments.
-    return MATCH_FIELDS + (CALIBRATED_FIELDS if config.get("workload") == "calibrated" else ())
+    return MATCH_FIELDS + (CALIBRATED_FIELDS + tuple(DISPATCH_DEFAULTS) if config.get("workload") == "calibrated" else ())
+
+
+def config_value(config: dict, field: str):
+    return config.get(field, DISPATCH_DEFAULTS.get(field))
 
 
 def key(config: dict) -> tuple:
-    return tuple(config.get(field) for field in match_fields(config))
+    return tuple(config_value(config, field) for field in match_fields(config))
+
+
+def dispatch_config(config: dict) -> tuple[str, int, str]:
+    dispatch, ttl, pattern = (config_value(config, field) for field in DISPATCH_DEFAULTS)
+    if (dispatch not in {"identity", "signature-affinity"} or pattern not in {"both", "mixed"}
+            or type(ttl) is not int or not 0 <= ttl <= 3600000
+            or (dispatch == "signature-affinity") != (ttl > 0)):
+        raise ValueError("signature-affinity requires an explicit TTL in 1..3600000 ms; identity requires TTL 0")
+    return dispatch, ttl, pattern
+
+
+@lru_cache(maxsize=64)
+def _dispatch_summary(active: int, workers: int, foreground: int, rate: int,
+                      dispatch: str, ttl: int, pattern: str) -> dict:
+    """Reconstruct routing from offered inputs, without Rust assignments.
+
+    The finite fixture retains expired signatures so new and expired misses
+    remain distinguishable. Neither database results nor completions select an
+    owner. The fingerprint encodes every global input index and assigned owner.
+    """
+    cache, seen, last_owner, owners = {}, set(), {}, {}
+    counters = dict(hits=0, misses=0, new_signature_misses=0, expired_misses=0,
+                    expired_owner_changes=0, planned_flight_worker_changes=0)
+    counts, cursor, fingerprint = [0] * workers, 0, 0xcbf29ce484222325
+    for sequence in range(foreground):
+        identity, ordinal = sequence % active, sequence // active
+        alias = (ordinal // 2) % 3 if pattern == "mixed" else 0
+        signature = (0 if alias == 2 else 100 + identity // 4,
+                     0 if alias == 1 else 10000 + identity)
+        seen.add(signature)
+        if dispatch == "identity":
+            owner = identity % workers
+        else:
+            arrival = sequence * 1000000000 // rate
+            previous = cache.get(signature)
+            if previous is not None and arrival < previous[1]:
+                owner = previous[0]
+                counters["hits"] += 1
+            else:
+                owner, cursor = cursor, (cursor + 1) % workers
+                counters["misses"] += 1
+                counters["new_signature_misses" if previous is None else "expired_misses"] += 1
+                counters["expired_owner_changes"] += int(previous is not None and previous[0] != owner)
+            cache[signature] = (owner, arrival + ttl * 1000000)
+        counts[owner] += 1
+        counters["planned_flight_worker_changes"] += int(identity in last_owner and last_owner[identity] != owner)
+        last_owner[identity] = owner
+        owners.setdefault(identity, set()).add(owner)
+        for byte in sequence.to_bytes(8, "little") + owner.to_bytes(8, "little"):
+            fingerprint = ((fingerprint ^ byte) * 0x100000001b3) & 0xffffffffffffffff
+    return {"policy_version": "calibrated-dispatch-v1", "dispatch": dispatch,
+            "affinity_ttl_ms": ttl, "signature_pattern": pattern,
+            "clock": "scheduled_arrival_offset", **counters,
+            "flights_with_multiple_workers": sum(len(value) > 1 for value in owners.values()),
+            "unique_signatures": len(seen), "worker_counts": counts,
+            "assignment_fingerprint_format": "fnv1a64-q-u64le-owner-u64le",
+            "assignment_fingerprint": f"{fingerprint:016x}"}
+
+
+def calibrated_dispatch(config: dict) -> dict:
+    dispatch, ttl, pattern = dispatch_config(config)
+    families = config["families"]
+    return _dispatch_summary(families - max(1, families // 4), config["workers"],
+                             config["arrival_rate"] * config["seconds"], config["arrival_rate"],
+                             dispatch, ttl, pattern)
 
 
 def calibrated_timer_counts(config: dict) -> tuple[int, int]:
@@ -125,12 +198,15 @@ def calibrated_corpus(config: dict) -> dict:
         raise ValueError("calibrated needs 4..1024 uniform identities and bounded positive foreground workers/rate")
     quiet = max(1, families // 4)
     active = families - quiet
+    dispatch, _, _ = dispatch_config(config)
     projection, housekeeping = calibrated_timer_counts(config)
     foreground = rate * config["seconds"]
     rounds, remainder = divmod(foreground, active)
     worker_counts = [0] * workers
     for identity in range(active):
         worker_counts[identity % workers] += rounds + int(identity < remainder)
+    if dispatch == "signature-affinity":
+        worker_counts = calibrated_dispatch(config)["worker_counts"]
     plans = (foreground // (16 * active)) * active + min(foreground % (16 * active), active)
     kinds = {"plan": plans, "position": foreground - plans,
              "global_projection": projection, "global_housekeeping": housekeeping}
@@ -153,6 +229,7 @@ def calibrated_report_errors(run: dict, config: dict, expected_counts: list[int]
         errors.append("calibrated worker count or foreground offered-rate scope differs")
     schedule = run.get("calibrated_schedule", {})
     corpus = calibrated_corpus(config)
+    dispatch, ttl, pattern = dispatch_config(config)
     intervals = [config[name] for name in CALIBRATED_FIELDS]
     cadence = ("accelerated" if min(intervals) < 300 else
                "representative_interval_config" if max(intervals) <= 600 else "custom_outside_calibration")
@@ -162,17 +239,35 @@ def calibrated_report_errors(run: dict, config: dict, expected_counts: list[int]
                 "housekeeping_interval_seconds": config["housekeeping_interval_seconds"],
                 "first_timer_tick": "after_one_interval", "timer_admission": "strictly_before_end",
                 "clock": "wall_clock", "cadence": cadence,
-                "per_flight_ordering": "stable_foreground_worker_fifo",
+                "per_flight_ordering": "stable_foreground_worker_fifo" if dispatch == "identity" else "signature_affinity_worker_fifo",
                 "projection_batch_limit": 4, "housekeeping_batch_limit": 32,
                 "maintenance_scope": "bounded_batch_not_full_sweep",
                 "population_turnover_tested": False, "global_maintenance_sweep_complete": False}
     if not isinstance(schedule, dict) or any(schedule.get(name) != value for name, value in required.items()):
         errors.append("calibrated timer/order/batch schedule differs from the declared profile")
     ordering = run.get("per_flight_order", {})
-    if (not isinstance(ordering, dict) or ordering.get("checked") is not True or ordering.get("passed") is not True
+    if (not isinstance(ordering, dict) or ordering.get("checked") is not True
             or ordering.get("foreground_completions") != foreground
             or ordering.get("identities_observed") != min(foreground, corpus["active_families"])):
         errors.append("same-flight foreground ordering check failed, missing or incomplete")
+    elif dispatch == "identity":
+        if ordering.get("passed") is not True or ordering.get("required", True) is not True:
+            errors.append("identity dispatch did not preserve required same-flight FIFO")
+    else:
+        diagnostics = [ordering.get(name) for name in ("overlapping_messages", "out_of_order_completions")]
+        if (ordering.get("required") is not False or type(ordering.get("passed")) is not bool
+                or any(type(value) is not int or not 0 <= value <= foreground for value in diagnostics)
+                or ordering["passed"] != all(value == 0 for value in diagnostics)):
+            errors.append("affinity same-flight ordering diagnostics are missing or inconsistent")
+    audit = run.get("dispatch_audit")
+    # Historic identity/both reports predate routing fingerprints. Their closed
+    # form worker counts and strict FIFO checks retain their original meaning.
+    if audit is not None or dispatch != "identity" or pattern != "both":
+        expected_audit = calibrated_dispatch(config)
+        if (not isinstance(audit, dict) or audit.get("checked") is not True or audit.get("passed") is not True
+                or any(type(audit.get(name)) is not type(value) or audit[name] != value
+                       for name, value in expected_audit.items())):
+            errors.append("dispatch assignments/counters differ from independent offered-input routing")
     classes = run.get("workload_classes", {})
     if not isinstance(classes, dict) or set(classes) != set(expected_classes):
         return errors + ["calibrated foreground/maintenance class metrics are missing"]
@@ -252,10 +347,14 @@ def assess_calibrated_scope(result: dict, run: dict, config: dict, policy: dict)
     foreground_rate = foreground / elapsed if finite_number(elapsed) and elapsed > 0 else None
     slo = classes["foreground"]["p99_us_including_retries"] <= policy["slo_ms"] * 1000
     rate = foreground_rate is not None and foreground_rate >= config["arrival_rate"] * policy["minimum_drain_fraction"]
+    view_updates = foreground_outcomes.get("updated_views", 0) + foreground_outcomes.get("ignored_stale", 0)
+    dispatch, _, _ = dispatch_config(config)
     result.update(
         no_op_fraction=missing / foreground, useful_work_passed=useful,
         foreground_outcomes=foreground_outcomes,
         foreground_effect_coverage_passed=foreground_complete,
+        foreground_positive_job_fraction=classes["foreground"]["positive_effect_jobs"] / foreground,
+        foreground_stale_view_update_fraction=foreground_outcomes.get("ignored_stale", 0) / view_updates if view_updates else None,
         foreground_p99_ms=classes["foreground"]["p99_us_including_retries"] / 1000,
         foreground_throughput_with_drain=foreground_rate,
         fleet_population_snapshots_passed=populated,
@@ -264,7 +363,8 @@ def assess_calibrated_scope(result: dict, run: dict, config: dict, policy: dict)
         representative_cadence_coverage_passed=cadence_covered,
         maintenance_jobs={name: {field: classes[name][field] for field in ("offered", "completed", "positive_effect_jobs")}
                           for name in ("projection", "housekeeping")},
-        foreground_ordering_passed=True,
+        foreground_ordering_required=dispatch == "identity",
+        foreground_ordering_passed=run["per_flight_order"]["passed"],
         diagnostic_performance_passed=result["continuous_timing_passed"] and useful and slo and rate,
         population_turnover_tested=False, global_maintenance_sweep_complete=False,
         calibrated_capacity_qualification_complete=False,
@@ -405,7 +505,7 @@ def assess_trial(trial: dict, policy: dict, companion_keys: set[tuple] = frozens
     if report.get("completed") is not True or report.get("passed") is not True:
         reasons.append("benchmark did not complete successfully")
     actual = report.get("config", {})
-    if actual.get("mode") != "sustained" or any(actual.get(field) != config.get(field) for field in match_fields(config) + ("evidence",)):
+    if actual.get("mode") != "sustained" or any(config_value(actual, field) != config_value(config, field) for field in match_fields(config) + ("evidence",)):
         reasons.append("reported configuration differs from offered corpus/configuration")
     if config.get("workload") not in {"lifecycle", "fleet", "calibrated"} or not finite_number(config.get("arrival_rate")) or config.get("arrival_rate", 0) <= 0:
         reasons.append("assessment requires a supported fixed corpus with positive offered arrivals")
@@ -537,7 +637,7 @@ def build_gate(trials: list[dict], policy: dict, engines: list[str], rates: list
     """Require every declared seed; optimize only across declared worker counts."""
     assessed = []
     axes = {"engine", "workers", "arrival_rate", "seed"}
-    common = {tuple((field, trial["config"].get(field)) for field in match_fields(trial["config"]) if field not in axes)
+    common = {tuple((field, config_value(trial["config"], field)) for field in match_fields(trial["config"]) if field not in axes)
               for trial in trials}
     corpus_configuration_matches = len(common) == 1
     for trial in trials:
@@ -777,6 +877,11 @@ def main(argv=None) -> int:
                         help="calibrated only: first tick after this interval; accelerated values are diagnostic only")
     parser.add_argument("--housekeeping-interval-seconds", type=int, default=600,
                         help="calibrated only: independent timer; 300..600 seconds matches operator cadence")
+    parser.add_argument("--dispatch", choices=["identity", "signature-affinity"], default="identity")
+    parser.add_argument("--affinity-ttl-ms", type=int, default=0,
+                        help="required positive sliding TTL for signature-affinity; identity requires 0")
+    parser.add_argument("--signature-pattern", choices=["both", "mixed"], default="both",
+                        help="calibrated only: mixed repeats two both, two callsign-only and two tail-only inputs per flight")
     parser.add_argument("--rates", type=comma_ints, default=[32, 64])
     parser.add_argument("--workers", type=comma_ints, default=[1, 2])
     parser.add_argument("--seeds", type=comma_ints, default=[20260924, 20260925, 20260926])
@@ -798,6 +903,12 @@ def main(argv=None) -> int:
     parser.add_argument("--minimum-drain-fraction", type=float, default=0.95)
     parser.add_argument("--outcome-tolerance", type=float, default=0.10)
     args = parser.parse_args(arguments)
+    try:
+        dispatch_config(vars(args))
+    except ValueError as error:
+        parser.error(str(error))
+    if args.workload != "calibrated" and any(getattr(args, field) != value for field, value in DISPATCH_DEFAULTS.items()):
+        parser.error("dispatch/signature overrides apply only to --workload calibrated")
     engines = args.engines.split(",")
     if (not engines or len(set(engines)) != len(engines) or any(e not in ENGINES for e in engines)
             or not 1 <= min(args.rates) <= max(args.rates) <= 1000000
@@ -825,9 +936,10 @@ def main(argv=None) -> int:
             config = {"arrival_rate": rate, "workers": workers, "seconds": args.seconds,
                       "families": args.families, "hot_percent": args.hot_percent,
                       "projection_interval_seconds": args.projection_interval_seconds,
-                      "housekeeping_interval_seconds": args.housekeeping_interval_seconds}
+                      "housekeeping_interval_seconds": args.housekeeping_interval_seconds,
+                      **{field: getattr(args, field) for field in DISPATCH_DEFAULTS}}
             if max(calibrated_corpus(config)["worker_counts"]) > args.max_messages:
-                parser.error("calibrated identity affinity or timer corpus exceeds a per-process message cap")
+                parser.error("calibrated dispatch or timer corpus exceeds a per-process message cap")
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     report_path = output / "campaign.json"
@@ -863,7 +975,8 @@ def main(argv=None) -> int:
                                                maximum_process_workers=args.max_worker_budget + 2,
                                                note="maximum_workers denotes foreground workers; calibrated trials add two maintenance processes; budgets are declared, not enforced, and do not establish equal engine resource use")
             campaign["calibrated_scope"] = {
-                "foreground_ordering": "stable_foreground_worker_fifo",
+                "foreground_ordering": "stable_foreground_worker_fifo" if args.dispatch == "identity" else "signature_affinity_worker_fifo",
+                **{field: getattr(args, field) for field in DISPATCH_DEFAULTS},
                 "projection_interval_seconds": args.projection_interval_seconds,
                 "housekeeping_interval_seconds": args.housekeeping_interval_seconds,
                 "population_turnover_tested": False, "global_maintenance_sweep_complete": False,
@@ -897,13 +1010,14 @@ def main(argv=None) -> int:
                           "message_interval_us": 0}
                 if args.workload == "calibrated":
                     config.update(projection_interval_seconds=args.projection_interval_seconds,
-                                  housekeeping_interval_seconds=args.housekeeping_interval_seconds)
+                                  housekeeping_interval_seconds=args.housekeeping_interval_seconds,
+                                  **{field: getattr(args, field) for field in DISPATCH_DEFAULTS})
                 command = [str(binary), "--mode", "sustained", "--output", str(directory / "report.json")]
                 for field in ("engine", "workload", "evidence", "families", "hot_percent", "seed", "arrival_rate", "seconds", "workers", "pg_write_mode", "rpc_delay_us"):
                     command += ["--" + field.replace("_", "-"), str(config[field])]
                 command += ["--max-backlog", str(args.max_backlog), "--max-messages", str(args.max_messages), "--shm-mib", str(args.shm_mib)]
                 if args.workload == "calibrated":
-                    for name in CALIBRATED_FIELDS:
+                    for name in CALIBRATED_FIELDS + tuple(DISPATCH_DEFAULTS):
                         command += ["--" + name.replace("_", "-"), str(config[name])]
                 public_command = command.copy()
                 if engine == "postgres":

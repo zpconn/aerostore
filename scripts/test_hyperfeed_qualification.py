@@ -149,7 +149,129 @@ def calibrated_trial(seconds=1201, rate=1, workers=4, families=16,
     return item
 
 
+def routed_trial(dispatch="signature-affinity", ttl=1000, pattern="mixed", **options):
+    item = calibrated_trial(**options)
+    config = item["config"]
+    config.update(dispatch=dispatch, affinity_ttl_ms=ttl, signature_pattern=pattern)
+    item["report"]["config"].update(config)
+    run = item["report"]["runs"][0]
+    audit = copy.deepcopy(gate.calibrated_dispatch(config))
+    run["dispatch_audit"] = {**audit, "checked": True, "passed": True}
+    counts = audit["worker_counts"] + run["completed_by_worker"][-2:]
+    run["completed_by_worker"] = counts
+    for statistics, count in zip(run["worker_activity"], counts):
+        statistics.update(offered=count, completed=count, busy_ns=count * 1000000,
+                          utilization=count * 1000000 / (run["elapsed_seconds_including_drain"] * 1e9))
+    if dispatch == "signature-affinity":
+        run["calibrated_schedule"]["per_flight_ordering"] = "signature_affinity_worker_fifo"
+        run["per_flight_order"].update(required=False, overlapping_messages=0, out_of_order_completions=0)
+    return item
+
+
 class QualificationTests(unittest.TestCase):
+    def test_signature_affinity_sliding_ttl_and_expiry_equality_have_golden_routes(self):
+        config = calibrated_trial(seconds=1, rate=10, families=4, workers=2)["config"]
+        config.update(dispatch="signature-affinity", affinity_ttl_ms=300, signature_pattern="both")
+        expired = gate.calibrated_dispatch(config)
+        # A three-flight cycle takes exactly300ms. Equality expires every entry;
+        # each miss advances the two-worker rotor, flipping seven old owners.
+        self.assertEqual({k: expired[k] for k in ("hits", "misses", "new_signature_misses", "expired_misses", "expired_owner_changes", "planned_flight_worker_changes", "flights_with_multiple_workers")},
+                         dict(hits=0, misses=10, new_signature_misses=3, expired_misses=7,
+                              expired_owner_changes=7, planned_flight_worker_changes=7, flights_with_multiple_workers=3))
+        self.assertEqual(expired["worker_counts"], [5, 5])
+        self.assertEqual(expired["assignment_fingerprint"], "5e9651c1c8fb3a05")
+        refreshed = gate.calibrated_dispatch({**config, "affinity_ttl_ms": 301})
+        self.assertEqual((refreshed["hits"], refreshed["misses"], refreshed["expired_misses"]), (7, 3, 0))
+        self.assertEqual(refreshed["worker_counts"], [7, 3])
+        self.assertEqual(refreshed["assignment_fingerprint"], "b33157edbe18c145")
+        self.assertEqual(refreshed["planned_flight_worker_changes"], 0)
+
+    def test_signature_alias_pattern_has_shared_callsign_hits_and_distinct_tail_keys(self):
+        config = calibrated_trial(seconds=3, rate=6, families=4, workers=2)["config"]
+        config.update(dispatch="signature-affinity", affinity_ttl_ms=10000, signature_pattern="mixed")
+        audit = gate.calibrated_dispatch(config)
+        # Per-flight aliases: both,both,callsign,callsign,tail,tail. All three
+        # flights share callsign100; destinations still distinguish DB matches.
+        self.assertEqual((audit["unique_signatures"], audit["hits"], audit["misses"]), (7, 11, 7))
+        self.assertEqual(audit["worker_counts"], [8, 10])
+        self.assertEqual(audit["planned_flight_worker_changes"], 4)
+        self.assertEqual(audit["flights_with_multiple_workers"], 2)
+        self.assertEqual(audit["assignment_fingerprint"], "5226764c10a68564")
+        identity = gate.calibrated_dispatch({**config, "dispatch": "identity", "affinity_ttl_ms": 0})
+        self.assertEqual(identity["unique_signatures"], 7)
+        self.assertEqual(identity["worker_counts"], [12, 6])
+        self.assertEqual(identity["hits"] + identity["misses"] + identity["planned_flight_worker_changes"], 0)
+
+    def test_affinity_valid_reordering_and_partly_stale_updates_remain_history_valid(self):
+        evidence = routed_trial(seconds=3, rate=6, families=4, workers=2)
+        run = evidence["report"]["runs"][0]
+        run["per_flight_order"].update(passed=False, overlapping_messages=2, out_of_order_completions=1)
+        run["per_kind"]["position"]["outcomes"]["ignored_stale"] = 1
+        run["per_kind"]["position"]["outcomes"]["updated_views"] -= 1
+        result = gate.assess_trial(evidence, POLICY)
+        self.assertTrue(result["execution_valid"], result["reasons"])
+        self.assertTrue(result["history_verified"])
+        self.assertFalse(result["foreground_ordering_required"])
+        self.assertFalse(result["foreground_ordering_passed"])
+        self.assertEqual(result["foreground_positive_job_fraction"], 1)
+        self.assertGreater(result["foreground_stale_view_update_fraction"], 0)
+        for field in ("useful_work_passed", "foreground_effect_coverage_passed", "diagnostic_performance_passed", "qualified_capacity_trial", "capacity_failure"):
+            self.assertFalse(result[field], field)
+
+    def test_affinity_requires_exact_dispatch_and_consistent_order_diagnostics(self):
+        mutations = [lambda run: run.pop("dispatch_audit"),
+                     lambda run: run["dispatch_audit"].update(hits=999),
+                     lambda run: run["dispatch_audit"].update(assignment_fingerprint="0000000000000000"),
+                     lambda run: run["dispatch_audit"].update(clock="completion_time"),
+                     lambda run: run["dispatch_audit"].update(worker_counts=[0, 18]),
+                     lambda run: run["per_flight_order"].update(required=True),
+                     lambda run: run["per_flight_order"].update(passed=False),
+                     lambda run: run["per_flight_order"].update(overlapping_messages=-1)]
+        for mutate in mutations:
+            with self.subTest(mutation=mutate):
+                evidence = routed_trial(seconds=3, rate=6, families=4, workers=2)
+                mutate(evidence["report"]["runs"][0])
+                self.assertFalse(gate.assess_trial(evidence, POLICY)["execution_valid"])
+
+    def test_dispatch_defaults_preserve_old_reports_and_companions_require_all_parameters(self):
+        old = calibrated_trial(seconds=1, rate=10, families=4, workers=2)
+        explicit = copy.deepcopy(old)
+        explicit["config"].update(gate.DISPATCH_DEFAULTS)
+        self.assertEqual(gate.key(old["config"]), gate.key(explicit["config"]))
+        self.assertTrue(gate.assess_trial(explicit, POLICY)["history_verified"])
+        evidence = routed_trial(seconds=3, rate=6, families=4, workers=2, evidence="metrics")
+        config = evidence["config"]
+        self.assertTrue(gate.assess_trial(evidence, POLICY, {gate.key(config)})["correctness_companion_verified"])
+        for changes in ({"affinity_ttl_ms": 1001}, {"signature_pattern": "both"}, {"dispatch": "identity", "affinity_ttl_ms": 0}):
+            with self.subTest(changes=changes):
+                self.assertFalse(gate.assess_trial(evidence, POLICY, {gate.key({**config, **changes})})["correctness_companion_verified"])
+        # A declared identity request cannot accept an affinity report even
+        # when both happen to have identical per-worker completion counts.
+        explicit["report"]["config"].update(dispatch="signature-affinity", affinity_ttl_ms=301)
+        self.assertFalse(gate.assess_trial(explicit, POLICY)["execution_valid"])
+
+    def test_mixed_identity_control_keeps_strict_fifo_and_matrices_do_not_mix_dispatch(self):
+        control = routed_trial(dispatch="identity", ttl=0, seconds=3, rate=6, families=4, workers=2)
+        self.assertTrue(gate.assess_trial(control, POLICY)["execution_valid"])
+        failed = copy.deepcopy(control)
+        failed["report"]["runs"][0]["per_flight_order"]["passed"] = False
+        self.assertFalse(gate.assess_trial(failed, POLICY)["execution_valid"])
+        other = routed_trial(seconds=3, rate=6, families=4, workers=2)
+        result = gate.build_gate([control, other], POLICY, ["aerostore"], [6], [2], [11])
+        self.assertFalse(result["corpus_configuration_matches"])
+
+    def test_invalid_dispatch_cli_is_rejected_before_running_a_benchmark(self):
+        for flags in (["--dispatch", "signature-affinity"], ["--affinity-ttl-ms", "1"],
+                      ["--dispatch", "signature-affinity", "--affinity-ttl-ms", "-1"],
+                      ["--dispatch", "signature-affinity", "--affinity-ttl-ms", "3600001"],
+                      ["--workload", "fleet", "--signature-pattern", "mixed"]):
+            with self.subTest(flags=flags), tempfile.TemporaryDirectory() as directory:
+                with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as caught:
+                    gate.main(["--binary", "/nonexistent/benchmark", "--output", directory,
+                               "--workload", "calibrated", "--families", "16", "--hot-percent", "0",
+                               "--slo-ms", "50", *flags])
+                self.assertEqual(caught.exception.code, 2)
+
     def test_calibrated_corpus_counts_and_exclusive_timer_endpoints(self):
         config = calibrated_trial(seconds=7, rate=12, projection=2, housekeeping=3)["config"]
         corpus = gate.calibrated_corpus(config)

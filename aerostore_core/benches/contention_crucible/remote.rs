@@ -21,6 +21,12 @@ pub struct FrameSetup {
     pub seed: u64,
     pub projection_interval_seconds: u64,
     pub housekeeping_interval_seconds: u64,
+    #[serde(default)]
+    pub dispatch: calibrated::Dispatch,
+    #[serde(default)]
+    pub affinity_ttl_ms: u64,
+    #[serde(default)]
+    pub signature_pattern: calibrated::SignaturePattern,
     pub global_time_predicates: bool,
     pub initial_rows: Vec<Record>,
     pub server_pid: u32,
@@ -202,6 +208,9 @@ pub fn serve(
     max_seconds: u64,
     projection_interval_seconds: u64,
     housekeeping_interval_seconds: u64,
+    dispatch: calibrated::Dispatch,
+    affinity_ttl_ms: u64,
+    signature_pattern: calibrated::SignaturePattern,
 ) -> Result<(), String> {
     if !["legacy", "lifecycle", "fleet", "calibrated"].contains(&workload)
         || !(1..=1024).contains(&families)
@@ -211,6 +220,13 @@ pub fn serve(
         || !(1..=3600).contains(&max_seconds)
         || !(1..=3600).contains(&projection_interval_seconds)
         || !(1..=3600).contains(&housekeeping_interval_seconds)
+        || (dispatch == calibrated::Dispatch::SignatureAffinity
+            && !(1..=3_600_000).contains(&affinity_ttl_ms))
+        || (dispatch == calibrated::Dispatch::Identity && affinity_ttl_ms != 0)
+        || (workload != "calibrated"
+            && (dispatch != calibrated::Dispatch::Identity
+                || affinity_ttl_ms != 0
+                || signature_pattern != calibrated::SignaturePattern::Both))
     {
         return Err("invalid bounded remote-server fixture configuration".into());
     }
@@ -313,6 +329,9 @@ pub fn serve(
             seed,
             projection_interval_seconds,
             housekeeping_interval_seconds,
+            dispatch,
+            affinity_ttl_ms,
+            signature_pattern,
             global_time_predicates: global_time,
             initial_rows: initial.clone(),
             server_pid: std::process::id(),

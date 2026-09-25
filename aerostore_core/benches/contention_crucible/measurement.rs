@@ -56,6 +56,57 @@ impl FlightOrderAudit {
     }
 }
 
+/// Identity is used only to audit observed histories, never to route affinity
+/// traffic. Receipt delivery order is not transaction completion order.
+pub struct ForegroundExecution {
+    pub identity: usize,
+    pub ordinal: u64,
+    pub started_ns: u64,
+    pub finished_ns: u64,
+}
+
+pub fn foreground_concurrency_report(samples: &[ForegroundExecution]) -> Result<Value, String> {
+    let mut flights: BTreeMap<usize, Vec<&ForegroundExecution>> = BTreeMap::new();
+    for sample in samples {
+        if sample.started_ns >= sample.finished_ns {
+            return Err("invalid foreground execution interval".into());
+        }
+        flights.entry(sample.identity).or_default().push(sample);
+    }
+    let mut fifo = true;
+    let mut overlaps = 0;
+    let mut out_of_order = 0;
+    for events in flights.values_mut() {
+        events.sort_unstable_by_key(|s| s.ordinal);
+        let mut previous_finish = 0;
+        let mut maximum_finish = 0;
+        for (ordinal, event) in events.iter().enumerate() {
+            if event.ordinal != ordinal as u64 {
+                return Err("foreground identity omitted or duplicated an input ordinal".into());
+            }
+            fifo &= event.started_ns >= previous_finish;
+            out_of_order += usize::from(event.finished_ns < maximum_finish);
+            previous_finish = event.finished_ns;
+            maximum_finish = maximum_finish.max(event.finished_ns);
+        }
+        events.sort_unstable_by_key(|s| s.started_ns);
+        let mut maximum_finish = 0;
+        for (index, event) in events.iter().enumerate() {
+            let preceding_overlap = maximum_finish > event.started_ns;
+            let following_overlap = events
+                .get(index + 1)
+                .is_some_and(|next| next.started_ns < event.finished_ns);
+            overlaps += usize::from(preceding_overlap || following_overlap);
+            maximum_finish = maximum_finish.max(event.finished_ns);
+        }
+    }
+    Ok(json!({"checked":true,"required":false,"passed":fifo,
+        "foreground_completions":samples.len(),"identities_observed":flights.len(),
+        "overlapping_messages":overlaps,"out_of_order_completions":out_of_order,
+        "scope":"Observed first-attempt through successful-completion intervals grouped by oracle identity. Same-flight FIFO is diagnostic under signature affinity; worker FIFO, exact dispatch and the serial-history oracle determine execution validity.",
+        "out_of_order_scope":"Messages finishing before at least one earlier offered message for the same identity; measured completion timestamps, not coordinator receipt order."}))
+}
+
 fn quantile_99(mut values: Vec<u64>) -> Option<f64> {
     values.sort_unstable();
     (!values.is_empty()).then(|| values[(values.len() * 99).div_ceil(100) - 1] as f64 / 1000.)
@@ -232,6 +283,40 @@ impl ArrivalPlan {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn affinity_concurrency_audit_accepts_reordering_but_rejects_missing_inputs() {
+        let event = |identity, ordinal, started_ns, finished_ns| ForegroundExecution {
+            identity,
+            ordinal,
+            started_ns,
+            finished_ns,
+        };
+        // Deliver receipts in reverse order. Flight one completes its later
+        // input first; flight two is FIFO despite receipt delivery order.
+        let observations = vec![
+            event(1, 1, 20, 30),
+            event(2, 1, 20, 30),
+            event(2, 0, 10, 20),
+            event(1, 0, 10, 40),
+        ];
+        let report = foreground_concurrency_report(&observations).unwrap();
+        assert_eq!(report["required"], false);
+        assert_eq!(report["passed"], false);
+        assert_eq!(report["overlapping_messages"], 2);
+        assert_eq!(report["out_of_order_completions"], 1);
+        assert_eq!(report["foreground_completions"], 4);
+        assert!(foreground_concurrency_report(&[event(1, 1, 10, 20)]).is_err());
+        assert!(foreground_concurrency_report(&[event(1, 0, 10, 10)]).is_err());
+        assert!(
+            foreground_concurrency_report(&[event(1, 0, 10, 20), event(1, 0, 30, 40)]).is_err()
+        );
+        let reversed =
+            foreground_concurrency_report(&[event(1, 0, 30, 40), event(1, 1, 10, 20)]).unwrap();
+        assert_eq!(reversed["overlapping_messages"], 0);
+        assert_eq!(reversed["out_of_order_completions"], 1);
+        assert_eq!(reversed["passed"], false);
+    }
 
     #[test]
     fn flight_order_accepts_cross_flight_overlap_and_rejects_same_flight_reordering() {

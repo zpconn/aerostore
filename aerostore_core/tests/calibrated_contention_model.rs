@@ -30,6 +30,9 @@ fn config() -> Config {
         seed: 20260925,
         projection_interval_seconds: 1,
         housekeeping_interval_seconds: 2,
+        dispatch: calibrated::Dispatch::Identity,
+        affinity_ttl_ms: 0,
+        signature_pattern: calibrated::SignaturePattern::Both,
     }
 }
 fn events(schedule: &Schedule) -> Vec<ScheduledEvent> {
@@ -575,4 +578,433 @@ fn seconds_and_nanosecond_execution_have_identical_physical_effects() {
             "physical state diverged at input {sequence}"
         );
     }
+}
+
+fn affinity_config() -> Config {
+    Config {
+        duration_ns: 2 * NANOS_PER_SECOND,
+        foreground_rate: 6,
+        foreground_workers: 2,
+        families: 4,
+        dispatch: calibrated::Dispatch::SignatureAffinity,
+        affinity_ttl_ms: 500,
+        ..config()
+    }
+}
+fn foreground_owners(schedule: &Schedule) -> Vec<usize> {
+    let mut owners = vec![usize::MAX; schedule.foreground_offered() as usize];
+    for worker in 0..schedule.config.foreground_workers {
+        for ordinal in 0..schedule.worker_offered(worker) {
+            let event = schedule.event(worker, ordinal).unwrap();
+            let q = (event.message.id - 1_000_000) as usize;
+            assert_eq!(owners[q], usize::MAX, "input assigned twice");
+            owners[q] = worker;
+        }
+    }
+    assert!(!owners.contains(&usize::MAX), "unassigned offered input");
+    owners
+}
+
+#[test]
+fn default_dispatch_preserves_old_config_json_and_input_fields() {
+    let cfg = config();
+    let expected = r#"{"duration_ns":8000000000,"foreground_rate":24,"foreground_workers":4,"families":16,"seed":20260925,"projection_interval_seconds":1,"housekeeping_interval_seconds":2}"#;
+    assert_eq!(serde_json::to_string(&cfg).unwrap(), expected);
+    assert_eq!(serde_json::from_str::<Config>(expected).unwrap(), cfg);
+    let input = Schedule::new(cfg).unwrap().event(0, 0).unwrap().message;
+    assert_eq!(
+        (
+            input.id,
+            input.callsign,
+            input.tail,
+            input.origin,
+            input.destination
+        ),
+        (1_000_000, 100, 10_000, 20, 1000)
+    );
+    assert_eq!(input.kind, MessageKind::Plan);
+    assert_eq!(input.event_time, EVENT_EPOCH_NS);
+    assert_eq!(input.source, 1);
+    assert_eq!(input.scheduled, 1_700_001_000);
+}
+
+#[test]
+fn ttl_equality_expires_and_round_robin_reassigns_the_same_signature() {
+    let plan = Schedule::new(affinity_config()).unwrap();
+    // Three signatures return exactly500ms later. At equality every entry
+    // expires; an odd number of misses over two workers changes each owner.
+    assert_eq!(
+        foreground_owners(&plan),
+        [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1]
+    );
+    let report = plan.dispatch_report();
+    assert_eq!(report["hits"], 0);
+    assert_eq!(report["misses"], 12);
+    assert_eq!(report["new_signature_misses"], 3);
+    assert_eq!(report["expired_misses"], 9);
+    assert_eq!(report["expired_owner_changes"], 9);
+    assert_eq!(report["planned_flight_worker_changes"], 9);
+    assert_eq!(report["flights_with_multiple_workers"], 3);
+    assert_eq!(report["worker_counts"], serde_json::json!([6, 6]));
+    assert_eq!(report["assignment_fingerprint"], "a9e22ff6968d40e5");
+    assert_eq!(
+        report["assignment_fingerprint_format"],
+        "fnv1a64-q-u64le-owner-u64le"
+    );
+}
+
+#[test]
+fn ttl_hits_refresh_deadlines_beyond_the_original_insertion_time() {
+    let plan = Schedule::new(Config {
+        affinity_ttl_ms: 501,
+        ..affinity_config()
+    })
+    .unwrap();
+    assert_eq!(
+        foreground_owners(&plan),
+        [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0]
+    );
+    let report = plan.dispatch_report();
+    assert_eq!(report["hits"], 9);
+    assert_eq!(report["misses"], 3);
+    assert_eq!(report["expired_misses"], 0);
+    assert_eq!(report["planned_flight_worker_changes"], 0);
+    // The last arrival is more than one original TTL after insertion. Keeping
+    // the same owner requires the earlier hits to refresh the deadline.
+    assert_eq!(plan.event(0, 6).unwrap().message.id, 1_000_009);
+}
+
+#[test]
+fn mixed_signatures_share_callsign_routes_and_hits_do_not_advance_round_robin() {
+    let plan = Schedule::new(Config {
+        duration_ns: 3 * NANOS_PER_SECOND,
+        affinity_ttl_ms: 5000,
+        signature_pattern: calibrated::SignaturePattern::Mixed,
+        ..affinity_config()
+    })
+    .unwrap();
+    // Distinct logical flights share the visible callsign-only signature.
+    // Its first miss follows three new both-signature misses, so owner1.
+    // Intervening hits must not advance the round-robin cursor.
+    assert_eq!(
+        foreground_owners(&plan),
+        [0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0]
+    );
+    let report = plan.dispatch_report();
+    assert_eq!(report["unique_signatures"], 7);
+    assert_eq!(report["hits"], 11);
+    assert_eq!(report["misses"], 7);
+    assert_eq!(report["expired_misses"], 0);
+    assert_eq!(report["expired_owner_changes"], 0);
+    assert_eq!(report["planned_flight_worker_changes"], 4);
+    assert_eq!(report["flights_with_multiple_workers"], 2);
+    assert_eq!(report["worker_counts"], serde_json::json!([8, 10]));
+    assert_eq!(report["assignment_fingerprint"], "5226764c10a68564");
+    let messages = events(&plan);
+    for ordinal in 0..6 {
+        let event = messages
+            .iter()
+            .find(|e| e.logical_identity == Some(0) && e.foreground_ordinal == Some(ordinal))
+            .unwrap();
+        assert_eq!(
+            (event.message.callsign, event.message.tail),
+            match ordinal {
+                0 | 1 => (100, 10_000),
+                2 | 3 => (100, 0),
+                _ => (0, 10_000),
+            }
+        );
+    }
+}
+
+#[test]
+fn expiry_does_not_falsely_imply_worker_migration() {
+    let plan = Schedule::new(Config {
+        duration_ns: 2 * NANOS_PER_SECOND,
+        foreground_rate: 24,
+        foreground_workers: 4,
+        families: 16,
+        affinity_ttl_ms: 1,
+        ..affinity_config()
+    })
+    .unwrap();
+    let report = plan.dispatch_report();
+    assert_eq!(report["expired_misses"], 36);
+    assert_eq!(report["expired_owner_changes"], 0);
+    assert_eq!(report["planned_flight_worker_changes"], 0);
+    assert_eq!(report["flights_with_multiple_workers"], 0);
+}
+
+#[test]
+fn aliases_change_input_evidence_but_corpus_is_independent_of_dispatch_and_workers() {
+    let baseline = Schedule::new(Config {
+        signature_pattern: calibrated::SignaturePattern::Mixed,
+        ..config()
+    })
+    .unwrap();
+    let expected = events(&baseline);
+    for workers in [1, 2, 4, 16, 32] {
+        let affinity = Schedule::new(Config {
+            foreground_workers: workers,
+            dispatch: calibrated::Dispatch::SignatureAffinity,
+            affinity_ttl_ms: 1200,
+            signature_pattern: calibrated::SignaturePattern::Mixed,
+            ..config()
+        })
+        .unwrap();
+        assert_eq!(events(&affinity), expected);
+        assert_eq!(
+            affinity.initial_records().unwrap(),
+            baseline.initial_records().unwrap()
+        );
+    }
+}
+
+#[test]
+fn prepared_worker_plans_roundtrip_and_binary_search_backlog_matches_due_inputs() {
+    let plan = Schedule::new(Config {
+        signature_pattern: calibrated::SignaturePattern::Mixed,
+        affinity_ttl_ms: 501,
+        ..affinity_config()
+    })
+    .unwrap();
+    for worker in 0..plan.worker_count() {
+        let prepared = plan.worker_schedule(worker);
+        prepared.validate().unwrap();
+        let decoded: calibrated::WorkerSchedule =
+            serde_json::from_slice(&serde_json::to_vec(&prepared).unwrap()).unwrap();
+        assert_eq!(prepared, decoded);
+        assert_eq!(prepared.offered(), plan.worker_offered(worker));
+        for ordinal in 0..=prepared.offered() {
+            assert_eq!(prepared.event(ordinal), plan.event(worker, ordinal));
+        }
+        for elapsed in [
+            0,
+            166_666_665,
+            166_666_666,
+            500_000_000,
+            1_000_000_000,
+            u64::MAX,
+        ] {
+            let due = (0..prepared.offered())
+                .filter(|&n| prepared.event(n).unwrap().offset_ns <= elapsed)
+                .count() as u64;
+            for completed in [0, 1, 2, 100] {
+                assert_eq!(
+                    prepared.backlog(completed, elapsed),
+                    due.saturating_sub(completed)
+                );
+                assert_eq!(
+                    prepared.backlog(completed, elapsed),
+                    plan.backlog(worker, completed, elapsed)
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn malformed_prepared_worker_plans_are_rejected() {
+    let plan = Schedule::new(affinity_config()).unwrap();
+    let good = plan.worker_schedule(0);
+    for indices in [vec![0, 0], vec![2, 0], vec![12], vec![u32::MAX]] {
+        let mut bad = good.clone();
+        bad.foreground_sequences = indices;
+        assert!(bad.validate().is_err());
+    }
+    let mut bad = good.clone();
+    bad.worker = plan.worker_count();
+    assert!(bad.validate().is_err());
+    let mut bad = plan.worker_schedule(2);
+    bad.foreground_sequences = vec![0];
+    assert!(
+        bad.validate().is_err(),
+        "timer worker cannot receive foreground indices"
+    );
+    let control = Schedule::new(config()).unwrap();
+    let mut bad = control.worker_schedule(0);
+    bad.foreground_sequences = vec![1];
+    assert!(
+        bad.validate().is_err(),
+        "identity control uses only its analytical lane"
+    );
+    let mut bad = good;
+    bad.config.affinity_ttl_ms = 0;
+    assert!(bad.validate().is_err());
+}
+
+#[test]
+fn dispatch_configuration_requires_explicit_bounded_ttl_only_for_affinity() {
+    for invalid in [
+        Config {
+            affinity_ttl_ms: 1,
+            ..config()
+        },
+        Config {
+            affinity_ttl_ms: 0,
+            ..affinity_config()
+        },
+        Config {
+            affinity_ttl_ms: 3_600_001,
+            ..affinity_config()
+        },
+        Config {
+            affinity_ttl_ms: u64::MAX,
+            ..affinity_config()
+        },
+    ] {
+        assert!(Schedule::new(invalid).is_err());
+    }
+    let mut invalid = serde_json::to_value(config()).unwrap();
+    invalid["dispatch"] = serde_json::json!("flight_hash");
+    assert!(serde_json::from_value::<Config>(invalid).is_err());
+    let plan = Schedule::new(Config {
+        signature_pattern: calibrated::SignaturePattern::Mixed,
+        ..config()
+    })
+    .unwrap();
+    assert_eq!(plan.dispatch_report()["dispatch"], "identity");
+    assert_eq!(plan.dispatch_report()["hits"], 0);
+    assert_eq!(plan.dispatch_report()["misses"], 0);
+}
+
+#[test]
+fn callsign_only_and_tail_only_queries_resolve_the_intended_family_and_forks() {
+    let plan = Schedule::new(Config {
+        duration_ns: 3 * NANOS_PER_SECOND,
+        signature_pattern: calibrated::SignaturePattern::Mixed,
+        ..affinity_config()
+    })
+    .unwrap();
+    let mut rows = as_map(&plan.initial_records().unwrap());
+    let mut aliases = BTreeSet::new();
+    for event in events(&plan)
+        .into_iter()
+        .filter(|e| e.class == EventClass::Foreground)
+    {
+        let body = model::serial_apply(&mut rows, &event.message).unwrap();
+        assert_eq!(
+            body.outcome.family,
+            Some((event.logical_identity.unwrap() * 2) as i64)
+        );
+        assert_eq!(body.outcome.updated_views, 4);
+        assert_eq!(body.outcome.ignored_stale, 0);
+        assert!(!body.outcome.missing_family);
+        assert!(!body.outcome.allocation_deferred);
+        aliases.insert((event.message.callsign == 0, event.message.tail == 0));
+        let writes: BTreeSet<_> = body
+            .operations
+            .iter()
+            .filter_map(|op| match op {
+                Operation::Write { row } => Some(row.id),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            writes.len(),
+            if matches!(event.message.kind, MessageKind::Plan) {
+                13
+            } else {
+                17
+            }
+        );
+    }
+    assert_eq!(
+        aliases,
+        [(false, false), (false, true), (true, false)].into()
+    );
+    model::validate_snapshot(&rows.into_values().collect::<Vec<_>>()).unwrap();
+}
+
+#[test]
+fn an_expired_assignment_can_finish_after_a_newer_one_with_valid_partial_staleness() {
+    let plan = Schedule::new(affinity_config()).unwrap();
+    let initial = plan.initial_records().unwrap();
+    let all = events(&plan);
+    let old = all
+        .iter()
+        .find(|e| e.message.id == 1_000_000)
+        .unwrap()
+        .message
+        .clone();
+    let newer = all
+        .iter()
+        .find(|e| e.message.id == 1_000_003)
+        .unwrap()
+        .message
+        .clone();
+    assert_eq!((old.callsign, old.tail), (newer.callsign, newer.tail));
+    assert_ne!(foreground_owners(&plan)[0], foreground_owners(&plan)[3]);
+    let mut rows = as_map(&initial);
+    let newer_body = model::serial_apply(&mut rows, &newer).unwrap();
+    let old_body = model::serial_apply(&mut rows, &old).unwrap();
+    assert_eq!(newer_body.outcome.updated_views, 4);
+    assert_eq!(old_body.outcome.updated_views, 2);
+    assert_eq!(old_body.outcome.ignored_stale, 2);
+    let mut history = vec![
+        oracle::Receipt {
+            message: old,
+            started: 4,
+            finished: 5,
+            body: old_body,
+        },
+        oracle::Receipt {
+            message: newer,
+            started: 2,
+            finished: 3,
+            body: newer_body,
+        },
+    ];
+    let final_rows: Vec<_> = rows.into_values().collect();
+    assert_eq!(
+        oracle::check(&initial, &history, &final_rows, 100).status,
+        oracle::Status::Valid
+    );
+    history[0].body.outcome.ignored_stale = 0;
+    assert_eq!(
+        oracle::check(&initial, &history, &final_rows, 100).status,
+        oracle::Status::Invalid
+    );
+}
+
+#[test]
+fn worker_plans_store_each_affinity_input_once_and_do_not_depend_on_consumption() {
+    let plan = Schedule::new(Config {
+        duration_ns: 10 * NANOS_PER_SECOND,
+        foreground_rate: 1000,
+        foreground_workers: 8,
+        families: 64,
+        affinity_ttl_ms: 60,
+        signature_pattern: calibrated::SignaturePattern::Mixed,
+        ..affinity_config()
+    })
+    .unwrap();
+    let prepared: Vec<_> = (0..plan.worker_count())
+        .map(|worker| plan.worker_schedule(worker))
+        .collect();
+    assert_eq!(
+        prepared
+            .iter()
+            .map(|p| p.foreground_sequences.len())
+            .sum::<usize>(),
+        10_000
+    );
+    let indices: BTreeSet<_> = prepared
+        .iter()
+        .flat_map(|p| p.foreground_sequences.iter().copied())
+        .collect();
+    assert_eq!(indices, (0..10_000).collect());
+    for worker in prepared {
+        worker.validate().unwrap();
+        let before = serde_json::to_value(&worker).unwrap();
+        for n in (0..worker.offered()).rev() {
+            let _ = worker.event(n);
+        }
+        let _ = worker.backlog(0, u64::MAX);
+        let _ = worker.backlog(worker.offered(), 0);
+        assert_eq!(serde_json::to_value(&worker).unwrap(), before);
+    }
+    let control = Schedule::new(config()).unwrap();
+    assert!((0..control.worker_count())
+        .all(|w| control.worker_schedule(w).foreground_sequences.is_empty()));
 }

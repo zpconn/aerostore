@@ -22,6 +22,17 @@ import time
 import uuid
 
 
+DISPATCH_DEFAULTS = {"dispatch": "identity", "affinity_ttl_ms": 0, "signature_pattern": "both"}
+
+
+def validate_dispatch_setup(setup: dict, expected: dict) -> None:
+    """Missing fields identify the historic identity/both control only."""
+    if any(type(setup.get(field, default)) is not type(expected.get(field, default))
+           or setup.get(field, default) != expected.get(field, default)
+           for field, default in DISPATCH_DEFAULTS.items()):
+        raise RuntimeError("server setup dispatch/signature configuration differs from the client")
+
+
 # A remote owner can die while cooperative GC shutdown is blocked. This
 # independent supervisor survives SSH hangup and bounds the entire owned group,
 # rather than depending on the owner's watchdog thread surviving that death.
@@ -202,6 +213,10 @@ def main() -> int:
                         help="calibrated profile: independent wall-clock projection interval")
     parser.add_argument("--housekeeping-interval-seconds", type=int, default=600,
                         help="calibrated profile: independent wall-clock housekeeping interval")
+    parser.add_argument("--dispatch", choices=["identity", "signature-affinity"], default="identity")
+    parser.add_argument("--affinity-ttl-ms", type=int, default=0,
+                        help="explicit sliding TTL in 1..3600000 ms required for signature-affinity")
+    parser.add_argument("--signature-pattern", choices=["both", "mixed"], default="both")
     parser.add_argument("--evidence", choices=["full", "metrics"], default="metrics")
     parser.add_argument("--arrival-rate", type=int, default=100)
     parser.add_argument("--max-backlog", type=int, default=1000)
@@ -210,6 +225,10 @@ def main() -> int:
     parser.add_argument("--hot-percent", type=int, default=80)
     parser.add_argument("--query-plan", choices=["family", "global-time"], default="family")
     args = parser.parse_args()
+    if not 0 <= args.affinity_ttl_ms <= 3600000 or (args.dispatch == "signature-affinity") != (args.affinity_ttl_ms > 0):
+        parser.error("signature-affinity requires an explicit TTL in 1..3600000 ms; identity requires TTL 0")
+    if args.workload != "calibrated" and any(getattr(args, field) != value for field, value in DISPATCH_DEFAULTS.items()):
+        parser.error("dispatch/signature overrides apply only to --workload calibrated")
     timeout = args.timeout if args.timeout is not None else args.seconds + 240
     if args.workload == "fleet" and (args.families < 16 or args.hot_percent != 0):
         parser.error("fleet requires at least 16 families and --hot-percent 0")
@@ -251,7 +270,9 @@ def main() -> int:
               "--seed", str(args.seed), "--shm-mib", str(args.shm_mib),
               "--query-plan", args.query_plan, "--hot-percent", str(args.hot_percent),
               "--projection-interval-seconds", str(args.projection_interval_seconds),
-              "--housekeeping-interval-seconds", str(args.housekeeping_interval_seconds)]
+              "--housekeeping-interval-seconds", str(args.housekeeping_interval_seconds),
+              "--dispatch", args.dispatch, "--affinity-ttl-ms", str(args.affinity_ttl_ms),
+              "--signature-pattern", args.signature_pattern]
     server_args = [args.remote_binary if args.ssh_host else str(binary),
                    "--mode", "serve", "--engine", "service-tcp", "--seconds", str(timeout),
                    "--service-bind", bind, "--output", server_setup, *common]
@@ -290,6 +311,7 @@ def main() -> int:
                                       stderr=subprocess.STDOUT, start_new_session=True)
             setup = wait_until(lambda: ready_setup(read_setup(server_setup, args.ssh_host)),
                                min(deadline, time.monotonic()+60), [("server", server)])
+            validate_dispatch_setup(setup, vars(args))
             manifest["run_id"] = setup["run_id"]
             if args.advertise_address:
                 endpoint = setup.get("endpoint", {}).get("Tcp")
