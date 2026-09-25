@@ -1,0 +1,10 @@
+{
+  "tool": "TLC",
+  "release_url": "https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar",
+  "release_tag": "v1.8.0",
+  "reported_version": "TLC2 Version 2026.09.22.222048 (rev: 35d40c9)",
+  "sha256": "9732eea90bdc7432e618184e4bee78700460e83e988238a80151dfd6507cfa0c",
+  "default_path": "target/verification-tools/tla/tla2tools.jar",
+  "java_tested": "OpenJDK 21.0.12.1",
+  "note": "The SHA-256, not the mutable release tag alone, identifies the tested binary. Download is explicit and checksum mismatch is fatal."
+}

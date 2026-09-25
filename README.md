@@ -4,7 +4,7 @@
 
 A Rust database engine for high-ingest, frequently updated data shared between processes on a single host. Aerostore combines shared-memory storage, indexed queries, transactions, and write-ahead logging. It includes a Tcl extension with a flight-tracking example for batch ingestion and search.
 
-The intended application is replacing PostgreSQL's shared transactional state store in single-machine FlightAware HyperFeed workloads. The repository uses synthetic flight-tracking scenarios informed by published HyperFeed descriptions; it does not include HyperFeed's application code.
+The goal is to replace PostgreSQL's transactional state store in both single-machine and multi-machine FlightAware HyperFeed, with at least 10× the sustainable message throughput under matched semantics and resource budgets. That target has not been demonstrated. The repository uses synthetic flight-tracking scenarios informed by published HyperFeed descriptions; it does not include HyperFeed's application code. Multi-machine HyperFeed still uses one central database host.
 
 **Status:** Experimental and under active development. APIs and storage formats can change. The project targets Linux, including WSL2, and is intended for development and workload evaluation.
 
@@ -26,7 +26,7 @@ Aerostore is a Rust library and Tcl extension. SQL compatibility, distributed re
 - Linux or WSL2. The implementation and process tests use Unix facilities such as `fork`, shared mappings, and signals.
 - Rust and Cargo. The current validation used Rust **1.93.1**; a minimum supported Rust version has not been declared.
 - Tcl and development tools to build the Tcl extension.
-- Python 3 for the sustained benchmark script, and Docker for the PostgreSQL comparison. Aerostore-only runs do not require Docker.
+- Python 3 for benchmark scripts. PostgreSQL comparisons need a disposable server; the original Crucible can manage one through Docker, while the architecture harness accepts an explicit database URL. Aerostore-only runs do not require Docker.
 
 On Debian or Ubuntu, install the native build dependencies:
 
@@ -100,7 +100,7 @@ The [verification workspace](verification/README.md) contains Verus proofs of pr
 
 The [P0 API audit](verification/contracts/p0_audit.md) is complete for the declared scope: public success/error contracts, explicit exclusions and a reviewed lock graph. Current Verus work connects native final-write selection, key planning and current-base validation to row/index publication, deregistration and shared-clock stamping. Native tests cover competing creations, key moves, repeated writes, rollback and stale-base rejection. The complete concurrent P1 slice and whole-engine verification remain open; the [current proof boundary](verification/planned_commit/README.md) explains the one-row/index scope and remaining assumptions.
 
-The latest [verification checkpoint](docs/verification_data/planned_commit_2026-09-23/README.md) retains the passing 71-check pilot, planning and admission proofs, semantic mutation controls, 266 core regressions and Extended Crucible smoke results for all three bucket configurations. This checkpoint adds proofs and tests without changing production execution paths. The previous [publication/completion checkpoint](docs/verification_data/commit_completion_2026-09-23/README.md) retains the preceding 63-check pilot.
+The [planned-commit verification checkpoint](docs/verification_data/planned_commit_2026-09-23/README.md) retains the passing 71-check pilot, planning and admission proofs, semantic mutation controls, 266 core regressions and Extended Crucible smoke results for all three bucket configurations. This checkpoint adds proofs and tests without changing production execution paths. The previous [publication/completion checkpoint](docs/verification_data/commit_completion_2026-09-23/README.md) retains the preceding 63-check pilot.
 
 Earlier checkpoints retain [indexed-read evidence](docs/verification_data/indexed_lookup_2026-09-23/README.md) and [row retention evidence](docs/verification_data/row_retention_2026-09-23/README.md), including the reproduced and repaired public vacuum-horizon bug.
 
@@ -173,6 +173,23 @@ The native contracts cover predicate conflicts, atomic row/index publication, hi
 The [repaired validation](docs/bench_data/transactional_indexes_2026-09-22/README.md) passes all six contracts on both engines, 3,840 deliveries per engine, and an additional 30,720-delivery Aerostore run.
 
 See the [extended benchmark runbook](docs/extended_crucible.md) for modes, assumptions, and reproduction commands, and the [research specification](docs/extended_crucible_research.md) for the public sources behind its design.
+
+## HyperFeed contention and worker failure
+
+The [contention Crucible](docs/contention_crucible.md) adds transactions that discover their write sets through queries, different concurrent messages on overlapping identities, competing creation after empty searches, and matching alongside projection and housekeeping. It preserves the deterministic Extended Crucible. Successful histories need a complete serial witness; an exhausted checker budget fails as inconclusive.
+
+```bash
+cargo bench -p aerostore_core --bench hyperfeed_contention_crucible -- \
+  --engine aerostore --mode all --seconds 60 --workers 4 --families 16
+```
+
+The [first investigation](docs/bench_data/contention_2026-09-24/README.md) preserves two broad-query retry-limit failures alongside passing family-scoped runs. This is an instrumented architectural diagnostic, not a peak-throughput ranking. Reports include retries, whole-message p99 including retries, useful work counts, and storage retention. PostgreSQL runs require an explicit disposable database URL. See the runbook for transaction and durability differences.
+
+**Current availability gap:** the requirement is that other workers keep running after a worker is killed. The [failure probes](docs/worker_failure_contract.md) show that abandoned native guards can prevent surviving work from completing, and abandoned registrations can pin retention. Exclusive restart is not an acceptable substitute for that requirement. The current milestone is to evaluate contention and failure isolation before investing heavily in proofs of architectural choices that may change.
+
+The [architecture qualification harness](docs/hyperfeed_qualification.md) adds a populated fleet with staggered lifecycle turnover, global background transactions, fixed offered arrivals, a buffered PostgreSQL adapter, and an interactive database-owned service over Unix sockets or TCP. It separates complete-history correctness runs from lighter measurement runs, retains failed trials, and provides a two-host runner. The [architecture investigation](docs/bench_data/architecture_2026-09-25/README.md) retains the measurements and their limits, including the earlier workload simplification. The service is an experimental benchmark path; it does not change the production engine or establish production availability, recovery equivalence, or a 10× result.
+
+The separate [cadence and ordering profile](docs/hyperfeed_calibrated.md) adds per-flight foreground ordering and independent projection/housekeeping timers using the architect's 5–10-minute cadence. Its [validation checkpoint](docs/bench_data/calibrated_2026-09-25/README.md) includes full-history runs across two real five-minute maintenance intervals. It retains a fixed synthetic population and bounded maintenance batches, so it is diagnostic evidence rather than a qualified capacity result. The frequent-maintenance workload remains stress coverage. [Paired two-host commands](docs/hyperfeed_two_host.md) prepare a later AeroStore/PostgreSQL comparison on separate worker and database hosts.
 
 ## Project layout
 
