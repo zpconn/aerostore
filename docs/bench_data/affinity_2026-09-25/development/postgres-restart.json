@@ -1,0 +1,29 @@
+{
+  "started_at": "2026-09-25T22:13:39.643854+00:00",
+  "scope": "Previously authorized owned disposable fixture restarted for affinity validation; data retained.",
+  "command": [
+    "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/install/bin/pg_ctl",
+    "-D",
+    "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/data",
+    "-l",
+    "/home/zpconn/code/aerostore/target/affinity-validation/postgres.log",
+    "-w",
+    "-t",
+    "30",
+    "start"
+  ],
+  "returncode": 0,
+  "stdout": "waiting for server to start.... done\nserver started\n",
+  "stderr": "",
+  "pid_file": [
+    "43367",
+    "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/data",
+    "1790374419",
+    "55432",
+    "/tmp/aerostore-tuned-pg-20260925",
+    "",
+    "  6341268         2",
+    "ready   "
+  ],
+  "proc_start_ticks": "528305"
+}

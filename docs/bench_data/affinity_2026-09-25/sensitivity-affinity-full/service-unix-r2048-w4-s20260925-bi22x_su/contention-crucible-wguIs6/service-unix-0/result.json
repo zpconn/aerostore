@@ -1,0 +1,8 @@
+{
+  "engine": "service-unix",
+  "error": "worker 4: message 4000000000 after 128 retries: transaction conflict; cleanup=Ok(())",
+  "evidence_directory": "/home/zpconn/code/aerostore/target/affinity-final-validation/sensitivity-affinity-full/service-unix-r2048-w4-s20260925-bi22x_su/contention-crucible-wguIs6/service-unix-0",
+  "execution_completed": false,
+  "passed": false,
+  "scenario": null
+}

@@ -1,0 +1,60 @@
+{
+  "completed_by_worker": [
+    51,
+    46,
+    46,
+    46,
+    2,
+    2
+  ],
+  "completed_messages": 193,
+  "due_uncompleted_by_worker": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "execution_completed": false,
+  "offered_by_worker": [
+    54,
+    46,
+    46,
+    46,
+    2,
+    2
+  ],
+  "passed": false,
+  "retention_samples": [
+    {
+      "completed_messages": 0,
+      "elapsed_seconds": 0.0,
+      "sample_finished_ns": 5929052595884,
+      "sample_started_ns": 5929052595863,
+      "storage": null
+    },
+    {
+      "completed_messages": 59,
+      "elapsed_seconds": 1.015610639,
+      "sample_finished_ns": 5930068206296,
+      "sample_started_ns": 5930068206272,
+      "storage": null
+    },
+    {
+      "completed_messages": 126,
+      "elapsed_seconds": 2.029795747,
+      "sample_finished_ns": 5931082391501,
+      "sample_started_ns": 5931082391479,
+      "storage": null
+    },
+    {
+      "completed_messages": 193,
+      "elapsed_seconds": 3.042991387,
+      "sample_finished_ns": 5932095587120,
+      "sample_started_ns": 5932095587098,
+      "storage": null
+    }
+  ],
+  "retries": 10
+}

@@ -1,0 +1,32 @@
+{
+  "method": "SHA-256 of the actual archived source bytes, mapped by original relative path; no live source lookup",
+  "passed": true,
+  "receipts": [
+    {
+      "archive_sha256": "9b04db0f4e3b8ef441449e4497b391a559b6f30cc9cf30c8d43d652ade62b54f",
+      "extra_source_files": 41,
+      "label": "final",
+      "main_source_files": 482,
+      "matches_raw_after": true,
+      "matches_raw_before": true,
+      "passed": true,
+      "pilot_completed": true,
+      "pilot_passed": true,
+      "reconstructed_proof_inputs": 523,
+      "source_archive": "source.tar.gz"
+    },
+    {
+      "archive_sha256": "a410f2128596ba4d49826029578289f584a09e992b0e4f1400af15b17d3ffcee",
+      "extra_source_files": 41,
+      "label": "development-interrupted",
+      "main_source_files": 482,
+      "matches_raw_after": false,
+      "matches_raw_before": true,
+      "passed": true,
+      "pilot_completed": false,
+      "pilot_passed": false,
+      "reconstructed_proof_inputs": 523,
+      "source_archive": "development/source.tar.gz"
+    }
+  ]
+}

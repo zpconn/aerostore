@@ -1,0 +1,3 @@
+contention-crucible: message 4000000002 after 128 retries: transaction conflict; cleanup=Ok(())
+contention_crucible engine=service-unix scenario=null passed=false completed=null retries=null p99_us=null
+contention-crucible: contention correctness/progress check failed: /home/zpconn/code/aerostore/target/affinity-final-validation/sensitivity-identity-full/service-unix-r2048-w4-s20260925-4y_qu_51/report.json

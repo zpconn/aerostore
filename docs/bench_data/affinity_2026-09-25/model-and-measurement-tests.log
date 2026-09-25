@@ -1,0 +1,71 @@
+warning: method `commit_with_record_before_publish` is never used
+    --> aerostore_core/src/occ_partitioned.rs:1264:19
+     |
+ 365 | impl<T: Copy + Send + Sync + 'static> OccTable<T> {
+     | ------------------------------------------------- method in this implementation
+...
+1264 |     pub(crate) fn commit_with_record_before_publish<E, F>(
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `aerostore_core` (lib) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running tests/calibrated_contention_model.rs (target/debug/deps/calibrated_contention_model-36dc5d4b7c9d5237)
+
+running 39 tests
+test default_dispatch_preserves_old_config_json_and_input_fields ... ok
+test expiry_does_not_falsely_imply_worker_migration ... ok
+test malformed_or_unbounded_schedules_fail_before_arithmetic ... ok
+test legacy_message_json_omits_clock_units_and_deserializes_as_seconds ... ok
+test dispatch_configuration_requires_explicit_bounded_ttl_only_for_affinity ... ok
+test mixed_signatures_share_callsign_routes_and_hits_do_not_advance_round_robin ... ok
+test malformed_prepared_worker_plans_are_rejected ... ok
+test prepared_worker_plans_roundtrip_and_binary_search_backlog_matches_due_inputs ... ok
+test sampled_backlog_obeys_nanosecond_boundaries_and_idle_workers_are_allowed ... ok
+test foreground_corpus_is_worker_independent_and_flight_fifo ... ok
+test shared_model::tests::duplicate_has_no_observable_mutation_or_output ... ok
+test shared_model::tests::empty_candidate_query_cannot_match_through_allocation_hint ... ok
+test shared_model::tests::allocation_hint_is_not_used_to_hide_a_candidate_match ... ok
+test shared_model::tests::failed_fork_rolls_back_physical_rows_and_buffered_outputs ... ok
+test shared_model::tests::duplicate_delivery_group_has_one_accepted_message_and_three_duplicates ... ok
+test shared_model::tests::independently_expected_coordinates_prove_fork_privacy ... ok
+test shared_model::tests::housekeeping_retains_exact_expected_real_position_history ... ok
+test shared_model::tests::projection_uses_expected_history_without_replacing_real_observation ... ok
+test ttl_equality_expires_and_round_robin_reassigns_the_same_signature ... ok
+test shared_model::tests::failed_family_expiration_rolls_back_every_related_row ... ok
+test shared_model::tests::invariant_checker_detects_provenance_leak_and_terminal_event ... ok
+test ttl_hits_refresh_deadlines_beyond_the_original_insertion_time ... ok
+test shared_model::tests::whole_message_abort_changes_neither_state_nor_output ... ok
+test shared_model::tests::source_one_never_changes_source_two_or_four_only_views ... ok
+test shared_model::tests::family_expiration_requires_terminal_views_and_strict_age_threshold ... ok
+test shared_model::tests::same_callsign_is_disambiguated_using_route_and_tail ... ok
+test an_expired_assignment_can_finish_after_a_newer_one_with_valid_partial_staleness ... ok
+test callsign_only_and_tail_only_queries_resolve_the_intended_family_and_forks ... ok
+test worker_plans_store_each_affinity_input_once_and_do_not_depend_on_consumption ... ok
+test seconds_and_nanosecond_execution_have_identical_physical_effects ... ok
+test projection_uses_seconds_for_motion_and_nanoseconds_for_rescheduling ... ok
+test ordered_subsecond_messages_update_and_schedule_thirty_physical_seconds ... ok
+test unsupported_clock_units_and_due_overflow_fail_without_committing ... ok
+test oracle_rejects_incomplete_calibrated_maintenance_observation ... ok
+test warmup_establishes_fixed_population_and_real_old_and_recent_quiet_history ... ok
+test shared_model::tests::serial_trace_preserves_independent_invariants_every_phase ... ok
+test accelerated_serial_run_updates_every_foreground_and_keeps_maintenance_useful ... ok
+test aliases_change_input_evidence_but_corpus_is_independent_of_dispatch_and_workers ... ok
+test real_timers_are_rate_independent_and_exclude_the_admission_endpoint ... ok
+
+test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.95s
+
+     Running tests/contention_measurement.rs (target/debug/deps/contention_measurement-92653bc121f55c2e)
+
+running 7 tests
+test measurement::tests::affinity_concurrency_audit_accepts_reordering_but_rejects_missing_inputs ... ok
+test measurement::tests::fractional_periods_and_admission_boundary_agree ... ok
+test measurement::tests::slow_completion_accumulates_visible_backlog_instead_of_throttling_arrivals ... ok
+test measurement::tests::interval_overlap_checks_half_open_boundaries_and_long_enclosing_work ... ok
+test measurement::tests::fixed_corpus_is_partitioned_without_omission_or_duplication ... ok
+test measurement::tests::class_metrics_include_queue_retry_and_receipt_delay_and_report_idle_jobs ... ok
+test measurement::tests::flight_order_accepts_cross_flight_overlap_and_rejects_same_flight_reordering ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,8 @@
+{
+  "engine": "service-unix",
+  "error": "worker 0: offered arrival backlog 23 exceeds worker bound 1 after 1 completions; arrivals were not throttled",
+  "evidence_directory": "/home/zpconn/code/aerostore/target/affinity-validation/preserved-integration/regression-9gkpss60/backlog/contention-crucible-aMix1k/service-unix-0",
+  "execution_completed": false,
+  "passed": false,
+  "scenario": null
+}

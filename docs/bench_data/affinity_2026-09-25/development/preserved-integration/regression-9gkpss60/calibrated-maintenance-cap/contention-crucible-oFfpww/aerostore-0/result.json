@@ -1,0 +1,8 @@
+{
+  "engine": "aerostore",
+  "error": "calibrated offered corpus exceeds --max-messages for a worker; no jobs may be truncated",
+  "evidence_directory": "/home/zpconn/code/aerostore/target/affinity-validation/preserved-integration/regression-9gkpss60/calibrated-maintenance-cap/contention-crucible-oFfpww/aerostore-0",
+  "execution_completed": false,
+  "passed": false,
+  "scenario": null
+}

@@ -1,0 +1,209 @@
+{
+  "completed_by_worker": [
+    450,
+    418,
+    216,
+    248,
+    1,
+    0
+  ],
+  "completed_messages": 1333,
+  "due_uncompleted_by_worker": [
+    528,
+    560,
+    762,
+    729,
+    0,
+    0
+  ],
+  "execution_completed": false,
+  "offered_by_worker": [
+    2560,
+    2560,
+    2560,
+    2560,
+    4,
+    2
+  ],
+  "passed": false,
+  "retention_samples": [
+    {
+      "completed_messages": 0,
+      "elapsed_seconds": 0.0,
+      "sample_finished_ns": 5989230698953,
+      "sample_started_ns": 5989227008586,
+      "storage": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "autovacuum_count": 0,
+        "cluster_checkpoint_counters": {
+          "buffers_alloc": 29206,
+          "buffers_backend": 32179,
+          "buffers_backend_fsync": 0,
+          "buffers_checkpoint": 3802,
+          "buffers_clean": 0,
+          "checkpoint_sync_time": 430,
+          "checkpoint_write_time": 469444,
+          "checkpoints_req": 2,
+          "checkpoints_timed": 66,
+          "maxwritten_clean": 0,
+          "stats_reset": "2026-09-25T00:14:03.439926-05:00"
+        },
+        "cluster_wal_counters": {
+          "stats_reset": "2026-09-25T00:14:03.439926-05:00",
+          "wal_buffers_full": 225,
+          "wal_bytes": 1316978640,
+          "wal_fpi": 5664,
+          "wal_records": 14159389,
+          "wal_sync": 1846,
+          "wal_sync_time": 0,
+          "wal_write": 128492,
+          "wal_write_time": 0
+        },
+        "database_counters": {
+          "blk_read_time": 0,
+          "blk_write_time": 0,
+          "conflicts": 0,
+          "datname": "contention_test",
+          "deadlocks": 0,
+          "stats_reset": null,
+          "temp_bytes": 0,
+          "temp_files": 0,
+          "xact_commit": 262878,
+          "xact_rollback": 14033
+        },
+        "deleted_tuples": 0,
+        "estimated_dead_tuples": 0,
+        "estimated_live_tuples": 4096,
+        "hot_updated_tuples": 0,
+        "index_bytes": 245760,
+        "inserted_tuples": 4096,
+        "resident_memory_measured": false,
+        "table_bytes": 843776,
+        "total_bytes": 1089536,
+        "tuple_counts_are_estimates": true,
+        "updated_tuples": 0,
+        "vacuum_count": 0
+      }
+    },
+    {
+      "completed_messages": 605,
+      "elapsed_seconds": 1.005041498,
+      "sample_finished_ns": 5990235740421,
+      "sample_started_ns": 5990231147662,
+      "storage": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "autovacuum_count": 0,
+        "cluster_checkpoint_counters": {
+          "buffers_alloc": 29381,
+          "buffers_backend": 32179,
+          "buffers_backend_fsync": 0,
+          "buffers_checkpoint": 3802,
+          "buffers_clean": 0,
+          "checkpoint_sync_time": 430,
+          "checkpoint_write_time": 469444,
+          "checkpoints_req": 2,
+          "checkpoints_timed": 66,
+          "maxwritten_clean": 0,
+          "stats_reset": "2026-09-25T00:14:03.439926-05:00"
+        },
+        "cluster_wal_counters": {
+          "stats_reset": "2026-09-25T00:14:03.439926-05:00",
+          "wal_buffers_full": 225,
+          "wal_bytes": 1326162147,
+          "wal_fpi": 5664,
+          "wal_records": 14277308,
+          "wal_sync": 1855,
+          "wal_sync_time": 0,
+          "wal_write": 129223,
+          "wal_write_time": 0
+        },
+        "database_counters": {
+          "blk_read_time": 0,
+          "blk_write_time": 0,
+          "conflicts": 0,
+          "datname": "contention_test",
+          "deadlocks": 0,
+          "stats_reset": null,
+          "temp_bytes": 0,
+          "temp_files": 0,
+          "xact_commit": 263541,
+          "xact_rollback": 15599
+        },
+        "deleted_tuples": 0,
+        "estimated_dead_tuples": 14311,
+        "estimated_live_tuples": 4096,
+        "hot_updated_tuples": 0,
+        "index_bytes": 761856,
+        "inserted_tuples": 4096,
+        "resident_memory_measured": false,
+        "table_bytes": 1122304,
+        "total_bytes": 1884160,
+        "tuple_counts_are_estimates": true,
+        "updated_tuples": 14311,
+        "vacuum_count": 0
+      }
+    },
+    {
+      "completed_messages": 1333,
+      "elapsed_seconds": 2.00926327,
+      "sample_finished_ns": 5991239962192,
+      "sample_started_ns": 5991235899527,
+      "storage": {
+        "analyze_count": 1,
+        "autoanalyze_count": 0,
+        "autovacuum_count": 0,
+        "cluster_checkpoint_counters": {
+          "buffers_alloc": 29488,
+          "buffers_backend": 32179,
+          "buffers_backend_fsync": 0,
+          "buffers_checkpoint": 3802,
+          "buffers_clean": 0,
+          "checkpoint_sync_time": 430,
+          "checkpoint_write_time": 469444,
+          "checkpoints_req": 2,
+          "checkpoints_timed": 66,
+          "maxwritten_clean": 0,
+          "stats_reset": "2026-09-25T00:14:03.439926-05:00"
+        },
+        "cluster_wal_counters": {
+          "stats_reset": "2026-09-25T00:14:03.439926-05:00",
+          "wal_buffers_full": 225,
+          "wal_bytes": 1336839724,
+          "wal_fpi": 5664,
+          "wal_records": 14414180,
+          "wal_sync": 1866,
+          "wal_sync_time": 0,
+          "wal_write": 130090,
+          "wal_write_time": 0
+        },
+        "database_counters": {
+          "blk_read_time": 0,
+          "blk_write_time": 0,
+          "conflicts": 0,
+          "datname": "contention_test",
+          "deadlocks": 0,
+          "stats_reset": null,
+          "temp_bytes": 0,
+          "temp_files": 0,
+          "xact_commit": 264287,
+          "xact_rollback": 17295
+        },
+        "deleted_tuples": 0,
+        "estimated_dead_tuples": 31043,
+        "estimated_live_tuples": 4096,
+        "hot_updated_tuples": 0,
+        "index_bytes": 1236992,
+        "inserted_tuples": 4096,
+        "resident_memory_measured": false,
+        "table_bytes": 1605632,
+        "total_bytes": 2842624,
+        "tuple_counts_are_estimates": true,
+        "updated_tuples": 31043,
+        "vacuum_count": 0
+      }
+    }
+  ],
+  "retries": 2949
+}

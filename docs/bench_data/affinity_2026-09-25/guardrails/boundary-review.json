@@ -1,0 +1,23 @@
+{
+  "changed": [
+    "aerostore_core/benches/contention_crucible/calibrated.rs",
+    "aerostore_core/benches/contention_crucible/measurement.rs",
+    "aerostore_core/benches/contention_crucible/remote.rs",
+    "aerostore_core/benches/contention_crucible/runner.rs",
+    "aerostore_core/benches/contention_crucible/workers.rs",
+    "aerostore_core/tests/calibrated_contention_model.rs",
+    "scripts/qualify_hyperfeed.py",
+    "scripts/run_remote_contention.py",
+    "scripts/test_hyperfeed_qualification.py",
+    "scripts/test_run_remote_contention.py"
+  ],
+  "added": [
+    "scripts/test_affinity_dispatch.py"
+  ],
+  "deleted": [],
+  "production_engine_original_extended_and_proof_logic_unchanged": true,
+  "previous_commit": "c0d6556",
+  "review": "Temporary signature-affinity benchmark dispatch, measurement/gate/remote changes and tests. Review preserves engine/proof semantics. Local boundary acceptance only; no performance promotion or whole-engine proof claim.",
+  "anchoring": "local_bootstrap_only",
+  "final_test_correction": "Legacy identity reports omit per_flight_order.required; assertion defaults absent to true, while affinity must explicitly report false. Previous failed test and completed campaigns retained separately."
+}

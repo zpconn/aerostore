@@ -1,0 +1,8 @@
+{
+  "engine": "aerostore",
+  "error": "offered corpus must give every worker work and fit --max-messages without truncation",
+  "evidence_directory": "/home/zpconn/code/aerostore/target/affinity-validation/preserved-integration/regression-9gkpss60/truncated/contention-crucible-W669cJ/aerostore-0",
+  "execution_completed": false,
+  "passed": false,
+  "scenario": null
+}

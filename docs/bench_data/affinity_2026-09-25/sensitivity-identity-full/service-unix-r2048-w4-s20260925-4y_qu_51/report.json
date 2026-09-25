@@ -1,0 +1,53 @@
+{
+  "architecture_promotion_eligible": false,
+  "completed": true,
+  "config": {
+    "affinity_ttl_ms": 0,
+    "arrival_rate": 2048,
+    "dispatch": "identity",
+    "engine": "service-unix",
+    "evidence": "full",
+    "families": 16,
+    "global_time_predicates": false,
+    "hot_percent": 0,
+    "housekeeping_interval_seconds": 2,
+    "max_backlog": 1000,
+    "max_messages": 100000,
+    "message_interval_us": 0,
+    "mode": "sustained",
+    "oracle_budget": 2000000,
+    "output": "/home/zpconn/code/aerostore/target/affinity-final-validation/sensitivity-identity-full/service-unix-r2048-w4-s20260925-4y_qu_51/report.json",
+    "pg_write_mode": "buffered",
+    "projection_interval_seconds": 1,
+    "remote_final": null,
+    "remote_setup": null,
+    "rpc_delay_us": 0,
+    "seconds": 5,
+    "seed": 20260925,
+    "service_bind": "127.0.0.1:0",
+    "shm_mib": 256,
+    "signature_pattern": "mixed",
+    "workers": 4,
+    "workload": "calibrated"
+  },
+  "durability_contract": "both use WAL with asynchronous acknowledgement; fsync on PostgreSQL; native writer drained on normal completion; equal crash loss windows and crash recovery NOT claimed",
+  "evidence_directory": "/home/zpconn/code/aerostore/target/affinity-final-validation/sensitivity-identity-full/service-unix-r2048-w4-s20260925-4y_qu_51/contention-crucible-1yWess",
+  "git_revision": "c0d6556833661784abd3bf9dc21caf42a835d7dd",
+  "passed": false,
+  "runs": [
+    {
+      "engine": "service-unix",
+      "error": "worker 4: message 4000000002 after 128 retries: transaction conflict; cleanup=Ok(())",
+      "evidence_directory": "/home/zpconn/code/aerostore/target/affinity-final-validation/sensitivity-identity-full/service-unix-r2048-w4-s20260925-4y_qu_51/contention-crucible-1yWess/service-unix-0",
+      "execution_completed": false,
+      "passed": false,
+      "scenario": null,
+      "scratch_cleanup_completed": true
+    }
+  ],
+  "schema": 2,
+  "scope": "synthetic harder HyperFeed storage workload, not proprietary handler compatibility or architecture superiority",
+  "transaction_contract": "single-table native optimistic transactions versus PostgreSQL SERIALIZABLE; dynamic reads/writes, no family prelocks; full evidence mode checks every successful attempt against a serial witness; metrics mode explicitly omits history checking",
+  "whole_engine_verified": false,
+  "worker_failure_requirement": "surviving workers must continue; separate worker_failure_contract test reports current violations"
+}

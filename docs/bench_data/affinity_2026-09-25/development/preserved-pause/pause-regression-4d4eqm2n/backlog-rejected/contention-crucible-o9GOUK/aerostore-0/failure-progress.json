@@ -1,0 +1,19 @@
+{
+  "completed_by_worker": [
+    6,
+    0,
+    2
+  ],
+  "completed_message_retries": 13,
+  "completed_messages": 8,
+  "error": "calibrated offered backlog 2 exceeds worker bound 1 after 0 completions; all independently due jobs remain admitted",
+  "execution_completed": false,
+  "note": "Offered schedule remains authoritative; failed message retry count is retained in worker error. Uncompleted offered events are not dropped or called successful.",
+  "offered_by_worker": [
+    6,
+    2,
+    2
+  ],
+  "passed": false,
+  "worker": 1
+}

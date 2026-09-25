@@ -1,0 +1,74 @@
+{
+  "checked_properties": [
+    "Prepared worker-specific dispatch is validated before Ready; no global dispatcher replay inside admission timing.",
+    "Every returned message, scheduled arrival and worker count is matched to the offered schedule; missing, duplicate, misrouted or truncated work fails.",
+    "Affinity permits observed same-flight overlap/reordering, while per-worker FIFO and complete full-history semantic oracle remain required.",
+    "Overlap and out-of-order diagnostics use execution timestamps, independent of coordinator receipt delivery order.",
+    "Original continuous admission-to-drain timing, timer admission and explicit no-capacity limits remain intact."
+  ],
+  "conclusion": "No blocking correctness issue found in the reviewed harness changes.",
+  "development_evidence_reuse": {
+    "benchmark_binary_sha256": "f01f19d86061fb4fe6f87cf384fc60eb6b4f3f44126b2ecd94d388808004f48d",
+    "benchmark_bytes_identical": true,
+    "boundary_changed_entry_only": [
+      "scripts/test_affinity_dispatch.py"
+    ],
+    "changed_paths": [
+      "scripts/test_affinity_dispatch.py",
+      "verification/frozen_boundary.json"
+    ],
+    "development_source_sha256": "3f94a0c3098bd6ac079553dfeb4b638be2686a5ba2ecff92bf4e2a3a7304cd72",
+    "exact_test_change": {
+      "after": "self.assertEqual(run[\"per_flight_order\"].get(\"required\", True), dispatch == \"identity\")",
+      "before": "self.assertEqual(run[\"per_flight_order\"][\"required\"], dispatch == \"identity\")"
+    },
+    "final_source_sha256": "fef4c866ad708e8d49335f6432a0ce0e24d288b4232e87efece565d22ad3c32e",
+    "preserved_execution_receipt": "target/affinity-validation/preserved-tests-execution.json",
+    "preserved_execution_receipt_sha256": "e2458f8c4185a997ab88c7be617dbe7b90d3fbeda5bfd696d45a9739a1582592",
+    "preserved_real_tests": [
+      {
+        "log": "target/affinity-validation/preserved-integration.log",
+        "log_sha256": "176b78af74102221883c796862bfab9b84ef993c06d61c92703c7295ec0b2a48",
+        "name": "preserved-integration",
+        "passed_tests": 11
+      },
+      {
+        "log": "target/affinity-validation/preserved-pause.log",
+        "log_sha256": "e6744d9e2b0602fdd556100998eabd90f40aeb504b85d6d90ed6dbf2f6128494",
+        "name": "preserved-pause",
+        "passed_tests": 2
+      }
+    ],
+    "preserved_source_and_binary_stable": true,
+    "reuse_claim": "The13 preserved real tests ran successfully against the development source and the identical benchmark binary. Their own test files are unchanged. They were NOT rerun after the unrelated optional-field assertion and its boundary hash changed. Final2 affinity tests were rerun against final source; the original failed development2-test run remains retained.",
+    "source_file_count": 482,
+    "total_preserved_tests": 13
+  },
+  "files_reviewed": [
+    {
+      "path": "aerostore_core/benches/contention_crucible/runner.rs",
+      "sha256": "ce0731ebe03e62374a416d86c3d44f695fbd57a5bb35cfdab360a81244236e07"
+    },
+    {
+      "path": "aerostore_core/benches/contention_crucible/measurement.rs",
+      "sha256": "7d502d83d4e0f526b421e35d45d1027a29c18c05938b16f8e32c0b9eca027cb5"
+    },
+    {
+      "path": "aerostore_core/benches/contention_crucible/workers.rs",
+      "sha256": "5b2fc630f2aa39bd4fa3d94d9cc76829a9521962d0e99995861710cd3aba4966"
+    },
+    {
+      "path": "aerostore_core/benches/contention_crucible/calibrated.rs",
+      "sha256": "3d7c97c14c777cb16c83f5c82b5e5768d1871f2aa52d9f832436f15da51b0bc2"
+    }
+  ],
+  "findings": [],
+  "passed": true,
+  "remaining_scope": [
+    "No whole-engine or Rust refinement proof from this review.",
+    "Finite fixed-population synthetic alias pattern and scheduled-arrival sliding TTL do not establish exact HyperFeed dispatch equivalence.",
+    "No controlled performance ranking, 10x result, full maintenance sweep, physical MMHF result or worker-death recovery claim."
+  ],
+  "review_method": "Read-only diff against checkpoint c0d6556 and surrounding execution paths; final actual-process reports independently assessed in affinity-tests-review.json. Hash comparisons use retained pre/post build inventories, source-tar members and binary bytes.",
+  "reviewed_at_unix_ns": 1790374974561000688
+}

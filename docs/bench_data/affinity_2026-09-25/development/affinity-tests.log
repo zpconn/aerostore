@@ -1,0 +1,16 @@
+test_expired_affinity_can_overtake_paused_work_without_invalidating_history (test_affinity_dispatch.AffinityDispatchTests.test_expired_affinity_can_overtake_paused_work_without_invalidating_history) ... ok
+test_mixed_aliases_preserve_corpus_with_identity_control_and_metrics_companion (test_affinity_dispatch.AffinityDispatchTests.test_mixed_aliases_preserve_corpus_with_identity_control_and_metrics_companion) ... ERROR
+
+======================================================================
+ERROR: test_mixed_aliases_preserve_corpus_with_identity_control_and_metrics_companion (test_affinity_dispatch.AffinityDispatchTests.test_mixed_aliases_preserve_corpus_with_identity_control_and_metrics_companion)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zpconn/code/aerostore/scripts/test_affinity_dispatch.py", line 176, in test_mixed_aliases_preserve_corpus_with_identity_control_and_metrics_companion
+    self.assertEqual(run["per_flight_order"]["required"], dispatch == "identity")
+                     ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+KeyError: 'required'
+
+----------------------------------------------------------------------
+Ran 2 tests in 6.457s
+
+FAILED (errors=1)

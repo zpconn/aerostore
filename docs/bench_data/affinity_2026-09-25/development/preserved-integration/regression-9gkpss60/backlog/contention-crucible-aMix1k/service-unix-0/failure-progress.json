@@ -1,0 +1,15 @@
+{
+  "completed_by_worker": [
+    1
+  ],
+  "completed_message_retries": 0,
+  "completed_messages": 1,
+  "error": "offered arrival backlog 23 exceeds worker bound 1 after 1 completions; arrivals were not throttled",
+  "execution_completed": false,
+  "note": "Offered schedule remains authoritative; failed message retry count is retained in worker error. Uncompleted offered events are not dropped or called successful.",
+  "offered_by_worker": [
+    100
+  ],
+  "passed": false,
+  "worker": 0
+}

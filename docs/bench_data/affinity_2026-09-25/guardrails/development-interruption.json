@@ -1,0 +1,18 @@
+{
+  "deliberate_interruption": true,
+  "reason": "Parent requested narrow test-helper correction after real-process test KeyError; stop frozen-input pilot before changing test source. No engine or proof failure inferred.",
+  "interrupted_at": "2026-09-25T22:16:28.683045+00:00",
+  "pilot_pid": 43493,
+  "terminated_descendant_pids": [
+    43949,
+    45012,
+    45062
+  ],
+  "completed_pilot": false,
+  "completed_checks": 7,
+  "completed_check_failures": [],
+  "source_before": "3f94a0c3098bd6ac079553dfeb4b638be2686a5ba2ecff92bf4e2a3a7304cd72",
+  "source_after": "3f94a0c3098bd6ac079553dfeb4b638be2686a5ba2ecff92bf4e2a3a7304cd72",
+  "source_stable_at_interruption": true,
+  "scope": "Interrupted before changing frozen source; not a completed pilot or proof failure."
+}

@@ -1,0 +1,164 @@
+{
+  "passed": true,
+  "baseline": "c0d6556",
+  "unchanged_files": 39,
+  "files": [
+    {
+      "path": "aerostore_core/src/arena.rs",
+      "sha256": "f8e1d90fef5fef613ecf3c7af5efece382a0eb2f1c91cf5b4c80de16cb50822f"
+    },
+    {
+      "path": "aerostore_core/src/bootloader.rs",
+      "sha256": "6c29c8fd5ead2aadb61f4fb77342a0705985110b5b0b3f5354e39d1a78e3e890"
+    },
+    {
+      "path": "aerostore_core/src/execution.rs",
+      "sha256": "85d32e3d42c8629c052ba36b769ce625148b297e02c5231504efc9f5cd73d9ce"
+    },
+    {
+      "path": "aerostore_core/src/filters.rs",
+      "sha256": "862b925c524f002daaca0f2524695908e0537a44c996c165789d16678bb5c8ac"
+    },
+    {
+      "path": "aerostore_core/src/index.rs",
+      "sha256": "3df81efcc90a842e96ec744661abcd93dee5175d03663a8c5894554e1e541e1f"
+    },
+    {
+      "path": "aerostore_core/src/ingest.rs",
+      "sha256": "8f4cc44d1352ee807e26fb1ed62e73d3f1a9177bc5334e3a403e733f7a04dd32"
+    },
+    {
+      "path": "aerostore_core/src/lib.rs",
+      "sha256": "5dd1dd237df07e2bd055a702af67a2fcf47825de356877cd12f2b42d49f59fad"
+    },
+    {
+      "path": "aerostore_core/src/mvcc.rs",
+      "sha256": "0b888ad0889fd5d0aaf3d1fe28974fa1257d55a8a87d4e3533f4f1630f3e9f59"
+    },
+    {
+      "path": "aerostore_core/src/occ.rs",
+      "sha256": "933c5ff6524da35ac806d8e7b03108ac09094d4a07a6784b6c130b676dc32cac"
+    },
+    {
+      "path": "aerostore_core/src/occ_legacy.rs",
+      "sha256": "506151b69538c42e3541cf12cc40e7f0b4a7353331e6bab4bd8236092892fadd"
+    },
+    {
+      "path": "aerostore_core/src/occ_partitioned.rs",
+      "sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d"
+    },
+    {
+      "path": "aerostore_core/src/planner_cardinality.rs",
+      "sha256": "d277fe3551d1fc76813df83fa6288a5afa312738d37d417c0a930ad24dd4c546"
+    },
+    {
+      "path": "aerostore_core/src/procarray.rs",
+      "sha256": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364"
+    },
+    {
+      "path": "aerostore_core/src/query.rs",
+      "sha256": "e47567fff036e9fd13d277ee2b26692d477e2da92d107ace40ae55500d3d9685"
+    },
+    {
+      "path": "aerostore_core/src/rbo_planner.rs",
+      "sha256": "1c91ab46417bf12825c1b04ece6a163d3af3138ebd2bf8ab6ee71773e2b4d186"
+    },
+    {
+      "path": "aerostore_core/src/recovery.rs",
+      "sha256": "45177cd588058fe73b0aa5c5a1bdbb1cc9c2c7302014a38ae01657b6b1a84b50"
+    },
+    {
+      "path": "aerostore_core/src/recovery_delta.rs",
+      "sha256": "b7985430386d2468eb64fe9c3651fa11405e7edb326472bbc6425ccef1e7be26"
+    },
+    {
+      "path": "aerostore_core/src/retry.rs",
+      "sha256": "010a40c9e58560bbb9a1d2a9cceb858ebd290bdf25e401bacf6597d6d20b4e98"
+    },
+    {
+      "path": "aerostore_core/src/shm.rs",
+      "sha256": "434964bde214af5b9ca4c4828447e995edc9074f117d61ee1173fa0ae0418884"
+    },
+    {
+      "path": "aerostore_core/src/shm_index.rs",
+      "sha256": "3ee2c2b8bb1f29e50e1f7177b238c794a12558b03fb8f948ac26c8ed6714c151"
+    },
+    {
+      "path": "aerostore_core/src/shm_lock.rs",
+      "sha256": "60c189fef3e17644f8470c2baf7e148c7096c06fc062ef280e315b21eb165fa2"
+    },
+    {
+      "path": "aerostore_core/src/shm_skiplist.rs",
+      "sha256": "a3b8862e481cb9a95345d9eafc88d8f2bdb102b28f001d70c7e01fd581f7c184"
+    },
+    {
+      "path": "aerostore_core/src/shm_tmpfs.rs",
+      "sha256": "08b0db51eef49a71f00ac75f16b4503927d9d52d406af0bd04b088382dbb2e74"
+    },
+    {
+      "path": "aerostore_core/src/stapi_parser.rs",
+      "sha256": "e786daafa895225bcabe5c73f6fc13e50a59805b98532cd1e3036a34520e49b2"
+    },
+    {
+      "path": "aerostore_core/src/txn.rs",
+      "sha256": "c5deae698fd360e6277af2148a301539f22379389338555877cf388434467e8f"
+    },
+    {
+      "path": "aerostore_core/src/vacuum.rs",
+      "sha256": "4a499b4aea79a8b5ce261eecb8706c83452f4a68b2323e174db2e72afd553385"
+    },
+    {
+      "path": "aerostore_core/src/wal.rs",
+      "sha256": "1037e7db135439718b1e7733039e80eed027fc17891677fffaee6c45ecf409e9"
+    },
+    {
+      "path": "aerostore_core/src/wal_delta.rs",
+      "sha256": "72175f6a106b5880208c65f29cd2a5758819ecf93af6507a054b95889a67365e"
+    },
+    {
+      "path": "aerostore_core/src/wal_logical.rs",
+      "sha256": "f96011096de4b5da3af3306527b70c9bdcf1ceda7991bfb85e4117eab5cbe09d"
+    },
+    {
+      "path": "aerostore_core/src/wal_ring.rs",
+      "sha256": "c32500ea26baf0602777fcd3dce1c7ecd558b410197668564f747796fc4eab4c"
+    },
+    {
+      "path": "aerostore_core/src/wal_writer.rs",
+      "sha256": "619be861775b8b1942750f427d6ecef55abc5e208fb165e5dd4c6cf5d123a70a"
+    },
+    {
+      "path": "aerostore_core/src/watch.rs",
+      "sha256": "f08c3d46e7fd77bbbcff92b3a88bde8724beae28fa888a7415163a732fa3f02a"
+    },
+    {
+      "path": "aerostore_core/benches/extended_crucible/aerostore.rs",
+      "sha256": "5e626f5953784e59b8f3ed42ff32f3e39d8b65c780f5cc5055cc17f6756fde10"
+    },
+    {
+      "path": "aerostore_core/benches/extended_crucible/contracts.rs",
+      "sha256": "f3480f7271e3585f1231e43a3e7716728fe5016deb6f7ad245a9643bad74facf"
+    },
+    {
+      "path": "aerostore_core/benches/extended_crucible/metrics.rs",
+      "sha256": "0974e0d10ed2072182a3b3c0b8b5d4d4bdec86726faa31108163da395170f42f"
+    },
+    {
+      "path": "aerostore_core/benches/extended_crucible/mod.rs",
+      "sha256": "eef78817af9947f49fa3d164e39a22a4fbf746fb371b4d8b54a4c7b6cd562ff9"
+    },
+    {
+      "path": "aerostore_core/benches/extended_crucible/model.rs",
+      "sha256": "7ac59bbc4be37689968bd00b2a7081b842afabd04357bcbbd42ebed424c37234"
+    },
+    {
+      "path": "aerostore_core/benches/extended_crucible/postgres.rs",
+      "sha256": "39f3fc071cca8e7d040b00d7f5a2908eeb44ad1ae9a12b2e61ec63f1cff17b6e"
+    },
+    {
+      "path": "aerostore_core/benches/extended_crucible/runner.rs",
+      "sha256": "3801a92c0418b4a250fe84cc3e787c9f6a89954a59615394de7dca3573ea8fc9"
+    }
+  ],
+  "scope": "All tracked production core source and original Extended Crucible implementation files are byte-identical to the pushed baseline. Benchmark scaffolding and tests changed; this is preservation evidence, not a new engine proof or performance acceptance."
+}

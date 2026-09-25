@@ -1,0 +1,15 @@
+test_affinity_and_mixed_identity_parameters_reach_both_peer_commands (test_run_remote_contention.RemoteHandshakeTests.test_affinity_and_mixed_identity_parameters_reach_both_peer_commands) ... ok
+test_configuration_placeholder_and_malformed_json_values_are_not_ready (test_run_remote_contention.RemoteHandshakeTests.test_configuration_placeholder_and_malformed_json_values_are_not_ready) ... ok
+test_dispatch_setup_defaults_and_mismatched_alias_policy (test_run_remote_contention.RemoteHandshakeTests.test_dispatch_setup_defaults_and_mismatched_alias_policy) ... ok
+test_independent_supervisor_enforces_owner_deadline (test_run_remote_contention.RemoteHandshakeTests.test_independent_supervisor_enforces_owner_deadline) ... ok
+test_independent_supervisor_kills_and_reaps_orphaned_owner_descendant (test_run_remote_contention.RemoteHandshakeTests.test_independent_supervisor_kills_and_reaps_orphaned_owner_descendant) ... ok
+test_invalid_calibrated_schedule_is_rejected_before_starting_any_process (test_run_remote_contention.RemoteHandshakeTests.test_invalid_calibrated_schedule_is_rejected_before_starting_any_process) ... ok
+test_remote_shell_arguments_are_quoted_as_arguments (test_run_remote_contention.RemoteHandshakeTests.test_remote_shell_arguments_are_quoted_as_arguments) ... ok
+test_server_exit_is_not_hidden_while_waiting_for_a_ready_frame (test_run_remote_contention.RemoteHandshakeTests.test_server_exit_is_not_hidden_while_waiting_for_a_ready_frame) ... ok
+test_stale_completion_marker_never_stops_a_different_server_run (test_run_remote_contention.RemoteHandshakeTests.test_stale_completion_marker_never_stops_a_different_server_run) ... ok
+test_stale_or_malformed_final_state_is_rejected_before_copy (test_run_remote_contention.RemoteHandshakeTests.test_stale_or_malformed_final_state_is_rejected_before_copy) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.306s
+
+OK

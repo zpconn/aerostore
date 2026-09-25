@@ -1,0 +1,12 @@
+START aerostore rate=512 workers=4 seed=20260925
+DONE aerostore valid=True capacity_pass=False
+START service-unix rate=512 workers=4 seed=20260925
+DONE service-unix valid=False capacity_pass=False
+START postgres rate=512 workers=4 seed=20260925
+DONE postgres valid=True capacity_pass=False
+START postgres rate=2048 workers=4 seed=20260925
+DONE postgres valid=False capacity_pass=False
+START service-unix rate=2048 workers=4 seed=20260925
+DONE service-unix valid=False capacity_pass=False
+START aerostore rate=2048 workers=4 seed=20260925
+DONE aerostore valid=True capacity_pass=False

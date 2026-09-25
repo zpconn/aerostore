@@ -1,0 +1,2 @@
+contention_crucible engine=aerostore scenario=null passed=false completed=null retries=null p99_us=null
+contention-crucible: contention correctness/progress check failed: /home/zpconn/code/aerostore/target/affinity-validation/preserved-integration/regression-9gkpss60/calibrated-maintenance-cap/report.json

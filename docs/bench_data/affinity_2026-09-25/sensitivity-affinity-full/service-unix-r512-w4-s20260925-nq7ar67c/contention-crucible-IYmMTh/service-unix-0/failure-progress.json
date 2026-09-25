@@ -1,0 +1,25 @@
+{
+  "completed_by_worker": [
+    710,
+    710,
+    708,
+    426,
+    4,
+    1
+  ],
+  "completed_message_retries": 397,
+  "completed_messages": 2559,
+  "error": "message 4000000003 after 128 retries: transaction conflict; cleanup=Ok(())",
+  "execution_completed": false,
+  "note": "Offered schedule remains authoritative; failed message retry count is retained in worker error. Uncompleted offered events are not dropped or called successful.",
+  "offered_by_worker": [
+    714,
+    710,
+    710,
+    426,
+    4,
+    2
+  ],
+  "passed": false,
+  "worker": 5
+}

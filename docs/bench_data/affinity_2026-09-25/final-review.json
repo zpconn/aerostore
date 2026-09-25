@@ -1,0 +1,23 @@
+{
+  "completed_at": "2026-09-25T22:41:41.010988+00:00",
+  "passed": true,
+  "source_sha256": "fef4c866ad708e8d49335f6432a0ce0e24d288b4232e87efece565d22ad3c32e",
+  "binary_sha256": "f01f19d86061fb4fe6f87cf384fc60eb6b4f3f44126b2ecd94d388808004f48d",
+  "pilot_checks": 71,
+  "pilot_all_passed": true,
+  "proof_input_files": 523,
+  "main_source_files": 482,
+  "main_archive_files_independently_verified": 708,
+  "guardrail_logical_members_verified": 5691,
+  "guardrail_compressed_sha256": "b5cf246dcae7ecd0243133835fdd5f0a682e300bd20ecac1056c5618444a8fb7",
+  "scope": "Final assembly check. Complete main evidence and separate guardrail archive have independent receipts. Higher-load progress failures retained; no capacity, 10x, full-P1, whole-engine or production availability qualification.",
+  "p0_complete": true,
+  "full_P1_complete": false,
+  "whole_engine_verified": false,
+  "promotion_eligible": false,
+  "main_readme_matches_reviewed_draft": true,
+  "disposable_postgres_stopped": true,
+  "linked_documents_checked": 9,
+  "shell_examples_parsed": 17,
+  "whitespace_check": "Staged sources/docs pass. The exact archived model-and-measurement-tests.log retains its original final blank line; changing raw evidence for whitespace style was intentionally avoided."
+}

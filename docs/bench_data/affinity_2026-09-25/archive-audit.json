@@ -1,0 +1,50 @@
+{
+  "archive_bytes": 58160250,
+  "archive_files_checked": 708,
+  "auditor_script_sha256": "29afe2818051dbadffaccf4ec61d9dda397c5d57da33b55286cf4ad05e7b863f",
+  "binary_sha256": "f01f19d86061fb4fe6f87cf384fc60eb6b4f3f44126b2ecd94d388808004f48d",
+  "checks": [
+    "All708 archive byte hashes/sizes and original decompressed hashes/sizes checked; gzip CRC/trailers read to EOF.",
+    "Final482 source members independently match build inventory/digest; development differs only in the optional-field test and frozen-boundary hash.",
+    "All48 trial frozen bindings/capacity flags checked; main36 pass, sensitivity6 valid+6 progress failures. Partial archived PG/service traces independently reproduce3341/2726 stale views.",
+    "Final real-process fault18-message trace independently reproduces6 stale view updates and18 positive jobs; Valid serial history and failed usefulness remain separate.",
+    "Draft README tables/counts match reviews and logs. Guardrail completion wording/link is contingent on separately finishing/archiving the final pilot; this audit does not certify that pilot."
+  ],
+  "created_at": "2026-09-25T22:35:32.430770+00:00",
+  "development_changed_paths": [
+    "scripts/test_affinity_dispatch.py",
+    "verification/frozen_boundary.json"
+  ],
+  "errors": [],
+  "fault_trace_recheck": {
+    "ignored_stale_views": 6,
+    "positive_jobs": 18,
+    "recorded_messages": 18
+  },
+  "gzip_wrapped_files_checked": 366,
+  "manifest_sha256": "4dc3886f257179f361558e5d58a5ae3180750a704586ddfe105f8cf396d5331b",
+  "original_bytes": 1396253941,
+  "original_source_files_also_checked": 708,
+  "partial_trace_recheck": [
+    {
+      "engine": "postgres",
+      "ignored_stale_views": 3341,
+      "oracle_status": null,
+      "recorded_messages": 2446
+    },
+    {
+      "engine": "service-unix",
+      "ignored_stale_views": 2726,
+      "oracle_status": null,
+      "recorded_messages": 3285
+    }
+  ],
+  "passed": true,
+  "pending_readme_links": [
+    "guardrails/README.md"
+  ],
+  "readme_draft_sha256": "cdf5dbf4f8d33e0d6ea3886df34315b5b11a3af71f3b1ed0e828627e7d939529",
+  "scope": "Independent read-only archive/content review. No benchmark, proof, semantic serial oracle or database action rerun. Main manifest excludes its own hash, pending README/root checksums, standalone audit and separately manifested guardrails. No capacity, speed ranking, whole-engine correctness or MMHF availability certification.",
+  "source_sha256": "fef4c866ad708e8d49335f6432a0ce0e24d288b4232e87efece565d22ad3c32e",
+  "source_tar_files": 482
+}

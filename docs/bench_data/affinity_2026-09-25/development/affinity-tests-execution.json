@@ -1,0 +1,24 @@
+{
+  "command": [
+    "python3",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "scripts",
+    "-p",
+    "test_affinity_dispatch.py",
+    "-v"
+  ],
+  "binary": "/home/zpconn/code/aerostore/target/affinity-validation/benchmark-final",
+  "binary_before_sha256": "f01f19d86061fb4fe6f87cf384fc60eb6b4f3f44126b2ecd94d388808004f48d",
+  "expected_source_sha256": "3f94a0c3098bd6ac079553dfeb4b638be2686a5ba2ecff92bf4e2a3a7304cd72",
+  "scope": "Frozen binary real-process functional tests; concurrent local validation means no performance claim.",
+  "started_at_unix_ns": 1790374454210094645,
+  "completed": true,
+  "passed": false,
+  "exit_code": 1,
+  "finished_at_unix_ns": 1790374460733711404,
+  "binary_after_sha256": "f01f19d86061fb4fe6f87cf384fc60eb6b4f3f44126b2ecd94d388808004f48d",
+  "log_sha256": "56a78175198b0a0bd24c98e0faf5cb2d437b471a052e53965dc6a6c9abaa1655"
+}

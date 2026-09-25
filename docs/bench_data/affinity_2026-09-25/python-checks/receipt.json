@@ -1,0 +1,45 @@
+{
+  "created_at": "2026-09-25T22:20:30.346947+00:00",
+  "source_sha256": "fef4c866ad708e8d49335f6432a0ce0e24d288b4232e87efece565d22ad3c32e",
+  "files_sha256": {
+    "scripts/qualify_hyperfeed.py": "c0cca4f755f4e793c13f665939b8ea77afd8c672d843adb50f31d04899fbff04",
+    "scripts/test_hyperfeed_qualification.py": "e56d90793acd96895120f54af854dbb2a1c1b39f36ae21d7589512892ee915ad",
+    "scripts/run_remote_contention.py": "5a9319311dd8705ac5040f85de716019bc80292e10b592d1269eaa66ef594b7f",
+    "scripts/test_run_remote_contention.py": "a6d40288376dba7ae25675a8537ec750c1bb8962ba3709c27114cf1891fcb596"
+  },
+  "checks": [
+    {
+      "command": [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "scripts",
+        "-p",
+        "test_hyperfeed_qualification.py",
+        "-v"
+      ],
+      "exit_code": 0,
+      "log": "target/affinity-final-validation/python-checks/test_hyperfeed_qualification.py.log",
+      "log_sha256": "81397b9f435f7d1832255a010aad01a6bd4b651cb51847a687fa94dde972e0b8"
+    },
+    {
+      "command": [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "scripts",
+        "-p",
+        "test_run_remote_contention.py",
+        "-v"
+      ],
+      "exit_code": 0,
+      "log": "target/affinity-final-validation/python-checks/test_run_remote_contention.py.log",
+      "log_sha256": "404aeccafb3dbfc684edda30b38966aa465c07dd491a215ec5e2fbd31b34fa94"
+    }
+  ],
+  "passed": true
+}

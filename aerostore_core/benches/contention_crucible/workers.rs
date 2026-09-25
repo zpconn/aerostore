@@ -38,6 +38,10 @@ pub struct Config {
     /// Minimum spacing between logical-message starts in sustained requests.
     /// Zero is unpaced; pacing waits are outside measured service latency.
     pub message_interval_us: u64,
+    /// Prepared by the coordinator before workers report Ready; no replay of
+    /// the complete affinity dispatcher occurs inside the measured interval.
+    #[serde(default)]
+    pub calibrated_schedule: Option<calibrated::WorkerSchedule>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -563,19 +567,24 @@ fn worker_loop(config: &Config, store: &mut impl MeasuredStore) -> Result<(), St
                 {
                     return Err("calibrated worker configuration mismatch".into());
                 }
-                let plan = calibrated::Schedule::new(schedule_config)?;
-                if config.worker_id >= plan.worker_count() || config.workers != plan.worker_count()
+                let plan = config
+                    .calibrated_schedule
+                    .as_ref()
+                    .ok_or("missing prepared calibrated schedule")?;
+                if plan.config != schedule_config
+                    || plan.worker != config.worker_id
+                    || config.workers != plan.config.foreground_workers + 2
                 {
                     return Err("calibrated worker routing dimensions differ".into());
                 }
-                let offered = plan.worker_offered(config.worker_id);
+                let offered = plan.offered();
                 if offered > max_messages as u64 {
                     return Err("calibrated message cap would truncate admitted jobs".into());
                 }
                 stop_reason = "arrival_corpus_drained";
                 for ordinal in 0..offered {
                     let event = plan
-                        .event(config.worker_id, ordinal)
+                        .event(ordinal)
                         .ok_or("calibrated offered event missing")?;
                     let scheduled_ns = start_ns
                         .checked_add(event.offset_ns)
@@ -585,11 +594,7 @@ fn worker_loop(config: &Config, store: &mut impl MeasuredStore) -> Result<(), St
                         stop_reason = "stop_requested";
                         break;
                     }
-                    let backlog = plan.backlog(
-                        config.worker_id,
-                        ordinal,
-                        monotonic_ns().saturating_sub(start_ns),
-                    );
+                    let backlog = plan.backlog(ordinal, monotonic_ns().saturating_sub(start_ns));
                     maximum_backlog = maximum_backlog.max(backlog);
                     if backlog > config.max_backlog {
                         return Err(format!("calibrated offered backlog {backlog} exceeds worker bound {} after {ordinal} completions; all independently due jobs remain admitted",config.max_backlog));
@@ -604,11 +609,8 @@ fn worker_loop(config: &Config, store: &mut impl MeasuredStore) -> Result<(), St
                         config.record_history,
                         Some(scheduled_ns),
                     )?;
-                    maximum_backlog = maximum_backlog.max(plan.backlog(
-                        config.worker_id,
-                        ordinal + 1,
-                        monotonic_ns().saturating_sub(start_ns),
-                    ));
+                    maximum_backlog = maximum_backlog
+                        .max(plan.backlog(ordinal + 1, monotonic_ns().saturating_sub(start_ns)));
                 }
                 if !stop && !wait_until(&input, deadline_ns)? {
                     stop = true;
@@ -661,6 +663,17 @@ fn worker_inner(config_path: &Path) -> Result<(), String> {
         || config.hot_percent > 100
     {
         return Err("invalid worker count, identity count, or hot-identity percentage".into());
+    }
+    if let Some(plan) = &config.calibrated_schedule {
+        plan.validate()?;
+        if config.workload != "calibrated"
+            || plan.worker != config.worker_id
+            || plan.config.foreground_workers + 2 != config.workers
+            || plan.config.families != config.families
+            || plan.config.seed != config.seed
+        {
+            return Err("invalid prepared calibrated worker schedule".into());
+        }
     }
     match config.engine.as_str() {
         "aerostore" => {
