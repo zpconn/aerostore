@@ -1,0 +1,227 @@
+{
+  "binary_sha256": "f37b288b38be0b86a29f1db32079f5819c4fe28220937219f41260c9c8549033",
+  "files": {
+    "execution.json": {
+      "bytes": 2432,
+      "compression": "none",
+      "original_bytes": 2432,
+      "original_sha256": "0f1efcd17dfd17fccddca28ab8da7c7a106afab1746288e39ceb2426853a5ade",
+      "sha256": "0f1efcd17dfd17fccddca28ab8da7c7a106afab1746288e39ceb2426853a5ade",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/execution.json"
+    },
+    "fleet-build-provenance.json": {
+      "bytes": 121029,
+      "compression": "none",
+      "original_bytes": 121029,
+      "original_sha256": "019518905ec4318d7b08a2f47989d725d51320556040fdfd74a578f021680541",
+      "sha256": "019518905ec4318d7b08a2f47989d725d51320556040fdfd74a578f021680541",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/fleet-build-provenance.json"
+    },
+    "native-postgres-report.json": {
+      "bytes": 58778,
+      "compression": "none",
+      "original_bytes": 58778,
+      "original_sha256": "5fd9a3df81c761e8380c4fe900cd6a9396d101351d44c66065581cd60dd62e63",
+      "sha256": "5fd9a3df81c761e8380c4fe900cd6a9396d101351d44c66065581cd60dd62e63",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/native-postgres-report.json"
+    },
+    "native-postgres-run.log": {
+      "bytes": 231,
+      "compression": "none",
+      "original_bytes": 231,
+      "original_sha256": "3289e8be2cc3fea91f2d18bf62f592d0d55853005ed72712a74e4e79938737bc",
+      "sha256": "3289e8be2cc3fea91f2d18bf62f592d0d55853005ed72712a74e4e79938737bc",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/native-postgres-run.log"
+    },
+    "native-postgres/aerostore/final.json.gz": {
+      "bytes": 103256,
+      "compression": "gzip",
+      "original_bytes": 6641969,
+      "original_sha256": "e67ce9070a9ae41534faf757f0865162a18001b8a2243835c154c801102364af",
+      "sha256": "2a8f7bf3c9ecab3d9c683c5f821e12ff04b12d62c62a665c7039dba1c47c3501",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/contention-crucible-2wbML1/aerostore-0/final.json"
+    },
+    "native-postgres/aerostore/history.jsonl.gz": {
+      "bytes": 185879,
+      "compression": "gzip",
+      "original_bytes": 3763593,
+      "original_sha256": "e47c1eefe7804c2738c7941389443fa4f76ff95da3acbd63fefdd54d203f2608",
+      "sha256": "8a66ee9b757f8d0470d0e5ff41a8e98d90b10336570b000b8dcd1ec1c99c8cf8",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/contention-crucible-2wbML1/aerostore-0/history.jsonl"
+    },
+    "native-postgres/aerostore/initial.json.gz": {
+      "bytes": 95105,
+      "compression": "gzip",
+      "original_bytes": 6609164,
+      "original_sha256": "91a74e9157761c6a1c6a4d263c5bc3821b4746aebb96ae36b8addc73b3aa4b0e",
+      "sha256": "14527e05a6e1bdc63ec86b4afbc4fe8ec7becc05b43a66bc15d7a28aee40b79c",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/contention-crucible-2wbML1/aerostore-0/initial.json"
+    },
+    "native-postgres/aerostore/serial-witness.json": {
+      "bytes": 2776,
+      "compression": "none",
+      "original_bytes": 2776,
+      "original_sha256": "b56af5fca48dce8afb0a9ae2346f08faea655f0e103d1f856caa11b61f45b11e",
+      "sha256": "b56af5fca48dce8afb0a9ae2346f08faea655f0e103d1f856caa11b61f45b11e",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/contention-crucible-2wbML1/aerostore-0/serial-witness.json"
+    },
+    "native-postgres/postgres/final.json.gz": {
+      "bytes": 103256,
+      "compression": "gzip",
+      "original_bytes": 6641969,
+      "original_sha256": "e67ce9070a9ae41534faf757f0865162a18001b8a2243835c154c801102364af",
+      "sha256": "2a8f7bf3c9ecab3d9c683c5f821e12ff04b12d62c62a665c7039dba1c47c3501",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/contention-crucible-2wbML1/postgres-0/final.json"
+    },
+    "native-postgres/postgres/history.jsonl.gz": {
+      "bytes": 186051,
+      "compression": "gzip",
+      "original_bytes": 3763813,
+      "original_sha256": "cd95b20729e36a4d0c28d40ee51b609546fb0da6392c7a963395cc9290bb62a2",
+      "sha256": "1cd91f118418b73a0bfd5f8e66777fe3468a116c9c6c919ee60e9b7bd49980c5",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/contention-crucible-2wbML1/postgres-0/history.jsonl"
+    },
+    "native-postgres/postgres/initial.json.gz": {
+      "bytes": 95105,
+      "compression": "gzip",
+      "original_bytes": 6609164,
+      "original_sha256": "91a74e9157761c6a1c6a4d263c5bc3821b4746aebb96ae36b8addc73b3aa4b0e",
+      "sha256": "14527e05a6e1bdc63ec86b4afbc4fe8ec7becc05b43a66bc15d7a28aee40b79c",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/contention-crucible-2wbML1/postgres-0/initial.json"
+    },
+    "native-postgres/postgres/serial-witness.json": {
+      "bytes": 2776,
+      "compression": "none",
+      "original_bytes": 2776,
+      "original_sha256": "b56af5fca48dce8afb0a9ae2346f08faea655f0e103d1f856caa11b61f45b11e",
+      "sha256": "b56af5fca48dce8afb0a9ae2346f08faea655f0e103d1f856caa11b61f45b11e",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/contention-crucible-2wbML1/postgres-0/serial-witness.json"
+    },
+    "remote-loopback/case/final.json.gz": {
+      "bytes": 31568,
+      "compression": "gzip",
+      "original_bytes": 1679800,
+      "original_sha256": "093c59d70e989a59a1f1756b66ac02414178985d2c4d1335571e691453f24fae",
+      "sha256": "56838b9e0ae2d016eccd95e8231f595c7b719dd864fd3c84bb73a1210dd8796d",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/remote-loopback/contention-crucible-HILtPO/service-remote-0/final.json"
+    },
+    "remote-loopback/case/history.jsonl.gz": {
+      "bytes": 118214,
+      "compression": "gzip",
+      "original_bytes": 3048869,
+      "original_sha256": "0ebff0dd6a2ee615575e3ec1a47c08aa5b2f23c4b793e197c2f949a49b976b0b",
+      "sha256": "e2b7078b2c85d731718e13868e1519a4d1c47cfda5ea720776b4870113548853",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/remote-loopback/contention-crucible-HILtPO/service-remote-0/history.jsonl"
+    },
+    "remote-loopback/case/initial.json.gz": {
+      "bytes": 24007,
+      "compression": "gzip",
+      "original_bytes": 1647970,
+      "original_sha256": "64f8f1ad6380b6388f8eb144123a2dd9f5a6a1e6622970776d2d95b8720fcc24",
+      "sha256": "1f82961d02ecf8c7f87631557788191867f463fcd2ed302add3dcec518ad33ed",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/remote-loopback/contention-crucible-HILtPO/service-remote-0/initial.json"
+    },
+    "remote-loopback/case/serial-witness.json": {
+      "bytes": 2776,
+      "compression": "none",
+      "original_bytes": 2776,
+      "original_sha256": "a0ae0681231b49f41e0b94994004dda7c84d3a54d4c033e7f202a0ea1f65cdfb",
+      "sha256": "a0ae0681231b49f41e0b94994004dda7c84d3a54d4c033e7f202a0ea1f65cdfb",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/remote-loopback/contention-crucible-HILtPO/service-remote-0/serial-witness.json"
+    },
+    "remote-loopback/client-final.json.gz": {
+      "bytes": 33399,
+      "compression": "gzip",
+      "original_bytes": 1877653,
+      "original_sha256": "c8f3f5a145753a213f6cbe5f464dd310edb30478b623b435c5b379a176a15ec3",
+      "sha256": "a87cb6f33867d538dd967022af5a65ef804257a44f235c0628dd0bd05de64f50",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/remote-loopback/client-final.json"
+    },
+    "remote-loopback/client-report.json": {
+      "bytes": 23482,
+      "compression": "none",
+      "original_bytes": 23482,
+      "original_sha256": "32d4bc1f89416cdc239cd73544689b31c35098e268bd8b29b7af4137f510106c",
+      "sha256": "32d4bc1f89416cdc239cd73544689b31c35098e268bd8b29b7af4137f510106c",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/remote-loopback/client-report.json"
+    },
+    "remote-loopback/client-setup.client-complete.json": {
+      "bytes": 64,
+      "compression": "none",
+      "original_bytes": 64,
+      "original_sha256": "b2a3d0ebc766a70592a622d2b8ee07bc59301c4311ab65dd59f9fe3570ccba4b",
+      "sha256": "b2a3d0ebc766a70592a622d2b8ee07bc59301c4311ab65dd59f9fe3570ccba4b",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/remote-loopback/client-setup.client-complete.json"
+    },
+    "remote-loopback/client-setup.json.gz": {
+      "bytes": 24744,
+      "compression": "gzip",
+      "original_bytes": 1836659,
+      "original_sha256": "c2b78ec521ea63580f65a70fdf4cc7c6626c0348ba1f4ed953296b8f41c55cca",
+      "sha256": "ffb66fc8a3cd9f1726c53037b144acc9bf4ef4d84013b5b92ac518d9a3d9ef34",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/remote-loopback/client-setup.json"
+    },
+    "remote-loopback/client.log": {
+      "bytes": 122,
+      "compression": "none",
+      "original_bytes": 122,
+      "original_sha256": "e97b2181b714ce5ff91791b3a427bd64fb00afea7e6773edee422e4405e214b7",
+      "sha256": "e97b2181b714ce5ff91791b3a427bd64fb00afea7e6773edee422e4405e214b7",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/remote-loopback/client.log"
+    },
+    "remote-loopback/client.supervisor.json": {
+      "bytes": 129,
+      "compression": "none",
+      "original_bytes": 129,
+      "original_sha256": "cfeee5e3a6b85af7d07d11d93c032b60eb47c5f23107166ec9617da49cb7738d",
+      "sha256": "cfeee5e3a6b85af7d07d11d93c032b60eb47c5f23107166ec9617da49cb7738d",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/remote-loopback/client.supervisor.json"
+    },
+    "remote-loopback/orchestration.json": {
+      "bytes": 4615,
+      "compression": "none",
+      "original_bytes": 4615,
+      "original_sha256": "e7755b560b6c4287d86a3ce183155cc42c986c4a69952ee33b80cc6bc43366bd",
+      "sha256": "e7755b560b6c4287d86a3ce183155cc42c986c4a69952ee33b80cc6bc43366bd",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/remote-loopback/orchestration.json"
+    },
+    "remote-loopback/server-setup.supervisor.json": {
+      "bytes": 129,
+      "compression": "none",
+      "original_bytes": 129,
+      "original_sha256": "8c8677e90e5eaa67d1a434ee735cea2a4f0412c2b335486e4ec3d06116aab7de",
+      "sha256": "8c8677e90e5eaa67d1a434ee735cea2a4f0412c2b335486e4ec3d06116aab7de",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/remote-loopback/server-setup.supervisor.json"
+    },
+    "remote-loopback/server.log": {
+      "bytes": 0,
+      "compression": "none",
+      "original_bytes": 0,
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/remote-loopback/server.log"
+    },
+    "remote-script-run.log": {
+      "bytes": 159,
+      "compression": "none",
+      "original_bytes": 159,
+      "original_sha256": "36af826a6414fe050388ab2e623cf62c1efe250f2398baa320e0e7b4bbd732e6",
+      "sha256": "36af826a6414fe050388ab2e623cf62c1efe250f2398baa320e0e7b4bbd732e6",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/remote-script-run.log"
+    },
+    "remote-script-tests.log": {
+      "bytes": 1361,
+      "compression": "none",
+      "original_bytes": 1361,
+      "original_sha256": "878f7e4ce0f3ecb6c5c8ec8e074160d286088def339fe0220b076f887e2f6ba8",
+      "sha256": "878f7e4ce0f3ecb6c5c8ec8e074160d286088def339fe0220b076f887e2f6ba8",
+      "source": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/remote-script-tests.log"
+    }
+  },
+  "omitted_semantically_duplicate_frames": [
+    "server-setup.json",
+    "server-setup.final.json"
+  ],
+  "source_directory": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final",
+  "version": 1
+}

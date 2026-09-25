@@ -1,0 +1,121 @@
+--- baseline/wal_crash_recovery.rs
++++ candidate/wal_crash_recovery.rs
+@@ -558,9 +558,23 @@
+ 
+ #[test]
+ fn async_wal_daemon_restart_does_not_persist_rolled_back_savepoint_intents() {
++    use std::os::fd::AsRawFd;
++
+     let data_dir = tmp_data_dir();
+     std::fs::create_dir_all(&data_dir).expect("failed to create temp data dir");
+     let wal_path = data_dir.join("aerostore_tcl_like_savepoint.wal");
++
++    // Prevent the first daemon from appending while it dequeues this wave.
++    // Asynchronous commit promises enqueue, not survival of this process crash.
++    let pre_crash_lock = std::fs::OpenOptions::new()
++        .create(true)
++        .append(true)
++        .read(true)
++        .open(&wal_path)
++        .expect("failed to open WAL for the deterministic crash cut");
++    // SAFETY: the file owns this valid descriptor throughout the first daemon's lifetime.
++    let locked = unsafe { libc::flock(pre_crash_lock.as_raw_fd(), libc::LOCK_EX) };
++    assert_eq!(locked, 0, "failed to exclude first-wave WAL appends");
+ 
+     let shm = std::sync::Arc::new(
+         ShmArena::new(64 << 20)
+@@ -598,6 +612,16 @@
+         &first_wave,
+     );
+ 
++    // is_empty observes dequeue claims; it does not assert that the bytes are durable
++    // or even that the final claimed slot has been copied into the private batch.
++    let dequeue_started = Instant::now();
++    while !ring.is_empty().expect("failed to inspect first-wave ring")
++        && dequeue_started.elapsed() < Duration::from_secs(10)
++    {
++        thread::yield_now();
++    }
++    let first_wave_dequeued = ring.is_empty().expect("failed to inspect drained ring");
++
+     daemon
+         .terminate(libc::SIGKILL)
+         .expect("failed to kill first wal writer daemon");
+@@ -610,11 +634,36 @@
+         killed_status
+     );
+ 
++    // Reap before asserting the timeout result, so a failed probe cannot leave
++    // the disposable first daemon waiting on the inherited file lock.
++    assert!(
++        first_wave_dequeued,
++        "first daemon did not dequeue within ten seconds"
++    );
++    assert_eq!(
++        pre_crash_lock
++            .metadata()
++            .expect("failed to inspect locked WAL")
++            .len(),
++        0,
++        "the forced crash cut must lose the complete first wave"
++    );
++    // Other concurrently forked test children might also inherit this descriptor.
++    // Unlock explicitly before spawning the replacement; closing our copy alone
++    // would not release a lock still held through another inherited descriptor.
++    // SAFETY: the file still owns this valid descriptor, and daemon one is reaped.
++    let unlocked = unsafe { libc::flock(pre_crash_lock.as_raw_fd(), libc::LOCK_UN) };
++    assert_eq!(unlocked, 0, "failed to release the first-wave WAL lock");
++    drop(pre_crash_lock);
++
+     let daemon2 = spawn_wal_writer_daemon(ring.clone(), &wal_path)
+         .expect("failed to spawn second wal writer daemon");
++    // Rewrite every final identity after the known first-wave loss. The oracle
++    // remains exact, without assuming asynchronous commits survived SIGKILL.
+     let second_wave = [
+         ("UAL123", 12_200_i32, 450_u16),
+         ("AAL456", 13_100, 410),
++        ("DAL789", 14_600, 438),
+         ("SWA321", 10_900, 382),
+     ];
+     run_tcl_like_upsert_wave_with_savepoint_churn(
+@@ -633,20 +682,30 @@
+         .expect("second daemon should exit cleanly after ring close");
+ 
+     let commits = read_ring_wal_records(&wal_path);
+-    assert!(
+-        !commits.is_empty(),
+-        "expected at least some commits to persist to WAL file"
+-    );
+-    assert!(
+-        commits.len() <= first_wave.len() + second_wave.len(),
+-        "persisted more commits than produced"
+-    );
+-
+-    for commit in &commits {
++    assert_eq!(
++        commits.len(),
++        second_wave.len(),
++        "clean replacement shutdown must persist exactly the second wave"
++    );
++
++    for (commit, (flight, altitude, gs)) in commits.iter().zip(second_wave.iter()) {
+         assert_eq!(
+             commit.writes.len(),
+             1,
+             "rolled-back savepoint intents must not appear in durable WAL records"
++        );
++        let write = &commit.writes[0];
++        let expected_row_id = key_to_row[*flight];
++        assert_eq!(write.row_id, expected_row_id as u64);
++        let record = aerostore_core::deserialize_delta_wal_record(&write.wal_record_payload)
++            .expect("persisted write must contain a valid recovery record");
++        let (pk, persisted) = aerostore_core::apply_update_record(&TclLikeRow::empty(), &record)
++            .expect("replacement record must recover without the lost first wave");
++        assert_eq!(pk, expected_row_id.to_string());
++        assert_eq!(
++            persisted,
++            TclLikeRow::from_parts(flight, *altitude, *gs),
++            "persisted payload must contain the committed value, never rolled-back churn"
+         );
+     }
+ 

@@ -1,0 +1,39 @@
+{
+  "architecture_promotion_eligible": false,
+  "completed": true,
+  "config": {
+    "engine": "aerostore",
+    "families": 16,
+    "global_time_predicates": true,
+    "hot_percent": 80,
+    "max_messages": 1000,
+    "message_interval_us": 0,
+    "mode": "sustained",
+    "oracle_budget": 2000000,
+    "output": "/home/zpconn/code/aerostore/target/contention-validation/fixed-global-time.json",
+    "seconds": 60,
+    "seed": 20260924,
+    "shm_mib": 256,
+    "workers": 4
+  },
+  "durability_contract": "both use WAL with asynchronous acknowledgement; fsync on PostgreSQL; native writer drained on normal completion; equal crash loss windows and crash recovery NOT claimed",
+  "evidence_directory": "/home/zpconn/code/aerostore/target/contention-validation/contention-crucible-ysvu4N",
+  "git_revision": "6291200b4383538d960f3b1c73942715193f464b",
+  "passed": false,
+  "runs": [
+    {
+      "engine": "aerostore",
+      "error": "worker 0: message 1764 after 128 retries: transaction conflict; cleanup=Ok(())",
+      "evidence_directory": "/home/zpconn/code/aerostore/target/contention-validation/contention-crucible-ysvu4N/aerostore-0",
+      "execution_completed": false,
+      "passed": false,
+      "scenario": null,
+      "scratch_cleanup_completed": true
+    }
+  ],
+  "schema": 1,
+  "scope": "synthetic harder HyperFeed storage workload, not proprietary handler compatibility or architecture superiority",
+  "transaction_contract": "single-table native optimistic transactions versus PostgreSQL SERIALIZABLE; dynamic reads/writes, no family prelocks; strict serial witness checked for every successful attempt",
+  "whole_engine_verified": false,
+  "worker_failure_requirement": "surviving workers must continue; separate worker_failure_contract test reports current violations"
+}

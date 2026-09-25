@@ -1,0 +1,168 @@
+{
+  "architecture_promotion_eligible": false,
+  "baseline_commit": "6291200b4383538d960f3b1c73942715193f464b",
+  "binary_sha256": "346d9393338c7ebdbce5c8975f05a06057176d0a53ef9d4de5739dcdc4db20a3",
+  "campaigns": {
+    "continuous-full": {
+      "campaign_sha256": "062f503a81455f96db6140716bb63983ca9cfa785f7040835b27628a91cc17b5",
+      "capacity_bounds": {
+        "aerostore": {
+          "all_seed_passes_required": true,
+          "best_tested_exploratory_rate": 100,
+          "best_tested_qualified_rate": 100,
+          "failing_tested_upper_rate": null,
+          "selected_workers": 1,
+          "three_or_more_seeds": true,
+          "worker_search_exhaustive_only_within_declared_grid": true
+        },
+        "postgres": {
+          "all_seed_passes_required": true,
+          "best_tested_exploratory_rate": 100,
+          "best_tested_qualified_rate": 100,
+          "failing_tested_upper_rate": null,
+          "selected_workers": 1,
+          "three_or_more_seeds": true,
+          "worker_search_exhaustive_only_within_declared_grid": true
+        },
+        "service-unix": {
+          "all_seed_passes_required": true,
+          "best_tested_exploratory_rate": 100,
+          "best_tested_qualified_rate": 100,
+          "failing_tested_upper_rate": null,
+          "selected_workers": 1,
+          "three_or_more_seeds": true,
+          "worker_search_exhaustive_only_within_declared_grid": true
+        }
+      },
+      "execution_campaign_passed": true,
+      "full_histories_verified": 18,
+      "performance_policy_passes": 18,
+      "trials": 18
+    },
+    "continuous-high-full": {
+      "campaign_sha256": "10e12b747993400d328704a40ec4cc543bf8b70af276c4019c317dc166726c57",
+      "capacity_bounds": {
+        "aerostore": {
+          "all_seed_passes_required": true,
+          "best_tested_exploratory_rate": null,
+          "best_tested_qualified_rate": null,
+          "failing_tested_upper_rate": null,
+          "selected_workers": null,
+          "three_or_more_seeds": false,
+          "worker_search_exhaustive_only_within_declared_grid": true
+        },
+        "postgres": {
+          "all_seed_passes_required": true,
+          "best_tested_exploratory_rate": 1000,
+          "best_tested_qualified_rate": null,
+          "failing_tested_upper_rate": null,
+          "selected_workers": null,
+          "three_or_more_seeds": false,
+          "worker_search_exhaustive_only_within_declared_grid": true
+        },
+        "service-unix": {
+          "all_seed_passes_required": true,
+          "best_tested_exploratory_rate": null,
+          "best_tested_qualified_rate": null,
+          "failing_tested_upper_rate": null,
+          "selected_workers": null,
+          "three_or_more_seeds": false,
+          "worker_search_exhaustive_only_within_declared_grid": true
+        }
+      },
+      "execution_campaign_passed": true,
+      "full_histories_verified": 3,
+      "performance_policy_passes": 1,
+      "trials": 3
+    },
+    "continuous-high-metrics": {
+      "campaign_sha256": "8eadc3609429c3f55f428fe95ef7970b5f4a022cc59904833442bd6bf63b8bd5",
+      "capacity_bounds": {
+        "aerostore": {
+          "all_seed_passes_required": true,
+          "best_tested_exploratory_rate": null,
+          "best_tested_qualified_rate": null,
+          "failing_tested_upper_rate": null,
+          "selected_workers": null,
+          "three_or_more_seeds": false,
+          "worker_search_exhaustive_only_within_declared_grid": true
+        },
+        "postgres": {
+          "all_seed_passes_required": true,
+          "best_tested_exploratory_rate": 1000,
+          "best_tested_qualified_rate": null,
+          "failing_tested_upper_rate": null,
+          "selected_workers": null,
+          "three_or_more_seeds": false,
+          "worker_search_exhaustive_only_within_declared_grid": true
+        },
+        "service-unix": {
+          "all_seed_passes_required": true,
+          "best_tested_exploratory_rate": null,
+          "best_tested_qualified_rate": null,
+          "failing_tested_upper_rate": null,
+          "selected_workers": null,
+          "three_or_more_seeds": false,
+          "worker_search_exhaustive_only_within_declared_grid": true
+        }
+      },
+      "execution_campaign_passed": true,
+      "full_histories_verified": 0,
+      "performance_policy_passes": 1,
+      "trials": 3
+    },
+    "continuous-metrics": {
+      "campaign_sha256": "5f5ed86cff624d957f806ba0895bfdc9455140af92026cf0c375ca25750f2279",
+      "capacity_bounds": {
+        "aerostore": {
+          "all_seed_passes_required": true,
+          "best_tested_exploratory_rate": 100,
+          "best_tested_qualified_rate": 100,
+          "failing_tested_upper_rate": null,
+          "selected_workers": 1,
+          "three_or_more_seeds": true,
+          "worker_search_exhaustive_only_within_declared_grid": true
+        },
+        "postgres": {
+          "all_seed_passes_required": true,
+          "best_tested_exploratory_rate": 100,
+          "best_tested_qualified_rate": 100,
+          "failing_tested_upper_rate": null,
+          "selected_workers": 1,
+          "three_or_more_seeds": true,
+          "worker_search_exhaustive_only_within_declared_grid": true
+        },
+        "service-unix": {
+          "all_seed_passes_required": true,
+          "best_tested_exploratory_rate": 100,
+          "best_tested_qualified_rate": 100,
+          "failing_tested_upper_rate": null,
+          "selected_workers": 1,
+          "three_or_more_seeds": true,
+          "worker_search_exhaustive_only_within_declared_grid": true
+        }
+      },
+      "execution_campaign_passed": true,
+      "full_histories_verified": 0,
+      "performance_policy_passes": 18,
+      "trials": 18
+    }
+  },
+  "component_pilot_checks_passed": 71,
+  "component_pilot_source_stable": true,
+  "deterministic_extended_crucible_unchanged": true,
+  "fixture_status": "Native and Docker PostgreSQL test servers remain running; automatic approval review rejected cleanup for lack of explicit authorization.",
+  "format": 1,
+  "frozen_boundary_scope": "Reviewed local bootstrap; independent original baseline still rejects the expanded boundary.",
+  "full_P1_complete": false,
+  "old_latency_history_retention_evidence_preserved": true,
+  "older_contention_archive_checksums_passed": true,
+  "older_drained_rate_capacity_claims_withdrawn": true,
+  "physical_MMHF_measured": false,
+  "production_source_files_unchanged": 37,
+  "source_files": 478,
+  "source_sha256": "d817ba814d857356f29c70d1f5dce340e380ce453601d028b69df939df6a5c4a",
+  "source_stable": true,
+  "tenfold_hyperfeed_target_demonstrated": false,
+  "whole_engine_verified": false
+}

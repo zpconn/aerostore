@@ -1,0 +1,11 @@
+test_fleet_keeps_population_and_executes_cross_family_background_work (test_contention_integration.ContentionIntegrationTests.test_fleet_keeps_population_and_executes_cross_family_background_work) ... ok
+test_fleet_rejects_silently_ignored_hotspot_configuration (test_contention_integration.ContentionIntegrationTests.test_fleet_rejects_silently_ignored_hotspot_configuration) ... ok
+test_full_and_metrics_process_the_same_fixed_single_worker_corpus (test_contention_integration.ContentionIntegrationTests.test_full_and_metrics_process_the_same_fixed_single_worker_corpus) ... ok
+test_interactive_delay_exposes_backlog_instead_of_throttling_arrivals (test_contention_integration.ContentionIntegrationTests.test_interactive_delay_exposes_backlog_instead_of_throttling_arrivals) ... ok
+test_message_cap_cannot_silently_truncate_offered_corpus (test_contention_integration.ContentionIntegrationTests.test_message_cap_cannot_silently_truncate_offered_corpus) ... ok
+test_one_arrival_waits_for_full_admission_interval_and_metrics_omit_history (test_contention_integration.ContentionIntegrationTests.test_one_arrival_waits_for_full_admission_interval_and_metrics_omit_history) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 7.308s
+
+OK

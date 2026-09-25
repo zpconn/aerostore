@@ -1,0 +1,3 @@
+contention-crucible: offered arrival backlog 23 exceeds worker bound 1 after 1 completions; arrivals were not throttled
+contention_crucible engine=service-unix scenario=null passed=false completed=null retries=null p99_us=null
+contention-crucible: contention correctness/progress check failed: /home/zpconn/code/aerostore/target/calibrated-validation/final-integration/regression-764v5a6c/backlog/report.json

@@ -1,0 +1,25 @@
+{
+  "changed": [
+    "aerostore_core/benches/contention_crucible/measurement.rs",
+    "aerostore_core/benches/contention_crucible/mod.rs",
+    "aerostore_core/benches/contention_crucible/model.rs",
+    "aerostore_core/benches/contention_crucible/remote.rs",
+    "aerostore_core/benches/contention_crucible/runner.rs",
+    "aerostore_core/benches/contention_crucible/workers.rs",
+    "scripts/qualify_hyperfeed.py",
+    "scripts/run_remote_contention.py",
+    "scripts/test_contention_integration.py",
+    "scripts/test_hyperfeed_qualification.py",
+    "scripts/test_run_remote_contention.py"
+  ],
+  "added": [
+    "aerostore_core/benches/contention_crucible/calibrated.rs",
+    "aerostore_core/tests/calibrated_contention_model.rs",
+    "scripts/test_calibrated_worker_pause.py"
+  ],
+  "deleted": [],
+  "production_engine_and_original_extended_unchanged": true,
+  "preserved_paths": 40,
+  "review": "New benchmark scheduling/model/measurement and tests only; previous boundary rejection retained. No performance promotion or whole-engine proof claim.",
+  "anchoring": "local_bootstrap_only"
+}

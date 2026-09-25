@@ -1,0 +1,17 @@
+Retained command and result excerpt from the observed tool output.
+This is not a complete raw console log.
+
+Working directory: /home/zpconn/code/aerostore
+Command:
+python3 -m unittest discover -s scripts -p test_hyperfeed_qualification.py -v
+
+----------------------------------------------------------------------
+Ran 19 tests in 0.414s
+
+OK
+
+This final run includes timeout cleanup of exact private-configuration names
+inside the owned trial tree, symlink/external-tree isolation, credential log
+redaction, stale-output invalidation, source/companion matching, complete corpus
+checks, repeated-seed capacity checks, saturation requirements, and useful-work
+comparison. No benchmark matrix or database was started by this unit suite.

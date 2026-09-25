@@ -1,0 +1,33 @@
+warning: method `commit_with_record_before_publish` is never used
+    --> aerostore_core/src/occ_partitioned.rs:1264:19
+     |
+ 365 | impl<T: Copy + Send + Sync + 'static> OccTable<T> {
+     | ------------------------------------------------- method in this implementation
+...
+1264 |     pub(crate) fn commit_with_record_before_publish<E, F>(
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `aerostore_core` (lib) generated 1 warning
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/aerostore_core)
+    Finished `release` profile [optimized] target(s) in 0.99s
+     Running tests/worker_failure_contract.rs (target/release/deps/worker_failure_contract-3282f400e117b70d)
+
+running 7 tests
+test killed_committer_holding_native_guards_requires_fresh_mapping_recovery ... WORKER_FAILURE_OBSERVATION {"arbitrary_partial_publication_kill_tested":false,"arena_bytes":16777216,"cleared_slots":1,"fixture_rows":2,"fresh_replay_index_rebuild_and_first_message_ms":1.8628740000000001,"kill_reap_ms":1.156496,"phase":"native_commit_before_wal_acceptance","predicate_usable_after_warm_attach":false,"replayed_transactions":1,"replayed_writes":2,"rows_partially_published":false,"timing_scope":"microfixture, excludes failure detection and stopping other workers","wait_for_native_wal_cutpoint_ms":27.078934999999998,"wal_bytes_changed":false,"warm_attach_ms":0.020823}
+ok
+test killed_idle_worker_does_not_interrupt_transactions ... WORKER_FAILURE_OBSERVATION {"active_after_kill":0,"first_verified_message_ms":0.013777000000000001,"kill_reap_ms":1.1087259999999999,"phase":"idle","recovery":"none"}
+ok
+test killed_indexed_guard_owner_still_blocks_participating_writers_after_warm_attach ... WORKER_FAILURE_OBSERVATION {"cleared_slots":0,"guard_available_after_warm_attach":false,"kill_reap_ms":1.089231,"phase":"indexed_update_guard","scope":"optional application guard, not every native transaction","unrelated_guard_available":true,"warm_attach_ms":0.018958}
+ok
+test killed_private_writer_pins_retention_until_exclusive_recovery ... WORKER_FAILURE_OBSERVATION {"active_after_kill":1,"cleared_slots":1,"completed_while_orphaned":8,"kill_reap_ms":1.084303,"phase":"private_write","private_allocation_bytes":48,"private_write_published":false,"reclaimed_after_recovery":8,"reclaimed_before_recovery":0,"warm_attach_ms":0.017416,"warm_attach_rewinds_allocator":false}
+ok
+test killed_row_lock_owner_still_blocks_updates_after_warm_attach ... WORKER_FAILURE_OBSERVATION {"cleared_slots":1,"kill_reap_ms":1.096695,"locked_row_usable_after_warm_attach":false,"phase":"row_lock","unrelated_update_succeeded":true,"warm_attach_ms":0.019333}
+ok
+test survivor_availability_characterization_reports_current_contract_failure ... WORKER_FAILURE_OBSERVATION {"arbitrary_partial_publication_kill_tested":false,"characterization_passed":true,"contract":"survivors keep existing mappings and complete same/disjoint work without whole-engine restart or unbounded orphan retention","max_attempts_per_message":16,"phase":"survivor_availability","phases":[{"kill_reap_ms":1.097705,"other_workers_kept_same_mapping":true,"phase":"idle","reset_or_rebuild_performed":false,"retained_orphan_slots":0,"same_and_disjoint_message_progress":true,"survivor":{"attempts":[{"attempt_count":1,"committed":true,"elapsed_ms":0.022177,"error":null,"kind":"same_row","query_error":null,"row":0,"verified_query":true},{"attempt_count":1,"committed":true,"elapsed_ms":0.008838,"error":null,"kind":"disjoint_row","query_error":null,"row":2,"verified_query":true}],"disjoint_range_query":{"completed":true,"error":null,"rows":[2]},"elapsed_ms":2.335542,"pid":101}},{"kill_reap_ms":1.099968,"other_workers_kept_same_mapping":true,"phase":"private","reset_or_rebuild_performed":false,"retained_orphan_slots":1,"same_and_disjoint_message_progress":true,"survivor":{"attempts":[{"attempt_count":1,"committed":true,"elapsed_ms":0.02459,"error":null,"kind":"same_row","query_error":null,"row":0,"verified_query":true},{"attempt_count":1,"committed":true,"elapsed_ms":0.008794000000000001,"error":null,"kind":"disjoint_row","query_error":null,"row":2,"verified_query":true}],"disjoint_range_query":{"completed":true,"error":null,"rows":[2]},"elapsed_ms":2.364068,"pid":105}},{"kill_reap_ms":1.108687,"other_workers_kept_same_mapping":true,"phase":"row_lock","reset_or_rebuild_performed":false,"retained_orphan_slots":1,"same_and_disjoint_message_progress":false,"survivor":{"attempts":[{"attempt_count":16,"committed":false,"elapsed_ms":2.5537300000000003,"error":"serialization failure","kind":"same_row","query_error":"write did not commit","row":0,"verified_query":false},{"attempt_count":1,"committed":true,"elapsed_ms":0.019985,"error":null,"kind":"disjoint_row","query_error":null,"row":2,"verified_query":true}],"disjoint_range_query":{"completed":true,"error":null,"rows":[2]},"elapsed_ms":4.978254,"pid":109}},{"kill_reap_ms":1.0965250000000002,"other_workers_kept_same_mapping":true,"phase":"indexed_guard","reset_or_rebuild_performed":false,"retained_orphan_slots":0,"same_and_disjoint_message_progress":false,"survivor":{"attempts":[{"attempt_count":16,"committed":false,"elapsed_ms":2.564245,"error":"indexed_update_guard_unavailable","kind":"same_row","query_error":"write did not commit","row":0,"verified_query":false},{"attempt_count":1,"committed":true,"elapsed_ms":0.023377,"error":null,"kind":"disjoint_row","query_error":null,"row":2,"verified_query":true}],"disjoint_range_query":{"completed":true,"error":null,"rows":[2]},"elapsed_ms":5.036079,"pid":113}},{"kill_reap_ms":1.135629,"other_workers_kept_same_mapping":true,"phase":"commit_waiting_wal","reset_or_rebuild_performed":false,"retained_orphan_slots":1,"same_and_disjoint_message_progress":false,"survivor":{"attempts":[{"attempt_count":16,"committed":false,"elapsed_ms":5.903943,"error":"occ error: serialization failure","kind":"same_row","query_error":"write did not commit","row":0,"verified_query":false},{"attempt_count":1,"committed":true,"elapsed_ms":1.087415,"error":null,"kind":"disjoint_row","query_error":null,"row":2,"verified_query":true}],"disjoint_range_query":{"completed":false,"error":"serialization failure","rows":null},"elapsed_ms":7.272392,"pid":117}}],"probe_timeout_ms":10000,"required_worker_failure_availability_satisfied":false}
+ok
+test worker_failure_child ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+

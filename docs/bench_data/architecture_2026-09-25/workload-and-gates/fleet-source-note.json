@@ -1,0 +1,12 @@
+{
+  "scope": "Post-test source hashes for the separate fleet profile and its tests. Test results were observed before benchmark campaigns. These hashes do not describe the archived pre-fleet lifecycle campaigns or attest a benchmark build. The only post-test model edit narrows a documentation comment about scaled event-time windows. Qualification tests were rerun after requiring positive effects from all four background kinds; all 22 passed in 0.424s.",
+  "sha256": {
+    "aerostore_core/benches/contention_crucible/model.rs": "40aa99d91603da24251ab92046b1cc1db9d9443a14592ad00afecc5600d7e3ee",
+    "aerostore_core/benches/contention_crucible/oracle.rs": "e440262b1b69c3fd0b43d565b9696b5494afdc0abd20dadcb29c8be974053cb3",
+    "aerostore_core/benches/contention_crucible/storage.rs": "1b891dc30fb772981d96e709b7401490f2e842d40ab7d0ca26a231bb33aaccde",
+    "aerostore_core/tests/contention_crucible_model.rs": "ad2e85d58f10e937706e447a428c1aeaed06236ec284ca1a333e50a5a4439714",
+    "scripts/qualify_hyperfeed.py": "8c964d497bbcbb84f0e31718deaf0f13941966d3157fe69f029f1a6a5f816dc5",
+    "scripts/test_hyperfeed_qualification.py": "5026e0986dbd2a7c24e7ead0cb0b31ffd227ac7622161004b9e04da97ccc7e1f",
+    "scripts/test_contention_integration.py": "eaa330c48441608be8379b2930a8aba18384628a651977a1cd2ca88b3038af0e"
+  }
+}

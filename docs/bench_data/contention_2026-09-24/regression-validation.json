@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "observed_at_utc": "2026-09-25T02:51:43.988308+00:00",
+  "passed": true,
+  "validation_scope": "regression only; no performance comparison",
+  "environment_script": "target/verification-tools/environment.sh",
+  "production_rust_toolchain": "1.93.1",
+  "native_contracts": {
+    "passed": 6,
+    "total": 6,
+    "historical_key_move_observation": "Expected the old snapshot's row to remain discoverable after a key move, or explicit serialization rejection. Independent witness sees row=Some(10); old_key_candidates=[], rejected_at_lookup=true, candidate_reader_committed=false. Operational errors are not accepted as serialization protection."
+  },
+  "deterministic_replay": {
+    "passed": true,
+    "families": 8,
+    "cycles": 1,
+    "workers": 4,
+    "phases": 27,
+    "logical_messages": 240,
+    "committed_messages": 232
+  },
+  "model_tests": {
+    "passed": 26,
+    "failed": 0
+  },
+  "artifact_sha256": {
+    "extended-baseline.json": "b35ee234678b66489e2c55b06c220ecaf39ab165dd8a99cfd53035fc44dc0d04",
+    "extended-baseline.log": "213da28a80fc725ac40c0011ea0ddb4d1c011eeec491ab5230cd4605535a31ba",
+    "model-tests.log": "a4719ad673a5c03ee75ba5cd3eefc1e558724f9abf07a6ea057919cba0de2cd5"
+  }
+}

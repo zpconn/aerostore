@@ -1,0 +1,50 @@
+{
+  "full-final": {
+    "archive": "full-final.tar.gz",
+    "archive_bytes": 35402839,
+    "archive_sha256": "8d0eeacd159bcc6d35c9ae3fa045c5f4591db3261e1ed82e55c2182c9af9a422",
+    "campaign_completed": true,
+    "campaign_passed": false,
+    "campaign_trials": 48,
+    "compressed_hardlinks_to_identical_prior_members": 90,
+    "logical_uncompressed_bytes": 995199769,
+    "member_count": 415,
+    "source_root": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/full-final"
+  },
+  "interrupted-full": {
+    "archive": "interrupted-full.tar.gz",
+    "archive_bytes": 11495993,
+    "archive_sha256": "0acbe2bacf1e202d3b5b6955e46c9aaedcf7d08cdeeeb75c4cbc7c3b768cb956",
+    "campaign_completed": false,
+    "campaign_passed": false,
+    "campaign_trials": 16,
+    "compressed_hardlinks_to_identical_prior_members": 27,
+    "logical_uncompressed_bytes": 322403210,
+    "member_count": 134,
+    "source_root": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/full"
+  },
+  "metrics-final": {
+    "archive": "metrics-final.tar.gz",
+    "archive_bytes": 10135629,
+    "archive_sha256": "0d12ddd86ef49ac4914c899b4a216f294404c465895e867d7e6914d367d7f040",
+    "campaign_completed": true,
+    "campaign_passed": false,
+    "campaign_trials": 48,
+    "compressed_hardlinks_to_identical_prior_members": 106,
+    "logical_uncompressed_bytes": 248195409,
+    "member_count": 415,
+    "source_root": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/metrics-final"
+  },
+  "retention-final": {
+    "archive": "retention-final.tar.gz",
+    "archive_bytes": 16412524,
+    "archive_sha256": "542370a6bb17e16c1916f089b3f9e1cda0077d2d25fc9b347dd223bc3ab00063",
+    "campaign_completed": true,
+    "campaign_passed": true,
+    "campaign_trials": 3,
+    "compressed_hardlinks_to_identical_prior_members": 6,
+    "logical_uncompressed_bytes": 435158470,
+    "member_count": 28,
+    "source_root": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/retention-final"
+  }
+}

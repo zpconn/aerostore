@@ -1,0 +1,2 @@
+contention_crucible engine=aerostore scenario=null passed=false completed=null retries=null p99_us=null
+contention-crucible: contention correctness/progress check failed: /home/zpconn/code/aerostore/target/calibrated-validation/final-integration/regression-764v5a6c/truncated/report.json

@@ -1,0 +1,8 @@
+PASS service_safety: completed_finite_search
+PASS service_conditional_progress: completed_finite_search
+PASS service_lost_reply_survivor_witness: reachable_witness
+PASS service_reject_CancelAccepted: intended_counterexample
+PASS service_reject_LeakRegistration: intended_counterexample
+PASS service_reject_ReplayAccepted: intended_counterexample
+PASS service_reject_UnknownMeansAbort: intended_counterexample
+Evidence: /home/zpconn/code/aerostore/target/service-prototype/tla/report.json

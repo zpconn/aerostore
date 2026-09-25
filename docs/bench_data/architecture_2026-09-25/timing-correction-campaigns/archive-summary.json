@@ -1,0 +1,50 @@
+{
+  "continuous-full": {
+    "archive": "continuous-full.tar.gz",
+    "archive_bytes": 4088407,
+    "archive_sha256": "c367e690213c55eb44a1091f9d1cd2d2bc99f616585edc06427991e337906b3a",
+    "campaign_completed": true,
+    "campaign_passed": true,
+    "campaign_trials": 18,
+    "compressed_hardlinks_to_identical_prior_members": 47,
+    "logical_uncompressed_bytes": 146458435,
+    "member_count": 163,
+    "source_root": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/continuous-full"
+  },
+  "continuous-high-full": {
+    "archive": "continuous-high-full.tar.gz",
+    "archive_bytes": 8737822,
+    "archive_sha256": "796e5e4a6b6de2db941cb33ffe8fd6e23c2c93c6c74ec65173afea09d078f731",
+    "campaign_completed": true,
+    "campaign_passed": true,
+    "campaign_trials": 3,
+    "compressed_hardlinks_to_identical_prior_members": 2,
+    "logical_uncompressed_bytes": 177863925,
+    "member_count": 28,
+    "source_root": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/continuous-high-full"
+  },
+  "continuous-high-metrics": {
+    "archive": "continuous-high-metrics.tar.gz",
+    "archive_bytes": 1604645,
+    "archive_sha256": "105c932e706a50709b0eb0a6d01c3225e77f488f02cf0df2487dc35a910ca96d",
+    "campaign_completed": true,
+    "campaign_passed": true,
+    "campaign_trials": 3,
+    "compressed_hardlinks_to_identical_prior_members": 4,
+    "logical_uncompressed_bytes": 25013719,
+    "member_count": 28,
+    "source_root": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/continuous-high-metrics"
+  },
+  "continuous-metrics": {
+    "archive": "continuous-metrics.tar.gz",
+    "archive_bytes": 1134510,
+    "archive_sha256": "a0c32fcd6dbba5d7d13ce10047da99885ce8df97f34064c04e6202d1f5ca49d2",
+    "campaign_completed": true,
+    "campaign_passed": true,
+    "campaign_trials": 18,
+    "compressed_hardlinks_to_identical_prior_members": 47,
+    "logical_uncompressed_bytes": 68737193,
+    "member_count": 163,
+    "source_root": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/continuous-metrics"
+  }
+}

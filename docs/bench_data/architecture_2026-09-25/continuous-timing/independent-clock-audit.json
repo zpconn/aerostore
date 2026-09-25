@@ -1,0 +1,301 @@
+{
+  "scope": "Independent arithmetic check against every corrected report, separate from stored gate assessments. Does not infer a witness for metrics mode.",
+  "checked": 42,
+  "passed": true,
+  "checks": [
+    {
+      "phase": "full",
+      "engine": "aerostore",
+      "workers": 1,
+      "seed": 20260924,
+      "passed": true
+    },
+    {
+      "phase": "full",
+      "engine": "service-unix",
+      "workers": 1,
+      "seed": 20260924,
+      "passed": true
+    },
+    {
+      "phase": "full",
+      "engine": "postgres",
+      "workers": 1,
+      "seed": 20260924,
+      "passed": true
+    },
+    {
+      "phase": "full",
+      "engine": "postgres",
+      "workers": 4,
+      "seed": 20260924,
+      "passed": true
+    },
+    {
+      "phase": "full",
+      "engine": "service-unix",
+      "workers": 4,
+      "seed": 20260924,
+      "passed": true
+    },
+    {
+      "phase": "full",
+      "engine": "aerostore",
+      "workers": 4,
+      "seed": 20260924,
+      "passed": true
+    },
+    {
+      "phase": "full",
+      "engine": "aerostore",
+      "workers": 1,
+      "seed": 20260925,
+      "passed": true
+    },
+    {
+      "phase": "full",
+      "engine": "service-unix",
+      "workers": 1,
+      "seed": 20260925,
+      "passed": true
+    },
+    {
+      "phase": "full",
+      "engine": "postgres",
+      "workers": 1,
+      "seed": 20260925,
+      "passed": true
+    },
+    {
+      "phase": "full",
+      "engine": "postgres",
+      "workers": 4,
+      "seed": 20260925,
+      "passed": true
+    },
+    {
+      "phase": "full",
+      "engine": "service-unix",
+      "workers": 4,
+      "seed": 20260925,
+      "passed": true
+    },
+    {
+      "phase": "full",
+      "engine": "aerostore",
+      "workers": 4,
+      "seed": 20260925,
+      "passed": true
+    },
+    {
+      "phase": "full",
+      "engine": "aerostore",
+      "workers": 1,
+      "seed": 20260926,
+      "passed": true
+    },
+    {
+      "phase": "full",
+      "engine": "service-unix",
+      "workers": 1,
+      "seed": 20260926,
+      "passed": true
+    },
+    {
+      "phase": "full",
+      "engine": "postgres",
+      "workers": 1,
+      "seed": 20260926,
+      "passed": true
+    },
+    {
+      "phase": "full",
+      "engine": "postgres",
+      "workers": 4,
+      "seed": 20260926,
+      "passed": true
+    },
+    {
+      "phase": "full",
+      "engine": "service-unix",
+      "workers": 4,
+      "seed": 20260926,
+      "passed": true
+    },
+    {
+      "phase": "full",
+      "engine": "aerostore",
+      "workers": 4,
+      "seed": 20260926,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "aerostore",
+      "workers": 1,
+      "seed": 20260924,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "service-unix",
+      "workers": 1,
+      "seed": 20260924,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "postgres",
+      "workers": 1,
+      "seed": 20260924,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "postgres",
+      "workers": 4,
+      "seed": 20260924,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "service-unix",
+      "workers": 4,
+      "seed": 20260924,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "aerostore",
+      "workers": 4,
+      "seed": 20260924,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "aerostore",
+      "workers": 1,
+      "seed": 20260925,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "service-unix",
+      "workers": 1,
+      "seed": 20260925,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "postgres",
+      "workers": 1,
+      "seed": 20260925,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "postgres",
+      "workers": 4,
+      "seed": 20260925,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "service-unix",
+      "workers": 4,
+      "seed": 20260925,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "aerostore",
+      "workers": 4,
+      "seed": 20260925,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "aerostore",
+      "workers": 1,
+      "seed": 20260926,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "service-unix",
+      "workers": 1,
+      "seed": 20260926,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "postgres",
+      "workers": 1,
+      "seed": 20260926,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "postgres",
+      "workers": 4,
+      "seed": 20260926,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "service-unix",
+      "workers": 4,
+      "seed": 20260926,
+      "passed": true
+    },
+    {
+      "phase": "metrics",
+      "engine": "aerostore",
+      "workers": 4,
+      "seed": 20260926,
+      "passed": true
+    },
+    {
+      "phase": "high-full",
+      "engine": "aerostore",
+      "workers": 4,
+      "seed": 20260925,
+      "passed": true
+    },
+    {
+      "phase": "high-full",
+      "engine": "service-unix",
+      "workers": 4,
+      "seed": 20260925,
+      "passed": true
+    },
+    {
+      "phase": "high-full",
+      "engine": "postgres",
+      "workers": 4,
+      "seed": 20260925,
+      "passed": true
+    },
+    {
+      "phase": "high-metrics",
+      "engine": "aerostore",
+      "workers": 4,
+      "seed": 20260925,
+      "passed": true
+    },
+    {
+      "phase": "high-metrics",
+      "engine": "service-unix",
+      "workers": 4,
+      "seed": 20260925,
+      "passed": true
+    },
+    {
+      "phase": "high-metrics",
+      "engine": "postgres",
+      "workers": 4,
+      "seed": 20260925,
+      "passed": true
+    }
+  ]
+}

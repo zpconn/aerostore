@@ -1,0 +1,17 @@
+{
+  "argv": [
+    "python3",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "scripts",
+    "-p",
+    "test_contention_integration.py",
+    "-v"
+  ],
+  "binary": "/home/zpconn/code/aerostore/target/calibrated-validation/benchmark-final",
+  "binary_sha256": "8842cd00f64fd6964536dadd058b928c7d27574b53a80d7b513c7255ef93ddb5",
+  "exit_code": 0,
+  "binary_after_sha256": "8842cd00f64fd6964536dadd058b928c7d27574b53a80d7b513c7255ef93ddb5"
+}

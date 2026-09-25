@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "engine": "service-remote",
+  "completed_messages": 200,
+  "oracle_status": "Valid",
+  "retries": 8,
+  "client_monotonic_timestamps": {
+    "admission_started_ns": 16906299525616,
+    "workload_completed_ns": 16908299690608,
+    "workers_stopped_ns": 16908320142681,
+    "drain_confirmed_ns": 16908522967428
+  },
+  "timestamps_ordered": true,
+  "recomputed_elapsed_seconds_including_drain": 2.223441812,
+  "recomputed_completed_messages_per_second_including_drain": 89.95063370698185,
+  "exact_elapsed_and_rate_identities": true,
+  "worker_shutdown_seconds": 0.020452073,
+  "drain_confirmation_after_workers_seconds": 0.202824747,
+  "physical_remote_workers_measured": false
+}

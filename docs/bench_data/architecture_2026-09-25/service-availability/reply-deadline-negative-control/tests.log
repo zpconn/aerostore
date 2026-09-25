@@ -1,0 +1,31 @@
+warning: method `commit_with_record_before_publish` is never used
+    --> aerostore_core/src/occ_partitioned.rs:1264:19
+     |
+ 365 | impl<T: Copy + Send + Sync + 'static> OccTable<T> {
+     | ------------------------------------------------- method in this implementation
+...
+1264 |     pub(crate) fn commit_with_record_before_publish<E, F>(
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `aerostore_core` (lib) generated 1 warning
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/aerostore_core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.89s
+     Running tests/contention_service.rs (target/debug/deps/contention_service-ac0c0f5a90edac19)
+
+running 1 test
+
+thread 'service::protocol_tests::nonreading_client_reply_is_bounded_by_open_transaction_deadline' (51744) panicked at aerostore_core/tests/../benches/contention_crucible/service.rs:1485:9:
+non-reading reply retained transaction until idle timeout: 4.131343214s
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test service::protocol_tests::nonreading_client_reply_is_bounded_by_open_transaction_deadline ... FAILED
+
+failures:
+
+failures:
+    service::protocol_tests::nonreading_client_reply_is_bounded_by_open_transaction_deadline
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 25 filtered out; finished in 4.13s
+
+error: test failed, to rerun pass `-p aerostore_core --test contention_service`

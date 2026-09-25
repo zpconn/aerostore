@@ -1,0 +1,1209 @@
+{
+  "scope": "Independent read-only report review; no history oracle or performance workload rerun. Full campaign complete; metrics campaign pending.",
+  "full_campaign_path": "target/architecture-qualification-2026-09-25/full-final/campaign.json",
+  "full_campaign_sha256": "b3a040b2348230a18b8c755e927292d6dd2d0b5545a801be1e30c5d63e7cd667",
+  "binary_sha256": "af39521c16db6244b7a8772a314d8df9a8554128b33a555f336b45f11b784e1f",
+  "source_sha256": "6e955013e6539022447dd3158843f955e58f4c3bb18b00b77a35ce6005369eb6",
+  "completed": true,
+  "source_stable": true,
+  "retained_trials": 48,
+  "valid_histories": 42,
+  "invalid_or_inconclusive_histories": 0,
+  "qualified_capacity_trials": 33,
+  "groups": [
+    {
+      "engine": "aerostore",
+      "rate": 100,
+      "workers": 1,
+      "trials": [
+        {
+          "seed": 20260924,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 2.763747,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260925,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 2.751718,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260926,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 2.80256,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        }
+      ]
+    },
+    {
+      "engine": "aerostore",
+      "rate": 100,
+      "workers": 4,
+      "trials": [
+        {
+          "seed": 20260924,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 3.215764,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260925,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 2.815068,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260926,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 2.8103580000000004,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        }
+      ]
+    },
+    {
+      "engine": "aerostore",
+      "rate": 1000,
+      "workers": 1,
+      "trials": [
+        {
+          "seed": 20260924,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 4.333259,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 1252,
+            "created_views": 2191,
+            "duplicate_messages": 0,
+            "expired_families": 312,
+            "expired_records": 14040,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 9378,
+            "rescheduled_events": 2191,
+            "updated_views": 8126
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260925,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 4.446060999999999,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 1252,
+            "created_views": 2191,
+            "duplicate_messages": 0,
+            "expired_families": 312,
+            "expired_records": 14040,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 9378,
+            "rescheduled_events": 2191,
+            "updated_views": 8126
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260926,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 4.251933,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 1252,
+            "created_views": 2191,
+            "duplicate_messages": 0,
+            "expired_families": 312,
+            "expired_records": 14040,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 9378,
+            "rescheduled_events": 2191,
+            "updated_views": 8126
+          },
+          "retries": 0,
+          "error": null
+        }
+      ]
+    },
+    {
+      "engine": "aerostore",
+      "rate": 1000,
+      "workers": 4,
+      "trials": [
+        {
+          "seed": 20260924,
+          "execution_valid": true,
+          "capacity_passed": false,
+          "oracle_status": "Valid",
+          "p99_ms": 687.8529100000001,
+          "no_op_fraction": 0.356,
+          "outcomes": {
+            "allocation_deferred": 144,
+            "cancelled_events": 52,
+            "claimed_events": 180,
+            "created_views": 1075,
+            "duplicate_messages": 0,
+            "expired_families": 166,
+            "expired_records": 4120,
+            "ignored_stale": 801,
+            "missing_family": 1636,
+            "outputs": 2118,
+            "rescheduled_events": 246,
+            "updated_views": 2073
+          },
+          "retries": 11148,
+          "error": null
+        },
+        {
+          "seed": 20260925,
+          "execution_valid": true,
+          "capacity_passed": false,
+          "oracle_status": "Valid",
+          "p99_ms": 696.907922,
+          "no_op_fraction": 0.3634,
+          "outcomes": {
+            "allocation_deferred": 151,
+            "cancelled_events": 62,
+            "claimed_events": 189,
+            "created_views": 1058,
+            "duplicate_messages": 0,
+            "expired_families": 158,
+            "expired_records": 4025,
+            "ignored_stale": 772,
+            "missing_family": 1666,
+            "outputs": 2047,
+            "rescheduled_events": 318,
+            "updated_views": 2003
+          },
+          "retries": 11198,
+          "error": null
+        },
+        {
+          "seed": 20260926,
+          "execution_valid": true,
+          "capacity_passed": false,
+          "oracle_status": "Valid",
+          "p99_ms": 1016.954896,
+          "no_op_fraction": 0.3646,
+          "outcomes": {
+            "allocation_deferred": 156,
+            "cancelled_events": 54,
+            "claimed_events": 197,
+            "created_views": 1035,
+            "duplicate_messages": 0,
+            "expired_families": 152,
+            "expired_records": 3960,
+            "ignored_stale": 789,
+            "missing_family": 1667,
+            "outputs": 2036,
+            "rescheduled_events": 285,
+            "updated_views": 1989
+          },
+          "retries": 10575,
+          "error": null
+        }
+      ]
+    },
+    {
+      "engine": "postgres",
+      "rate": 100,
+      "workers": 1,
+      "trials": [
+        {
+          "seed": 20260924,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 1.8501400000000001,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260925,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 2.014548,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260926,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 2.020023,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        }
+      ]
+    },
+    {
+      "engine": "postgres",
+      "rate": 100,
+      "workers": 4,
+      "trials": [
+        {
+          "seed": 20260924,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 2.049826,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260925,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 2.022189,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260926,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 2.3937869999999997,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        }
+      ]
+    },
+    {
+      "engine": "postgres",
+      "rate": 1000,
+      "workers": 1,
+      "trials": [
+        {
+          "seed": 20260924,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 1.7935329999999998,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 1252,
+            "created_views": 2191,
+            "duplicate_messages": 0,
+            "expired_families": 312,
+            "expired_records": 14040,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 9378,
+            "rescheduled_events": 2191,
+            "updated_views": 8126
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260925,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 1.727813,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 1252,
+            "created_views": 2191,
+            "duplicate_messages": 0,
+            "expired_families": 312,
+            "expired_records": 14040,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 9378,
+            "rescheduled_events": 2191,
+            "updated_views": 8126
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260926,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 1.938947,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 1252,
+            "created_views": 2191,
+            "duplicate_messages": 0,
+            "expired_families": 312,
+            "expired_records": 14040,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 9378,
+            "rescheduled_events": 2191,
+            "updated_views": 8126
+          },
+          "retries": 0,
+          "error": null
+        }
+      ]
+    },
+    {
+      "engine": "postgres",
+      "rate": 1000,
+      "workers": 4,
+      "trials": [
+        {
+          "seed": 20260924,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 5.018223,
+          "no_op_fraction": 0.0802,
+          "outcomes": {
+            "allocation_deferred": 41,
+            "cancelled_events": 0,
+            "claimed_events": 1005,
+            "created_views": 1904,
+            "duplicate_messages": 0,
+            "expired_families": 266,
+            "expired_records": 11703,
+            "ignored_stale": 301,
+            "missing_family": 360,
+            "outputs": 7612,
+            "rescheduled_events": 1883,
+            "updated_views": 6726
+          },
+          "retries": 924,
+          "error": null
+        },
+        {
+          "seed": 20260925,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 4.444961,
+          "no_op_fraction": 0.0644,
+          "outcomes": {
+            "allocation_deferred": 34,
+            "cancelled_events": 2,
+            "claimed_events": 1028,
+            "created_views": 1953,
+            "duplicate_messages": 0,
+            "expired_families": 275,
+            "expired_records": 12192,
+            "ignored_stale": 211,
+            "missing_family": 288,
+            "outputs": 7960,
+            "rescheduled_events": 1911,
+            "updated_views": 7015
+          },
+          "retries": 669,
+          "error": null
+        },
+        {
+          "seed": 20260926,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 3.978303,
+          "no_op_fraction": 0.0642,
+          "outcomes": {
+            "allocation_deferred": 35,
+            "cancelled_events": 0,
+            "claimed_events": 981,
+            "created_views": 1946,
+            "duplicate_messages": 0,
+            "expired_families": 276,
+            "expired_records": 12226,
+            "ignored_stale": 176,
+            "missing_family": 286,
+            "outputs": 7977,
+            "rescheduled_events": 1914,
+            "updated_views": 7033
+          },
+          "retries": 734,
+          "error": null
+        }
+      ]
+    },
+    {
+      "engine": "service-tcp",
+      "rate": 100,
+      "workers": 1,
+      "trials": [
+        {
+          "seed": 20260924,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 16.10871,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260925,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 14.352937,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260926,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 15.324245000000001,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        }
+      ]
+    },
+    {
+      "engine": "service-tcp",
+      "rate": 100,
+      "workers": 4,
+      "trials": [
+        {
+          "seed": 20260924,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 15.583411,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 36,
+          "error": null
+        },
+        {
+          "seed": 20260925,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 33.80519,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 40,
+          "error": null
+        },
+        {
+          "seed": 20260926,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 33.677203999999996,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 45,
+          "error": null
+        }
+      ]
+    },
+    {
+      "engine": "service-tcp",
+      "rate": 1000,
+      "workers": 1,
+      "trials": [
+        {
+          "seed": 20260924,
+          "execution_valid": false,
+          "capacity_passed": false,
+          "oracle_status": null,
+          "p99_ms": null,
+          "no_op_fraction": null,
+          "outcomes": {},
+          "retries": null,
+          "error": "worker 0: offered arrival backlog 1010 exceeds worker bound 1000 after 332 completions; arrivals were not throttled"
+        },
+        {
+          "seed": 20260925,
+          "execution_valid": false,
+          "capacity_passed": false,
+          "oracle_status": null,
+          "p99_ms": null,
+          "no_op_fraction": null,
+          "outcomes": {},
+          "retries": null,
+          "error": "worker 0: offered arrival backlog 1003 exceeds worker bound 1000 after 295 completions; arrivals were not throttled"
+        },
+        {
+          "seed": 20260926,
+          "execution_valid": false,
+          "capacity_passed": false,
+          "oracle_status": null,
+          "p99_ms": null,
+          "no_op_fraction": null,
+          "outcomes": {},
+          "retries": null,
+          "error": "worker 0: offered arrival backlog 1001 exceeds worker bound 1000 after 274 completions; arrivals were not throttled"
+        }
+      ]
+    },
+    {
+      "engine": "service-tcp",
+      "rate": 1000,
+      "workers": 4,
+      "trials": [
+        {
+          "seed": 20260924,
+          "execution_valid": true,
+          "capacity_passed": false,
+          "oracle_status": "Valid",
+          "p99_ms": 3691.2787089999997,
+          "no_op_fraction": 0.487,
+          "outcomes": {
+            "allocation_deferred": 153,
+            "cancelled_events": 125,
+            "claimed_events": 55,
+            "created_views": 408,
+            "duplicate_messages": 0,
+            "expired_families": 144,
+            "expired_records": 1353,
+            "ignored_stale": 13,
+            "missing_family": 2282,
+            "outputs": 597,
+            "rescheduled_events": 427,
+            "updated_views": 597
+          },
+          "retries": 4967,
+          "error": null
+        },
+        {
+          "seed": 20260925,
+          "execution_valid": true,
+          "capacity_passed": false,
+          "oracle_status": "Valid",
+          "p99_ms": 3758.275863,
+          "no_op_fraction": 0.491,
+          "outcomes": {
+            "allocation_deferred": 156,
+            "cancelled_events": 118,
+            "claimed_events": 52,
+            "created_views": 379,
+            "duplicate_messages": 0,
+            "expired_families": 140,
+            "expired_records": 1258,
+            "ignored_stale": 1,
+            "missing_family": 2299,
+            "outputs": 560,
+            "rescheduled_events": 432,
+            "updated_views": 560
+          },
+          "retries": 4948,
+          "error": null
+        },
+        {
+          "seed": 20260926,
+          "execution_valid": true,
+          "capacity_passed": false,
+          "oracle_status": "Valid",
+          "p99_ms": 3770.06988,
+          "no_op_fraction": 0.4556,
+          "outcomes": {
+            "allocation_deferred": 106,
+            "cancelled_events": 125,
+            "claimed_events": 67,
+            "created_views": 549,
+            "duplicate_messages": 0,
+            "expired_families": 190,
+            "expired_records": 1913,
+            "ignored_stale": 2,
+            "missing_family": 2172,
+            "outputs": 869,
+            "rescheduled_events": 545,
+            "updated_views": 869
+          },
+          "retries": 5548,
+          "error": null
+        }
+      ]
+    },
+    {
+      "engine": "service-unix",
+      "rate": 100,
+      "workers": 1,
+      "trials": [
+        {
+          "seed": 20260924,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 4.311331,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260925,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 4.147303,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260926,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 3.927846,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        }
+      ]
+    },
+    {
+      "engine": "service-unix",
+      "rate": 100,
+      "workers": 4,
+      "trials": [
+        {
+          "seed": 20260924,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 4.205559,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260925,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 4.115122,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        },
+        {
+          "seed": 20260926,
+          "execution_valid": true,
+          "capacity_passed": true,
+          "oracle_status": "Valid",
+          "p99_ms": 3.959788,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 124,
+            "created_views": 220,
+            "duplicate_messages": 0,
+            "expired_families": 31,
+            "expired_records": 1395,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 936,
+            "rescheduled_events": 217,
+            "updated_views": 812
+          },
+          "retries": 0,
+          "error": null
+        }
+      ]
+    },
+    {
+      "engine": "service-unix",
+      "rate": 1000,
+      "workers": 1,
+      "trials": [
+        {
+          "seed": 20260924,
+          "execution_valid": false,
+          "capacity_passed": false,
+          "oracle_status": null,
+          "p99_ms": null,
+          "no_op_fraction": null,
+          "outcomes": {},
+          "retries": null,
+          "error": "worker 0: offered arrival backlog 1001 exceeds worker bound 1000 after 2093 completions; arrivals were not throttled"
+        },
+        {
+          "seed": 20260925,
+          "execution_valid": false,
+          "capacity_passed": false,
+          "oracle_status": null,
+          "p99_ms": null,
+          "no_op_fraction": null,
+          "outcomes": {},
+          "retries": null,
+          "error": "worker 0: offered arrival backlog 1001 exceeds worker bound 1000 after 2040 completions; arrivals were not throttled"
+        },
+        {
+          "seed": 20260926,
+          "execution_valid": false,
+          "capacity_passed": false,
+          "oracle_status": null,
+          "p99_ms": null,
+          "no_op_fraction": null,
+          "outcomes": {},
+          "retries": null,
+          "error": "worker 0: offered arrival backlog 1001 exceeds worker bound 1000 after 1949 completions; arrivals were not throttled"
+        }
+      ]
+    },
+    {
+      "engine": "service-unix",
+      "rate": 1000,
+      "workers": 4,
+      "trials": [
+        {
+          "seed": 20260924,
+          "execution_valid": true,
+          "capacity_passed": false,
+          "oracle_status": "Valid",
+          "p99_ms": 1121.124919,
+          "no_op_fraction": 0.4404,
+          "outcomes": {
+            "allocation_deferred": 117,
+            "cancelled_events": 228,
+            "claimed_events": 133,
+            "created_views": 728,
+            "duplicate_messages": 0,
+            "expired_families": 187,
+            "expired_records": 2260,
+            "ignored_stale": 204,
+            "missing_family": 2085,
+            "outputs": 1003,
+            "rescheduled_events": 281,
+            "updated_views": 998
+          },
+          "retries": 10385,
+          "error": null
+        },
+        {
+          "seed": 20260925,
+          "execution_valid": true,
+          "capacity_passed": false,
+          "oracle_status": "Valid",
+          "p99_ms": 1106.577021,
+          "no_op_fraction": 0.4402,
+          "outcomes": {
+            "allocation_deferred": 119,
+            "cancelled_events": 225,
+            "claimed_events": 128,
+            "created_views": 748,
+            "duplicate_messages": 0,
+            "expired_families": 189,
+            "expired_records": 2354,
+            "ignored_stale": 185,
+            "missing_family": 2082,
+            "outputs": 1019,
+            "rescheduled_events": 291,
+            "updated_views": 1013
+          },
+          "retries": 10751,
+          "error": null
+        },
+        {
+          "seed": 20260926,
+          "execution_valid": true,
+          "capacity_passed": false,
+          "oracle_status": "Valid",
+          "p99_ms": 1192.330185,
+          "no_op_fraction": 0.4374,
+          "outcomes": {
+            "allocation_deferred": 120,
+            "cancelled_events": 176,
+            "claimed_events": 138,
+            "created_views": 763,
+            "duplicate_messages": 0,
+            "expired_families": 187,
+            "expired_records": 2413,
+            "ignored_stale": 212,
+            "missing_family": 2067,
+            "outputs": 1059,
+            "rescheduled_events": 272,
+            "updated_views": 1054
+          },
+          "retries": 10514,
+          "error": null
+        }
+      ]
+    }
+  ],
+  "interpretation": [
+    "Missing/deferred outcomes are allowed application-model results, not evidence of lost committed data.",
+    "Complete valid histories can fail the capacity gate because of latency or unequal useful work.",
+    "Global predicates have genuine cross-family conflicts; aggregate retry stages do not establish false-positive dominance.",
+    "The interactive prototype adds per-operation serialization/transport costs; this does not isolate the general effect of database ownership.",
+    "Both direct native and PostgreSQL pass 1000/s at one worker; neither tested ceiling is established.",
+    "Service progress/backlog failures cannot establish saturation upper bounds under this gate."
+  ]
+}

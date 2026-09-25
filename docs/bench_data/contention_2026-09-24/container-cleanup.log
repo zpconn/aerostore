@@ -1,0 +1,10 @@
+COMMAND: docker inspect --format {{.Id}} aerostore-contention-validation-20260924
+EXIT: 0
+dda24fcaa9e916310a85e2a768a757372edbcd20dc48154c4cd75bf83d07a3e7
+COMMAND: docker stop --time 10 dda24fcaa9e916310a85e2a768a757372edbcd20dc48154c4cd75bf83d07a3e7
+EXIT: 0
+Flag --time has been deprecated, use --timeout instead
+dda24fcaa9e916310a85e2a768a757372edbcd20dc48154c4cd75bf83d07a3e7
+COMMAND: docker ps -a --filter id=dda24fcaa9e916310a85e2a768a757372edbcd20dc48154c4cd75bf83d07a3e7 --format {{.ID}}
+EXIT: 0
+RESULT: PASS

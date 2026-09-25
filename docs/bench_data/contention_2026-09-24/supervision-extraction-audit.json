@@ -1,0 +1,47 @@
+{
+  "passed": true,
+  "scope": "Mechanical helper relocation only; no workload/transaction/timing behavior changes. Exact body comparison normalizes whitespace and optional trailing argument commas; this is a drift check, not formal equivalence.",
+  "unchanged_runner_functions": [
+    "exercise",
+    "summarize",
+    "coordinator",
+    "cleanup_postgres_case",
+    "isolated_case",
+    "parse",
+    "run_engines",
+    "run"
+  ],
+  "unchanged_worker_functions": [
+    "monotonic_ns",
+    "reply",
+    "inbox",
+    "receive",
+    "execute",
+    "worker_loop",
+    "worker_inner",
+    "worker_main"
+  ],
+  "moved_functions_unchanged": [
+    "write_json",
+    "private_json",
+    "with_cleanup_result",
+    "invalidate_previous_report",
+    "unique_evidence_directory",
+    "pacing_wake_ns"
+  ],
+  "moved_types_unchanged_except_visibility": [
+    "ProcessGroup",
+    "PrivateCaseFiles"
+  ],
+  "report_path_default": "same target/contention-crucible.json literal, extracted into standalone shared DEFAULT_OUTPUT constant",
+  "debug_tests": 6,
+  "release_tests": 6,
+  "imports_engine_modules": false,
+  "source_sha256": {
+    "aerostore_core/benches/contention_crucible/runner.rs": "dca3f30cc59fab6a78132ae518bbfab2ca0133e1cf4edf1140d8643246744eaf",
+    "aerostore_core/benches/contention_crucible/workers.rs": "7585667bf66f38e6ddd6bf660716c6e6178ae83021b952b2ca32a34975e80b39",
+    "aerostore_core/benches/contention_crucible/supervision.rs": "a335fb704903706b897f0300290292a49b24d4b8221265cb23e18a1076274985",
+    "aerostore_core/benches/contention_crucible/mod.rs": "8ebb180dc013ae53ec88cbc4552e4a7ba71a8c75f3dd7690136ed1b8e9100cb8",
+    "aerostore_core/tests/contention_runner.rs": "115b809c16f15bc1f31cf3c6843702ebd66d3088873e701808925440b80698f7"
+  }
+}

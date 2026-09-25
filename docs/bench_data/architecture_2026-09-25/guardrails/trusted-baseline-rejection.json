@@ -1,0 +1,22 @@
+{
+  "passed": false,
+  "errors": [
+    "candidate changed the baseline boundary lock",
+    "frozen boundary path set changed; review new/deleted engine or contract files",
+    "frozen boundary changed: aerostore_core/Cargo.toml",
+    "frozen boundary changed: aerostore_core/tests/wal_crash_recovery.rs",
+    "frozen boundary changed: scripts/check_formal_coverage.py"
+  ],
+  "scope": "change detection only; not a whole-engine refinement proof",
+  "checked_files": 339,
+  "baseline_ref": "6291200b4383538d960f3b1c73942715193f464b",
+  "anchoring": "independent_git_baseline",
+  "open_claims": [
+    "TX-HISTORY-IMPLEMENTATION",
+    "MEMORY-OWNERSHIP",
+    "MEMORY-PROGRESS",
+    "WEAK-MEMORY-MMAP",
+    "DURABILITY-IMPLEMENTATION",
+    "QUERY-APPLICATION"
+  ]
+}

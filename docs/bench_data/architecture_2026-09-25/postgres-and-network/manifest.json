@@ -1,0 +1,194 @@
+{
+  "schema": 1,
+  "scope": "Final PostgreSQL adapter, repaired bounded scenarios and repaired TCP loopback lifecycle evidence; not physical MMHF capacity evidence",
+  "build_provenance": "../build-provenance.json",
+  "build_provenance_source": "target/architecture-qualification-2026-09-25/build-provenance.json",
+  "benchmark_binary_sha256": "af39521c16db6244b7a8772a314d8df9a8554128b33a555f336b45f11b784e1f",
+  "benchmark_source_sha256": "6e955013e6539022447dd3158843f955e58f4c3bb18b00b77a35ce6005369eb6",
+  "source_stable_at_build": true,
+  "files": [
+    {
+      "archived_path": "tests/postgres-native-fence-tests.log",
+      "source_path": "target/contention-tuned-validation/postgres-native-fence-tests.log",
+      "bytes": 1465,
+      "sha256": "5f5f26a6f305592b6f2752baaf7a902b9876e427f3dfb3009b5882ca9f5f9de6"
+    },
+    {
+      "archived_path": "tests/remote-script-tests.log",
+      "source_path": "target/contention-tuned-validation/remote-script-final-tests.log",
+      "bytes": 1361,
+      "sha256": "cde5879d6233f69531c457fa87aac4150fb1bc41438bb6759d787cbdaf83ee12"
+    },
+    {
+      "archived_path": "postgres-native/resource.json",
+      "source_path": "target/contention-tuned-validation/native-postgres/resource.json",
+      "bytes": 2036,
+      "sha256": "a5eebc07a4881eb2d47c3a10907e0b64dd2f2b75ef00d164bc70a02ee33525a6"
+    },
+    {
+      "archived_path": "postgres-native/settings.json",
+      "source_path": "target/contention-tuned-validation/native-postgres/settings.json",
+      "bytes": 1111,
+      "sha256": "81c872460180fa5e720590b3225f3d74f1c888a4c26c34d80466be040e77fe09"
+    },
+    {
+      "archived_path": "postgres-native/configure.log",
+      "source_path": "target/contention-tuned-validation/native-postgres/configure.log",
+      "bytes": 14913,
+      "sha256": "2e4023f3dbca654c9c5d578e12df3ebc1047505b2be0780eceaacab5d4c2631c"
+    },
+    {
+      "archived_path": "postgres-native/build.log",
+      "source_path": "target/contention-tuned-validation/native-postgres/build.log",
+      "bytes": 811611,
+      "sha256": "ee1b2eb1faab5b50c4cc2e6c54295529a4a16b34784d3cbca62c11fb50a78008"
+    },
+    {
+      "archived_path": "postgres-native/install.log",
+      "source_path": "target/contention-tuned-validation/native-postgres/install.log",
+      "bytes": 166977,
+      "sha256": "e669b44b6c8683207077b3cfcb76adf0325d1897ca16685156bec082f36b47c0"
+    },
+    {
+      "archived_path": "postgres-native/initdb.log",
+      "source_path": "target/contention-tuned-validation/native-postgres/initdb.log",
+      "bytes": 933,
+      "sha256": "73ba6507442a61036215b64562c2913d8a915942d629008c3a8c8b1d3443dbb7"
+    },
+    {
+      "archived_path": "postgres-native/postgresql-16.13.tar.bz2.sha256",
+      "source_path": "target/contention-tuned-validation/native-postgres/downloads/postgresql-16.13.tar.bz2.sha256",
+      "bytes": 91,
+      "sha256": "e2a5207fb8097296c0f4ca0b30f2709636187566d19749986fc4301652e3a064"
+    },
+    {
+      "archived_path": "remote-loopback/client-report.json",
+      "source_path": "target/contention-tuned-validation/remote-loopback-repaired/client-report.json",
+      "bytes": 22350,
+      "sha256": "3c8714a5d757848ffb43b18cba62bec1572c761905859933536ebd578f0a7a91"
+    },
+    {
+      "archived_path": "remote-loopback/client-setup.json",
+      "source_path": "target/contention-tuned-validation/remote-loopback-repaired/client-setup.json",
+      "bytes": 450751,
+      "sha256": "e1bc033b3bfe667adbab55ad0f57cb1fb673ddeb689118c5e02c0e18a7e7c62c"
+    },
+    {
+      "archived_path": "remote-loopback/client-final.json",
+      "source_path": "target/contention-tuned-validation/remote-loopback-repaired/client-final.json",
+      "bytes": 464908,
+      "sha256": "2b03e7767e20102dd535004cf7eead3837c30c1c44d2e5af4f9720dc7981dcf1"
+    },
+    {
+      "archived_path": "remote-loopback/orchestration.json",
+      "source_path": "target/contention-tuned-validation/remote-loopback-repaired/orchestration.json",
+      "bytes": 4408,
+      "sha256": "61efc8abf1096a59511d971f53fd751207c57b1ce81a21dc974f59703394490f"
+    },
+    {
+      "archived_path": "remote-loopback/client.log",
+      "source_path": "target/contention-tuned-validation/remote-loopback-repaired/client.log",
+      "bytes": 121,
+      "sha256": "b2efbd3dd67f66a3be26b39f222093787751caaae7e569971b8ba40cb1f781a8"
+    },
+    {
+      "archived_path": "remote-loopback/server.log",
+      "source_path": "target/contention-tuned-validation/remote-loopback-repaired/server.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "archived_path": "remote-loopback/client.supervisor.json",
+      "source_path": "target/contention-tuned-validation/remote-loopback-repaired/client.supervisor.json",
+      "bytes": 129,
+      "sha256": "95e7f9bf665bd6e7498a8937b6f3d4dfa2edc7e9d4ee559a17a7419c1864e28b"
+    },
+    {
+      "archived_path": "remote-loopback/server-setup.supervisor.json",
+      "source_path": "target/contention-tuned-validation/remote-loopback-repaired/server-setup.supervisor.json",
+      "bytes": 129,
+      "sha256": "5fe774b9b7be713b8b5edbf666477284b98f13384a849bccb0e2181165eb79f4"
+    },
+    {
+      "archived_path": "remote-loopback/client-setup.client-complete.json",
+      "source_path": "target/contention-tuned-validation/remote-loopback-repaired/client-setup.client-complete.json",
+      "bytes": 64,
+      "sha256": "772eb8c24c8627865a623281a56c28c568e4ab54d5b16956b8432d676b098761"
+    },
+    {
+      "archived_path": "remote-loopback/history.jsonl",
+      "source_path": "target/contention-tuned-validation/remote-loopback-repaired/contention-crucible-TVUOtp/service-remote-0/history.jsonl",
+      "bytes": 449953,
+      "sha256": "cb7583cc8aa40d9b9a9205bc3b1f3058aef47052cc0715d8024894b2d1275baa"
+    },
+    {
+      "archived_path": "remote-loopback/serial-witness.json",
+      "source_path": "target/contention-tuned-validation/remote-loopback-repaired/contention-crucible-TVUOtp/service-remote-0/serial-witness.json",
+      "bytes": 695,
+      "sha256": "7e0a0c660d83b7f9f4808f7b91c0ef82d397adc2396e2ac230bf2aea9e740aff"
+    },
+    {
+      "archived_path": "scenarios/repaired-scenarios-both.json",
+      "source_path": "target/architecture-qualification-2026-09-25/repaired-scenarios-both.json",
+      "bytes": 207814,
+      "sha256": "9262156ed59094f20527da7de26243fb98d4a5b346f5a062a9c8763ed6ab12f8"
+    },
+    {
+      "archived_path": "scenarios/repaired-scenarios-both.log",
+      "source_path": "target/architecture-qualification-2026-09-25/repaired-scenarios-both.log",
+      "bytes": 1283,
+      "sha256": "342d3944023216d2d494773082b43df0484a927394bc24c7b024b8ee64648350"
+    },
+    {
+      "archived_path": "scenarios/repaired-scenarios-service-unix.json",
+      "source_path": "target/architecture-qualification-2026-09-25/repaired-scenarios-service-unix.json",
+      "bytes": 69504,
+      "sha256": "dbcf1c674e51c98efc6e580808331dfe7012b22ae018dd4df266a4c08baaeb2d"
+    },
+    {
+      "archived_path": "scenarios/repaired-scenarios-service-unix.log",
+      "source_path": "target/architecture-qualification-2026-09-25/repaired-scenarios-service-unix.log",
+      "bytes": 658,
+      "sha256": "14804351bad4c5c485ad26e525d5879f37f82168a684ecc5c826150c61df3b80"
+    },
+    {
+      "archived_path": "scenarios/repaired-scenarios-service-tcp.json",
+      "source_path": "target/architecture-qualification-2026-09-25/repaired-scenarios-service-tcp.json",
+      "bytes": 69729,
+      "sha256": "9118037f0d6c16e399784201336a274750e39cedf0872359858d6ec45eab55b4"
+    },
+    {
+      "archived_path": "scenarios/repaired-scenarios-service-tcp.log",
+      "source_path": "target/architecture-qualification-2026-09-25/repaired-scenarios-service-tcp.log",
+      "bytes": 658,
+      "sha256": "a90852b57c58f2928c75b7d755b3ba470880457d7d05e1c8df2cc05b1665056f"
+    }
+  ],
+  "semantically_identical_json_omitted": [
+    {
+      "original": "target/contention-tuned-validation/remote-loopback-repaired/server-setup.json",
+      "archived_equivalent": "remote-loopback/client-setup.json"
+    },
+    {
+      "original": "target/contention-tuned-validation/remote-loopback-repaired/server-setup.final.json",
+      "archived_equivalent": "remote-loopback/client-final.json"
+    }
+  ],
+  "source_bindings": {
+    "aerostore_core/benches/contention_crucible/postgres.rs": "582f78c7f6e05e44b06ed331732f7b03ddc1a62f1f5005f9559a5678a0a3ace4",
+    "aerostore_core/benches/contention_crucible/remote.rs": "38a4560ab75663c6bc73f01c030084a58a679f2e211baa87557799963792a321",
+    "aerostore_core/benches/contention_crucible/service.rs": "3fb494a3c7606a1e2c2fdbe610e8c1c9e6afb40dd18aee509176bb65bc7b830b",
+    "aerostore_core/tests/contention_postgres.rs": "6fc97724de868bc2a76713b0ec7a6505bc4dde0520eba41b9060fd1b5d9d4b28",
+    "scripts/run_remote_contention.py": "c53569aa2c0ae8f15b5742dee2ee9fb4614867083631266e240aad687122e62c",
+    "scripts/test_run_remote_contention.py": "bd16c7c1267f54426852126c025d60621451cd04c109d8a1dc69a90d65f3a854"
+  },
+  "omitted": [
+    "PostgreSQL source tarball/extracted tree/binaries/data/WAL",
+    "live fixture credentials and connection URLs",
+    "earlier pre-repair/discovery smokes",
+    "duplicate remote setup/final JSON",
+    "raw operation histories for the20boundedscenarios; their top-level correctness reports and logs are archived"
+  ],
+  "physical_remote_workers_measured": false,
+  "performance_comparison_eligible": false
+}

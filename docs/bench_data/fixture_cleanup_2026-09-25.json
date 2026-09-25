@@ -1,0 +1,91 @@
+{
+  "authorization": "User explicitly answered Approve cleanup for the two named test servers and disposable Docker container; native files retained.",
+  "started_at": "2026-09-25T14:09:32.697282+00:00",
+  "actions": [
+    {
+      "argv": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Id}} {{.Name}} {{.State.Status}}",
+        "dbe528ea9afbc055b0a6aea796aa1d8ab8debd524ab467803454e2543dacaa29"
+      ],
+      "returncode": 0,
+      "stdout": "dbe528ea9afbc055b0a6aea796aa1d8ab8debd524ab467803454e2543dacaa29 /aerostore-tuned-pg-20260925 running\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/install/bin/pg_ctl",
+        "-D",
+        "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/data",
+        "-m",
+        "fast",
+        "-w",
+        "-t",
+        "30",
+        "stop"
+      ],
+      "returncode": 0,
+      "stdout": "waiting for server to shut down.... done\nserver stopped\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "docker",
+        "stop",
+        "--time",
+        "20",
+        "dbe528ea9afbc055b0a6aea796aa1d8ab8debd524ab467803454e2543dacaa29"
+      ],
+      "returncode": 0,
+      "stdout": "Flag --time has been deprecated, use --timeout instead\ndbe528ea9afbc055b0a6aea796aa1d8ab8debd524ab467803454e2543dacaa29\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "docker",
+        "rm",
+        "dbe528ea9afbc055b0a6aea796aa1d8ab8debd524ab467803454e2543dacaa29"
+      ],
+      "returncode": 0,
+      "stdout": "dbe528ea9afbc055b0a6aea796aa1d8ab8debd524ab467803454e2543dacaa29\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "docker",
+        "ps",
+        "-a",
+        "--no-trunc",
+        "--filter",
+        "id=dbe528ea9afbc055b0a6aea796aa1d8ab8debd524ab467803454e2543dacaa29",
+        "--format",
+        "{{.ID}}"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/install/bin/pg_ctl",
+        "-D",
+        "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/data",
+        "status"
+      ],
+      "returncode": 3,
+      "stdout": "pg_ctl: no server running\n",
+      "stderr": ""
+    }
+  ],
+  "native_data_directory": "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/data",
+  "container_id": "dbe528ea9afbc055b0a6aea796aa1d8ab8debd524ab467803454e2543dacaa29",
+  "historical_evidence_modified": false,
+  "completed_at": "2026-09-25T14:09:33.569675+00:00",
+  "native_stopped": true,
+  "native_data_retained": true,
+  "docker_container_removed": true,
+  "docker_volumes_removed": false,
+  "completed": true
+}

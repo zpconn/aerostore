@@ -1,0 +1,129 @@
+{
+  "all_compressed_member_hashes_verified": true,
+  "archive": "retention-final.tar.gz",
+  "archive_bytes": 16412524,
+  "archive_sha256": "542370a6bb17e16c1916f089b3f9e1cda0077d2d25fc9b347dd223bc3ab00063",
+  "campaign_completed": true,
+  "campaign_passed": true,
+  "campaign_trials": 3,
+  "compressed_hardlinks_to_identical_prior_members": 6,
+  "format": "aerostore-campaign-evidence-archive-v1",
+  "interpretation": "Original concentrated lifecycle stress corpus; insufficient live fleet population for architecture qualification. Historical report bytes are preserved without reinterpreting their gates.",
+  "member_paths_relative_to": "source_root",
+  "members": {
+    "aerostore-r100-w4-s20260925-x8ezlu81/contention-crucible-2GVAA2/aerostore-0/final.json": {
+      "bytes": 1668175,
+      "sha256": "956dd0d2850174dcff0e16929ce53f2684309479cb9701b65873e119988cc589"
+    },
+    "aerostore-r100-w4-s20260925-x8ezlu81/contention-crucible-2GVAA2/aerostore-0/history.jsonl": {
+      "bytes": 140236157,
+      "sha256": "835bc19d997fb0a40a357a687f6c11ee4521cfe537189dadf515c07d634823b9"
+    },
+    "aerostore-r100-w4-s20260925-x8ezlu81/contention-crucible-2GVAA2/aerostore-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "aerostore-r100-w4-s20260925-x8ezlu81/contention-crucible-2GVAA2/aerostore-0/progress.json": {
+      "bytes": 210757,
+      "sha256": "257474bc99028b7f0ea21f09e5686eb2a17d33ba59f18570d8b4575d4844ac9e"
+    },
+    "aerostore-r100-w4-s20260925-x8ezlu81/contention-crucible-2GVAA2/aerostore-0/result.json": {
+      "bytes": 223168,
+      "sha256": "574335235d823800ab3ccaa3b46df2649bcee6532e1d6b91f555bbf92b573ac4"
+    },
+    "aerostore-r100-w4-s20260925-x8ezlu81/contention-crucible-2GVAA2/aerostore-0/serial-witness.json": {
+      "bytes": 156178,
+      "sha256": "dff29c5dc90668931929f333f50d05e41f23a5b2d0b10613de69c9f75ea47751"
+    },
+    "aerostore-r100-w4-s20260925-x8ezlu81/report.json": {
+      "bytes": 254840,
+      "sha256": "37ac9bef3b6aff1297cc38e8f833afdd75c24d0047219d463579d6ff3e0036c2"
+    },
+    "aerostore-r100-w4-s20260925-x8ezlu81/run.log": {
+      "bytes": 117,
+      "sha256": "64d00a169edf3736787983583eea1547074d8852551c863117556f9ad115ab60"
+    },
+    "aerostore-r100-w4-s20260925-x8ezlu81/trial.json": {
+      "bytes": 276871,
+      "sha256": "c3cbaba59697541814df2f833cb6c90e5da8a194d990c4793ee2980db9ec3b55"
+    },
+    "campaign.json": {
+      "bytes": 1101260,
+      "sha256": "d4d83465a2e8463b301fefe1c94442638ed3c7d063f2c7ec8b55f5c81288fcab"
+    },
+    "postgres-r100-w4-s20260925-zz8d3ocu/contention-crucible-GcVOga/postgres-0/final.json": {
+      "bytes": 1668175,
+      "sha256": "956dd0d2850174dcff0e16929ce53f2684309479cb9701b65873e119988cc589"
+    },
+    "postgres-r100-w4-s20260925-zz8d3ocu/contention-crucible-GcVOga/postgres-0/history.jsonl": {
+      "bytes": 140246765,
+      "sha256": "9a2caa2608d7fc9ac8c52c1b6d8f5af3c7b86af3b3104f9d4310ec614b05bb80"
+    },
+    "postgres-r100-w4-s20260925-zz8d3ocu/contention-crucible-GcVOga/postgres-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "postgres-r100-w4-s20260925-zz8d3ocu/contention-crucible-GcVOga/postgres-0/progress.json": {
+      "bytes": 222858,
+      "sha256": "daa467c3425cce0fd14e642b7229642b63a2d964d436e57d5a44827ead746fc4"
+    },
+    "postgres-r100-w4-s20260925-zz8d3ocu/contention-crucible-GcVOga/postgres-0/result.json": {
+      "bytes": 247668,
+      "sha256": "6d2eccba2b050990d0ffb8481ebd2c5d775c97df981940e1c3b79add49f5a5c0"
+    },
+    "postgres-r100-w4-s20260925-zz8d3ocu/contention-crucible-GcVOga/postgres-0/serial-witness.json": {
+      "bytes": 156178,
+      "sha256": "dff29c5dc90668931929f333f50d05e41f23a5b2d0b10613de69c9f75ea47751"
+    },
+    "postgres-r100-w4-s20260925-zz8d3ocu/report.json": {
+      "bytes": 281681,
+      "sha256": "7db8edf519d2c75dda0de1bf3fc8b1596f70557d7e60c75a1880f75ad7342996"
+    },
+    "postgres-r100-w4-s20260925-zz8d3ocu/run.log": {
+      "bytes": 117,
+      "sha256": "fb2bdf210aadaaa600c5e9e0b0727afb8d29a18911c9e0c308e844bcaba7ccec"
+    },
+    "postgres-r100-w4-s20260925-zz8d3ocu/trial.json": {
+      "bytes": 304442,
+      "sha256": "e772cfd3e9cba05651dd1fdb281494ef26d701b4c9489fe114212be8954a39ae"
+    },
+    "service-unix-r100-w4-s20260925-3k1ubp2g/contention-crucible-eoRdkD/service-unix-0/final.json": {
+      "bytes": 1668175,
+      "sha256": "956dd0d2850174dcff0e16929ce53f2684309479cb9701b65873e119988cc589"
+    },
+    "service-unix-r100-w4-s20260925-3k1ubp2g/contention-crucible-eoRdkD/service-unix-0/history.jsonl": {
+      "bytes": 140253289,
+      "sha256": "4fc5dd24e9ed020d3c2685a950c0d8c901a04b81fbc6a524f0dc36dc1f8d86e4"
+    },
+    "service-unix-r100-w4-s20260925-3k1ubp2g/contention-crucible-eoRdkD/service-unix-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-unix-r100-w4-s20260925-3k1ubp2g/contention-crucible-eoRdkD/service-unix-0/progress.json": {
+      "bytes": 210750,
+      "sha256": "c99953e7ddea4632c85f860bdb7d133986c3eb4e944f9bf530dc45b7ee6b4675"
+    },
+    "service-unix-r100-w4-s20260925-3k1ubp2g/contention-crucible-eoRdkD/service-unix-0/result.json": {
+      "bytes": 223388,
+      "sha256": "7a9608841bb6b275f985afd7ba8054440bfa44db6c2da9346b7c6947539a0f30"
+    },
+    "service-unix-r100-w4-s20260925-3k1ubp2g/contention-crucible-eoRdkD/service-unix-0/serial-witness.json": {
+      "bytes": 156178,
+      "sha256": "dff29c5dc90668931929f333f50d05e41f23a5b2d0b10613de69c9f75ea47751"
+    },
+    "service-unix-r100-w4-s20260925-3k1ubp2g/report.json": {
+      "bytes": 255105,
+      "sha256": "573a46fc77b21bc28d5d1f166dee58c5211a991f06190ed56420922ae8e086d8"
+    },
+    "service-unix-r100-w4-s20260925-3k1ubp2g/run.log": {
+      "bytes": 121,
+      "sha256": "45be9b7b3f7f55ab1538c5864ddf63973a329452fc11da8cd74ef55eabc10c9a"
+    },
+    "service-unix-r100-w4-s20260925-3k1ubp2g/trial.json": {
+      "bytes": 277173,
+      "sha256": "3dea5c03345806c022bcf0280cf81e3f6fbac25529cbc6f3797e6d5e38e30098"
+    }
+  },
+  "selection": "Regular non-symlink .json, .jsonl, .log files only; private-config.json and worker-[0-9]+.json excluded. No mappings, WAL, sockets, binaries or temporary files.",
+  "source_root": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/retention-final"
+}

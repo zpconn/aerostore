@@ -1,0 +1,5697 @@
+{
+  "evidence_limit": "compact projections reproduce these aggregates; full serial-oracle replay requires original complete histories identified in inputs.json",
+  "quantile_definition": "nearest rank: sorted[ceil(N * percentile / 100) - 1]; nanoseconds divided by 1000",
+  "runs": [
+    {
+      "admission_epoch_monotonic_ns": 15763720911974,
+      "after_drain": {
+        "active_transactions": 0,
+        "arena_capacity_bytes": 268435456,
+        "arena_high_water_bytes": 2632944,
+        "indexes": [
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 0,
+            "reclaimed_postings": 5126,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 1,
+            "reclaimed_postings": 4494,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 2,
+            "reclaimed_postings": 40794,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 3,
+            "reclaimed_postings": 10754,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 4,
+            "reclaimed_postings": 56450,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          }
+        ],
+        "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+        "row_fresh_allocations": 4965,
+        "row_recycled": 122052,
+        "row_reuse_allocations": 121183,
+        "snapshot_xmax": 331226,
+        "snapshot_xmin": 331226
+      },
+      "aggregate": {
+        "arrival_queue_p99_us": 796.385,
+        "e2e_max_us": 3971.136,
+        "e2e_p50_us": 432.195,
+        "e2e_p99_us": 3284.689,
+        "message_kinds": {
+          "arrival": 2250,
+          "expire_family": 1500,
+          "global_cancel": 750,
+          "global_housekeeping": 1500,
+          "global_projection": 750,
+          "global_reschedule": 750,
+          "plan": 2250,
+          "position": 2250
+        },
+        "messages": 12000,
+        "messages_retried": 0,
+        "outcomes": {
+          "allocation_deferred": 0,
+          "cancelled_events": 3000,
+          "claimed_events": 3000,
+          "created_views": 5250,
+          "duplicate_messages": 0,
+          "expired_families": 749,
+          "expired_records": 34839,
+          "ignored_stale": 0,
+          "missing_family": 0,
+          "outputs": 21963,
+          "rescheduled_events": 6000,
+          "updated_views": 19500
+        },
+        "retries": 0,
+        "service_p99_us": 2517.276,
+        "transcript_write_operations": 122052,
+        "transcripts_without_write_operations": 1501
+      },
+      "all_messages_before_next_scheduled_arrival": true,
+      "all_sample_summary": {
+        "first_sample_offset_ns": -100005865,
+        "gauges_and_counters": {
+          "active_transactions": {
+            "first": 0,
+            "last": 0,
+            "max": 0,
+            "min": 0
+          },
+          "arena_capacity_bytes": {
+            "first": 268435456,
+            "last": 268435456,
+            "max": 268435456,
+            "min": 268435456
+          },
+          "arena_high_water_bytes": {
+            "first": 2432768,
+            "last": 2632944,
+            "max": 2632944,
+            "min": 2432768
+          },
+          "index_alloc_failures_sum": {
+            "first": 0,
+            "last": 0,
+            "max": 0,
+            "min": 0
+          },
+          "index_gc_recycle_errors_sum": {
+            "first": 0,
+            "last": 0,
+            "max": 0,
+            "min": 0
+          },
+          "index_reclaimed_postings_sum": {
+            "first": 0,
+            "last": 117576,
+            "max": 117576,
+            "min": 0
+          },
+          "index_retired_nodes_sum": {
+            "first": 0,
+            "last": 5,
+            "max": 9,
+            "min": 0
+          },
+          "index_retired_postings_sum": {
+            "first": 0,
+            "last": 42,
+            "max": 72,
+            "min": 0
+          },
+          "row_fresh_allocations": {
+            "first": 4096,
+            "last": 4965,
+            "max": 4965,
+            "min": 4096
+          },
+          "row_recycled": {
+            "first": 0,
+            "last": 122032,
+            "max": 122032,
+            "min": 0
+          },
+          "row_reuse_allocations": {
+            "first": 0,
+            "last": 121183,
+            "max": 121183,
+            "min": 0
+          },
+          "snapshot_xmax": {
+            "first": 4730,
+            "last": 331221,
+            "max": 331221,
+            "min": 4730
+          },
+          "snapshot_xmin": {
+            "first": 4730,
+            "last": 331221,
+            "max": 331221,
+            "min": 4730
+          }
+        },
+        "last_sample_offset_ns": 119993043254,
+        "maximum_sample_duration_ns": 24409,
+        "sample_count": 120
+      },
+      "background_work": {
+        "global_cancel": {
+          "arrival_queue_p99_us": 799.821,
+          "e2e_max_us": 3472.693,
+          "e2e_p50_us": 2595.104,
+          "e2e_p99_us": 3363.099,
+          "message_kinds": {
+            "global_cancel": 750
+          },
+          "messages": 750,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 3000,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "retries": 0,
+          "service_p99_us": 2492.644,
+          "transcript_write_operations": 3000,
+          "transcripts_without_write_operations": 0
+        },
+        "global_housekeeping": {
+          "arrival_queue_p99_us": 794.821,
+          "e2e_max_us": 3685.159,
+          "e2e_p50_us": 2689.294,
+          "e2e_p99_us": 3466.735,
+          "message_kinds": {
+            "global_housekeeping": 1500
+          },
+          "messages": 1500,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 20832,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "retries": 0,
+          "service_p99_us": 2556.342,
+          "transcript_write_operations": 20832,
+          "transcripts_without_write_operations": 750
+        },
+        "global_projection": {
+          "arrival_queue_p99_us": 803.16,
+          "e2e_max_us": 3971.136,
+          "e2e_p50_us": 2697.539,
+          "e2e_p99_us": 3469.279,
+          "message_kinds": {
+            "global_projection": 750
+          },
+          "messages": 750,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 3000,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 2463,
+            "rescheduled_events": 3000,
+            "updated_views": 0
+          },
+          "retries": 0,
+          "service_p99_us": 2568.329,
+          "transcript_write_operations": 5463,
+          "transcripts_without_write_operations": 0
+        },
+        "global_reschedule": {
+          "arrival_queue_p99_us": 797.5,
+          "e2e_max_us": 3689.664,
+          "e2e_p50_us": 2596.399,
+          "e2e_p99_us": 3354.484,
+          "message_kinds": {
+            "global_reschedule": 750
+          },
+          "messages": 750,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 3000,
+            "updated_views": 0
+          },
+          "retries": 0,
+          "service_p99_us": 2517.668,
+          "transcript_write_operations": 3000,
+          "transcripts_without_write_operations": 0
+        }
+      },
+      "baseline_samples": [
+        {
+          "completed_messages": 0,
+          "elapsed_seconds": 0.0,
+          "sample_finished_ns": 15763620911890,
+          "sample_offset_ns": -100005865,
+          "sample_started_ns": 15763620900329,
+          "storage": {
+            "active_transactions": 0,
+            "arena_capacity_bytes": 268435456,
+            "arena_high_water_bytes": 2432768,
+            "indexes": [
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 0,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 1,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 2,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 3,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 4,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              }
+            ],
+            "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+            "row_fresh_allocations": 4096,
+            "row_recycled": 0,
+            "row_reuse_allocations": 0,
+            "snapshot_xmax": 4730,
+            "snapshot_xmin": 4730
+          }
+        }
+      ],
+      "checks": {
+        "exact_100_hz_schedule": true,
+        "overall_latency_retry_and_outcome_totals_match_report": true,
+        "per_kind_counts_outcomes_retries_and_p99_match_report": true,
+        "per_worker_counts_match": true,
+        "timestamp_identities_match": true,
+        "unique_message_ids": true
+      },
+      "engine": "aerostore",
+      "final_population": {
+        "active_rows": 251,
+        "flight_views": 71,
+        "live_families": 13,
+        "retained_positions": 28,
+        "scheduled_events": 33,
+        "scope": "initial/final snapshot population, not a measured runtime minimum"
+      },
+      "initial_population": {
+        "active_rows": 234,
+        "flight_views": 64,
+        "live_families": 12,
+        "retained_positions": 27,
+        "scheduled_events": 32,
+        "scope": "initial/final snapshot population, not a measured runtime minimum"
+      },
+      "oracle_status_from_original_run": "Valid",
+      "overlap": {
+        "message_service_including_retries": {
+          "maximum_simultaneous_intervals": 1,
+          "messages_overlapping_another": 0,
+          "overlapping_pairs": 0
+        },
+        "scheduled_arrival_through_coordinator_receipt": {
+          "maximum_simultaneous_intervals": 1,
+          "messages_overlapping_another": 0,
+          "overlapping_pairs": 0
+        },
+        "scope": "half-open monotonic intervals on this host; successful-attempt intervals exclude failed attempts, service intervals include retries/backoff",
+        "successful_transaction_attempts": {
+          "maximum_simultaneous_intervals": 1,
+          "messages_overlapping_another": 0,
+          "overlapping_pairs": 0
+        }
+      },
+      "samples_after_admission": [],
+      "source_workload_label": "fleet",
+      "windows": [
+        {
+          "arrival_queue_p99_us": 437.673,
+          "e2e_max_us": 3971.136,
+          "e2e_p50_us": 483.955,
+          "e2e_p99_us": 3145.056,
+          "end_seconds_exclusive": 10,
+          "message_kinds": {
+            "arrival": 189,
+            "expire_family": 125,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 187,
+            "position": 187
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 438,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2892,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1838,
+            "rescheduled_events": 504,
+            "updated_views": 1632
+          },
+          "retries": 0,
+          "service_p99_us": 2545.429,
+          "start_seconds": 0,
+          "storage_samples": {
+            "first_sample_offset_ns": 900519539,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2505424,
+                "last": 2581528,
+                "max": 2581528,
+                "min": 2505424
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 903,
+                "last": 9750,
+                "max": 9750,
+                "min": 903
+              },
+              "index_retired_nodes_sum": {
+                "first": 1,
+                "last": 1,
+                "max": 6,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 6,
+                "last": 5,
+                "max": 59,
+                "min": 0
+              },
+              "row_fresh_allocations": {
+                "first": 4407,
+                "last": 4725,
+                "max": 4725,
+                "min": 4407
+              },
+              "row_recycled": {
+                "first": 900,
+                "last": 10140,
+                "max": 10140,
+                "min": 900
+              },
+              "row_reuse_allocations": {
+                "first": 605,
+                "last": 9537,
+                "max": 9537,
+                "min": 605
+              },
+              "snapshot_xmax": {
+                "first": 7186,
+                "last": 31905,
+                "max": 31905,
+                "min": 7186
+              },
+              "snapshot_xmin": {
+                "first": 7186,
+                "last": 31905,
+                "max": 31905,
+                "min": 7186
+              }
+            },
+            "last_sample_offset_ns": 9980480811,
+            "maximum_sample_duration_ns": 12377,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10185,
+          "transcripts_without_write_operations": 125
+        },
+        {
+          "arrival_queue_p99_us": 103.323,
+          "e2e_max_us": 2983.459,
+          "e2e_p50_us": 360.081,
+          "e2e_p99_us": 2862.319,
+          "end_seconds_exclusive": 20,
+          "message_kinds": {
+            "arrival": 186,
+            "expire_family": 125,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 188,
+            "position": 188
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 437,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2903,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1824,
+            "rescheduled_events": 496,
+            "updated_views": 1618
+          },
+          "retries": 0,
+          "service_p99_us": 2500.767,
+          "start_seconds": 10,
+          "storage_samples": {
+            "first_sample_offset_ns": 10992584447,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2582032,
+                "last": 2593592,
+                "max": 2593592,
+                "min": 2582032
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 10764,
+                "last": 18644,
+                "max": 18644,
+                "min": 10764
+              },
+              "index_retired_nodes_sum": {
+                "first": 1,
+                "last": 0,
+                "max": 2,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 11,
+                "last": 3,
+                "max": 16,
+                "min": 0
+              },
+              "row_fresh_allocations": {
+                "first": 4727,
+                "last": 4782,
+                "max": 4782,
+                "min": 4727
+              },
+              "row_recycled": {
+                "first": 11187,
+                "last": 19374,
+                "max": 19374,
+                "min": 11187
+              },
+              "row_reuse_allocations": {
+                "first": 10560,
+                "last": 18695,
+                "max": 18695,
+                "min": 10560
+              },
+              "snapshot_xmax": {
+                "first": 34654,
+                "last": 56578,
+                "max": 56578,
+                "min": 34654
+              },
+              "snapshot_xmin": {
+                "first": 34654,
+                "last": 56578,
+                "max": 56578,
+                "min": 34654
+              }
+            },
+            "last_sample_offset_ns": 19060561653,
+            "maximum_sample_duration_ns": 6639,
+            "sample_count": 9
+          },
+          "transcript_write_operations": 10147,
+          "transcripts_without_write_operations": 126
+        },
+        {
+          "arrival_queue_p99_us": 801.075,
+          "e2e_max_us": 3646.171,
+          "e2e_p50_us": 508.087,
+          "e2e_p99_us": 3427.808,
+          "end_seconds_exclusive": 30,
+          "message_kinds": {
+            "arrival": 187,
+            "expire_family": 126,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 187,
+            "position": 187
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 435,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2916,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1822,
+            "rescheduled_events": 496,
+            "updated_views": 1618
+          },
+          "retries": 0,
+          "service_p99_us": 2520.927,
+          "start_seconds": 20,
+          "storage_samples": {
+            "first_sample_offset_ns": 20072549148,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2594216,
+                "last": 2603576,
+                "max": 2603576,
+                "min": 2594216
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 19672,
+                "last": 28587,
+                "max": 28587,
+                "min": 19672
+              },
+              "index_retired_nodes_sum": {
+                "first": 0,
+                "last": 1,
+                "max": 3,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 0,
+                "last": 6,
+                "max": 14,
+                "min": 0
+              },
+              "row_fresh_allocations": {
+                "first": 4785,
+                "last": 4830,
+                "max": 4830,
+                "min": 4785
+              },
+              "row_recycled": {
+                "first": 20417,
+                "last": 29646,
+                "max": 29646,
+                "min": 20417
+              },
+              "row_reuse_allocations": {
+                "first": 19728,
+                "last": 28938,
+                "max": 28938,
+                "min": 19728
+              },
+              "snapshot_xmax": {
+                "first": 59344,
+                "last": 84071,
+                "max": 84071,
+                "min": 59344
+              },
+              "snapshot_xmin": {
+                "first": 59344,
+                "last": 84071,
+                "max": 84071,
+                "min": 59344
+              }
+            },
+            "last_sample_offset_ns": 29140520719,
+            "maximum_sample_duration_ns": 6985,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10153,
+          "transcripts_without_write_operations": 127
+        },
+        {
+          "arrival_queue_p99_us": 425.43,
+          "e2e_max_us": 3342.704,
+          "e2e_p50_us": 446.627,
+          "e2e_p99_us": 3019.867,
+          "end_seconds_exclusive": 40,
+          "message_kinds": {
+            "arrival": 188,
+            "expire_family": 124,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 188,
+            "position": 188
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 440,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2899,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1839,
+            "rescheduled_events": 504,
+            "updated_views": 1632
+          },
+          "retries": 0,
+          "service_p99_us": 2500.607,
+          "start_seconds": 30,
+          "storage_samples": {
+            "first_sample_offset_ns": 30152992780,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2604408,
+                "last": 2608000,
+                "max": 2608000,
+                "min": 2604408
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 29512,
+                "last": 38440,
+                "max": 38440,
+                "min": 29512
+              },
+              "index_retired_nodes_sum": {
+                "first": 5,
+                "last": 1,
+                "max": 7,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 21,
+                "last": 20,
+                "max": 57,
+                "min": 0
+              },
+              "row_fresh_allocations": {
+                "first": 4834,
+                "last": 4850,
+                "max": 4850,
+                "min": 4834
+              },
+              "row_recycled": {
+                "first": 30644,
+                "last": 39923,
+                "max": 39923,
+                "min": 30644
+              },
+              "row_reuse_allocations": {
+                "first": 29910,
+                "last": 39186,
+                "max": 39186,
+                "min": 29910
+              },
+              "snapshot_xmax": {
+                "first": 86713,
+                "last": 111565,
+                "max": 111565,
+                "min": 86713
+              },
+              "snapshot_xmin": {
+                "first": 86713,
+                "last": 111565,
+                "max": 111565,
+                "min": 86713
+              }
+            },
+            "last_sample_offset_ns": 39240408775,
+            "maximum_sample_duration_ns": 10458,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10198,
+          "transcripts_without_write_operations": 124
+        },
+        {
+          "arrival_queue_p99_us": 118.203,
+          "e2e_max_us": 2950.526,
+          "e2e_p50_us": 361.745,
+          "e2e_p99_us": 2832.03,
+          "end_seconds_exclusive": 50,
+          "message_kinds": {
+            "arrival": 188,
+            "expire_family": 126,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 187,
+            "position": 186
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 435,
+            "duplicate_messages": 0,
+            "expired_families": 63,
+            "expired_records": 2921,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1824,
+            "rescheduled_events": 496,
+            "updated_views": 1621
+          },
+          "retries": 0,
+          "service_p99_us": 2479.258,
+          "start_seconds": 40,
+          "storage_samples": {
+            "first_sample_offset_ns": 40250468093,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2608416,
+                "last": 2612176,
+                "max": 2612176,
+                "min": 2608416
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 39421,
+                "last": 48434,
+                "max": 48434,
+                "min": 39421
+              },
+              "index_retired_nodes_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 5,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 7,
+                "last": 1,
+                "max": 12,
+                "min": 1
+              },
+              "row_fresh_allocations": {
+                "first": 4852,
+                "last": 4869,
+                "max": 4869,
+                "min": 4852
+              },
+              "row_recycled": {
+                "first": 40903,
+                "last": 50193,
+                "max": 50193,
+                "min": 40903
+              },
+              "row_reuse_allocations": {
+                "first": 40163,
+                "last": 49432,
+                "max": 49432,
+                "min": 40163
+              },
+              "snapshot_xmax": {
+                "first": 114186,
+                "last": 139032,
+                "max": 139032,
+                "min": 114186
+              },
+              "snapshot_xmin": {
+                "first": 114186,
+                "last": 139032,
+                "max": 139032,
+                "min": 114186
+              }
+            },
+            "last_sample_offset_ns": 49350432444,
+            "maximum_sample_duration_ns": 6991,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10165,
+          "transcripts_without_write_operations": 126
+        },
+        {
+          "arrival_queue_p99_us": 803.704,
+          "e2e_max_us": 3567.828,
+          "e2e_p50_us": 479.961,
+          "e2e_p99_us": 3351.46,
+          "end_seconds_exclusive": 60,
+          "message_kinds": {
+            "arrival": 187,
+            "expire_family": 124,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 188,
+            "position": 189
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 440,
+            "duplicate_messages": 0,
+            "expired_families": 63,
+            "expired_records": 2888,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1835,
+            "rescheduled_events": 504,
+            "updated_views": 1629
+          },
+          "retries": 0,
+          "service_p99_us": 2541.235,
+          "start_seconds": 50,
+          "storage_samples": {
+            "first_sample_offset_ns": 50360511219,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2612592,
+                "last": 2616752,
+                "max": 2616752,
+                "min": 2612592
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 49300,
+                "last": 58278,
+                "max": 58278,
+                "min": 49300
+              },
+              "index_retired_nodes_sum": {
+                "first": 1,
+                "last": 3,
+                "max": 5,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 6,
+                "last": 9,
+                "max": 56,
+                "min": 0
+              },
+              "row_fresh_allocations": {
+                "first": 4871,
+                "last": 4891,
+                "max": 4891,
+                "min": 4871
+              },
+              "row_recycled": {
+                "first": 51205,
+                "last": 60451,
+                "max": 60451,
+                "min": 51205
+              },
+              "row_reuse_allocations": {
+                "first": 50456,
+                "last": 59660,
+                "max": 59660,
+                "min": 50456
+              },
+              "snapshot_xmax": {
+                "first": 141746,
+                "last": 166449,
+                "max": 166449,
+                "min": 141746
+              },
+              "snapshot_xmin": {
+                "first": 141746,
+                "last": 166449,
+                "max": 166449,
+                "min": 141746
+              }
+            },
+            "last_sample_offset_ns": 59442747942,
+            "maximum_sample_duration_ns": 24409,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10178,
+          "transcripts_without_write_operations": 123
+        },
+        {
+          "arrival_queue_p99_us": 418.652,
+          "e2e_max_us": 3183.196,
+          "e2e_p50_us": 420.601,
+          "e2e_p99_us": 2963.038,
+          "end_seconds_exclusive": 70,
+          "message_kinds": {
+            "arrival": 187,
+            "expire_family": 124,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 188,
+            "position": 189
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 440,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2895,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1835,
+            "rescheduled_events": 504,
+            "updated_views": 1629
+          },
+          "retries": 0,
+          "service_p99_us": 2528.216,
+          "start_seconds": 60,
+          "storage_samples": {
+            "first_sample_offset_ns": 60460375663,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2617792,
+                "last": 2621120,
+                "max": 2621120,
+                "min": 2617792
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 59233,
+                "last": 68156,
+                "max": 68156,
+                "min": 59233
+              },
+              "index_retired_nodes_sum": {
+                "first": 0,
+                "last": 1,
+                "max": 5,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 34,
+                "last": 6,
+                "max": 49,
+                "min": 1
+              },
+              "row_fresh_allocations": {
+                "first": 4896,
+                "last": 4912,
+                "max": 4912,
+                "min": 4896
+              },
+              "row_recycled": {
+                "first": 61497,
+                "last": 70753,
+                "max": 70753,
+                "min": 61497
+              },
+              "row_reuse_allocations": {
+                "first": 60706,
+                "last": 69937,
+                "max": 69937,
+                "min": 60706
+              },
+              "snapshot_xmax": {
+                "first": 169238,
+                "last": 193998,
+                "max": 193998,
+                "min": 169238
+              },
+              "snapshot_xmin": {
+                "first": 169238,
+                "last": 193998,
+                "max": 193998,
+                "min": 169238
+              }
+            },
+            "last_sample_offset_ns": 69542442880,
+            "maximum_sample_duration_ns": 8983,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10185,
+          "transcripts_without_write_operations": 124
+        },
+        {
+          "arrival_queue_p99_us": 122.049,
+          "e2e_max_us": 2966.509,
+          "e2e_p50_us": 359.157,
+          "e2e_p99_us": 2855.64,
+          "end_seconds_exclusive": 80,
+          "message_kinds": {
+            "arrival": 188,
+            "expire_family": 126,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 187,
+            "position": 186
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 435,
+            "duplicate_messages": 0,
+            "expired_families": 63,
+            "expired_records": 2925,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1825,
+            "rescheduled_events": 496,
+            "updated_views": 1621
+          },
+          "retries": 0,
+          "service_p99_us": 2492.644,
+          "start_seconds": 70,
+          "storage_samples": {
+            "first_sample_offset_ns": 70550463195,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2621744,
+                "last": 2624616,
+                "max": 2624616,
+                "min": 2621744
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 69117,
+                "last": 78030,
+                "max": 78030,
+                "min": 69117
+              },
+              "index_retired_nodes_sum": {
+                "first": 3,
+                "last": 6,
+                "max": 7,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 15,
+                "last": 59,
+                "max": 63,
+                "min": 0
+              },
+              "row_fresh_allocations": {
+                "first": 4915,
+                "last": 4928,
+                "max": 4928,
+                "min": 4915
+              },
+              "row_recycled": {
+                "first": 71745,
+                "last": 80992,
+                "max": 80992,
+                "min": 71745
+              },
+              "row_reuse_allocations": {
+                "first": 70943,
+                "last": 80208,
+                "max": 80208,
+                "min": 70943
+              },
+              "snapshot_xmax": {
+                "first": 196675,
+                "last": 221510,
+                "max": 221510,
+                "min": 196675
+              },
+              "snapshot_xmin": {
+                "first": 196675,
+                "last": 221510,
+                "max": 221510,
+                "min": 196675
+              }
+            },
+            "last_sample_offset_ns": 79640515664,
+            "maximum_sample_duration_ns": 8544,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10170,
+          "transcripts_without_write_operations": 126
+        },
+        {
+          "arrival_queue_p99_us": 819.55,
+          "e2e_max_us": 3619.666,
+          "e2e_p50_us": 542.617,
+          "e2e_p99_us": 3417.893,
+          "end_seconds_exclusive": 90,
+          "message_kinds": {
+            "arrival": 188,
+            "expire_family": 124,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 188,
+            "position": 188
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 440,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2868,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1841,
+            "rescheduled_events": 504,
+            "updated_views": 1632
+          },
+          "retries": 0,
+          "service_p99_us": 2509.366,
+          "start_seconds": 80,
+          "storage_samples": {
+            "first_sample_offset_ns": 80650519426,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2624616,
+                "last": 2626536,
+                "max": 2626536,
+                "min": 2624616
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 79003,
+                "last": 87932,
+                "max": 87932,
+                "min": 79003
+              },
+              "index_retired_nodes_sum": {
+                "first": 6,
+                "last": 1,
+                "max": 6,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 72,
+                "last": 6,
+                "max": 72,
+                "min": 0
+              },
+              "row_fresh_allocations": {
+                "first": 4928,
+                "last": 4937,
+                "max": 4937,
+                "min": 4928
+              },
+              "row_recycled": {
+                "first": 82042,
+                "last": 91252,
+                "max": 91252,
+                "min": 82042
+              },
+              "row_reuse_allocations": {
+                "first": 81223,
+                "last": 90437,
+                "max": 90437,
+                "min": 81223
+              },
+              "snapshot_xmax": {
+                "first": 224209,
+                "last": 248893,
+                "max": 248893,
+                "min": 224209
+              },
+              "snapshot_xmin": {
+                "first": 224209,
+                "last": 248893,
+                "max": 248893,
+                "min": 224209
+              }
+            },
+            "last_sample_offset_ns": 89730796564,
+            "maximum_sample_duration_ns": 7830,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10169,
+          "transcripts_without_write_operations": 124
+        },
+        {
+          "arrival_queue_p99_us": 441.311,
+          "e2e_max_us": 3314.582,
+          "e2e_p50_us": 465.327,
+          "e2e_p99_us": 3075.174,
+          "end_seconds_exclusive": 100,
+          "message_kinds": {
+            "arrival": 187,
+            "expire_family": 126,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 187,
+            "position": 187
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 435,
+            "duplicate_messages": 0,
+            "expired_families": 63,
+            "expired_records": 2929,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1820,
+            "rescheduled_events": 496,
+            "updated_views": 1618
+          },
+          "retries": 0,
+          "service_p99_us": 2508.133,
+          "start_seconds": 90,
+          "storage_samples": {
+            "first_sample_offset_ns": 90740535300,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2627576,
+                "last": 2629656,
+                "max": 2629656,
+                "min": 2627576
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 88923,
+                "last": 97809,
+                "max": 97809,
+                "min": 88923
+              },
+              "index_retired_nodes_sum": {
+                "first": 0,
+                "last": 4,
+                "max": 4,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 4,
+                "last": 13,
+                "max": 43,
+                "min": 0
+              },
+              "row_fresh_allocations": {
+                "first": 4942,
+                "last": 4952,
+                "max": 4952,
+                "min": 4942
+              },
+              "row_recycled": {
+                "first": 92286,
+                "last": 101523,
+                "max": 101523,
+                "min": 92286
+              },
+              "row_reuse_allocations": {
+                "first": 91447,
+                "last": 100680,
+                "max": 100680,
+                "min": 91447
+              },
+              "snapshot_xmax": {
+                "first": 251626,
+                "last": 276326,
+                "max": 276326,
+                "min": 251626
+              },
+              "snapshot_xmin": {
+                "first": 251626,
+                "last": 276326,
+                "max": 276326,
+                "min": 251626
+              }
+            },
+            "last_sample_offset_ns": 99820641937,
+            "maximum_sample_duration_ns": 7162,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10164,
+          "transcripts_without_write_operations": 126
+        },
+        {
+          "arrival_queue_p99_us": 101.36,
+          "e2e_max_us": 3024.672,
+          "e2e_p50_us": 370.048,
+          "e2e_p99_us": 2877.134,
+          "end_seconds_exclusive": 110,
+          "message_kinds": {
+            "arrival": 186,
+            "expire_family": 125,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 188,
+            "position": 188
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 437,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2911,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1822,
+            "rescheduled_events": 496,
+            "updated_views": 1618
+          },
+          "retries": 0,
+          "service_p99_us": 2492.945,
+          "start_seconds": 100,
+          "storage_samples": {
+            "first_sample_offset_ns": 100830610139,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2629656,
+                "last": 2631488,
+                "max": 2631488,
+                "min": 2629656
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 98862,
+                "last": 107696,
+                "max": 107696,
+                "min": 98862
+              },
+              "index_retired_nodes_sum": {
+                "first": 9,
+                "last": 7,
+                "max": 9,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 61,
+                "last": 57,
+                "max": 67,
+                "min": 0
+              },
+              "row_fresh_allocations": {
+                "first": 4952,
+                "last": 4958,
+                "max": 4958,
+                "min": 4952
+              },
+              "row_recycled": {
+                "first": 102584,
+                "last": 111785,
+                "max": 111785,
+                "min": 102584
+              },
+              "row_reuse_allocations": {
+                "first": 101749,
+                "last": 110945,
+                "max": 110945,
+                "min": 101749
+              },
+              "snapshot_xmax": {
+                "first": 279183,
+                "last": 303806,
+                "max": 303806,
+                "min": 279183
+              },
+              "snapshot_xmin": {
+                "first": 279183,
+                "last": 303806,
+                "max": 303806,
+                "min": 279183
+              }
+            },
+            "last_sample_offset_ns": 109910718147,
+            "maximum_sample_duration_ns": 8770,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10153,
+          "transcripts_without_write_operations": 126
+        },
+        {
+          "arrival_queue_p99_us": 812.201,
+          "e2e_max_us": 3685.159,
+          "e2e_p50_us": 655.069,
+          "e2e_p99_us": 3442.924,
+          "end_seconds_exclusive": 120,
+          "message_kinds": {
+            "arrival": 189,
+            "expire_family": 125,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 187,
+            "position": 187
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 438,
+            "duplicate_messages": 0,
+            "expired_families": 63,
+            "expired_records": 2892,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1838,
+            "rescheduled_events": 504,
+            "updated_views": 1632
+          },
+          "retries": 0,
+          "service_p99_us": 2532.377,
+          "start_seconds": 110,
+          "storage_samples": {
+            "first_sample_offset_ns": 110920523784,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2631696,
+                "last": 2632944,
+                "max": 2632944,
+                "min": 2631696
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 108720,
+                "last": 117576,
+                "max": 117576,
+                "min": 108720
+              },
+              "index_retired_nodes_sum": {
+                "first": 1,
+                "last": 5,
+                "max": 5,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 20,
+                "last": 42,
+                "max": 42,
+                "min": 1
+              },
+              "row_fresh_allocations": {
+                "first": 4959,
+                "last": 4965,
+                "max": 4965,
+                "min": 4959
+              },
+              "row_recycled": {
+                "first": 112822,
+                "last": 122032,
+                "max": 122032,
+                "min": 112822
+              },
+              "row_reuse_allocations": {
+                "first": 111989,
+                "last": 121183,
+                "max": 121183,
+                "min": 111989
+              },
+              "snapshot_xmax": {
+                "first": 306613,
+                "last": 331221,
+                "max": 331221,
+                "min": 306613
+              },
+              "snapshot_xmin": {
+                "first": 306613,
+                "last": 331221,
+                "max": 331221,
+                "min": 306613
+              }
+            },
+            "last_sample_offset_ns": 119993043254,
+            "maximum_sample_duration_ns": 8022,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10185,
+          "transcripts_without_write_operations": 124
+        }
+      ],
+      "workload_classification": "synthetic staggered fleet; not calibrated production HyperFeed"
+    },
+    {
+      "admission_epoch_monotonic_ns": 15884378458677,
+      "after_drain": {
+        "active_transactions": 0,
+        "arena_capacity_bytes": 268435456,
+        "arena_high_water_bytes": 2632808,
+        "indexes": [
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 0,
+            "reclaimed_postings": 5126,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 1,
+            "reclaimed_postings": 4494,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 2,
+            "reclaimed_postings": 40794,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 3,
+            "reclaimed_postings": 10754,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 4,
+            "reclaimed_postings": 56450,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          }
+        ],
+        "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+        "row_fresh_allocations": 4964,
+        "row_recycled": 122052,
+        "row_reuse_allocations": 121184,
+        "snapshot_xmax": 331226,
+        "snapshot_xmin": 331226
+      },
+      "aggregate": {
+        "arrival_queue_p99_us": 768.195,
+        "e2e_max_us": 7060.986,
+        "e2e_p50_us": 1511.625,
+        "e2e_p99_us": 5294.575,
+        "message_kinds": {
+          "arrival": 2250,
+          "expire_family": 1500,
+          "global_cancel": 750,
+          "global_housekeeping": 1500,
+          "global_projection": 750,
+          "global_reschedule": 750,
+          "plan": 2250,
+          "position": 2250
+        },
+        "messages": 12000,
+        "messages_retried": 0,
+        "outcomes": {
+          "allocation_deferred": 0,
+          "cancelled_events": 3000,
+          "claimed_events": 3000,
+          "created_views": 5250,
+          "duplicate_messages": 0,
+          "expired_families": 749,
+          "expired_records": 34839,
+          "ignored_stale": 0,
+          "missing_family": 0,
+          "outputs": 21963,
+          "rescheduled_events": 6000,
+          "updated_views": 19500
+        },
+        "retries": 0,
+        "service_p99_us": 4950.911,
+        "transcript_write_operations": 122052,
+        "transcripts_without_write_operations": 1501
+      },
+      "all_messages_before_next_scheduled_arrival": true,
+      "all_sample_summary": {
+        "first_sample_offset_ns": -100007498,
+        "gauges_and_counters": {
+          "active_transactions": {
+            "first": 0,
+            "last": 0,
+            "max": 0,
+            "min": 0
+          },
+          "arena_capacity_bytes": {
+            "first": 268435456,
+            "last": 268435456,
+            "max": 268435456,
+            "min": 268435456
+          },
+          "arena_high_water_bytes": {
+            "first": 2432768,
+            "last": 2632808,
+            "max": 2632808,
+            "min": 2432768
+          },
+          "index_alloc_failures_sum": {
+            "first": 0,
+            "last": 0,
+            "max": 0,
+            "min": 0
+          },
+          "index_gc_recycle_errors_sum": {
+            "first": 0,
+            "last": 0,
+            "max": 0,
+            "min": 0
+          },
+          "index_reclaimed_postings_sum": {
+            "first": 0,
+            "last": 117352,
+            "max": 117352,
+            "min": 0
+          },
+          "index_retired_nodes_sum": {
+            "first": 0,
+            "last": 2,
+            "max": 9,
+            "min": 0
+          },
+          "index_retired_postings_sum": {
+            "first": 0,
+            "last": 6,
+            "max": 68,
+            "min": 0
+          },
+          "row_fresh_allocations": {
+            "first": 4096,
+            "last": 4964,
+            "max": 4964,
+            "min": 4096
+          },
+          "row_recycled": {
+            "first": 0,
+            "last": 121809,
+            "max": 121809,
+            "min": 0
+          },
+          "row_reuse_allocations": {
+            "first": 0,
+            "last": 120945,
+            "max": 120945,
+            "min": 0
+          },
+          "snapshot_xmax": {
+            "first": 4730,
+            "last": 330578,
+            "max": 330578,
+            "min": 4730
+          },
+          "snapshot_xmin": {
+            "first": 4730,
+            "last": 330578,
+            "max": 330578,
+            "min": 4730
+          }
+        },
+        "last_sample_offset_ns": 119763424701,
+        "maximum_sample_duration_ns": 18305,
+        "sample_count": 120
+      },
+      "background_work": {
+        "global_cancel": {
+          "arrival_queue_p99_us": 764.946,
+          "e2e_max_us": 4492.401,
+          "e2e_p50_us": 3068.246,
+          "e2e_p99_us": 3911.759,
+          "message_kinds": {
+            "global_cancel": 750
+          },
+          "messages": 750,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 3000,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "retries": 0,
+          "service_p99_us": 3428.515,
+          "transcript_write_operations": 3000,
+          "transcripts_without_write_operations": 0
+        },
+        "global_housekeeping": {
+          "arrival_queue_p99_us": 782.625,
+          "e2e_max_us": 7060.986,
+          "e2e_p50_us": 3285.348,
+          "e2e_p99_us": 6111.161,
+          "message_kinds": {
+            "global_housekeeping": 1500
+          },
+          "messages": 1500,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 20832,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "retries": 0,
+          "service_p99_us": 5729.142,
+          "transcript_write_operations": 20832,
+          "transcripts_without_write_operations": 750
+        },
+        "global_projection": {
+          "arrival_queue_p99_us": 794.913,
+          "e2e_max_us": 5092.398,
+          "e2e_p50_us": 3547.107,
+          "e2e_p99_us": 4764.155,
+          "message_kinds": {
+            "global_projection": 750
+          },
+          "messages": 750,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 3000,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 2463,
+            "rescheduled_events": 3000,
+            "updated_views": 0
+          },
+          "retries": 0,
+          "service_p99_us": 4194.424,
+          "transcript_write_operations": 5463,
+          "transcripts_without_write_operations": 0
+        },
+        "global_reschedule": {
+          "arrival_queue_p99_us": 796.333,
+          "e2e_max_us": 4273.152,
+          "e2e_p50_us": 3040.847,
+          "e2e_p99_us": 3866.867,
+          "message_kinds": {
+            "global_reschedule": 750
+          },
+          "messages": 750,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 3000,
+            "updated_views": 0
+          },
+          "retries": 0,
+          "service_p99_us": 3370.556,
+          "transcript_write_operations": 3000,
+          "transcripts_without_write_operations": 0
+        }
+      },
+      "baseline_samples": [
+        {
+          "completed_messages": 0,
+          "elapsed_seconds": 0.0,
+          "sample_finished_ns": 15884278458595,
+          "sample_offset_ns": -100007498,
+          "sample_started_ns": 15884278443763,
+          "storage": {
+            "active_transactions": 0,
+            "arena_capacity_bytes": 268435456,
+            "arena_high_water_bytes": 2432768,
+            "indexes": [
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 0,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 1,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 2,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 3,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 4,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              }
+            ],
+            "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+            "row_fresh_allocations": 4096,
+            "row_recycled": 0,
+            "row_reuse_allocations": 0,
+            "snapshot_xmax": 4730,
+            "snapshot_xmin": 4730
+          }
+        }
+      ],
+      "checks": {
+        "exact_100_hz_schedule": true,
+        "overall_latency_retry_and_outcome_totals_match_report": true,
+        "per_kind_counts_outcomes_retries_and_p99_match_report": true,
+        "per_worker_counts_match": true,
+        "timestamp_identities_match": true,
+        "unique_message_ids": true
+      },
+      "engine": "service-unix",
+      "final_population": {
+        "active_rows": 251,
+        "flight_views": 71,
+        "live_families": 13,
+        "retained_positions": 28,
+        "scheduled_events": 33,
+        "scope": "initial/final snapshot population, not a measured runtime minimum"
+      },
+      "initial_population": {
+        "active_rows": 234,
+        "flight_views": 64,
+        "live_families": 12,
+        "retained_positions": 27,
+        "scheduled_events": 32,
+        "scope": "initial/final snapshot population, not a measured runtime minimum"
+      },
+      "oracle_status_from_original_run": "Valid",
+      "overlap": {
+        "message_service_including_retries": {
+          "maximum_simultaneous_intervals": 1,
+          "messages_overlapping_another": 0,
+          "overlapping_pairs": 0
+        },
+        "scheduled_arrival_through_coordinator_receipt": {
+          "maximum_simultaneous_intervals": 1,
+          "messages_overlapping_another": 0,
+          "overlapping_pairs": 0
+        },
+        "scope": "half-open monotonic intervals on this host; successful-attempt intervals exclude failed attempts, service intervals include retries/backoff",
+        "successful_transaction_attempts": {
+          "maximum_simultaneous_intervals": 1,
+          "messages_overlapping_another": 0,
+          "overlapping_pairs": 0
+        }
+      },
+      "samples_after_admission": [],
+      "source_workload_label": "fleet",
+      "windows": [
+        {
+          "arrival_queue_p99_us": 324.58,
+          "e2e_max_us": 6722.459,
+          "e2e_p50_us": 1483.438,
+          "e2e_p99_us": 5177.273,
+          "end_seconds_exclusive": 10,
+          "message_kinds": {
+            "arrival": 189,
+            "expire_family": 125,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 187,
+            "position": 187
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 438,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2892,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1838,
+            "rescheduled_events": 504,
+            "updated_views": 1632
+          },
+          "retries": 0,
+          "service_p99_us": 4804.636,
+          "start_seconds": 0,
+          "storage_samples": {
+            "first_sample_offset_ns": 901203512,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2505648,
+                "last": 2582008,
+                "max": 2582008,
+                "min": 2505648
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 901,
+                "last": 9711,
+                "max": 9711,
+                "min": 901
+              },
+              "index_retired_nodes_sum": {
+                "first": 2,
+                "last": 3,
+                "max": 6,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 8,
+                "last": 16,
+                "max": 63,
+                "min": 3
+              },
+              "row_fresh_allocations": {
+                "first": 4407,
+                "last": 4727,
+                "max": 4727,
+                "min": 4407
+              },
+              "row_recycled": {
+                "first": 900,
+                "last": 10116,
+                "max": 10116,
+                "min": 900
+              },
+              "row_reuse_allocations": {
+                "first": 605,
+                "last": 9492,
+                "max": 9492,
+                "min": 605
+              },
+              "snapshot_xmax": {
+                "first": 7186,
+                "last": 31810,
+                "max": 31810,
+                "min": 7186
+              },
+              "snapshot_xmin": {
+                "first": 7186,
+                "last": 31810,
+                "max": 31810,
+                "min": 7186
+              }
+            },
+            "last_sample_offset_ns": 9944001708,
+            "maximum_sample_duration_ns": 6496,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10185,
+          "transcripts_without_write_operations": 125
+        },
+        {
+          "arrival_queue_p99_us": 99.811,
+          "e2e_max_us": 5878.356,
+          "e2e_p50_us": 1380.909,
+          "e2e_p99_us": 5199.801,
+          "end_seconds_exclusive": 20,
+          "message_kinds": {
+            "arrival": 186,
+            "expire_family": 125,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 188,
+            "position": 188
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 437,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2903,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1824,
+            "rescheduled_events": 496,
+            "updated_views": 1618
+          },
+          "retries": 0,
+          "service_p99_us": 4963.546,
+          "start_seconds": 10,
+          "storage_samples": {
+            "first_sample_offset_ns": 10951343844,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2582512,
+                "last": 2594128,
+                "max": 2594128,
+                "min": 2582512
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 10697,
+                "last": 18628,
+                "max": 18628,
+                "min": 10697
+              },
+              "index_retired_nodes_sum": {
+                "first": 3,
+                "last": 1,
+                "max": 6,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 16,
+                "last": 10,
+                "max": 48,
+                "min": 0
+              },
+              "row_fresh_allocations": {
+                "first": 4729,
+                "last": 4784,
+                "max": 4784,
+                "min": 4729
+              },
+              "row_recycled": {
+                "first": 11153,
+                "last": 19311,
+                "max": 19311,
+                "min": 11153
+              },
+              "row_reuse_allocations": {
+                "first": 10533,
+                "last": 18662,
+                "max": 18662,
+                "min": 10533
+              },
+              "snapshot_xmax": {
+                "first": 34571,
+                "last": 56483,
+                "max": 56483,
+                "min": 34571
+              },
+              "snapshot_xmin": {
+                "first": 34571,
+                "last": 56483,
+                "max": 56483,
+                "min": 34571
+              }
+            },
+            "last_sample_offset_ns": 19011726775,
+            "maximum_sample_duration_ns": 6229,
+            "sample_count": 9
+          },
+          "transcript_write_operations": 10147,
+          "transcripts_without_write_operations": 126
+        },
+        {
+          "arrival_queue_p99_us": 822.412,
+          "e2e_max_us": 6914.741,
+          "e2e_p50_us": 1554.966,
+          "e2e_p99_us": 5346.447,
+          "end_seconds_exclusive": 30,
+          "message_kinds": {
+            "arrival": 187,
+            "expire_family": 126,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 187,
+            "position": 187
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 435,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2916,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1822,
+            "rescheduled_events": 496,
+            "updated_views": 1618
+          },
+          "retries": 0,
+          "service_p99_us": 4890.667,
+          "start_seconds": 20,
+          "storage_samples": {
+            "first_sample_offset_ns": 20013376247,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2594752,
+                "last": 2602768,
+                "max": 2602768,
+                "min": 2594752
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 19580,
+                "last": 28451,
+                "max": 28451,
+                "min": 19580
+              },
+              "index_retired_nodes_sum": {
+                "first": 3,
+                "last": 5,
+                "max": 7,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 11,
+                "last": 47,
+                "max": 68,
+                "min": 0
+              },
+              "row_fresh_allocations": {
+                "first": 4787,
+                "last": 4825,
+                "max": 4825,
+                "min": 4787
+              },
+              "row_recycled": {
+                "first": 20332,
+                "last": 29573,
+                "max": 29573,
+                "min": 20332
+              },
+              "row_reuse_allocations": {
+                "first": 19663,
+                "last": 28863,
+                "max": 28863,
+                "min": 19663
+              },
+              "snapshot_xmax": {
+                "first": 59179,
+                "last": 83880,
+                "max": 83880,
+                "min": 59179
+              },
+              "snapshot_xmin": {
+                "first": 59179,
+                "last": 83880,
+                "max": 83880,
+                "min": 59179
+              }
+            },
+            "last_sample_offset_ns": 29073177291,
+            "maximum_sample_duration_ns": 14800,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10153,
+          "transcripts_without_write_operations": 127
+        },
+        {
+          "arrival_queue_p99_us": 427.376,
+          "e2e_max_us": 5858.909,
+          "e2e_p50_us": 1523.852,
+          "e2e_p99_us": 5137.774,
+          "end_seconds_exclusive": 40,
+          "message_kinds": {
+            "arrival": 188,
+            "expire_family": 124,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 188,
+            "position": 188
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 440,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2899,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1839,
+            "rescheduled_events": 504,
+            "updated_views": 1632
+          },
+          "retries": 0,
+          "service_p99_us": 4854.804,
+          "start_seconds": 30,
+          "storage_samples": {
+            "first_sample_offset_ns": 30083491271,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2603392,
+                "last": 2609000,
+                "max": 2609000,
+                "min": 2603392
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 29421,
+                "last": 38398,
+                "max": 38398,
+                "min": 29421
+              },
+              "index_retired_nodes_sum": {
+                "first": 2,
+                "last": 5,
+                "max": 7,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 11,
+                "last": 17,
+                "max": 57,
+                "min": 6
+              },
+              "row_fresh_allocations": {
+                "first": 4828,
+                "last": 4851,
+                "max": 4851,
+                "min": 4828
+              },
+              "row_recycled": {
+                "first": 30575,
+                "last": 39832,
+                "max": 39832,
+                "min": 30575
+              },
+              "row_reuse_allocations": {
+                "first": 29847,
+                "last": 39089,
+                "max": 39089,
+                "min": 29847
+              },
+              "snapshot_xmax": {
+                "first": 86519,
+                "last": 111320,
+                "max": 111320,
+                "min": 86519
+              },
+              "snapshot_xmin": {
+                "first": 86519,
+                "last": 111320,
+                "max": 111320,
+                "min": 86519
+              }
+            },
+            "last_sample_offset_ns": 39163287209,
+            "maximum_sample_duration_ns": 18305,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10198,
+          "transcripts_without_write_operations": 124
+        },
+        {
+          "arrival_queue_p99_us": 109.122,
+          "e2e_max_us": 6347.31,
+          "e2e_p50_us": 1470.226,
+          "e2e_p99_us": 5152.684,
+          "end_seconds_exclusive": 50,
+          "message_kinds": {
+            "arrival": 188,
+            "expire_family": 126,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 187,
+            "position": 186
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 435,
+            "duplicate_messages": 0,
+            "expired_families": 63,
+            "expired_records": 2921,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1824,
+            "rescheduled_events": 496,
+            "updated_views": 1621
+          },
+          "retries": 0,
+          "service_p99_us": 4896.563,
+          "start_seconds": 40,
+          "storage_samples": {
+            "first_sample_offset_ns": 40170771591,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2609624,
+                "last": 2612952,
+                "max": 2612952,
+                "min": 2609624
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 39323,
+                "last": 48308,
+                "max": 48308,
+                "min": 39323
+              },
+              "index_retired_nodes_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 5,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 49,
+                "min": 0
+              },
+              "row_fresh_allocations": {
+                "first": 4854,
+                "last": 4870,
+                "max": 4870,
+                "min": 4854
+              },
+              "row_recycled": {
+                "first": 40835,
+                "last": 50083,
+                "max": 50083,
+                "min": 40835
+              },
+              "row_reuse_allocations": {
+                "first": 40090,
+                "last": 49316,
+                "max": 49316,
+                "min": 40090
+              },
+              "snapshot_xmax": {
+                "first": 113977,
+                "last": 138712,
+                "max": 138712,
+                "min": 113977
+              },
+              "snapshot_xmin": {
+                "first": 113977,
+                "last": 138712,
+                "max": 138712,
+                "min": 113977
+              }
+            },
+            "last_sample_offset_ns": 49242032187,
+            "maximum_sample_duration_ns": 13296,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10165,
+          "transcripts_without_write_operations": 126
+        },
+        {
+          "arrival_queue_p99_us": 821.576,
+          "e2e_max_us": 6904.069,
+          "e2e_p50_us": 1737.223,
+          "e2e_p99_us": 5615.833,
+          "end_seconds_exclusive": 60,
+          "message_kinds": {
+            "arrival": 187,
+            "expire_family": 124,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 188,
+            "position": 189
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 440,
+            "duplicate_messages": 0,
+            "expired_families": 63,
+            "expired_records": 2888,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1835,
+            "rescheduled_events": 504,
+            "updated_views": 1629
+          },
+          "retries": 0,
+          "service_p99_us": 5250.965,
+          "start_seconds": 50,
+          "storage_samples": {
+            "first_sample_offset_ns": 50242980339,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2613368,
+                "last": 2617528,
+                "max": 2617528,
+                "min": 2613368
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 49227,
+                "last": 58081,
+                "max": 58081,
+                "min": 49227
+              },
+              "index_retired_nodes_sum": {
+                "first": 1,
+                "last": 4,
+                "max": 6,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 11,
+                "last": 41,
+                "max": 60,
+                "min": 6
+              },
+              "row_fresh_allocations": {
+                "first": 4872,
+                "last": 4892,
+                "max": 4892,
+                "min": 4872
+              },
+              "row_recycled": {
+                "first": 51092,
+                "last": 60315,
+                "max": 60315,
+                "min": 51092
+              },
+              "row_reuse_allocations": {
+                "first": 50327,
+                "last": 59541,
+                "max": 59541,
+                "min": 50327
+              },
+              "snapshot_xmax": {
+                "first": 141415,
+                "last": 166134,
+                "max": 166134,
+                "min": 141415
+              },
+              "snapshot_xmin": {
+                "first": 141415,
+                "last": 166134,
+                "max": 166134,
+                "min": 141415
+              }
+            },
+            "last_sample_offset_ns": 59302886109,
+            "maximum_sample_duration_ns": 8680,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10178,
+          "transcripts_without_write_operations": 123
+        },
+        {
+          "arrival_queue_p99_us": 413.709,
+          "e2e_max_us": 6069.05,
+          "e2e_p50_us": 1560.972,
+          "e2e_p99_us": 5341.027,
+          "end_seconds_exclusive": 70,
+          "message_kinds": {
+            "arrival": 187,
+            "expire_family": 124,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 188,
+            "position": 189
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 440,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2895,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1835,
+            "rescheduled_events": 504,
+            "updated_views": 1629
+          },
+          "retries": 0,
+          "service_p99_us": 5026.376,
+          "start_seconds": 60,
+          "storage_samples": {
+            "first_sample_offset_ns": 60311540313,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2618152,
+                "last": 2622520,
+                "max": 2622520,
+                "min": 2618152
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 59074,
+                "last": 67973,
+                "max": 67973,
+                "min": 59074
+              },
+              "index_retired_nodes_sum": {
+                "first": 4,
+                "last": 2,
+                "max": 4,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 18,
+                "last": 11,
+                "max": 18,
+                "min": 2
+              },
+              "row_fresh_allocations": {
+                "first": 4895,
+                "last": 4916,
+                "max": 4916,
+                "min": 4895
+              },
+              "row_recycled": {
+                "first": 61333,
+                "last": 70563,
+                "max": 70563,
+                "min": 61333
+              },
+              "row_reuse_allocations": {
+                "first": 60547,
+                "last": 69756,
+                "max": 69756,
+                "min": 60547
+              },
+              "snapshot_xmax": {
+                "first": 168811,
+                "last": 193526,
+                "max": 193526,
+                "min": 168811
+              },
+              "snapshot_xmin": {
+                "first": 168811,
+                "last": 193526,
+                "max": 193526,
+                "min": 168811
+              }
+            },
+            "last_sample_offset_ns": 69371844012,
+            "maximum_sample_duration_ns": 8577,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10185,
+          "transcripts_without_write_operations": 124
+        },
+        {
+          "arrival_queue_p99_us": 102.453,
+          "e2e_max_us": 5778.2,
+          "e2e_p50_us": 1443.405,
+          "e2e_p99_us": 4874.765,
+          "end_seconds_exclusive": 80,
+          "message_kinds": {
+            "arrival": 188,
+            "expire_family": 126,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 187,
+            "position": 186
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 435,
+            "duplicate_messages": 0,
+            "expired_families": 63,
+            "expired_records": 2925,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1825,
+            "rescheduled_events": 496,
+            "updated_views": 1621
+          },
+          "retries": 0,
+          "service_p99_us": 4644.725,
+          "start_seconds": 70,
+          "storage_samples": {
+            "first_sample_offset_ns": 70383318354,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2622520,
+                "last": 2625760,
+                "max": 2625760,
+                "min": 2622520
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 68953,
+                "last": 77852,
+                "max": 77852,
+                "min": 68953
+              },
+              "index_retired_nodes_sum": {
+                "first": 2,
+                "last": 1,
+                "max": 6,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 10,
+                "last": 11,
+                "max": 66,
+                "min": 6
+              },
+              "row_fresh_allocations": {
+                "first": 4916,
+                "last": 4931,
+                "max": 4931,
+                "min": 4916
+              },
+              "row_recycled": {
+                "first": 71577,
+                "last": 80783,
+                "max": 80783,
+                "min": 71577
+              },
+              "row_reuse_allocations": {
+                "first": 70761,
+                "last": 79978,
+                "max": 79978,
+                "min": 70761
+              },
+              "snapshot_xmax": {
+                "first": 196224,
+                "last": 220906,
+                "max": 220906,
+                "min": 196224
+              },
+              "snapshot_xmin": {
+                "first": 196224,
+                "last": 220906,
+                "max": 220906,
+                "min": 196224
+              }
+            },
+            "last_sample_offset_ns": 79442101950,
+            "maximum_sample_duration_ns": 8352,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10170,
+          "transcripts_without_write_operations": 126
+        },
+        {
+          "arrival_queue_p99_us": 816.83,
+          "e2e_max_us": 6608.905,
+          "e2e_p50_us": 1633.911,
+          "e2e_p99_us": 5281.281,
+          "end_seconds_exclusive": 90,
+          "message_kinds": {
+            "arrival": 188,
+            "expire_family": 124,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 188,
+            "position": 188
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 440,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2868,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1841,
+            "rescheduled_events": 504,
+            "updated_views": 1632
+          },
+          "retries": 0,
+          "service_p99_us": 4950.911,
+          "start_seconds": 80,
+          "storage_samples": {
+            "first_sample_offset_ns": 80452103733,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2625808,
+                "last": 2626640,
+                "max": 2626640,
+                "min": 2625808
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 78871,
+                "last": 87735,
+                "max": 87735,
+                "min": 78871
+              },
+              "index_retired_nodes_sum": {
+                "first": 1,
+                "last": 0,
+                "max": 5,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 7,
+                "last": 3,
+                "max": 67,
+                "min": 0
+              },
+              "row_fresh_allocations": {
+                "first": 4931,
+                "last": 4935,
+                "max": 4935,
+                "min": 4931
+              },
+              "row_recycled": {
+                "first": 81816,
+                "last": 91014,
+                "max": 91014,
+                "min": 81816
+              },
+              "row_reuse_allocations": {
+                "first": 81011,
+                "last": 90187,
+                "max": 90187,
+                "min": 81011
+              },
+              "snapshot_xmax": {
+                "first": 223667,
+                "last": 248217,
+                "max": 248217,
+                "min": 223667
+              },
+              "snapshot_xmin": {
+                "first": 223667,
+                "last": 248217,
+                "max": 248217,
+                "min": 223667
+              }
+            },
+            "last_sample_offset_ns": 89501476419,
+            "maximum_sample_duration_ns": 8795,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10169,
+          "transcripts_without_write_operations": 124
+        },
+        {
+          "arrival_queue_p99_us": 427.614,
+          "e2e_max_us": 6526.459,
+          "e2e_p50_us": 1470.848,
+          "e2e_p99_us": 5165.067,
+          "end_seconds_exclusive": 100,
+          "message_kinds": {
+            "arrival": 187,
+            "expire_family": 126,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 187,
+            "position": 187
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 435,
+            "duplicate_messages": 0,
+            "expired_families": 63,
+            "expired_records": 2929,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1820,
+            "rescheduled_events": 496,
+            "updated_views": 1618
+          },
+          "retries": 0,
+          "service_p99_us": 4831.317,
+          "start_seconds": 90,
+          "storage_samples": {
+            "first_sample_offset_ns": 90512734414,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2627520,
+                "last": 2629480,
+                "max": 2629480,
+                "min": 2627520
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 88725,
+                "last": 97611,
+                "max": 97611,
+                "min": 88725
+              },
+              "index_retired_nodes_sum": {
+                "first": 1,
+                "last": 0,
+                "max": 7,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 13,
+                "last": 5,
+                "max": 67,
+                "min": 1
+              },
+              "row_fresh_allocations": {
+                "first": 4939,
+                "last": 4948,
+                "max": 4948,
+                "min": 4939
+              },
+              "row_recycled": {
+                "first": 92088,
+                "last": 101288,
+                "max": 101288,
+                "min": 92088
+              },
+              "row_reuse_allocations": {
+                "first": 91245,
+                "last": 100449,
+                "max": 100449,
+                "min": 91245
+              },
+              "snapshot_xmax": {
+                "first": 251064,
+                "last": 275710,
+                "max": 275710,
+                "min": 251064
+              },
+              "snapshot_xmin": {
+                "first": 251064,
+                "last": 275710,
+                "max": 275710,
+                "min": 251064
+              }
+            },
+            "last_sample_offset_ns": 99602083592,
+            "maximum_sample_duration_ns": 8000,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10164,
+          "transcripts_without_write_operations": 126
+        },
+        {
+          "arrival_queue_p99_us": 102.082,
+          "e2e_max_us": 7060.986,
+          "e2e_p50_us": 1397.303,
+          "e2e_p99_us": 5304.083,
+          "end_seconds_exclusive": 110,
+          "message_kinds": {
+            "arrival": 186,
+            "expire_family": 125,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 188,
+            "position": 188
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 437,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2911,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1822,
+            "rescheduled_events": 496,
+            "updated_views": 1618
+          },
+          "retries": 0,
+          "service_p99_us": 5082.694,
+          "start_seconds": 100,
+          "storage_samples": {
+            "first_sample_offset_ns": 100603136163,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2629688,
+                "last": 2631144,
+                "max": 2631144,
+                "min": 2629688
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 98650,
+                "last": 107496,
+                "max": 107496,
+                "min": 98650
+              },
+              "index_retired_nodes_sum": {
+                "first": 4,
+                "last": 1,
+                "max": 8,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 5,
+                "last": 11,
+                "max": 63,
+                "min": 0
+              },
+              "row_fresh_allocations": {
+                "first": 4949,
+                "last": 4956,
+                "max": 4956,
+                "min": 4949
+              },
+              "row_recycled": {
+                "first": 102339,
+                "last": 111548,
+                "max": 111548,
+                "min": 102339
+              },
+              "row_reuse_allocations": {
+                "first": 101487,
+                "last": 110705,
+                "max": 110705,
+                "min": 101487
+              },
+              "snapshot_xmax": {
+                "first": 278504,
+                "last": 303178,
+                "max": 303178,
+                "min": 278504
+              },
+              "snapshot_xmin": {
+                "first": 278504,
+                "last": 303178,
+                "max": 303178,
+                "min": 278504
+              }
+            },
+            "last_sample_offset_ns": 109682478703,
+            "maximum_sample_duration_ns": 8444,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10153,
+          "transcripts_without_write_operations": 126
+        },
+        {
+          "arrival_queue_p99_us": 784.871,
+          "e2e_max_us": 6428.234,
+          "e2e_p50_us": 1532.607,
+          "e2e_p99_us": 5113.475,
+          "end_seconds_exclusive": 120,
+          "message_kinds": {
+            "arrival": 189,
+            "expire_family": 125,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 187,
+            "position": 187
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 438,
+            "duplicate_messages": 0,
+            "expired_families": 63,
+            "expired_records": 2892,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1838,
+            "rescheduled_events": 504,
+            "updated_views": 1632
+          },
+          "retries": 0,
+          "service_p99_us": 4516.718,
+          "start_seconds": 110,
+          "storage_samples": {
+            "first_sample_offset_ns": 110690990692,
+            "gauges_and_counters": {
+              "active_transactions": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "arena_capacity_bytes": {
+                "first": 268435456,
+                "last": 268435456,
+                "max": 268435456,
+                "min": 268435456
+              },
+              "arena_high_water_bytes": {
+                "first": 2631352,
+                "last": 2632808,
+                "max": 2632808,
+                "min": 2631352
+              },
+              "index_alloc_failures_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_gc_recycle_errors_sum": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_reclaimed_postings_sum": {
+                "first": 108548,
+                "last": 117352,
+                "max": 117352,
+                "min": 108548
+              },
+              "index_retired_nodes_sum": {
+                "first": 0,
+                "last": 2,
+                "max": 9,
+                "min": 0
+              },
+              "index_retired_postings_sum": {
+                "first": 4,
+                "last": 6,
+                "max": 62,
+                "min": 4
+              },
+              "row_fresh_allocations": {
+                "first": 4957,
+                "last": 4964,
+                "max": 4964,
+                "min": 4957
+              },
+              "row_recycled": {
+                "first": 112586,
+                "last": 121809,
+                "max": 121809,
+                "min": 112586
+              },
+              "row_reuse_allocations": {
+                "first": 111734,
+                "last": 120945,
+                "max": 120945,
+                "min": 111734
+              },
+              "snapshot_xmax": {
+                "first": 305923,
+                "last": 330578,
+                "max": 330578,
+                "min": 305923
+              },
+              "snapshot_xmin": {
+                "first": 305923,
+                "last": 330578,
+                "max": 330578,
+                "min": 305923
+              }
+            },
+            "last_sample_offset_ns": 119763424701,
+            "maximum_sample_duration_ns": 8307,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10185,
+          "transcripts_without_write_operations": 124
+        }
+      ],
+      "workload_classification": "synthetic staggered fleet; not calibrated production HyperFeed"
+    },
+    {
+      "admission_epoch_monotonic_ns": 16005329308719,
+      "after_drain": {
+        "analyze_count": 1,
+        "autoanalyze_count": 2,
+        "autovacuum_count": 2,
+        "cluster_checkpoint_counters": {
+          "buffers_alloc": 18332,
+          "buffers_backend": 20501,
+          "buffers_backend_fsync": 0,
+          "buffers_checkpoint": 2222,
+          "buffers_clean": 0,
+          "checkpoint_sync_time": 285,
+          "checkpoint_write_time": 265161,
+          "checkpoints_req": 0,
+          "checkpoints_timed": 15,
+          "maxwritten_clean": 0,
+          "stats_reset": "2026-09-25T00:14:03.439926-05:00"
+        },
+        "cluster_wal_counters": {
+          "stats_reset": "2026-09-25T00:14:03.439926-05:00",
+          "wal_buffers_full": 225,
+          "wal_bytes": 873244014,
+          "wal_fpi": 3593,
+          "wal_records": 9242469,
+          "wal_sync": 1108,
+          "wal_sync_time": 0,
+          "wal_write": 88629,
+          "wal_write_time": 0
+        },
+        "database_counters": {
+          "blk_read_time": 0,
+          "blk_write_time": 0,
+          "conflicts": 0,
+          "datname": "contention_test",
+          "deadlocks": 0,
+          "stats_reset": null,
+          "temp_bytes": 0,
+          "temp_files": 0,
+          "xact_commit": 198874,
+          "xact_rollback": 11444
+        },
+        "deleted_tuples": 0,
+        "estimated_dead_tuples": 50449,
+        "estimated_live_tuples": 4096,
+        "hot_updated_tuples": 0,
+        "index_bytes": 1769472,
+        "inserted_tuples": 4096,
+        "resident_memory_measured": false,
+        "table_bytes": 2056192,
+        "total_bytes": 3825664,
+        "tuple_counts_are_estimates": true,
+        "updated_tuples": 116802,
+        "vacuum_count": 0
+      },
+      "aggregate": {
+        "arrival_queue_p99_us": 821.556,
+        "e2e_max_us": 4305.928,
+        "e2e_p50_us": 1165.624,
+        "e2e_p99_us": 2193.009,
+        "message_kinds": {
+          "arrival": 2250,
+          "expire_family": 1500,
+          "global_cancel": 750,
+          "global_housekeeping": 1500,
+          "global_projection": 750,
+          "global_reschedule": 750,
+          "plan": 2250,
+          "position": 2250
+        },
+        "messages": 12000,
+        "messages_retried": 0,
+        "outcomes": {
+          "allocation_deferred": 0,
+          "cancelled_events": 3000,
+          "claimed_events": 3000,
+          "created_views": 5250,
+          "duplicate_messages": 0,
+          "expired_families": 749,
+          "expired_records": 34839,
+          "ignored_stale": 0,
+          "missing_family": 0,
+          "outputs": 21963,
+          "rescheduled_events": 6000,
+          "updated_views": 19500
+        },
+        "retries": 0,
+        "service_p99_us": 1729.507,
+        "transcript_write_operations": 122052,
+        "transcripts_without_write_operations": 1501
+      },
+      "all_messages_before_next_scheduled_arrival": true,
+      "all_sample_summary": {
+        "first_sample_offset_ns": -101767276,
+        "gauges_and_counters": {
+          "analyze_count": {
+            "first": 1,
+            "last": 1,
+            "max": 1,
+            "min": 1
+          },
+          "autoanalyze_count": {
+            "first": 0,
+            "last": 2,
+            "max": 2,
+            "min": 0
+          },
+          "autovacuum_count": {
+            "first": 0,
+            "last": 2,
+            "max": 2,
+            "min": 0
+          },
+          "deleted_tuples": {
+            "first": 0,
+            "last": 0,
+            "max": 0,
+            "min": 0
+          },
+          "estimated_dead_tuples": {
+            "first": 0,
+            "last": 49176,
+            "max": 57616,
+            "min": 0
+          },
+          "estimated_live_tuples": {
+            "first": 4096,
+            "last": 4096,
+            "max": 4096,
+            "min": 4096
+          },
+          "hot_updated_tuples": {
+            "first": 0,
+            "last": 0,
+            "max": 0,
+            "min": 0
+          },
+          "index_bytes": {
+            "first": 245760,
+            "last": 1769472,
+            "max": 1769472,
+            "min": 245760
+          },
+          "inserted_tuples": {
+            "first": 4096,
+            "last": 4096,
+            "max": 4096,
+            "min": 4096
+          },
+          "table_bytes": {
+            "first": 843776,
+            "last": 2056192,
+            "max": 2056192,
+            "min": 843776
+          },
+          "total_bytes": {
+            "first": 1089536,
+            "last": 3825664,
+            "max": 3825664,
+            "min": 1089536
+          },
+          "updated_tuples": {
+            "first": 0,
+            "last": 115529,
+            "max": 115529,
+            "min": 0
+          },
+          "vacuum_count": {
+            "first": 0,
+            "last": 0,
+            "max": 0,
+            "min": 0
+          }
+        },
+        "last_sample_offset_ns": 119113954952,
+        "maximum_sample_duration_ns": 4810567,
+        "sample_count": 119
+      },
+      "background_work": {
+        "global_cancel": {
+          "arrival_queue_p99_us": 813.831,
+          "e2e_max_us": 2272.676,
+          "e2e_p50_us": 743.742,
+          "e2e_p99_us": 1800.757,
+          "message_kinds": {
+            "global_cancel": 750
+          },
+          "messages": 750,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 3000,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "retries": 0,
+          "service_p99_us": 1226.538,
+          "transcript_write_operations": 3000,
+          "transcripts_without_write_operations": 0
+        },
+        "global_housekeeping": {
+          "arrival_queue_p99_us": 819.065,
+          "e2e_max_us": 3020.404,
+          "e2e_p50_us": 930.74,
+          "e2e_p99_us": 2008.024,
+          "message_kinds": {
+            "global_housekeeping": 1500
+          },
+          "messages": 1500,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 20832,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "retries": 0,
+          "service_p99_us": 1509.238,
+          "transcript_write_operations": 20832,
+          "transcripts_without_write_operations": 750
+        },
+        "global_projection": {
+          "arrival_queue_p99_us": 815.145,
+          "e2e_max_us": 3106.696,
+          "e2e_p50_us": 1284.956,
+          "e2e_p99_us": 2208.731,
+          "message_kinds": {
+            "global_projection": 750
+          },
+          "messages": 750,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 3000,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 2463,
+            "rescheduled_events": 3000,
+            "updated_views": 0
+          },
+          "retries": 0,
+          "service_p99_us": 1790.949,
+          "transcript_write_operations": 5463,
+          "transcripts_without_write_operations": 0
+        },
+        "global_reschedule": {
+          "arrival_queue_p99_us": 802.406,
+          "e2e_max_us": 2118.184,
+          "e2e_p50_us": 701.988,
+          "e2e_p99_us": 1446.698,
+          "message_kinds": {
+            "global_reschedule": 750
+          },
+          "messages": 750,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 3000,
+            "updated_views": 0
+          },
+          "retries": 0,
+          "service_p99_us": 1033.282,
+          "transcript_write_operations": 3000,
+          "transcripts_without_write_operations": 0
+        }
+      },
+      "baseline_samples": [
+        {
+          "completed_messages": 0,
+          "elapsed_seconds": 0.0,
+          "sample_finished_ns": 16005229308663,
+          "sample_offset_ns": -101767276,
+          "sample_started_ns": 16005225774223,
+          "storage": {
+            "analyze_count": 1,
+            "autoanalyze_count": 0,
+            "autovacuum_count": 0,
+            "cluster_checkpoint_counters": {
+              "buffers_alloc": 17990,
+              "buffers_backend": 20501,
+              "buffers_backend_fsync": 0,
+              "buffers_checkpoint": 2222,
+              "buffers_clean": 0,
+              "checkpoint_sync_time": 285,
+              "checkpoint_write_time": 265161,
+              "checkpoints_req": 0,
+              "checkpoints_timed": 15,
+              "maxwritten_clean": 0,
+              "stats_reset": "2026-09-25T00:14:03.439926-05:00"
+            },
+            "cluster_wal_counters": {
+              "stats_reset": "2026-09-25T00:14:03.439926-05:00",
+              "wal_buffers_full": 225,
+              "wal_bytes": 814976660,
+              "wal_fpi": 3587,
+              "wal_records": 8587642,
+              "wal_sync": 1051,
+              "wal_sync_time": 0,
+              "wal_write": 81787,
+              "wal_write_time": 0
+            },
+            "database_counters": {
+              "blk_read_time": 0,
+              "blk_write_time": 0,
+              "conflicts": 0,
+              "datname": "contention_test",
+              "deadlocks": 0,
+              "stats_reset": null,
+              "temp_bytes": 0,
+              "temp_files": 0,
+              "xact_commit": 185606,
+              "xact_rollback": 11444
+            },
+            "deleted_tuples": 0,
+            "estimated_dead_tuples": 0,
+            "estimated_live_tuples": 4096,
+            "hot_updated_tuples": 0,
+            "index_bytes": 245760,
+            "inserted_tuples": 4096,
+            "resident_memory_measured": false,
+            "table_bytes": 843776,
+            "total_bytes": 1089536,
+            "tuple_counts_are_estimates": true,
+            "updated_tuples": 0,
+            "vacuum_count": 0
+          }
+        }
+      ],
+      "checks": {
+        "exact_100_hz_schedule": true,
+        "overall_latency_retry_and_outcome_totals_match_report": true,
+        "per_kind_counts_outcomes_retries_and_p99_match_report": true,
+        "per_worker_counts_match": true,
+        "timestamp_identities_match": true,
+        "unique_message_ids": true
+      },
+      "engine": "postgres",
+      "final_population": {
+        "active_rows": 251,
+        "flight_views": 71,
+        "live_families": 13,
+        "retained_positions": 28,
+        "scheduled_events": 33,
+        "scope": "initial/final snapshot population, not a measured runtime minimum"
+      },
+      "initial_population": {
+        "active_rows": 234,
+        "flight_views": 64,
+        "live_families": 12,
+        "retained_positions": 27,
+        "scheduled_events": 32,
+        "scope": "initial/final snapshot population, not a measured runtime minimum"
+      },
+      "oracle_status_from_original_run": "Valid",
+      "overlap": {
+        "message_service_including_retries": {
+          "maximum_simultaneous_intervals": 1,
+          "messages_overlapping_another": 0,
+          "overlapping_pairs": 0
+        },
+        "scheduled_arrival_through_coordinator_receipt": {
+          "maximum_simultaneous_intervals": 1,
+          "messages_overlapping_another": 0,
+          "overlapping_pairs": 0
+        },
+        "scope": "half-open monotonic intervals on this host; successful-attempt intervals exclude failed attempts, service intervals include retries/backoff",
+        "successful_transaction_attempts": {
+          "maximum_simultaneous_intervals": 1,
+          "messages_overlapping_another": 0,
+          "overlapping_pairs": 0
+        }
+      },
+      "samples_after_admission": [],
+      "source_workload_label": "fleet",
+      "windows": [
+        {
+          "arrival_queue_p99_us": 421.092,
+          "e2e_max_us": 4305.928,
+          "e2e_p50_us": 1163.318,
+          "e2e_p99_us": 2165.149,
+          "end_seconds_exclusive": 10,
+          "message_kinds": {
+            "arrival": 189,
+            "expire_family": 125,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 187,
+            "position": 187
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 438,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2892,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1838,
+            "rescheduled_events": 504,
+            "updated_views": 1632
+          },
+          "retries": 0,
+          "service_p99_us": 1853.637,
+          "start_seconds": 0,
+          "storage_samples": {
+            "first_sample_offset_ns": 903654798,
+            "gauges_and_counters": {
+              "analyze_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "autoanalyze_count": {
+                "first": 0,
+                "last": 1,
+                "max": 1,
+                "min": 0
+              },
+              "autovacuum_count": {
+                "first": 0,
+                "last": 1,
+                "max": 1,
+                "min": 0
+              },
+              "deleted_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "estimated_dead_tuples": {
+                "first": 235,
+                "last": 1005,
+                "max": 6868,
+                "min": 21
+              },
+              "estimated_live_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "hot_updated_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_bytes": {
+                "first": 245760,
+                "last": 458752,
+                "max": 458752,
+                "min": 245760
+              },
+              "inserted_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "table_bytes": {
+                "first": 909312,
+                "last": 1032192,
+                "max": 1032192,
+                "min": 909312
+              },
+              "total_bytes": {
+                "first": 1155072,
+                "last": 1490944,
+                "max": 1490944,
+                "min": 1155072
+              },
+              "updated_tuples": {
+                "first": 235,
+                "last": 8863,
+                "max": 8863,
+                "min": 235
+              },
+              "vacuum_count": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              }
+            },
+            "last_sample_offset_ns": 9993432846,
+            "maximum_sample_duration_ns": 4405600,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10185,
+          "transcripts_without_write_operations": 125
+        },
+        {
+          "arrival_queue_p99_us": 129.864,
+          "e2e_max_us": 2210.778,
+          "e2e_p50_us": 1099.488,
+          "e2e_p99_us": 1916.226,
+          "end_seconds_exclusive": 20,
+          "message_kinds": {
+            "arrival": 186,
+            "expire_family": 125,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 188,
+            "position": 188
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 437,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2903,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1824,
+            "rescheduled_events": 496,
+            "updated_views": 1618
+          },
+          "retries": 0,
+          "service_p99_us": 1734.358,
+          "start_seconds": 10,
+          "storage_samples": {
+            "first_sample_offset_ns": 11003024289,
+            "gauges_and_counters": {
+              "analyze_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "autoanalyze_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "autovacuum_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "deleted_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "estimated_dead_tuples": {
+                "first": 2001,
+                "last": 9963,
+                "max": 9963,
+                "min": 2001
+              },
+              "estimated_live_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "hot_updated_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_bytes": {
+                "first": 475136,
+                "last": 565248,
+                "max": 565248,
+                "min": 475136
+              },
+              "inserted_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "table_bytes": {
+                "first": 1032192,
+                "last": 1032192,
+                "max": 1032192,
+                "min": 1032192
+              },
+              "total_bytes": {
+                "first": 1507328,
+                "last": 1597440,
+                "max": 1597440,
+                "min": 1507328
+              },
+              "updated_tuples": {
+                "first": 9859,
+                "last": 17821,
+                "max": 17821,
+                "min": 9859
+              },
+              "vacuum_count": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              }
+            },
+            "last_sample_offset_ns": 19084055985,
+            "maximum_sample_duration_ns": 4661530,
+            "sample_count": 9
+          },
+          "transcript_write_operations": 10147,
+          "transcripts_without_write_operations": 126
+        },
+        {
+          "arrival_queue_p99_us": 888.221,
+          "e2e_max_us": 2772.129,
+          "e2e_p50_us": 1279.09,
+          "e2e_p99_us": 2339.595,
+          "end_seconds_exclusive": 30,
+          "message_kinds": {
+            "arrival": 187,
+            "expire_family": 126,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 187,
+            "position": 187
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 435,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2916,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1822,
+            "rescheduled_events": 496,
+            "updated_views": 1618
+          },
+          "retries": 0,
+          "service_p99_us": 1689.241,
+          "start_seconds": 20,
+          "storage_samples": {
+            "first_sample_offset_ns": 20093351601,
+            "gauges_and_counters": {
+              "analyze_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "autoanalyze_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "autovacuum_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "deleted_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "estimated_dead_tuples": {
+                "first": 10965,
+                "last": 19862,
+                "max": 19862,
+                "min": 10965
+              },
+              "estimated_live_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "hot_updated_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_bytes": {
+                "first": 565248,
+                "last": 688128,
+                "max": 688128,
+                "min": 565248
+              },
+              "inserted_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "table_bytes": {
+                "first": 1032192,
+                "last": 1163264,
+                "max": 1163264,
+                "min": 1032192
+              },
+              "total_bytes": {
+                "first": 1597440,
+                "last": 1851392,
+                "max": 1851392,
+                "min": 1597440
+              },
+              "updated_tuples": {
+                "first": 18823,
+                "last": 27720,
+                "max": 27720,
+                "min": 18823
+              },
+              "vacuum_count": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              }
+            },
+            "last_sample_offset_ns": 29183203030,
+            "maximum_sample_duration_ns": 4392026,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10153,
+          "transcripts_without_write_operations": 127
+        },
+        {
+          "arrival_queue_p99_us": 365.009,
+          "e2e_max_us": 2442.572,
+          "e2e_p50_us": 1145.311,
+          "e2e_p99_us": 1912.347,
+          "end_seconds_exclusive": 40,
+          "message_kinds": {
+            "arrival": 188,
+            "expire_family": 124,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 188,
+            "position": 188
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 440,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2899,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1839,
+            "rescheduled_events": 504,
+            "updated_views": 1632
+          },
+          "retries": 0,
+          "service_p99_us": 1668.908,
+          "start_seconds": 30,
+          "storage_samples": {
+            "first_sample_offset_ns": 30193520028,
+            "gauges_and_counters": {
+              "analyze_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "autoanalyze_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "autovacuum_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "deleted_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "estimated_dead_tuples": {
+                "first": 20851,
+                "last": 29813,
+                "max": 29813,
+                "min": 20851
+              },
+              "estimated_live_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "hot_updated_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_bytes": {
+                "first": 720896,
+                "last": 868352,
+                "max": 868352,
+                "min": 720896
+              },
+              "inserted_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "table_bytes": {
+                "first": 1171456,
+                "last": 1327104,
+                "max": 1327104,
+                "min": 1171456
+              },
+              "total_bytes": {
+                "first": 1892352,
+                "last": 2195456,
+                "max": 2195456,
+                "min": 1892352
+              },
+              "updated_tuples": {
+                "first": 28709,
+                "last": 37671,
+                "max": 37671,
+                "min": 28709
+              },
+              "vacuum_count": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              }
+            },
+            "last_sample_offset_ns": 39283561788,
+            "maximum_sample_duration_ns": 4417667,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10198,
+          "transcripts_without_write_operations": 124
+        },
+        {
+          "arrival_queue_p99_us": 140.801,
+          "e2e_max_us": 2729.306,
+          "e2e_p50_us": 1091.046,
+          "e2e_p99_us": 2035.351,
+          "end_seconds_exclusive": 50,
+          "message_kinds": {
+            "arrival": 188,
+            "expire_family": 126,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 187,
+            "position": 186
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 435,
+            "duplicate_messages": 0,
+            "expired_families": 63,
+            "expired_records": 2921,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1824,
+            "rescheduled_events": 496,
+            "updated_views": 1621
+          },
+          "retries": 0,
+          "service_p99_us": 1745.77,
+          "start_seconds": 40,
+          "storage_samples": {
+            "first_sample_offset_ns": 40292834888,
+            "gauges_and_counters": {
+              "analyze_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "autoanalyze_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "autovacuum_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "deleted_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "estimated_dead_tuples": {
+                "first": 30793,
+                "last": 39755,
+                "max": 39755,
+                "min": 30793
+              },
+              "estimated_live_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "hot_updated_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_bytes": {
+                "first": 876544,
+                "last": 1007616,
+                "max": 1007616,
+                "min": 876544
+              },
+              "inserted_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "table_bytes": {
+                "first": 1351680,
+                "last": 1572864,
+                "max": 1572864,
+                "min": 1351680
+              },
+              "total_bytes": {
+                "first": 2228224,
+                "last": 2580480,
+                "max": 2580480,
+                "min": 2228224
+              },
+              "updated_tuples": {
+                "first": 38651,
+                "last": 47613,
+                "max": 47613,
+                "min": 38651
+              },
+              "vacuum_count": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              }
+            },
+            "last_sample_offset_ns": 49393647436,
+            "maximum_sample_duration_ns": 4647955,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10165,
+          "transcripts_without_write_operations": 126
+        },
+        {
+          "arrival_queue_p99_us": 832.442,
+          "e2e_max_us": 3179.084,
+          "e2e_p50_us": 1225.36,
+          "e2e_p99_us": 2330.213,
+          "end_seconds_exclusive": 60,
+          "message_kinds": {
+            "arrival": 187,
+            "expire_family": 124,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 188,
+            "position": 189
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 440,
+            "duplicate_messages": 0,
+            "expired_families": 63,
+            "expired_records": 2888,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1835,
+            "rescheduled_events": 504,
+            "updated_views": 1629
+          },
+          "retries": 0,
+          "service_p99_us": 1701.027,
+          "start_seconds": 50,
+          "storage_samples": {
+            "first_sample_offset_ns": 50403478350,
+            "gauges_and_counters": {
+              "analyze_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "autoanalyze_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "autovacuum_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "deleted_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "estimated_dead_tuples": {
+                "first": 40761,
+                "last": 49615,
+                "max": 49615,
+                "min": 40761
+              },
+              "estimated_live_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "hot_updated_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_bytes": {
+                "first": 1015808,
+                "last": 1163264,
+                "max": 1163264,
+                "min": 1015808
+              },
+              "inserted_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "table_bytes": {
+                "first": 1589248,
+                "last": 1843200,
+                "max": 1843200,
+                "min": 1589248
+              },
+              "total_bytes": {
+                "first": 2605056,
+                "last": 3006464,
+                "max": 3006464,
+                "min": 2605056
+              },
+              "updated_tuples": {
+                "first": 48619,
+                "last": 57473,
+                "max": 57473,
+                "min": 48619
+              },
+              "vacuum_count": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              }
+            },
+            "last_sample_offset_ns": 59493470606,
+            "maximum_sample_duration_ns": 4810567,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10178,
+          "transcripts_without_write_operations": 123
+        },
+        {
+          "arrival_queue_p99_us": 307.229,
+          "e2e_max_us": 3974.949,
+          "e2e_p50_us": 1152.515,
+          "e2e_p99_us": 1973.822,
+          "end_seconds_exclusive": 70,
+          "message_kinds": {
+            "arrival": 187,
+            "expire_family": 124,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 188,
+            "position": 189
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 440,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2895,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1835,
+            "rescheduled_events": 504,
+            "updated_views": 1629
+          },
+          "retries": 0,
+          "service_p99_us": 1671.442,
+          "start_seconds": 60,
+          "storage_samples": {
+            "first_sample_offset_ns": 60503747963,
+            "gauges_and_counters": {
+              "analyze_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "autoanalyze_count": {
+                "first": 1,
+                "last": 2,
+                "max": 2,
+                "min": 1
+              },
+              "autovacuum_count": {
+                "first": 1,
+                "last": 2,
+                "max": 2,
+                "min": 1
+              },
+              "deleted_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "estimated_dead_tuples": {
+                "first": 50587,
+                "last": 1079,
+                "max": 57616,
+                "min": 32
+              },
+              "estimated_live_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "hot_updated_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_bytes": {
+                "first": 1187840,
+                "last": 1384448,
+                "max": 1384448,
+                "min": 1187840
+              },
+              "inserted_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "table_bytes": {
+                "first": 1875968,
+                "last": 2056192,
+                "max": 2056192,
+                "min": 1875968
+              },
+              "total_bytes": {
+                "first": 3063808,
+                "last": 3440640,
+                "max": 3440640,
+                "min": 3063808
+              },
+              "updated_tuples": {
+                "first": 58445,
+                "last": 67432,
+                "max": 67432,
+                "min": 58445
+              },
+              "vacuum_count": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              }
+            },
+            "last_sample_offset_ns": 69603030368,
+            "maximum_sample_duration_ns": 4692458,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10185,
+          "transcripts_without_write_operations": 124
+        },
+        {
+          "arrival_queue_p99_us": 148.886,
+          "e2e_max_us": 3137.044,
+          "e2e_p50_us": 1086.699,
+          "e2e_p99_us": 1902.017,
+          "end_seconds_exclusive": 80,
+          "message_kinds": {
+            "arrival": 188,
+            "expire_family": 126,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 187,
+            "position": 186
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 435,
+            "duplicate_messages": 0,
+            "expired_families": 63,
+            "expired_records": 2925,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1825,
+            "rescheduled_events": 496,
+            "updated_views": 1621
+          },
+          "retries": 0,
+          "service_p99_us": 1667.886,
+          "start_seconds": 70,
+          "storage_samples": {
+            "first_sample_offset_ns": 70613726451,
+            "gauges_and_counters": {
+              "analyze_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "autoanalyze_count": {
+                "first": 2,
+                "last": 2,
+                "max": 2,
+                "min": 2
+              },
+              "autovacuum_count": {
+                "first": 2,
+                "last": 2,
+                "max": 2,
+                "min": 2
+              },
+              "deleted_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "estimated_dead_tuples": {
+                "first": 2086,
+                "last": 11014,
+                "max": 11014,
+                "min": 2086
+              },
+              "estimated_live_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "hot_updated_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_bytes": {
+                "first": 1384448,
+                "last": 1400832,
+                "max": 1400832,
+                "min": 1384448
+              },
+              "inserted_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "table_bytes": {
+                "first": 2056192,
+                "last": 2056192,
+                "max": 2056192,
+                "min": 2056192
+              },
+              "total_bytes": {
+                "first": 3440640,
+                "last": 3457024,
+                "max": 3457024,
+                "min": 3440640
+              },
+              "updated_tuples": {
+                "first": 68439,
+                "last": 77367,
+                "max": 77367,
+                "min": 68439
+              },
+              "vacuum_count": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              }
+            },
+            "last_sample_offset_ns": 79723685530,
+            "maximum_sample_duration_ns": 4559655,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10170,
+          "transcripts_without_write_operations": 126
+        },
+        {
+          "arrival_queue_p99_us": 847.579,
+          "e2e_max_us": 2862.874,
+          "e2e_p50_us": 1273.368,
+          "e2e_p99_us": 2480.421,
+          "end_seconds_exclusive": 90,
+          "message_kinds": {
+            "arrival": 188,
+            "expire_family": 124,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 188,
+            "position": 188
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 440,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2868,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1841,
+            "rescheduled_events": 504,
+            "updated_views": 1632
+          },
+          "retries": 0,
+          "service_p99_us": 1818.576,
+          "start_seconds": 80,
+          "storage_samples": {
+            "first_sample_offset_ns": 80733345009,
+            "gauges_and_counters": {
+              "analyze_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "autoanalyze_count": {
+                "first": 2,
+                "last": 2,
+                "max": 2,
+                "min": 2
+              },
+              "autovacuum_count": {
+                "first": 2,
+                "last": 2,
+                "max": 2,
+                "min": 2
+              },
+              "deleted_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "estimated_dead_tuples": {
+                "first": 12049,
+                "last": 20636,
+                "max": 20636,
+                "min": 12049
+              },
+              "estimated_live_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "hot_updated_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_bytes": {
+                "first": 1400832,
+                "last": 1466368,
+                "max": 1466368,
+                "min": 1400832
+              },
+              "inserted_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "table_bytes": {
+                "first": 2056192,
+                "last": 2056192,
+                "max": 2056192,
+                "min": 2056192
+              },
+              "total_bytes": {
+                "first": 3457024,
+                "last": 3522560,
+                "max": 3522560,
+                "min": 3457024
+              },
+              "updated_tuples": {
+                "first": 78402,
+                "last": 86989,
+                "max": 86989,
+                "min": 78402
+              },
+              "vacuum_count": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              }
+            },
+            "last_sample_offset_ns": 89824151432,
+            "maximum_sample_duration_ns": 4585284,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10169,
+          "transcripts_without_write_operations": 124
+        },
+        {
+          "arrival_queue_p99_us": 356.647,
+          "e2e_max_us": 2712.891,
+          "e2e_p50_us": 1151.494,
+          "e2e_p99_us": 2009.263,
+          "end_seconds_exclusive": 100,
+          "message_kinds": {
+            "arrival": 187,
+            "expire_family": 126,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 187,
+            "position": 187
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 435,
+            "duplicate_messages": 0,
+            "expired_families": 63,
+            "expired_records": 2929,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1820,
+            "rescheduled_events": 496,
+            "updated_views": 1618
+          },
+          "retries": 0,
+          "service_p99_us": 1735.857,
+          "start_seconds": 90,
+          "storage_samples": {
+            "first_sample_offset_ns": 90833680652,
+            "gauges_and_counters": {
+              "analyze_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "autoanalyze_count": {
+                "first": 2,
+                "last": 2,
+                "max": 2,
+                "min": 2
+              },
+              "autovacuum_count": {
+                "first": 2,
+                "last": 2,
+                "max": 2,
+                "min": 2
+              },
+              "deleted_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "estimated_dead_tuples": {
+                "first": 21661,
+                "last": 30574,
+                "max": 30574,
+                "min": 21661
+              },
+              "estimated_live_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "hot_updated_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_bytes": {
+                "first": 1474560,
+                "last": 1523712,
+                "max": 1523712,
+                "min": 1474560
+              },
+              "inserted_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "table_bytes": {
+                "first": 2056192,
+                "last": 2056192,
+                "max": 2056192,
+                "min": 2056192
+              },
+              "total_bytes": {
+                "first": 3530752,
+                "last": 3579904,
+                "max": 3579904,
+                "min": 3530752
+              },
+              "updated_tuples": {
+                "first": 88014,
+                "last": 96927,
+                "max": 96927,
+                "min": 88014
+              },
+              "vacuum_count": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              }
+            },
+            "last_sample_offset_ns": 99923590163,
+            "maximum_sample_duration_ns": 4352190,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10164,
+          "transcripts_without_write_operations": 126
+        },
+        {
+          "arrival_queue_p99_us": 138.962,
+          "e2e_max_us": 2489.256,
+          "e2e_p50_us": 1112.492,
+          "e2e_p99_us": 1943.612,
+          "end_seconds_exclusive": 110,
+          "message_kinds": {
+            "arrival": 186,
+            "expire_family": 125,
+            "global_cancel": 63,
+            "global_housekeeping": 126,
+            "global_projection": 62,
+            "global_reschedule": 62,
+            "plan": 188,
+            "position": 188
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 252,
+            "claimed_events": 248,
+            "created_views": 437,
+            "duplicate_messages": 0,
+            "expired_families": 62,
+            "expired_records": 2911,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1822,
+            "rescheduled_events": 496,
+            "updated_views": 1618
+          },
+          "retries": 0,
+          "service_p99_us": 1678.824,
+          "start_seconds": 100,
+          "storage_samples": {
+            "first_sample_offset_ns": 100933499105,
+            "gauges_and_counters": {
+              "analyze_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "autoanalyze_count": {
+                "first": 2,
+                "last": 2,
+                "max": 2,
+                "min": 2
+              },
+              "autovacuum_count": {
+                "first": 2,
+                "last": 2,
+                "max": 2,
+                "min": 2
+              },
+              "deleted_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "estimated_dead_tuples": {
+                "first": 31621,
+                "last": 39280,
+                "max": 39280,
+                "min": 31621
+              },
+              "estimated_live_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "hot_updated_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_bytes": {
+                "first": 1531904,
+                "last": 1662976,
+                "max": 1662976,
+                "min": 1531904
+              },
+              "inserted_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "table_bytes": {
+                "first": 2056192,
+                "last": 2056192,
+                "max": 2056192,
+                "min": 2056192
+              },
+              "total_bytes": {
+                "first": 3588096,
+                "last": 3719168,
+                "max": 3719168,
+                "min": 3588096
+              },
+              "updated_tuples": {
+                "first": 97974,
+                "last": 105633,
+                "max": 105633,
+                "min": 97974
+              },
+              "vacuum_count": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              }
+            },
+            "last_sample_offset_ns": 109013160200,
+            "maximum_sample_duration_ns": 4605956,
+            "sample_count": 9
+          },
+          "transcript_write_operations": 10153,
+          "transcripts_without_write_operations": 126
+        },
+        {
+          "arrival_queue_p99_us": 847.647,
+          "e2e_max_us": 2804.197,
+          "e2e_p50_us": 1283.112,
+          "e2e_p99_us": 2379.981,
+          "end_seconds_exclusive": 120,
+          "message_kinds": {
+            "arrival": 189,
+            "expire_family": 125,
+            "global_cancel": 62,
+            "global_housekeeping": 124,
+            "global_projection": 63,
+            "global_reschedule": 63,
+            "plan": 187,
+            "position": 187
+          },
+          "messages": 1000,
+          "messages_retried": 0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 248,
+            "claimed_events": 252,
+            "created_views": 438,
+            "duplicate_messages": 0,
+            "expired_families": 63,
+            "expired_records": 2892,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1838,
+            "rescheduled_events": 504,
+            "updated_views": 1632
+          },
+          "retries": 0,
+          "service_p99_us": 1703.934,
+          "start_seconds": 110,
+          "storage_samples": {
+            "first_sample_offset_ns": 110023216746,
+            "gauges_and_counters": {
+              "analyze_count": {
+                "first": 1,
+                "last": 1,
+                "max": 1,
+                "min": 1
+              },
+              "autoanalyze_count": {
+                "first": 2,
+                "last": 2,
+                "max": 2,
+                "min": 2
+              },
+              "autovacuum_count": {
+                "first": 2,
+                "last": 2,
+                "max": 2,
+                "min": 2
+              },
+              "deleted_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "estimated_dead_tuples": {
+                "first": 40324,
+                "last": 49176,
+                "max": 49176,
+                "min": 40324
+              },
+              "estimated_live_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "hot_updated_tuples": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              },
+              "index_bytes": {
+                "first": 1662976,
+                "last": 1769472,
+                "max": 1769472,
+                "min": 1662976
+              },
+              "inserted_tuples": {
+                "first": 4096,
+                "last": 4096,
+                "max": 4096,
+                "min": 4096
+              },
+              "table_bytes": {
+                "first": 2056192,
+                "last": 2056192,
+                "max": 2056192,
+                "min": 2056192
+              },
+              "total_bytes": {
+                "first": 3719168,
+                "last": 3825664,
+                "max": 3825664,
+                "min": 3719168
+              },
+              "updated_tuples": {
+                "first": 106677,
+                "last": 115529,
+                "max": 115529,
+                "min": 106677
+              },
+              "vacuum_count": {
+                "first": 0,
+                "last": 0,
+                "max": 0,
+                "min": 0
+              }
+            },
+            "last_sample_offset_ns": 119113954952,
+            "maximum_sample_duration_ns": 4458615,
+            "sample_count": 10
+          },
+          "transcript_write_operations": 10185,
+          "transcripts_without_write_operations": 124
+        }
+      ],
+      "workload_classification": "synthetic staggered fleet; not calibrated production HyperFeed"
+    }
+  ],
+  "storage_window_definition": "observed sample midpoint relative to admission epoch; no interpolation or RSS inference; counters are cumulative",
+  "version": 1,
+  "window_definition": "scheduled-arrival cohorts [0,10), [10,20), ... relative to minimum scheduled_ns; delayed completions remain in their original cohort"
+}

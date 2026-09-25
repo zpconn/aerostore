@@ -1,0 +1,227 @@
+{
+  "binary_sha256": "8842cd00f64fd6964536dadd058b928c7d27574b53a80d7b513c7255ef93ddb5",
+  "created_at": "2026-09-25T21:26:03.405998+00:00",
+  "errors": [],
+  "passed": true,
+  "review_method": "Streamed every history observation independently; reconstructed foreground/timer schedule, IDs, routing, useful outcomes, class counts/percentiles, worker busy time, per-flight order, population snapshots, serial-witness ID coverage and real-time precedence, continuous drain arithmetic, and source/binary hashes. Existing semantic serial oracle result checked, not independently re-executed.",
+  "runs": [
+    {
+      "campaign": "target/calibrated-validation/cadence-native/campaign.json",
+      "campaign_sha256": "e54dc6de54486c1d7307f2479e21a7b58fed30e3faf965e7d16a470b129b54de",
+      "capacity_qualified": false,
+      "classes": {
+        "foreground": {
+          "count": 19232,
+          "positive": 19232,
+          "retries": 12
+        },
+        "housekeeping": {
+          "count": 2,
+          "positive": 2,
+          "retries": 2
+        },
+        "maintenance": {
+          "count": 4,
+          "positive": 4,
+          "retries": 4
+        },
+        "projection": {
+          "count": 2,
+          "positive": 2,
+          "retries": 2
+        }
+      },
+      "continuous_elapsed_seconds": 601.069347823,
+      "engine": "aerostore",
+      "foreground_identities": 12,
+      "foreground_useful_and_ordered": true,
+      "history": "target/calibrated-validation/cadence-native/aerostore-r32-w4-s20260925-g6vpse0d/contention-crucible-wfwCcw/aerostore-0/history.jsonl",
+      "history_sha256": "25c00c0307128ec31cbd4500fb632a1018218777230253395ac0dacd30594da2",
+      "kind_counts": {
+        "global_housekeeping": 2,
+        "global_projection": 2,
+        "plan": 1212,
+        "position": 18020
+      },
+      "maintenance_ticks": [
+        {
+          "claimed_events": 0,
+          "class": "housekeeping",
+          "expired_records": 32,
+          "first_attempt_delay_us": 55.018,
+          "global_query_rows": 196,
+          "id": 4000000001,
+          "outputs": 0,
+          "retries": 2,
+          "scheduled_offset_seconds": 300.0
+        },
+        {
+          "claimed_events": 4,
+          "class": "projection",
+          "expired_records": 0,
+          "first_attempt_delay_us": 74.267,
+          "global_query_rows": 28,
+          "id": 4000000000,
+          "outputs": 4,
+          "retries": 1,
+          "scheduled_offset_seconds": 300.0
+        },
+        {
+          "claimed_events": 0,
+          "class": "housekeeping",
+          "expired_records": 32,
+          "first_attempt_delay_us": 65.198,
+          "global_query_rows": 164,
+          "id": 4000000003,
+          "outputs": 0,
+          "retries": 0,
+          "scheduled_offset_seconds": 600.0
+        },
+        {
+          "claimed_events": 4,
+          "class": "projection",
+          "expired_records": 0,
+          "first_attempt_delay_us": 71.396,
+          "global_query_rows": 28,
+          "id": 4000000002,
+          "outputs": 4,
+          "retries": 1,
+          "scheduled_offset_seconds": 600.0
+        }
+      ],
+      "observations": 19236,
+      "oracle_status": "Valid",
+      "population": {
+        "final": 16,
+        "initial": 16
+      },
+      "post_worker_drain_confirmation_seconds": 0.038371212,
+      "representative_cadence_coverage": true,
+      "supporting_sha256": {
+        "final.json": "ce2c523221b9e64acc07595935d444a0e6afcea1a7b6be2c48f7611e93e29de4",
+        "initial.json": "4f2dc6a6080e7533aa95b0c0d09878ad129412f1dd88e0458d5ae7a798bab7cb",
+        "offered-schedule.json": "174f89f9d29526344e057c9ad9e8d76ea7819f490cb51305574480eb61b366e6",
+        "serial-witness.json": "cb3db6796781773ffa7148b3dad089bb35b2c2bf4c593adf1d6eace793800963"
+      },
+      "worker_counts": [
+        4808,
+        4808,
+        4808,
+        4808,
+        2,
+        2
+      ],
+      "worker_shutdown_seconds": 0.030477562
+    },
+    {
+      "campaign": "target/calibrated-validation/cadence-postgres/campaign.json",
+      "campaign_sha256": "c608f2b456359d80fca06010c051535109502f30c4a50bbb70c8c9092645af14",
+      "capacity_qualified": false,
+      "classes": {
+        "foreground": {
+          "count": 19232,
+          "positive": 19232,
+          "retries": 0
+        },
+        "housekeeping": {
+          "count": 2,
+          "positive": 2,
+          "retries": 0
+        },
+        "maintenance": {
+          "count": 4,
+          "positive": 4,
+          "retries": 2
+        },
+        "projection": {
+          "count": 2,
+          "positive": 2,
+          "retries": 2
+        }
+      },
+      "continuous_elapsed_seconds": 601.035254571,
+      "engine": "postgres",
+      "foreground_identities": 12,
+      "foreground_useful_and_ordered": true,
+      "history": "target/calibrated-validation/cadence-postgres/postgres-r32-w4-s20260925-5bqiv1oc/contention-crucible-q3bRCu/postgres-0/history.jsonl",
+      "history_sha256": "a1a627e012c3a16cf2bd5d8df0456062afcf3b504dd8c66c3b935ca99c56d8df",
+      "kind_counts": {
+        "global_housekeeping": 2,
+        "global_projection": 2,
+        "plan": 1212,
+        "position": 18020
+      },
+      "maintenance_ticks": [
+        {
+          "claimed_events": 0,
+          "class": "housekeeping",
+          "expired_records": 32,
+          "first_attempt_delay_us": 93.366,
+          "global_query_rows": 196,
+          "id": 4000000001,
+          "outputs": 0,
+          "retries": 0,
+          "scheduled_offset_seconds": 300.0
+        },
+        {
+          "claimed_events": 4,
+          "class": "projection",
+          "expired_records": 0,
+          "first_attempt_delay_us": 108.797,
+          "global_query_rows": 28,
+          "id": 4000000000,
+          "outputs": 4,
+          "retries": 1,
+          "scheduled_offset_seconds": 300.0
+        },
+        {
+          "claimed_events": 0,
+          "class": "housekeeping",
+          "expired_records": 32,
+          "first_attempt_delay_us": 85.703,
+          "global_query_rows": 164,
+          "id": 4000000003,
+          "outputs": 0,
+          "retries": 0,
+          "scheduled_offset_seconds": 600.0
+        },
+        {
+          "claimed_events": 4,
+          "class": "projection",
+          "expired_records": 0,
+          "first_attempt_delay_us": 74.05,
+          "global_query_rows": 28,
+          "id": 4000000002,
+          "outputs": 4,
+          "retries": 1,
+          "scheduled_offset_seconds": 600.0
+        }
+      ],
+      "observations": 19236,
+      "oracle_status": "Valid",
+      "population": {
+        "final": 16,
+        "initial": 16
+      },
+      "post_worker_drain_confirmation_seconds": 0.004428592,
+      "representative_cadence_coverage": true,
+      "supporting_sha256": {
+        "final.json": "ce2c523221b9e64acc07595935d444a0e6afcea1a7b6be2c48f7611e93e29de4",
+        "initial.json": "4f2dc6a6080e7533aa95b0c0d09878ad129412f1dd88e0458d5ae7a798bab7cb",
+        "offered-schedule.json": "63aeb6bc1feb29d21b94d176faf49f08556ac8e36f932d724cd1d26afdfb7906",
+        "serial-witness.json": "3825df4552a410e5df8aa802de95224a50f23b98a51fa9c22501aa76e2656875"
+      },
+      "worker_counts": [
+        4808,
+        4808,
+        4808,
+        4808,
+        2,
+        2
+      ],
+      "worker_shutdown_seconds": 0.030488578
+    }
+  ],
+  "scope": "Concurrent same-host functional validation, 601 seconds and one seed per engine. Two positive jobs per timer at 300 and 600 seconds. No capacity/ranking/10x, full global sweep, turnover, memory plateau or remote-worker claim.",
+  "source_sha256": "29f53f412ab151ce026c189a95e67c477015ffa0489a59c8bdc5e254f7451add"
+}

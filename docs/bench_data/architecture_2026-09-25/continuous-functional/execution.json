@@ -1,0 +1,31 @@
+{
+  "command": [
+    "python3",
+    "scripts/run_remote_contention.py",
+    "--binary",
+    "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/continuous-functional/benchmark",
+    "--output-dir",
+    "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/continuous-functional/remote-loopback",
+    "--workload",
+    "fleet",
+    "--families",
+    "16",
+    "--hot-percent",
+    "0",
+    "--evidence",
+    "full",
+    "--seconds",
+    "2",
+    "--arrival-rate",
+    "100",
+    "--workers",
+    "4",
+    "--shm-mib",
+    "256",
+    "--seed",
+    "20260925"
+  ],
+  "exit_code": 0,
+  "binary_sha256": "346d9393338c7ebdbce5c8975f05a06057176d0a53ef9d4de5739dcdc4db20a3",
+  "source_inventory_sha256": "d817ba814d857356f29c70d1f5dce340e380ce453601d028b69df939df6a5c4a"
+}

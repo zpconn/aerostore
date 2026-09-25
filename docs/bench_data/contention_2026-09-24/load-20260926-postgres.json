@@ -1,0 +1,358 @@
+{
+  "architecture_promotion_eligible": false,
+  "completed": true,
+  "config": {
+    "engine": "postgres",
+    "families": 16,
+    "global_time_predicates": false,
+    "hot_percent": 80,
+    "max_messages": 100000,
+    "message_interval_us": 0,
+    "mode": "sustained",
+    "oracle_budget": 2000000,
+    "output": "/home/zpconn/code/aerostore/target/contention-validation/load-20260926-postgres.json",
+    "seconds": 5,
+    "seed": 20260926,
+    "shm_mib": 256,
+    "workers": 4
+  },
+  "durability_contract": "both use WAL with asynchronous acknowledgement; fsync on PostgreSQL; native writer drained on normal completion; equal crash loss windows and crash recovery NOT claimed",
+  "evidence_directory": "/home/zpconn/code/aerostore/target/contention-validation/contention-crucible-5IvedN",
+  "git_revision": "6291200b4383538d960f3b1c73942715193f464b",
+  "passed": true,
+  "postgres_configuration": {
+    "application_prelocks": false,
+    "fsync": "on",
+    "full_page_writes": "on",
+    "max_connections": "100",
+    "predeclared_write_sets": false,
+    "server_version": "16.13 (Debian 16.13-1.pgdg13+1)",
+    "shared_buffers": "128MB",
+    "snapshot_established": "first business query",
+    "synchronous_commit": "off",
+    "transaction_isolation": "serializable",
+    "wal_level": "replica",
+    "wal_writer_delay": "10s"
+  },
+  "runs": [
+    {
+      "after_drain": {
+        "autovacuum_count": 0,
+        "estimated_dead_tuples": 3126,
+        "estimated_live_tuples": 4096,
+        "index_bytes": 237568,
+        "resident_memory_measured": false,
+        "table_bytes": 1024000,
+        "total_bytes": 1261568,
+        "tuple_counts_are_estimates": true,
+        "vacuum_count": 0
+      },
+      "completed_by_worker": [
+        36,
+        31,
+        34,
+        34
+      ],
+      "completed_messages": 135,
+      "completed_messages_per_second": 17.337996798803967,
+      "elapsed_seconds": 7.786366647,
+      "engine": "postgres",
+      "evidence_directory": "/home/zpconn/code/aerostore/target/contention-validation/contention-crucible-5IvedN/postgres-0",
+      "execution_completed": true,
+      "invariants": {
+        "checks": {
+          "active_dedup": 66,
+          "active_events": 112,
+          "active_families": 16,
+          "active_flights": 112,
+          "active_outputs": 173,
+          "active_positions": 134,
+          "provenance_checked": 531
+        },
+        "passed": true
+      },
+      "message_kinds": {
+        "housekeeping": 17,
+        "key_move": 16,
+        "plan": 16,
+        "position": 51,
+        "projection": 35
+      },
+      "message_latency_max_us_including_retries": 3132109.011,
+      "message_latency_p50_us_including_retries": 9777.763,
+      "message_latency_p99_us_including_retries": 3038425.009,
+      "native_audit": null,
+      "oracle_detail": "complete observations, effects, outcomes and final state have a serial witness respecting non-overlap",
+      "oracle_explored": 135,
+      "oracle_seconds": 0.004849318,
+      "oracle_status": "Valid",
+      "passed": true,
+      "per_kind": {
+        "housekeeping": {
+          "completed": 17,
+          "outcomes": {
+            "created_views": 0,
+            "expired_records": 248,
+            "ignored_stale": 0,
+            "outputs": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 1176012.475,
+          "retries": 100
+        },
+        "key_move": {
+          "completed": 16,
+          "outcomes": {
+            "created_views": 0,
+            "expired_records": 0,
+            "ignored_stale": 25,
+            "outputs": 39,
+            "updated_views": 39
+          },
+          "p99_us_including_retries": 960988.229,
+          "retries": 8
+        },
+        "plan": {
+          "completed": 16,
+          "outcomes": {
+            "created_views": 0,
+            "expired_records": 0,
+            "ignored_stale": 38,
+            "outputs": 26,
+            "updated_views": 26
+          },
+          "p99_us_including_retries": 19703.421,
+          "retries": 6
+        },
+        "position": {
+          "completed": 51,
+          "outcomes": {
+            "created_views": 0,
+            "expired_records": 0,
+            "ignored_stale": 74,
+            "outputs": 130,
+            "updated_views": 130
+          },
+          "p99_us_including_retries": 1091702.773,
+          "retries": 111
+        },
+        "projection": {
+          "completed": 35,
+          "outcomes": {
+            "created_views": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "outputs": 125,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 3132109.011,
+          "retries": 157
+        }
+      },
+      "performance_comparison_eligible": false,
+      "performance_scope": "diagnostic instrumented workload; repeated matched trials, noise analysis and availability acceptance are required before architecture promotion",
+      "postgres_configuration": {
+        "application_prelocks": false,
+        "fsync": "on",
+        "full_page_writes": "on",
+        "max_connections": "100",
+        "predeclared_write_sets": false,
+        "server_version": "16.13 (Debian 16.13-1.pgdg13+1)",
+        "shared_buffers": "128MB",
+        "snapshot_established": "first business query",
+        "synchronous_commit": "off",
+        "transaction_isolation": "serializable",
+        "wal_level": "replica",
+        "wal_writer_delay": "10s"
+      },
+      "requested_duration_reached": true,
+      "retention_samples": [
+        {
+          "completed_messages": 0,
+          "elapsed_seconds": 0.0,
+          "sample_finished_ns": 2495843748295,
+          "sample_started_ns": 2495838308136,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 0,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 196608,
+            "resident_memory_measured": false,
+            "table_bytes": 843776,
+            "total_bytes": 1040384,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 3,
+          "elapsed_seconds": 1.032705626,
+          "sample_finished_ns": 2496876453905,
+          "sample_started_ns": 2496869260526,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 86,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 196608,
+            "resident_memory_measured": false,
+            "table_bytes": 884736,
+            "total_bytes": 1081344,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 27,
+          "elapsed_seconds": 2.062270391,
+          "sample_finished_ns": 2497906018668,
+          "sample_started_ns": 2497898149912,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 86,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 196608,
+            "resident_memory_measured": false,
+            "table_bytes": 892928,
+            "total_bytes": 1089536,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 40,
+          "elapsed_seconds": 3.158680114,
+          "sample_finished_ns": 2499002428391,
+          "sample_started_ns": 2498992918994,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 476,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 221184,
+            "resident_memory_measured": false,
+            "table_bytes": 917504,
+            "total_bytes": 1138688,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 71,
+          "elapsed_seconds": 4.179260154,
+          "sample_finished_ns": 2500023008415,
+          "sample_started_ns": 2500015846542,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 729,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 221184,
+            "resident_memory_measured": false,
+            "table_bytes": 950272,
+            "total_bytes": 1171456,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 131,
+          "elapsed_seconds": 5.285851413,
+          "sample_finished_ns": 2501129599689,
+          "sample_started_ns": 2501122102773,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 1441,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 237568,
+            "resident_memory_measured": false,
+            "table_bytes": 1015808,
+            "total_bytes": 1253376,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 133,
+          "elapsed_seconds": 6.307250978,
+          "sample_finished_ns": 2502150999253,
+          "sample_started_ns": 2502142533663,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 3081,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 237568,
+            "resident_memory_measured": false,
+            "table_bytes": 1024000,
+            "total_bytes": 1261568,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 133,
+          "elapsed_seconds": 7.333997928,
+          "sample_finished_ns": 2503177746197,
+          "sample_started_ns": 2503169042947,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 3092,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 237568,
+            "resident_memory_measured": false,
+            "table_bytes": 1024000,
+            "total_bytes": 1261568,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        }
+      ],
+      "retries": 382,
+      "retry_cause_limit": "native stages do not distinguish exact predicate bucket collisions, row validation or underlying newer-stamp causes; PostgreSQL reports SQLSTATE",
+      "retry_causes": {
+        "commit:40001": 8,
+        "query:40001": 10,
+        "read:40001": 74,
+        "write:40001": 281,
+        "write:40P01": 9
+      },
+      "scenario": "sustained-mixed",
+      "scratch_cleanup_completed": true,
+      "store_metrics": {
+        "aborts": 382,
+        "begins": 517,
+        "commits": 135,
+        "index_mutations": 0,
+        "queries": 1846,
+        "reads": 4586,
+        "returned_rows": 22416,
+        "savepoint_rollbacks": 0,
+        "savepoints": 0,
+        "writes": 3101
+      },
+      "timing_contract": "instrumented closed-loop completion throughput includes process/receipt IPC; service latency includes full query/write recording, retries/backoff, excludes queue/IPC; scenarios include their deliberate first-query wait; oracle and final audit are outside timing",
+      "worker_failure_availability_tested": false,
+      "worker_message_cap_reached": false,
+      "worker_stops": [
+        {
+          "finished_ns": 2501633457752,
+          "stop_reason": "deadline"
+        },
+        {
+          "finished_ns": 2503629982689,
+          "stop_reason": "deadline"
+        },
+        {
+          "finished_ns": 2503627182099,
+          "stop_reason": "deadline"
+        },
+        {
+          "finished_ns": 2501623566505,
+          "stop_reason": "deadline"
+        }
+      ]
+    }
+  ],
+  "schema": 1,
+  "scope": "synthetic harder HyperFeed storage workload, not proprietary handler compatibility or architecture superiority",
+  "transaction_contract": "single-table native optimistic transactions versus PostgreSQL SERIALIZABLE; dynamic reads/writes, no family prelocks; strict serial witness checked for every successful attempt",
+  "whole_engine_verified": false,
+  "worker_failure_requirement": "surviving workers must continue; separate worker_failure_contract test reports current violations"
+}

@@ -1,0 +1,13 @@
+{
+  "active_after_kill": 1,
+  "cleared_slots": 1,
+  "completed_while_orphaned": 8,
+  "kill_reap_ms": 1.084303,
+  "phase": "private_write",
+  "private_allocation_bytes": 48,
+  "private_write_published": false,
+  "reclaimed_after_recovery": 8,
+  "reclaimed_before_recovery": 0,
+  "warm_attach_ms": 0.017416,
+  "warm_attach_rewinds_allocator": false
+}

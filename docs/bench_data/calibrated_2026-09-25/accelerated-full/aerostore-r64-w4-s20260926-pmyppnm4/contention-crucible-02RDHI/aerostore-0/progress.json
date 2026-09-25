@@ -1,0 +1,386 @@
+{
+  "completed_by_worker": [
+    80,
+    80,
+    79,
+    79,
+    4,
+    2
+  ],
+  "completed_messages": 324,
+  "due_uncompleted_by_worker": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "execution_completed": false,
+  "offered_by_worker": [
+    80,
+    80,
+    80,
+    80,
+    4,
+    2
+  ],
+  "passed": false,
+  "retention_samples": [
+    {
+      "completed_messages": 0,
+      "elapsed_seconds": 0.0,
+      "sample_finished_ns": 1643331584036,
+      "sample_started_ns": 1643331570750,
+      "storage": {
+        "active_transactions": 0,
+        "arena_capacity_bytes": 268435456,
+        "arena_high_water_bytes": 2488448,
+        "indexes": [
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 0,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 1,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 2,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 3,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 4,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          }
+        ],
+        "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+        "row_fresh_allocations": 4096,
+        "row_recycled": 0,
+        "row_reuse_allocations": 0,
+        "snapshot_xmax": 5822,
+        "snapshot_xmin": 5822
+      }
+    },
+    {
+      "completed_messages": 59,
+      "elapsed_seconds": 1.006847572,
+      "sample_finished_ns": 1644338431628,
+      "sample_started_ns": 1644338425740,
+      "storage": {
+        "active_transactions": 0,
+        "arena_capacity_bytes": 268435456,
+        "arena_high_water_bytes": 2607712,
+        "indexes": [
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 0,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 1,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 2,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 3,
+            "reclaimed_postings": 204,
+            "retired_nodes": 2,
+            "retired_postings": 6
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 4,
+            "reclaimed_postings": 593,
+            "retired_nodes": 0,
+            "retired_postings": 24
+          }
+        ],
+        "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+        "row_fresh_allocations": 4392,
+        "row_recycled": 938,
+        "row_reuse_allocations": 659,
+        "snapshot_xmax": 8558,
+        "snapshot_xmin": 8558
+      }
+    },
+    {
+      "completed_messages": 124,
+      "elapsed_seconds": 2.007143453,
+      "sample_finished_ns": 1645338727497,
+      "sample_started_ns": 1645338721086,
+      "storage": {
+        "active_transactions": 0,
+        "arena_capacity_bytes": 268435456,
+        "arena_high_water_bytes": 2656536,
+        "indexes": [
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 0,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 1,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 2,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 3,
+            "reclaimed_postings": 403,
+            "retired_nodes": 1,
+            "retired_postings": 3
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 4,
+            "reclaimed_postings": 1535,
+            "retired_nodes": 0,
+            "retired_postings": 16
+          }
+        ],
+        "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+        "row_fresh_allocations": 4479,
+        "row_recycled": 2144,
+        "row_reuse_allocations": 1778,
+        "snapshot_xmax": 11689,
+        "snapshot_xmin": 11689
+      }
+    },
+    {
+      "completed_messages": 191,
+      "elapsed_seconds": 3.022504989,
+      "sample_finished_ns": 1646354088990,
+      "sample_started_ns": 1646354081457,
+      "storage": {
+        "active_transactions": 0,
+        "arena_capacity_bytes": 268435456,
+        "arena_high_water_bytes": 2682688,
+        "indexes": [
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 0,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 1,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 2,
+            "reclaimed_postings": 32,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 3,
+            "reclaimed_postings": 603,
+            "retired_nodes": 1,
+            "retired_postings": 3
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 4,
+            "reclaimed_postings": 2580,
+            "retired_nodes": 0,
+            "retired_postings": 17
+          }
+        ],
+        "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+        "row_fresh_allocations": 4526,
+        "row_recycled": 3463,
+        "row_reuse_allocations": 3050,
+        "snapshot_xmax": 14939,
+        "snapshot_xmin": 14939
+      }
+    },
+    {
+      "completed_messages": 257,
+      "elapsed_seconds": 4.038100953,
+      "sample_finished_ns": 1647369685008,
+      "sample_started_ns": 1647369677557,
+      "storage": {
+        "active_transactions": 0,
+        "arena_capacity_bytes": 268435456,
+        "arena_high_water_bytes": 2694064,
+        "indexes": [
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 0,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 1,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 2,
+            "reclaimed_postings": 32,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 3,
+            "reclaimed_postings": 799,
+            "retired_nodes": 2,
+            "retired_postings": 6
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 4,
+            "reclaimed_postings": 3556,
+            "retired_nodes": 1,
+            "retired_postings": 33
+          }
+        ],
+        "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+        "row_fresh_allocations": 4551,
+        "row_recycled": 4614,
+        "row_reuse_allocations": 4176,
+        "snapshot_xmax": 18022,
+        "snapshot_xmin": 18022
+      }
+    },
+    {
+      "completed_messages": 324,
+      "elapsed_seconds": 5.053674734,
+      "sample_finished_ns": 1648385258789,
+      "sample_started_ns": 1648385253082,
+      "storage": {
+        "active_transactions": 0,
+        "arena_capacity_bytes": 268435456,
+        "arena_high_water_bytes": 2704408,
+        "indexes": [
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 0,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 1,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 2,
+            "reclaimed_postings": 64,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 3,
+            "reclaimed_postings": 1002,
+            "retired_nodes": 1,
+            "retired_postings": 3
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 4,
+            "reclaimed_postings": 4654,
+            "retired_nodes": 2,
+            "retired_postings": 15
+          }
+        ],
+        "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+        "row_fresh_allocations": 4576,
+        "row_recycled": 5916,
+        "row_reuse_allocations": 5470,
+        "snapshot_xmax": 21272,
+        "snapshot_xmin": 21272
+      }
+    }
+  ],
+  "retries": 32
+}

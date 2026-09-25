@@ -1,0 +1,29 @@
+{
+  "checked_at": "2026-09-25T06:42:52.890961+00:00",
+  "mutations_performed": false,
+  "native": {
+    "pid": 39471,
+    "proc_start_ticks": 1139048,
+    "executable": "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/install/bin/postgres",
+    "command_argv": [
+      "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/install/bin/postgres",
+      "-D",
+      "target/contention-tuned-validation/native-postgres/data"
+    ],
+    "sql_identity": {
+      "data_directory": "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/data",
+      "postmaster_start_epoch": 1790313270.377108,
+      "client_backends": 0,
+      "benchmark_sessions": 0
+    },
+    "available": true
+  },
+  "docker": {
+    "container_id": "dbe528ea9afbc055b0a6aea796aa1d8ab8debd524ab467803454e2543dacaa29",
+    "name": "/aerostore-tuned-pg-20260925",
+    "created": "2026-09-25T05:06:42.265381188Z",
+    "started_at": "2026-09-25T05:06:42.368923227Z",
+    "status": "running"
+  },
+  "cleanup_status": "not executed: automatic approval review rejected cleanup; then coordinator explicitly requested fixtures remain running for corrected timing checks"
+}

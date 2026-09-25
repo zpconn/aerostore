@@ -1,0 +1,60 @@
+{
+  "benchmark_worker_overrides": {
+    "statement_timeout": "60s",
+    "synchronous_commit": "off",
+    "transaction_isolation": "serializable"
+  },
+  "captured_at": "2026-09-25T02:51:46.630477+00:00",
+  "observation_scope": "Independent psql connection with same startup options as tuned benchmark workers",
+  "settings": {
+    "deadlock_timeout": {
+      "context": "superuser",
+      "setting": "10",
+      "source": "client",
+      "unit": "ms"
+    },
+    "default_transaction_isolation": {
+      "context": "user",
+      "setting": "read committed",
+      "source": "default",
+      "unit": null
+    },
+    "fsync": {
+      "context": "sighup",
+      "setting": "on",
+      "source": "command line",
+      "unit": null
+    },
+    "lock_timeout": {
+      "context": "user",
+      "setting": "0",
+      "source": "default",
+      "unit": "ms"
+    },
+    "server_version": {
+      "context": "internal",
+      "setting": "16.13 (Debian 16.13-1.pgdg13+1)",
+      "source": "default",
+      "unit": null
+    },
+    "statement_timeout": {
+      "context": "user",
+      "setting": "0",
+      "source": "default",
+      "unit": "ms"
+    },
+    "synchronous_commit": {
+      "context": "user",
+      "setting": "off",
+      "source": "command line",
+      "unit": null
+    },
+    "wal_writer_delay": {
+      "context": "sighup",
+      "setting": "10000",
+      "source": "command line",
+      "unit": "ms"
+    }
+  },
+  "startup_options": "-c deadlock_timeout=10ms"
+}

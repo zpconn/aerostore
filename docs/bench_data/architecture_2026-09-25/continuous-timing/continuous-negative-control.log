@@ -1,0 +1,14 @@
+test_continuous_drain_includes_deliberately_slow_worker_shutdown (test_contention_integration.ContentionIntegrationTests.test_continuous_drain_includes_deliberately_slow_worker_shutdown) ... FAIL
+
+======================================================================
+FAIL: test_continuous_drain_includes_deliberately_slow_worker_shutdown (test_contention_integration.ContentionIntegrationTests.test_continuous_drain_includes_deliberately_slow_worker_shutdown)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/zpconn/code/aerostore/scripts/test_contention_integration.py", line 135, in test_continuous_drain_includes_deliberately_slow_worker_shutdown
+    self.assertLessEqual(run["completed_messages_per_second_including_drain"],
+AssertionError: 0.9547182189656775 not less than or equal to 0.7404264264319363
+
+----------------------------------------------------------------------
+Ran 1 test in 1.746s
+
+FAILED (failures=1)

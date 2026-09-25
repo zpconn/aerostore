@@ -1,0 +1,41 @@
+{
+  "platform_observed_after_campaign": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "machine": "x86_64",
+  "logical_cpus_visible": 24,
+  "worker_process_allowed_cpus": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23
+  ],
+  "cpu_models": [
+    "Intel(R) Core(TM) Ultra 9 285K"
+  ],
+  "memory_totals": {
+    "MemTotal": "49328252 kB",
+    "SwapTotal": "25165824 kB"
+  },
+  "measurement_environment": "Workers in WSL2; PostgreSQL 16 disposable Docker fixture reached via published localhost TCP port. No CPU affinity or comparative cgroup tuning applied by the campaign. Concurrent compilation/proofs were held until timing completed.",
+  "performance_promotion_eligible": false,
+  "postgres_fixture_cleanup": "container-cleanup.json"
+}

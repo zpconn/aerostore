@@ -1,0 +1,13 @@
+{
+  "detail": "complete observations, effects, outcomes and final state have a serial witness respecting non-overlap",
+  "explored": 6,
+  "order": [
+    23,
+    21,
+    22,
+    20,
+    25,
+    24
+  ],
+  "status": "Valid"
+}

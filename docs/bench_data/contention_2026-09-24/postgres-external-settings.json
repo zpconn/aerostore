@@ -1,0 +1,162 @@
+{
+  "benchmark_worker_overrides": {
+    "statement_timeout": "60s",
+    "synchronous_commit": "off",
+    "transaction_isolation": "serializable"
+  },
+  "captured_at": "2026-09-25T02:48:52.037829+00:00",
+  "observation_scope": "Independent psql session: server defaults; benchmark worker BEGIN and SET overrides are reported separately",
+  "sensitivity_connection_options": "options='-c deadlock_timeout=10ms'",
+  "settings": {
+    "autovacuum": {
+      "context": "sighup",
+      "setting": "on",
+      "source": "default",
+      "unit": null
+    },
+    "autovacuum_naptime": {
+      "context": "sighup",
+      "setting": "60",
+      "source": "default",
+      "unit": "s"
+    },
+    "autovacuum_vacuum_scale_factor": {
+      "context": "sighup",
+      "setting": "0.2",
+      "source": "default",
+      "unit": null
+    },
+    "autovacuum_vacuum_threshold": {
+      "context": "sighup",
+      "setting": "50",
+      "source": "default",
+      "unit": null
+    },
+    "deadlock_timeout": {
+      "context": "superuser",
+      "setting": "1000",
+      "source": "default",
+      "unit": "ms"
+    },
+    "default_transaction_isolation": {
+      "context": "user",
+      "setting": "read committed",
+      "source": "default",
+      "unit": null
+    },
+    "default_transaction_read_only": {
+      "context": "user",
+      "setting": "off",
+      "source": "default",
+      "unit": null
+    },
+    "fsync": {
+      "context": "sighup",
+      "setting": "on",
+      "source": "command line",
+      "unit": null
+    },
+    "full_page_writes": {
+      "context": "sighup",
+      "setting": "on",
+      "source": "default",
+      "unit": null
+    },
+    "idle_in_transaction_session_timeout": {
+      "context": "user",
+      "setting": "0",
+      "source": "default",
+      "unit": "ms"
+    },
+    "lock_timeout": {
+      "context": "user",
+      "setting": "0",
+      "source": "default",
+      "unit": "ms"
+    },
+    "log_lock_waits": {
+      "context": "superuser",
+      "setting": "off",
+      "source": "default",
+      "unit": null
+    },
+    "max_connections": {
+      "context": "postmaster",
+      "setting": "100",
+      "source": "configuration file",
+      "unit": null
+    },
+    "max_pred_locks_per_page": {
+      "context": "sighup",
+      "setting": "2",
+      "source": "default",
+      "unit": null
+    },
+    "max_pred_locks_per_relation": {
+      "context": "sighup",
+      "setting": "-2",
+      "source": "default",
+      "unit": null
+    },
+    "max_pred_locks_per_transaction": {
+      "context": "postmaster",
+      "setting": "64",
+      "source": "default",
+      "unit": null
+    },
+    "server_version": {
+      "context": "internal",
+      "setting": "16.13 (Debian 16.13-1.pgdg13+1)",
+      "source": "default",
+      "unit": null
+    },
+    "shared_buffers": {
+      "context": "postmaster",
+      "setting": "16384",
+      "source": "configuration file",
+      "unit": "8kB"
+    },
+    "statement_timeout": {
+      "context": "user",
+      "setting": "0",
+      "source": "default",
+      "unit": "ms"
+    },
+    "synchronous_commit": {
+      "context": "user",
+      "setting": "off",
+      "source": "command line",
+      "unit": null
+    },
+    "track_activities": {
+      "context": "superuser",
+      "setting": "on",
+      "source": "default",
+      "unit": null
+    },
+    "track_counts": {
+      "context": "superuser",
+      "setting": "on",
+      "source": "default",
+      "unit": null
+    },
+    "wal_level": {
+      "context": "postmaster",
+      "setting": "replica",
+      "source": "default",
+      "unit": null
+    },
+    "wal_writer_delay": {
+      "context": "sighup",
+      "setting": "10000",
+      "source": "command line",
+      "unit": "ms"
+    },
+    "wal_writer_flush_after": {
+      "context": "sighup",
+      "setting": "128",
+      "source": "default",
+      "unit": "8kB"
+    }
+  }
+}

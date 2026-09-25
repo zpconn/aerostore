@@ -1,0 +1,99 @@
+{
+  "architecture_promotion_eligible": false,
+  "whole_engine_verified": false,
+  "required_worker_failure_availability_satisfied": false,
+  "groups": {
+    "unpaced-family-aerostore": {
+      "successful_runs": 3,
+      "completed_messages": [
+        62414,
+        62273,
+        61398
+      ],
+      "median_messages_per_second": 10835.317524597427,
+      "median_p99_ms_including_retries": 1.913124,
+      "median_retries_per_message": 0.8976031018681706
+    },
+    "unpaced-family-postgres": {
+      "successful_runs": 3,
+      "completed_messages": [
+        211,
+        147,
+        135
+      ],
+      "median_messages_per_second": 21.55387245620928,
+      "median_p99_ms_including_retries": 2038.102732,
+      "median_retries_per_message": 2.836734693877551
+    },
+    "unpaced-global-time-aerostore": {
+      "successful_runs": 2,
+      "completed_messages": [
+        2450,
+        2459
+      ],
+      "median_messages_per_second": 489.410475286788,
+      "median_p99_ms_including_retries": 115.4133785,
+      "median_retries_per_message": 5.667703645915463
+    },
+    "retention-aerostore": {
+      "successful_runs": 1,
+      "completed_messages": [
+        47559
+      ],
+      "median_messages_per_second": 396.324232244,
+      "median_p99_ms_including_retries": 0.283416,
+      "median_retries_per_message": 0.027733972539372147
+    },
+    "retention-postgres": {
+      "successful_runs": 1,
+      "completed_messages": [
+        3184
+      ],
+      "median_messages_per_second": 26.223975605403663,
+      "median_p99_ms_including_retries": 2071.0453430000002,
+      "median_retries_per_message": 2.361180904522613
+    },
+    "unpaced-family-postgres-deadlock-10ms": {
+      "successful_runs": 3,
+      "completed_messages": [
+        823,
+        867,
+        804
+      ],
+      "median_messages_per_second": 163.4695234699107,
+      "median_p99_ms_including_retries": 157.05344699999998,
+      "median_retries_per_message": 2.6306196840826246
+    },
+    "fixed-family": {
+      "successful_runs": 1,
+      "completed_messages": [
+        4000
+      ],
+      "median_messages_per_second": 10101.356225511676,
+      "median_p99_ms_including_retries": 1.932568,
+      "median_retries_per_message": 0.92
+    }
+  },
+  "failures": [
+    {
+      "trial": "broad-20260926",
+      "engine": "aerostore",
+      "error": "worker 0: message 1460 after 128 retries: transaction conflict; cleanup=Ok(())",
+      "evidence_directory": "/home/zpconn/code/aerostore/target/contention-validation/contention-crucible-6X8Yha/aerostore-0",
+      "execution_completed": false,
+      "passed": false,
+      "scenario": null,
+      "scratch_cleanup_completed": true
+    },
+    {
+      "trial": "fixed-global-time",
+      "engine": "aerostore",
+      "error": "worker 0: message 1764 after 128 retries: transaction conflict; cleanup=Ok(())",
+      "evidence_directory": "/home/zpconn/code/aerostore/target/contention-validation/contention-crucible-ysvu4N/aerostore-0",
+      "execution_completed": false,
+      "passed": false,
+      "scenario": null,
+      "scratch_cleanup_completed": true
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "started_at": "2026-09-25T21:24:01.807563+00:00",
+  "scope": "Stop only the previously authorized disposable native PostgreSQL fixture; retain its data.",
+  "identity": {
+    "pid": 2467,
+    "proc_start_ticks": "51730",
+    "exe": "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/install/bin/postgres",
+    "cmdline": [
+      "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/install/bin/postgres",
+      "-D",
+      "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/data"
+    ],
+    "pid_file": [
+      "2467",
+      "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/data",
+      "1790369623",
+      "55432",
+      "/tmp/aerostore-tuned-pg-20260925",
+      "",
+      "  6341268         1",
+      "ready   "
+    ]
+  },
+  "pre_stop_database_check": {
+    "data_directory": "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/data",
+    "other_client_sessions": 0
+  },
+  "command": [
+    "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/install/bin/pg_ctl",
+    "-D",
+    "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/data",
+    "-m",
+    "fast",
+    "-w",
+    "-t",
+    "30",
+    "stop"
+  ],
+  "returncode": 0,
+  "stdout": "waiting for server to shut down.... done\nserver stopped\n",
+  "stderr": "",
+  "post_stop_status": {
+    "returncode": 3,
+    "stdout": "pg_ctl: no server running\n",
+    "stderr": "",
+    "pid_file_exists": false,
+    "data_retained": true
+  },
+  "passed": true,
+  "finished_at": "2026-09-25T21:24:01.925124+00:00"
+}

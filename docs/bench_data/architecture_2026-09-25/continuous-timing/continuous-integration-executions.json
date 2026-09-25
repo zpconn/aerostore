@@ -1,0 +1,16 @@
+[
+  {
+    "label": "continuous-negative-control",
+    "binary_sha256": "f37b288b38be0b86a29f1db32079f5819c4fe28220937219f41260c9c8549033",
+    "exit_code": 1,
+    "expected_exit_code": 1,
+    "passed": true
+  },
+  {
+    "label": "continuous-integration",
+    "binary_sha256": "346d9393338c7ebdbce5c8975f05a06057176d0a53ef9d4de5739dcdc4db20a3",
+    "exit_code": 0,
+    "expected_exit_code": 0,
+    "passed": true
+  }
+]

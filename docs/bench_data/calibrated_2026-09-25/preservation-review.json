@@ -1,0 +1,41 @@
+{
+  "completed": true,
+  "format": "calibrated-preservation-review-v1",
+  "frozen_build": {
+    "build_provenance": "target/calibrated-validation/build-provenance.json",
+    "build_provenance_sha256": "42a487754d23f716f74ec92a40360f1a6a364bf709c152c01d590d9723e1f8b5",
+    "method": "Independently enumerate declared source roots/extensions, stream-hash every file and every source tar member, reproduce canonical sorted-JSON aggregate, compare both build snapshots and private binary to independently supplied frozen identities.",
+    "passed": true,
+    "private_binary": "target/calibrated-validation/benchmark-final",
+    "private_binary_sha256": "8842cd00f64fd6964536dadd058b928c7d27574b53a80d7b513c7255ef93ddb5",
+    "source_archive_members_verified": 481,
+    "source_archive_sha256": "5a03531415a1fc79931ea24dd281baa55a0cff7408f2b7996bb8bb4f59600fa7",
+    "source_before_equals_after": true,
+    "source_files_verified": 481,
+    "source_inventory_verified": true,
+    "source_sha256": "29f53f412ab151ce026c189a95e67c477015ffa0489a59c8bdc5e254f7451add"
+  },
+  "historical_architecture_archive": {
+    "file_inventory_verified": true,
+    "files_verified": 293,
+    "manifest": "docs/bench_data/architecture_2026-09-25/SHA256SUMS",
+    "manifest_sha256": "818803e01b780b1b9b2bad16cb8b645f70d5db68a37eabe3709ce66774f17a3e",
+    "manifest_stable_during_audit": true,
+    "method": "Strictly parse every recorded SHA256SUMS entry, reject duplicates/unsafe paths, require the complete on-disk file inventory to match all 293 entries, and independently rehash all bytes. The existing historical manifest is the reference.",
+    "passed": true
+  },
+  "passed": true,
+  "preserved_engine_and_extended": {
+    "also_byte_identical_to_git_baseline": "6291200b4383538d960f3b1c73942715193f464b",
+    "core_runtime_files": 32,
+    "files_verified": 40,
+    "manifest": "target/calibrated-validation/preserved-engine-and-extended.json",
+    "manifest_sha256": "7bc1fce3c51b18c6bd5d161a8410eca493909cbde1c10da03bc5e7924f3f7241",
+    "method": "Stream SHA-256 of each current file, equality to retained 40-file manifest, and independent SHA-256 of each Git baseline blob.",
+    "original_extended_files": 8,
+    "passed": true
+  },
+  "reviewed_at": "2026-09-25T21:26:27.385660+00:00",
+  "scope": "Independent read-only rehash of the requested preserved runtime/Extended files, final source build inputs and private binary, source archive, and historical architecture archive. No benchmark performance or whole-engine proof claim.",
+  "source_and_binary_stable_through_review": true
+}

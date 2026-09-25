@@ -1,0 +1,46 @@
+TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 188] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-kn3a_qct/ServiceProtocol.tla
+Parsing file /tmp/tlc-12055613969996931498/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-12055613969996931498/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-12055613969996931498/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module ServiceProtocol
+Linting of module ServiceProtocol
+Starting... (2026-09-25 00:41:44)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-09-25 00:41:44.
+Error: Invariant Safety is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ learned = <<"unknown", "unknown">>
+/\ applied = <<0, 0>>
+/\ alive = <<TRUE, TRUE>>
+/\ outcome = <<"unknown", "unknown">>
+/\ phase = <<"new", "new">>
+/\ accepted = <<FALSE, FALSE>>
+/\ registered = <<FALSE, FALSE>>
+
+State 2: <Begin(1) line 19, col 5 to line 22, col 63 of module ServiceProtocol>
+/\ phase = <<"open", "new">>
+/\ registered = <<TRUE, FALSE>>
+
+State 3: <Resolve(1) line 56, col 5 to line 59, col 73 of module ServiceProtocol>
+/\ learned = <<"aborted", "unknown">>
+/\ phase = <<"open", "new">>
+/\ registered = <<TRUE, FALSE>>
+
+State 4: <Accept(1) line 25, col 5 to line 29, col 56 of module ServiceProtocol>
+/\ learned = <<"aborted", "unknown">>
+/\ applied = <<0, 0>>
+/\ alive = <<TRUE, TRUE>>
+/\ outcome = <<"pending", "unknown">>
+/\ phase = <<"accepted", "new">>
+/\ accepted = <<TRUE, FALSE>>
+/\ registered = <<TRUE, FALSE>>
+
+49 states generated, 32 distinct states found, 19 states left on queue.
+The depth of the complete state graph search is 4.
+Finished in 00s at (2026-09-25 00:41:44)

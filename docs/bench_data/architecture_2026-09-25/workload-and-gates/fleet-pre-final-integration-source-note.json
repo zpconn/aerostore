@@ -1,0 +1,5 @@
+{
+  "scope": "The six-test log completed in 7.308 seconds before the final fleet build. It must not be attributed to the final f37b288b38be0b86a29f1db32079f5819c4fe28220937219f41260c9c8549033 binary. The earlier binary was reported with prefix 173add; no full hash is asserted by this note. Final-binary rerun pending after timed campaigns.",
+  "log": "fleet-pre-final-integration-tests.log",
+  "followup": "The subsequent exact final-binary six-test pass is archived separately as fleet-final-integration-tests.log and fleet-final-integration-receipt.json."
+}

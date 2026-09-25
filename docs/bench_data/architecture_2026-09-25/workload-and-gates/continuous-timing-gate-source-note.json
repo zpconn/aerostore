@@ -1,0 +1,8 @@
+{
+  "scope": "Qualification gate and unit-test bytes after 26 passing tests in 0.416s. This records only these owned source files, not a runner build or benchmark campaign. Older campaign and review JSON bytes are preserved unchanged.",
+  "sha256": {
+    "scripts/qualify_hyperfeed.py": "daa784d47d588a9db4da167ff488d79549c5c298f09cd3919064a7f8de00e5c4",
+    "scripts/test_hyperfeed_qualification.py": "79c311309f77a9250e89a3aef3194bd145221ec3779be996ba5d73898a7019f8"
+  },
+  "test_log_sha256": "f578c40cf81de16695abafff39f1c39faac469b6c589574325ec2baedb9c66c6"
+}

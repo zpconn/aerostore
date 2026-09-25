@@ -1,0 +1,113 @@
+{
+  "files": {
+    "README.md": {
+      "bytes": 8531,
+      "sha256": "24b405944b77a58b87914bdcf78912a0b6c72b907978ed182ad87398888e12d3"
+    },
+    "aerostore/final.json.gz": {
+      "bytes": 41542,
+      "sha256": "5d727504ba74fec8cef1ebe3e2f709dc0125250b3e67c55a101ecf93afe993d0"
+    },
+    "aerostore/initial.json.gz": {
+      "bytes": 24020,
+      "sha256": "9da7893a5e82328876c5df870b2564720c775b5677d1e4aa80d4962c9cf2aced"
+    },
+    "aerostore/message-timing-outcomes.csv.gz": {
+      "bytes": 452151,
+      "sha256": "314d68f47aa6ef084cddc5d2da66870f32655228c480923ea36f75ba46c11bf6"
+    },
+    "aerostore/report.json": {
+      "bytes": 255463,
+      "sha256": "a8046c0bab7af395486d7192ff3355a6216f2dabfab90e75decda43d05122af7"
+    },
+    "aerostore/run.log": {
+      "bytes": 118,
+      "sha256": "a9500ea82bf172e5642b442f80f37e236ceedb836d7d2e1ca850b50ccb8db9e8"
+    },
+    "aerostore/serial-witness.json": {
+      "bytes": 156178,
+      "sha256": "de3154f2a7d04a2e1fef8693f783713f6fd696665ae83cb50e266f7f656aa6e2"
+    },
+    "aerostore/trial.json": {
+      "bytes": 278003,
+      "sha256": "89010eaab5b3302b7fb9d38bf0a0309fa412f6f283de6e57d1f1521f86991504"
+    },
+    "analyze.py": {
+      "bytes": 16783,
+      "sha256": "67f5dd49ff92f188cc85c0301ebf15bdd996b5dcef33b78e8bcf3fa97a901fff"
+    },
+    "build-provenance.json": {
+      "bytes": 121029,
+      "sha256": "019518905ec4318d7b08a2f47989d725d51320556040fdfd74a578f021680541"
+    },
+    "campaign.json": {
+      "bytes": 1107819,
+      "sha256": "43502be954319fef448adb4dc6ec35329bea1e8d88b38973f0339e1c7fc803a0"
+    },
+    "inputs.json": {
+      "bytes": 5704,
+      "sha256": "e6f7f48e4fccadec63e496857b128a1b29db77df505316d4fb4c096d074b0841"
+    },
+    "postgres/final.json.gz": {
+      "bytes": 41542,
+      "sha256": "86460f966dd082c17f9fd57a2c95f1bae260dea44a489157f7ec84e2b2040ad1"
+    },
+    "postgres/initial.json.gz": {
+      "bytes": 24020,
+      "sha256": "ef0da1a599c638b6d961ffdf41c95b308521e7fda8a9ef017c1588b48f0876a6"
+    },
+    "postgres/message-timing-outcomes.csv.gz": {
+      "bytes": 460681,
+      "sha256": "e20ccac174b2478420f546c9bb2d44042a254bf7f745a7a369315229f920897d"
+    },
+    "postgres/report.json": {
+      "bytes": 283498,
+      "sha256": "559dcfae166be09ed5ce0b1598bc974ce6bf0a3c74295b88252b010700bb64c2"
+    },
+    "postgres/run.log": {
+      "bytes": 117,
+      "sha256": "b3a6f059e2aeeaa657ab9197a254f73190a376f4dfa9496894a09dc905a2afea"
+    },
+    "postgres/serial-witness.json": {
+      "bytes": 156178,
+      "sha256": "de3154f2a7d04a2e1fef8693f783713f6fd696665ae83cb50e266f7f656aa6e2"
+    },
+    "postgres/trial.json": {
+      "bytes": 306776,
+      "sha256": "d7b9f1ec7a5272045ba1f96c0059925a60acb9874b0a3f786ef72faeb11a80d2"
+    },
+    "service-unix/final.json.gz": {
+      "bytes": 41542,
+      "sha256": "fb55a387378cbb4e48ca1bb6ee731cc49f26941e5d36ebfe40cc7b81ca47ea64"
+    },
+    "service-unix/initial.json.gz": {
+      "bytes": 24020,
+      "sha256": "873c0b4f2ece381180a7cde79e1974c2149b423f4bf4494e7c652e4878495213"
+    },
+    "service-unix/message-timing-outcomes.csv.gz": {
+      "bytes": 467548,
+      "sha256": "ce595062340c97988c43013cf9dea84d70a339f625d6cf92f522039da35a5a0b"
+    },
+    "service-unix/report.json": {
+      "bytes": 255754,
+      "sha256": "a07555cfeac8c6e5964306d2bdbf96d7f525c84324dcc5e77f7e0f209e9d311b"
+    },
+    "service-unix/run.log": {
+      "bytes": 121,
+      "sha256": "1199fc1c494471b457e388605b8fd9855a4279de4aeccc7f9e7745b132e9c376"
+    },
+    "service-unix/serial-witness.json": {
+      "bytes": 156178,
+      "sha256": "de3154f2a7d04a2e1fef8693f783713f6fd696665ae83cb50e266f7f656aa6e2"
+    },
+    "service-unix/trial.json": {
+      "bytes": 278316,
+      "sha256": "5ce468d1d59b6352ab6ac0210b67badb8aa6ce0e50f0b2cfb664f83ac823c4e1"
+    },
+    "windows.json": {
+      "bytes": 173837,
+      "sha256": "b0c4dfc317154eff7e2141af05a6633d07cdd62fe6d0bf79a6f8ee7e3baa7752"
+    }
+  },
+  "format": 1
+}

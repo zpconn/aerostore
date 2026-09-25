@@ -1,0 +1,38 @@
+{
+  "fleet-full": {
+    "archive": "fleet-full.tar.gz",
+    "archive_bytes": 57877531,
+    "archive_sha256": "d505a28f8498fe285370cc5af5a48c4f3b6d82170733d8b22c867ef2b8dd8452",
+    "campaign_completed": true,
+    "campaign_passed": false,
+    "campaign_trials": 36,
+    "compressed_hardlinks_to_identical_prior_members": 70,
+    "logical_uncompressed_bytes": 1315107594,
+    "member_count": 316,
+    "source_root": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-full"
+  },
+  "fleet-metrics": {
+    "archive": "fleet-metrics.tar.gz",
+    "archive_bytes": 9084564,
+    "archive_sha256": "df12e071c5a042aa9647ce097094b217d2ef6976063739c36977a2fde7d30b40",
+    "campaign_completed": true,
+    "campaign_passed": false,
+    "campaign_trials": 36,
+    "compressed_hardlinks_to_identical_prior_members": 76,
+    "logical_uncompressed_bytes": 195062186,
+    "member_count": 310,
+    "source_root": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-metrics"
+  },
+  "fleet-retention": {
+    "archive": "fleet-retention.tar.gz",
+    "archive_bytes": 26015030,
+    "archive_sha256": "078908f166eaae72cfc7aa2592c96860b9582d6e3922393ec063ca14b4580f81",
+    "campaign_completed": true,
+    "campaign_passed": true,
+    "campaign_trials": 3,
+    "compressed_hardlinks_to_identical_prior_members": 6,
+    "logical_uncompressed_bytes": 577232172,
+    "member_count": 28,
+    "source_root": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-retention"
+  }
+}

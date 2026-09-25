@@ -1,0 +1,10 @@
+contention_crucible engine=aerostore scenario="competing-empty-creation" passed=true completed=4 retries=4 p99_us=878.386
+contention_crucible engine=aerostore scenario="mixed-matching-projection-housekeeping" passed=true completed=6 retries=11 p99_us=1345.327
+contention_crucible engine=aerostore scenario="indexed-key-move" passed=true completed=4 retries=6 p99_us=1316.478
+contention_crucible engine=aerostore scenario="global-due-claim-cancel-reschedule" passed=true completed=5 retries=49 p99_us=16595.312
+contention_crucible engine=aerostore scenario="creation-versus-whole-family-expiry" passed=true completed=6 retries=15 p99_us=5178.895
+contention_crucible engine=postgres scenario="competing-empty-creation" passed=true completed=4 retries=6 p99_us=6229.352
+contention_crucible engine=postgres scenario="mixed-matching-projection-housekeeping" passed=true completed=6 retries=15 p99_us=8940.274
+contention_crucible engine=postgres scenario="indexed-key-move" passed=true completed=4 retries=6 p99_us=7399.733
+contention_crucible engine=postgres scenario="global-due-claim-cancel-reschedule" passed=true completed=5 retries=8 p99_us=8130.748
+contention_crucible engine=postgres scenario="creation-versus-whole-family-expiry" passed=true completed=6 retries=3 p99_us=4653.315

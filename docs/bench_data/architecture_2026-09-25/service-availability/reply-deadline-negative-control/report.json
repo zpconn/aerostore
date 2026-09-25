@@ -1,0 +1,10 @@
+{
+  "expected_failure_reproduced": true,
+  "implementation_reply_deadline_uses_only_idle": true,
+  "source_sha256": "2585ab2b15c237ed0d46d9315cfbaa3e89020c81ecf75b29ab9884e1a753a924",
+  "test": "service::protocol_tests::nonreading_client_reply_is_bounded_by_open_transaction_deadline",
+  "expected_max_seconds": 2,
+  "idle_timeout_seconds": 4,
+  "transaction_timeout_ms": 250,
+  "scope": "Small TCP send and receive buffers plus non-reading client force reply backpressure below bounded frame cap; original implementation retains transaction beyond transaction deadline."
+}

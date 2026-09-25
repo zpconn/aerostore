@@ -1,0 +1,1729 @@
+{
+  "binary_sha256": "346d9393338c7ebdbce5c8975f05a06057176d0a53ef9d4de5739dcdc4db20a3",
+  "campaign_passed_execution_checks": true,
+  "campaign_path": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/continuous-high-full/campaign.json",
+  "campaign_sha256": "10e12b747993400d328704a40ec4cc543bf8b70af276c4019c317dc166726c57",
+  "cells": [
+    {
+      "admission_started_ns": 17061198248420,
+      "arrival_rate": 1000,
+      "capacity_failure": false,
+      "continuous_timing_errors": [],
+      "continuous_timing_passed": true,
+      "correctness_companion_verified": true,
+      "directory": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/continuous-high-full/aerostore-r1000-w4-s20260925-csnil69t",
+      "drain_confirmed_ns": 17067913338565,
+      "elapsed_seconds": 6.652280392,
+      "elapsed_seconds_including_drain": 6.715090145,
+      "engine": "aerostore",
+      "error": null,
+      "evidence": "full",
+      "execution_valid": true,
+      "exit_code": 0,
+      "families": 16,
+      "final_fleet": {
+        "active_rows": 142,
+        "flight_views": 112,
+        "live_families": 20,
+        "retained_positions": 3,
+        "scheduled_events": 6,
+        "scope": "initial/final snapshot population, not a measured runtime minimum"
+      },
+      "history_verified": true,
+      "initial_fleet": {
+        "active_rows": 234,
+        "flight_views": 64,
+        "live_families": 12,
+        "retained_positions": 27,
+        "scheduled_events": 32,
+        "scope": "initial/final snapshot population, not a measured runtime minimum"
+      },
+      "missing_deferred_fraction": 0.2964,
+      "operation_diagnostics": {
+        "candidate_lookup:calls": 6464,
+        "candidate_lookup:candidate_rows": 188476,
+        "candidate_lookup:returned_rows": 52848,
+        "candidate_lookup:successful_query_ns": 67320674,
+        "family_lookup:calls": 11972,
+        "family_lookup:candidate_rows": 90175,
+        "family_lookup:returned_rows": 40378,
+        "family_lookup:successful_query_ns": 27524862,
+        "global_due_lookup:calls": 12096,
+        "global_due_lookup:candidate_rows": 7651,
+        "global_due_lookup:returned_rows": 7651,
+        "global_due_lookup:successful_query_ns": 5218334395,
+        "global_expiry_lookup:calls": 3993,
+        "global_expiry_lookup:candidate_rows": 116429,
+        "global_expiry_lookup:returned_rows": 13270,
+        "global_expiry_lookup:successful_query_ns": 2551275102,
+        "history_lookup:calls": 1348,
+        "history_lookup:candidate_rows": 18256,
+        "history_lookup:returned_rows": 557,
+        "history_lookup:successful_query_ns": 8463119
+      },
+      "oracle_status": "Valid",
+      "outcomes": {
+        "allocation_deferred": 121,
+        "cancelled_events": 469,
+        "claimed_events": 382,
+        "created_views": 1194,
+        "duplicate_messages": 0,
+        "expired_families": 184,
+        "expired_records": 5471,
+        "ignored_stale": 1155,
+        "missing_family": 1361,
+        "outputs": 2539,
+        "rescheduled_events": 977,
+        "updated_views": 2381
+      },
+      "p99_ms": 1858.112791,
+      "per_kind": {
+        "arrival": {
+          "completed": 938,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 358,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 153,
+            "missing_family": 440,
+            "outputs": 1406,
+            "rescheduled_events": 0,
+            "updated_views": 1406
+          },
+          "p99_us_including_retries": 1856621.926,
+          "retries": 1191
+        },
+        "expire_family": {
+          "completed": 626,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 184,
+            "expired_records": 1346,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 1854018.756,
+          "retries": 86
+        },
+        "global_cancel": {
+          "completed": 313,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 469,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 1861031.301,
+          "retries": 4112
+        },
+        "global_housekeeping": {
+          "completed": 626,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 4125,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 1872332.136,
+          "retries": 3367
+        },
+        "global_projection": {
+          "completed": 312,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 382,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 158,
+            "rescheduled_events": 382,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 1858007.091,
+          "retries": 3582
+        },
+        "global_reschedule": {
+          "completed": 312,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 595,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 1866473.238,
+          "retries": 3465
+        },
+        "plan": {
+          "completed": 937,
+          "outcomes": {
+            "allocation_deferred": 121,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 550,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 484,
+            "missing_family": 388,
+            "outputs": 456,
+            "rescheduled_events": 0,
+            "updated_views": 456
+          },
+          "p99_us_including_retries": 1861803.552,
+          "retries": 1150
+        },
+        "position": {
+          "completed": 936,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 286,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 518,
+            "missing_family": 533,
+            "outputs": 519,
+            "rescheduled_events": 0,
+            "updated_views": 519
+          },
+          "p99_us_including_retries": 1848812.903,
+          "retries": 1312
+        }
+      },
+      "qualified_capacity_trial": false,
+      "reasons": [
+        "lifecycle lacks creation/expiry turnover or exceeds missing/deferred limit",
+        "declared end-to-end p99 SLO exceeded",
+        "drained completion rate below declared offered-rate fraction"
+      ],
+      "retries": 18265,
+      "retry_causes": {
+        "candidate_lookup:serialization_failure": 18,
+        "commit:serialization_failure": 5662,
+        "family_lookup:serialization_failure": 10,
+        "global_due_lookup:serialization_failure": 9728,
+        "global_expiry_lookup:serialization_failure": 2829,
+        "history_lookup:serialization_failure": 18
+      },
+      "seconds": 5,
+      "seed": 20260925,
+      "source_stable": true,
+      "throughput_with_drain": 744.5916424104832,
+      "timing_scope": "continuous_client_monotonic",
+      "useful_work_passed": false,
+      "workers": 4,
+      "workers_stopped_ns": 17067870877749,
+      "workload_completed_ns": 17067850528812
+    },
+    {
+      "admission_started_ns": 17068211878714,
+      "arrival_rate": 1000,
+      "capacity_failure": true,
+      "continuous_timing_errors": [],
+      "continuous_timing_passed": true,
+      "correctness_companion_verified": true,
+      "directory": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/continuous-high-full/service-unix-r1000-w4-s20260925-y2d794la",
+      "drain_confirmed_ns": 17085309021763,
+      "elapsed_seconds": 17.021400842,
+      "elapsed_seconds_including_drain": 17.097143049,
+      "engine": "service-unix",
+      "error": null,
+      "evidence": "full",
+      "execution_valid": true,
+      "exit_code": 0,
+      "families": 16,
+      "final_fleet": {
+        "active_rows": 315,
+        "flight_views": 121,
+        "live_families": 21,
+        "retained_positions": 30,
+        "scheduled_events": 22,
+        "scope": "initial/final snapshot population, not a measured runtime minimum"
+      },
+      "history_verified": true,
+      "initial_fleet": {
+        "active_rows": 234,
+        "flight_views": 64,
+        "live_families": 12,
+        "retained_positions": 27,
+        "scheduled_events": 32,
+        "scope": "initial/final snapshot population, not a measured runtime minimum"
+      },
+      "missing_deferred_fraction": 0.1004,
+      "operation_diagnostics": {
+        "candidate_lookup:calls": 10978,
+        "candidate_lookup:candidate_rows": 308832,
+        "candidate_lookup:returned_rows": 163332,
+        "candidate_lookup:successful_query_ns": 127140157,
+        "family_lookup:calls": 24792,
+        "family_lookup:candidate_rows": 352754,
+        "family_lookup:returned_rows": 108052,
+        "family_lookup:successful_query_ns": 149606511,
+        "global_due_lookup:calls": 17331,
+        "global_due_lookup:candidate_rows": 50061,
+        "global_due_lookup:returned_rows": 50061,
+        "global_due_lookup:successful_query_ns": 10765023281,
+        "global_expiry_lookup:calls": 6398,
+        "global_expiry_lookup:candidate_rows": 349677,
+        "global_expiry_lookup:returned_rows": 154721,
+        "global_expiry_lookup:successful_query_ns": 6062852340,
+        "history_lookup:calls": 8859,
+        "history_lookup:candidate_rows": 181532,
+        "history_lookup:returned_rows": 4980,
+        "history_lookup:successful_query_ns": 94874060
+      },
+      "oracle_status": "Valid",
+      "outcomes": {
+        "allocation_deferred": 25,
+        "cancelled_events": 922,
+        "claimed_events": 758,
+        "created_views": 1970,
+        "duplicate_messages": 0,
+        "expired_families": 279,
+        "expired_records": 10484,
+        "ignored_stale": 1460,
+        "missing_family": 477,
+        "outputs": 5809,
+        "rescheduled_events": 1822,
+        "updated_views": 5446
+      },
+      "p99_ms": 11955.384435,
+      "per_kind": {
+        "arrival": {
+          "completed": 938,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 120,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 358,
+            "missing_family": 84,
+            "outputs": 2882,
+            "rescheduled_events": 0,
+            "updated_views": 2882
+          },
+          "p99_us_including_retries": 12023254.571,
+          "retries": 2890
+        },
+        "expire_family": {
+          "completed": 626,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 279,
+            "expired_records": 3400,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 11964759.717,
+          "retries": 318
+        },
+        "global_cancel": {
+          "completed": 313,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 922,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 12024305.949,
+          "retries": 4011
+        },
+        "global_housekeeping": {
+          "completed": 626,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 7084,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 11936292.634,
+          "retries": 5772
+        },
+        "global_projection": {
+          "completed": 312,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 758,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 363,
+            "rescheduled_events": 758,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 11895163.645,
+          "retries": 8742
+        },
+        "global_reschedule": {
+          "completed": 312,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 1064,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 11954937.162,
+          "retries": 3641
+        },
+        "plan": {
+          "completed": 937,
+          "outcomes": {
+            "allocation_deferred": 25,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 1222,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 587,
+            "missing_family": 178,
+            "outputs": 1107,
+            "rescheduled_events": 0,
+            "updated_views": 1107
+          },
+          "p99_us_including_retries": 11944950.702,
+          "retries": 2285
+        },
+        "position": {
+          "completed": 936,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 628,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 515,
+            "missing_family": 215,
+            "outputs": 1457,
+            "rescheduled_events": 0,
+            "updated_views": 1457
+          },
+          "p99_us_including_retries": 11934854.68,
+          "retries": 2992
+        }
+      },
+      "qualified_capacity_trial": false,
+      "reasons": [
+        "declared end-to-end p99 SLO exceeded",
+        "drained completion rate below declared offered-rate fraction"
+      ],
+      "retries": 30651,
+      "retry_causes": {
+        "candidate_lookup:serialization_failure": 19,
+        "commit:serialization_failure": 14401,
+        "family_lookup:serialization_failure": 72,
+        "global_due_lookup:serialization_failure": 12401,
+        "global_expiry_lookup:serialization_failure": 3624,
+        "history_lookup:serialization_failure": 134
+      },
+      "seconds": 5,
+      "seed": 20260925,
+      "source_stable": true,
+      "throughput_with_drain": 292.44652078245593,
+      "timing_scope": "continuous_client_monotonic",
+      "useful_work_passed": true,
+      "workers": 4,
+      "workers_stopped_ns": 17085253723859,
+      "workload_completed_ns": 17085233279556
+    },
+    {
+      "admission_started_ns": 17085883697290,
+      "arrival_rate": 1000,
+      "capacity_failure": false,
+      "continuous_timing_errors": [],
+      "continuous_timing_passed": true,
+      "correctness_companion_verified": true,
+      "directory": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/continuous-high-full/postgres-r1000-w4-s20260925-758f512n",
+      "drain_confirmed_ns": 17090908029994,
+      "elapsed_seconds": 5.000261523,
+      "elapsed_seconds_including_drain": 5.024332704,
+      "engine": "postgres",
+      "error": null,
+      "evidence": "full",
+      "execution_valid": true,
+      "exit_code": 0,
+      "families": 16,
+      "final_fleet": {
+        "active_rows": 207,
+        "flight_views": 72,
+        "live_families": 14,
+        "retained_positions": 18,
+        "scheduled_events": 24,
+        "scope": "initial/final snapshot population, not a measured runtime minimum"
+      },
+      "history_verified": true,
+      "initial_fleet": {
+        "active_rows": 234,
+        "flight_views": 64,
+        "live_families": 12,
+        "retained_positions": 27,
+        "scheduled_events": 32,
+        "scope": "initial/final snapshot population, not a measured runtime minimum"
+      },
+      "missing_deferred_fraction": 0.0,
+      "operation_diagnostics": {
+        "postgres:batch_write_statements": 5275,
+        "postgres:batch_written_rows": 49471,
+        "postgres:buffered_writes": 64907,
+        "postgres:immediate_write_statements": 0,
+        "postgres:ordered_lock_statements": 5544,
+        "postgres:overlay_reads": 2903,
+        "postgres:point_read_statements": 37953,
+        "postgres:predicate_statements": 17410,
+        "postgres:read_cache_hits": 32360
+      },
+      "oracle_status": "Valid",
+      "outcomes": {
+        "allocation_deferred": 0,
+        "cancelled_events": 1252,
+        "claimed_events": 1248,
+        "created_views": 2185,
+        "duplicate_messages": 0,
+        "expired_families": 311,
+        "expired_records": 14451,
+        "ignored_stale": 2,
+        "missing_family": 0,
+        "outputs": 8959,
+        "rescheduled_events": 2496,
+        "updated_views": 8119
+      },
+      "p99_ms": 6.303179,
+      "per_kind": {
+        "arrival": {
+          "completed": 938,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 2,
+            "missing_family": 0,
+            "outputs": 3750,
+            "rescheduled_events": 0,
+            "updated_views": 3750
+          },
+          "p99_us_including_retries": 7386.94,
+          "retries": 445
+        },
+        "expire_family": {
+          "completed": 626,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 311,
+            "expired_records": 5829,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 2209.772,
+          "retries": 19
+        },
+        "global_cancel": {
+          "completed": 313,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 1252,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 1764.207,
+          "retries": 4
+        },
+        "global_housekeeping": {
+          "completed": 626,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 8622,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 2776.367,
+          "retries": 8
+        },
+        "global_projection": {
+          "completed": 312,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 1248,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 840,
+            "rescheduled_events": 1248,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 5939.457,
+          "retries": 245
+        },
+        "global_reschedule": {
+          "completed": 312,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 1248,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 1715.664,
+          "retries": 27
+        },
+        "plan": {
+          "completed": 937,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 2185,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 2185,
+            "rescheduled_events": 0,
+            "updated_views": 2185
+          },
+          "p99_us_including_retries": 9002.514,
+          "retries": 219
+        },
+        "position": {
+          "completed": 936,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 2184,
+            "rescheduled_events": 0,
+            "updated_views": 2184
+          },
+          "p99_us_including_retries": 7565.04,
+          "retries": 205
+        }
+      },
+      "qualified_capacity_trial": true,
+      "reasons": [],
+      "retries": 1172,
+      "retry_causes": {
+        "batch_write:40001": 813,
+        "commit:40001": 90,
+        "ordered_lock:40001": 269
+      },
+      "seconds": 5,
+      "seed": 20260925,
+      "source_stable": true,
+      "throughput_with_drain": 995.1570277221832,
+      "timing_scope": "continuous_client_monotonic",
+      "useful_work_passed": true,
+      "workers": 4,
+      "workers_stopped_ns": 17090904345787,
+      "workload_completed_ns": 17090883958813
+    }
+  ],
+  "completed": true,
+  "continuous_timing_passed_count": 3,
+  "correctness_companion_verified_count": 3,
+  "execution_valid_count": 3,
+  "gate": {
+    "actual_hyperfeed_replacement_qualified": false,
+    "architecture_promotion_eligible": false,
+    "capacity_bounds": {
+      "aerostore": {
+        "all_seed_passes_required": true,
+        "best_tested_exploratory_rate": null,
+        "best_tested_qualified_rate": null,
+        "failing_tested_upper_rate": null,
+        "selected_workers": null,
+        "three_or_more_seeds": false,
+        "worker_search_exhaustive_only_within_declared_grid": true
+      },
+      "postgres": {
+        "all_seed_passes_required": true,
+        "best_tested_exploratory_rate": 1000,
+        "best_tested_qualified_rate": null,
+        "failing_tested_upper_rate": null,
+        "selected_workers": null,
+        "three_or_more_seeds": false,
+        "worker_search_exhaustive_only_within_declared_grid": true
+      },
+      "service-unix": {
+        "all_seed_passes_required": true,
+        "best_tested_exploratory_rate": null,
+        "best_tested_qualified_rate": null,
+        "failing_tested_upper_rate": null,
+        "selected_workers": null,
+        "three_or_more_seeds": false,
+        "worker_search_exhaustive_only_within_declared_grid": true
+      }
+    },
+    "comparisons": {
+      "aerostore": {
+        "conditional_tested_grid_10x_ratio": false,
+        "hardware_resource_equivalence_verified": false,
+        "ratio_is_capacity_proof": false,
+        "ratio_of_tested_passing_rates": null,
+        "reason": "passing rates are lower bounds; need a repeated PostgreSQL saturation bracket and comparable useful work",
+        "saturation_monotonicity_verified": false,
+        "synthetic_10x_bound_demonstrated": false,
+        "synthetic_capacity_lower_bound": null,
+        "useful_work_comparable": false
+      },
+      "service-unix": {
+        "conditional_tested_grid_10x_ratio": false,
+        "hardware_resource_equivalence_verified": false,
+        "ratio_is_capacity_proof": false,
+        "ratio_of_tested_passing_rates": null,
+        "reason": "passing rates are lower bounds; need a repeated PostgreSQL saturation bracket and comparable useful work",
+        "saturation_monotonicity_verified": false,
+        "synthetic_10x_bound_demonstrated": false,
+        "synthetic_capacity_lower_bound": null,
+        "useful_work_comparable": false
+      }
+    },
+    "corpus_configuration_matches": true,
+    "real_world_10x_claim": false,
+    "scope": "exploratory synthetic capacity evidence; compatibility, recovery, MMHF, production retention and resource isolation remain unqualified",
+    "trial_assessments": [
+      {
+        "assessment": {
+          "capacity_failure": false,
+          "completed_messages": 5000,
+          "configured_identities": 16,
+          "continuous_timing_errors": [],
+          "continuous_timing_passed": true,
+          "correctness_companion_verified": true,
+          "elapsed_seconds_including_drain": 6.715090145,
+          "execution_valid": true,
+          "final_observed_live_families": 20,
+          "fleet_complete_phase_cycle": true,
+          "fleet_global_cancellation_mutated": true,
+          "fleet_global_housekeeping_mutated": true,
+          "fleet_global_projection_mutated": true,
+          "fleet_global_rescheduling_mutated": true,
+          "fleet_population_snapshots_passed": true,
+          "history_verified": true,
+          "initial_observed_live_families": 12,
+          "no_op_fraction": 0.2964,
+          "outcomes": {
+            "allocation_deferred": 121,
+            "cancelled_events": 469,
+            "claimed_events": 382,
+            "created_views": 1194,
+            "duplicate_messages": 0,
+            "expired_families": 184,
+            "expired_records": 5471,
+            "ignored_stale": 1155,
+            "missing_family": 1361,
+            "outputs": 2539,
+            "rescheduled_events": 977,
+            "updated_views": 2381
+          },
+          "p99_ms": 1858.112791,
+          "per_kind": {
+            "arrival": {
+              "completed": 938,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 358,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 153,
+                "missing_family": 440,
+                "outputs": 1406,
+                "rescheduled_events": 0,
+                "updated_views": 1406
+              },
+              "p99_us_including_retries": 1856621.926,
+              "retries": 1191
+            },
+            "expire_family": {
+              "completed": 626,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 0,
+                "duplicate_messages": 0,
+                "expired_families": 184,
+                "expired_records": 1346,
+                "ignored_stale": 0,
+                "missing_family": 0,
+                "outputs": 0,
+                "rescheduled_events": 0,
+                "updated_views": 0
+              },
+              "p99_us_including_retries": 1854018.756,
+              "retries": 86
+            },
+            "global_cancel": {
+              "completed": 313,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 469,
+                "claimed_events": 0,
+                "created_views": 0,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 0,
+                "missing_family": 0,
+                "outputs": 0,
+                "rescheduled_events": 0,
+                "updated_views": 0
+              },
+              "p99_us_including_retries": 1861031.301,
+              "retries": 4112
+            },
+            "global_housekeeping": {
+              "completed": 626,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 0,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 4125,
+                "ignored_stale": 0,
+                "missing_family": 0,
+                "outputs": 0,
+                "rescheduled_events": 0,
+                "updated_views": 0
+              },
+              "p99_us_including_retries": 1872332.136,
+              "retries": 3367
+            },
+            "global_projection": {
+              "completed": 312,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 382,
+                "created_views": 0,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 0,
+                "missing_family": 0,
+                "outputs": 158,
+                "rescheduled_events": 382,
+                "updated_views": 0
+              },
+              "p99_us_including_retries": 1858007.091,
+              "retries": 3582
+            },
+            "global_reschedule": {
+              "completed": 312,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 0,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 0,
+                "missing_family": 0,
+                "outputs": 0,
+                "rescheduled_events": 595,
+                "updated_views": 0
+              },
+              "p99_us_including_retries": 1866473.238,
+              "retries": 3465
+            },
+            "plan": {
+              "completed": 937,
+              "outcomes": {
+                "allocation_deferred": 121,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 550,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 484,
+                "missing_family": 388,
+                "outputs": 456,
+                "rescheduled_events": 0,
+                "updated_views": 456
+              },
+              "p99_us_including_retries": 1861803.552,
+              "retries": 1150
+            },
+            "position": {
+              "completed": 936,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 286,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 518,
+                "missing_family": 533,
+                "outputs": 519,
+                "rescheduled_events": 0,
+                "updated_views": 519
+              },
+              "p99_us_including_retries": 1848812.903,
+              "retries": 1312
+            }
+          },
+          "performance_passed": false,
+          "population_scope": "initial/final snapshots; not a runtime minimum",
+          "qualified_capacity_trial": false,
+          "reasons": [
+            "lifecycle lacks creation/expiry turnover or exceeds missing/deferred limit",
+            "declared end-to-end p99 SLO exceeded",
+            "drained completion rate below declared offered-rate fraction"
+          ],
+          "throughput_with_drain": 744.5916424104832,
+          "timing_scope": "continuous_client_monotonic",
+          "useful_work_passed": false
+        },
+        "config": {
+          "arrival_rate": 1000,
+          "engine": "aerostore",
+          "evidence": "full",
+          "families": 16,
+          "global_time_predicates": false,
+          "hot_percent": 0,
+          "max_backlog": 1000,
+          "max_messages": 100000,
+          "message_interval_us": 0,
+          "pg_write_mode": "buffered",
+          "rpc_delay_us": 0,
+          "seconds": 5,
+          "seed": 20260925,
+          "shm_mib": 256,
+          "workers": 4,
+          "workload": "fleet"
+        }
+      },
+      {
+        "assessment": {
+          "capacity_failure": true,
+          "completed_messages": 5000,
+          "configured_identities": 16,
+          "continuous_timing_errors": [],
+          "continuous_timing_passed": true,
+          "correctness_companion_verified": true,
+          "elapsed_seconds_including_drain": 17.097143049,
+          "execution_valid": true,
+          "final_observed_live_families": 21,
+          "fleet_complete_phase_cycle": true,
+          "fleet_global_cancellation_mutated": true,
+          "fleet_global_housekeeping_mutated": true,
+          "fleet_global_projection_mutated": true,
+          "fleet_global_rescheduling_mutated": true,
+          "fleet_population_snapshots_passed": true,
+          "history_verified": true,
+          "initial_observed_live_families": 12,
+          "no_op_fraction": 0.1004,
+          "outcomes": {
+            "allocation_deferred": 25,
+            "cancelled_events": 922,
+            "claimed_events": 758,
+            "created_views": 1970,
+            "duplicate_messages": 0,
+            "expired_families": 279,
+            "expired_records": 10484,
+            "ignored_stale": 1460,
+            "missing_family": 477,
+            "outputs": 5809,
+            "rescheduled_events": 1822,
+            "updated_views": 5446
+          },
+          "p99_ms": 11955.384435,
+          "per_kind": {
+            "arrival": {
+              "completed": 938,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 120,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 358,
+                "missing_family": 84,
+                "outputs": 2882,
+                "rescheduled_events": 0,
+                "updated_views": 2882
+              },
+              "p99_us_including_retries": 12023254.571,
+              "retries": 2890
+            },
+            "expire_family": {
+              "completed": 626,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 0,
+                "duplicate_messages": 0,
+                "expired_families": 279,
+                "expired_records": 3400,
+                "ignored_stale": 0,
+                "missing_family": 0,
+                "outputs": 0,
+                "rescheduled_events": 0,
+                "updated_views": 0
+              },
+              "p99_us_including_retries": 11964759.717,
+              "retries": 318
+            },
+            "global_cancel": {
+              "completed": 313,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 922,
+                "claimed_events": 0,
+                "created_views": 0,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 0,
+                "missing_family": 0,
+                "outputs": 0,
+                "rescheduled_events": 0,
+                "updated_views": 0
+              },
+              "p99_us_including_retries": 12024305.949,
+              "retries": 4011
+            },
+            "global_housekeeping": {
+              "completed": 626,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 0,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 7084,
+                "ignored_stale": 0,
+                "missing_family": 0,
+                "outputs": 0,
+                "rescheduled_events": 0,
+                "updated_views": 0
+              },
+              "p99_us_including_retries": 11936292.634,
+              "retries": 5772
+            },
+            "global_projection": {
+              "completed": 312,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 758,
+                "created_views": 0,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 0,
+                "missing_family": 0,
+                "outputs": 363,
+                "rescheduled_events": 758,
+                "updated_views": 0
+              },
+              "p99_us_including_retries": 11895163.645,
+              "retries": 8742
+            },
+            "global_reschedule": {
+              "completed": 312,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 0,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 0,
+                "missing_family": 0,
+                "outputs": 0,
+                "rescheduled_events": 1064,
+                "updated_views": 0
+              },
+              "p99_us_including_retries": 11954937.162,
+              "retries": 3641
+            },
+            "plan": {
+              "completed": 937,
+              "outcomes": {
+                "allocation_deferred": 25,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 1222,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 587,
+                "missing_family": 178,
+                "outputs": 1107,
+                "rescheduled_events": 0,
+                "updated_views": 1107
+              },
+              "p99_us_including_retries": 11944950.702,
+              "retries": 2285
+            },
+            "position": {
+              "completed": 936,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 628,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 515,
+                "missing_family": 215,
+                "outputs": 1457,
+                "rescheduled_events": 0,
+                "updated_views": 1457
+              },
+              "p99_us_including_retries": 11934854.68,
+              "retries": 2992
+            }
+          },
+          "performance_passed": false,
+          "population_scope": "initial/final snapshots; not a runtime minimum",
+          "qualified_capacity_trial": false,
+          "reasons": [
+            "declared end-to-end p99 SLO exceeded",
+            "drained completion rate below declared offered-rate fraction"
+          ],
+          "throughput_with_drain": 292.44652078245593,
+          "timing_scope": "continuous_client_monotonic",
+          "useful_work_passed": true
+        },
+        "config": {
+          "arrival_rate": 1000,
+          "engine": "service-unix",
+          "evidence": "full",
+          "families": 16,
+          "global_time_predicates": false,
+          "hot_percent": 0,
+          "max_backlog": 1000,
+          "max_messages": 100000,
+          "message_interval_us": 0,
+          "pg_write_mode": "buffered",
+          "rpc_delay_us": 0,
+          "seconds": 5,
+          "seed": 20260925,
+          "shm_mib": 256,
+          "workers": 4,
+          "workload": "fleet"
+        }
+      },
+      {
+        "assessment": {
+          "capacity_failure": false,
+          "completed_messages": 5000,
+          "configured_identities": 16,
+          "continuous_timing_errors": [],
+          "continuous_timing_passed": true,
+          "correctness_companion_verified": true,
+          "elapsed_seconds_including_drain": 5.024332704,
+          "execution_valid": true,
+          "final_observed_live_families": 14,
+          "fleet_complete_phase_cycle": true,
+          "fleet_global_cancellation_mutated": true,
+          "fleet_global_housekeeping_mutated": true,
+          "fleet_global_projection_mutated": true,
+          "fleet_global_rescheduling_mutated": true,
+          "fleet_population_snapshots_passed": true,
+          "history_verified": true,
+          "initial_observed_live_families": 12,
+          "no_op_fraction": 0.0,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 1252,
+            "claimed_events": 1248,
+            "created_views": 2185,
+            "duplicate_messages": 0,
+            "expired_families": 311,
+            "expired_records": 14451,
+            "ignored_stale": 2,
+            "missing_family": 0,
+            "outputs": 8959,
+            "rescheduled_events": 2496,
+            "updated_views": 8119
+          },
+          "p99_ms": 6.303179,
+          "per_kind": {
+            "arrival": {
+              "completed": 938,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 0,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 2,
+                "missing_family": 0,
+                "outputs": 3750,
+                "rescheduled_events": 0,
+                "updated_views": 3750
+              },
+              "p99_us_including_retries": 7386.94,
+              "retries": 445
+            },
+            "expire_family": {
+              "completed": 626,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 0,
+                "duplicate_messages": 0,
+                "expired_families": 311,
+                "expired_records": 5829,
+                "ignored_stale": 0,
+                "missing_family": 0,
+                "outputs": 0,
+                "rescheduled_events": 0,
+                "updated_views": 0
+              },
+              "p99_us_including_retries": 2209.772,
+              "retries": 19
+            },
+            "global_cancel": {
+              "completed": 313,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 1252,
+                "claimed_events": 0,
+                "created_views": 0,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 0,
+                "missing_family": 0,
+                "outputs": 0,
+                "rescheduled_events": 0,
+                "updated_views": 0
+              },
+              "p99_us_including_retries": 1764.207,
+              "retries": 4
+            },
+            "global_housekeeping": {
+              "completed": 626,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 0,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 8622,
+                "ignored_stale": 0,
+                "missing_family": 0,
+                "outputs": 0,
+                "rescheduled_events": 0,
+                "updated_views": 0
+              },
+              "p99_us_including_retries": 2776.367,
+              "retries": 8
+            },
+            "global_projection": {
+              "completed": 312,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 1248,
+                "created_views": 0,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 0,
+                "missing_family": 0,
+                "outputs": 840,
+                "rescheduled_events": 1248,
+                "updated_views": 0
+              },
+              "p99_us_including_retries": 5939.457,
+              "retries": 245
+            },
+            "global_reschedule": {
+              "completed": 312,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 0,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 0,
+                "missing_family": 0,
+                "outputs": 0,
+                "rescheduled_events": 1248,
+                "updated_views": 0
+              },
+              "p99_us_including_retries": 1715.664,
+              "retries": 27
+            },
+            "plan": {
+              "completed": 937,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 2185,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 0,
+                "missing_family": 0,
+                "outputs": 2185,
+                "rescheduled_events": 0,
+                "updated_views": 2185
+              },
+              "p99_us_including_retries": 9002.514,
+              "retries": 219
+            },
+            "position": {
+              "completed": 936,
+              "outcomes": {
+                "allocation_deferred": 0,
+                "cancelled_events": 0,
+                "claimed_events": 0,
+                "created_views": 0,
+                "duplicate_messages": 0,
+                "expired_families": 0,
+                "expired_records": 0,
+                "ignored_stale": 0,
+                "missing_family": 0,
+                "outputs": 2184,
+                "rescheduled_events": 0,
+                "updated_views": 2184
+              },
+              "p99_us_including_retries": 7565.04,
+              "retries": 205
+            }
+          },
+          "performance_passed": true,
+          "population_scope": "initial/final snapshots; not a runtime minimum",
+          "qualified_capacity_trial": true,
+          "reasons": [],
+          "throughput_with_drain": 995.1570277221832,
+          "timing_scope": "continuous_client_monotonic",
+          "useful_work_passed": true
+        },
+        "config": {
+          "arrival_rate": 1000,
+          "engine": "postgres",
+          "evidence": "full",
+          "families": 16,
+          "global_time_predicates": false,
+          "hot_percent": 0,
+          "max_backlog": 1000,
+          "max_messages": 100000,
+          "message_interval_us": 0,
+          "pg_write_mode": "buffered",
+          "rpc_delay_us": 0,
+          "seconds": 5,
+          "seed": 20260925,
+          "shm_mib": 256,
+          "workers": 4,
+          "workload": "fleet"
+        }
+      }
+    ],
+    "whole_engine_verified": false
+  },
+  "groups": [
+    {
+      "arrival_rate": 1000,
+      "candidate_returned_ratios": {
+        "candidate_lookup": 3.566379049349077,
+        "family_lookup": 2.233270592897122,
+        "global_due_lookup": 1.0,
+        "global_expiry_lookup": 8.773850791258477,
+        "history_lookup": 32.77558348294434
+      },
+      "capacity_failure": 0,
+      "engine": "aerostore",
+      "execution_valid": 1,
+      "failed_processes": 0,
+      "final_fleet_live_families_range": [
+        20,
+        20
+      ],
+      "history_verified": 1,
+      "initial_fleet_live_families_range": [
+        12,
+        12
+      ],
+      "missing_deferred_fraction_range": [
+        0.2964,
+        0.2964
+      ],
+      "operation_diagnostics_total": {
+        "candidate_lookup:calls": 6464,
+        "candidate_lookup:candidate_rows": 188476,
+        "candidate_lookup:returned_rows": 52848,
+        "candidate_lookup:successful_query_ns": 67320674,
+        "family_lookup:calls": 11972,
+        "family_lookup:candidate_rows": 90175,
+        "family_lookup:returned_rows": 40378,
+        "family_lookup:successful_query_ns": 27524862,
+        "global_due_lookup:calls": 12096,
+        "global_due_lookup:candidate_rows": 7651,
+        "global_due_lookup:returned_rows": 7651,
+        "global_due_lookup:successful_query_ns": 5218334395,
+        "global_expiry_lookup:calls": 3993,
+        "global_expiry_lookup:candidate_rows": 116429,
+        "global_expiry_lookup:returned_rows": 13270,
+        "global_expiry_lookup:successful_query_ns": 2551275102,
+        "history_lookup:calls": 1348,
+        "history_lookup:candidate_rows": 18256,
+        "history_lookup:returned_rows": 557,
+        "history_lookup:successful_query_ns": 8463119
+      },
+      "outcomes_total": {
+        "allocation_deferred": 121,
+        "cancelled_events": 469,
+        "claimed_events": 382,
+        "created_views": 1194,
+        "expired_families": 184,
+        "expired_records": 5471,
+        "ignored_stale": 1155,
+        "missing_family": 1361,
+        "outputs": 2539,
+        "rescheduled_events": 977,
+        "updated_views": 2381
+      },
+      "p99_ms_range": [
+        1858.112791,
+        1858.112791
+      ],
+      "qualified_capacity_trial": 0,
+      "retries_range": [
+        18265,
+        18265
+      ],
+      "retry_causes_total": {
+        "candidate_lookup:serialization_failure": 18,
+        "commit:serialization_failure": 5662,
+        "family_lookup:serialization_failure": 10,
+        "global_due_lookup:serialization_failure": 9728,
+        "global_expiry_lookup:serialization_failure": 2829,
+        "history_lookup:serialization_failure": 18
+      },
+      "seeds": [
+        20260925
+      ],
+      "throughput_with_drain_range": [
+        744.5916424104832,
+        744.5916424104832
+      ],
+      "trials": 1,
+      "workers": 4
+    },
+    {
+      "arrival_rate": 1000,
+      "candidate_returned_ratios": {},
+      "capacity_failure": 0,
+      "engine": "postgres",
+      "execution_valid": 1,
+      "failed_processes": 0,
+      "final_fleet_live_families_range": [
+        14,
+        14
+      ],
+      "history_verified": 1,
+      "initial_fleet_live_families_range": [
+        12,
+        12
+      ],
+      "missing_deferred_fraction_range": [
+        0.0,
+        0.0
+      ],
+      "operation_diagnostics_total": {
+        "postgres:batch_write_statements": 5275,
+        "postgres:batch_written_rows": 49471,
+        "postgres:buffered_writes": 64907,
+        "postgres:ordered_lock_statements": 5544,
+        "postgres:overlay_reads": 2903,
+        "postgres:point_read_statements": 37953,
+        "postgres:predicate_statements": 17410,
+        "postgres:read_cache_hits": 32360
+      },
+      "outcomes_total": {
+        "cancelled_events": 1252,
+        "claimed_events": 1248,
+        "created_views": 2185,
+        "expired_families": 311,
+        "expired_records": 14451,
+        "ignored_stale": 2,
+        "outputs": 8959,
+        "rescheduled_events": 2496,
+        "updated_views": 8119
+      },
+      "p99_ms_range": [
+        6.303179,
+        6.303179
+      ],
+      "qualified_capacity_trial": 1,
+      "retries_range": [
+        1172,
+        1172
+      ],
+      "retry_causes_total": {
+        "batch_write:40001": 813,
+        "commit:40001": 90,
+        "ordered_lock:40001": 269
+      },
+      "seeds": [
+        20260925
+      ],
+      "throughput_with_drain_range": [
+        995.1570277221832,
+        995.1570277221832
+      ],
+      "trials": 1,
+      "workers": 4
+    },
+    {
+      "arrival_rate": 1000,
+      "candidate_returned_ratios": {
+        "candidate_lookup": 1.8908235985599882,
+        "family_lookup": 3.2646688631399696,
+        "global_due_lookup": 1.0,
+        "global_expiry_lookup": 2.2600487328804753,
+        "history_lookup": 36.45220883534137
+      },
+      "capacity_failure": 1,
+      "engine": "service-unix",
+      "execution_valid": 1,
+      "failed_processes": 0,
+      "final_fleet_live_families_range": [
+        21,
+        21
+      ],
+      "history_verified": 1,
+      "initial_fleet_live_families_range": [
+        12,
+        12
+      ],
+      "missing_deferred_fraction_range": [
+        0.1004,
+        0.1004
+      ],
+      "operation_diagnostics_total": {
+        "candidate_lookup:calls": 10978,
+        "candidate_lookup:candidate_rows": 308832,
+        "candidate_lookup:returned_rows": 163332,
+        "candidate_lookup:successful_query_ns": 127140157,
+        "family_lookup:calls": 24792,
+        "family_lookup:candidate_rows": 352754,
+        "family_lookup:returned_rows": 108052,
+        "family_lookup:successful_query_ns": 149606511,
+        "global_due_lookup:calls": 17331,
+        "global_due_lookup:candidate_rows": 50061,
+        "global_due_lookup:returned_rows": 50061,
+        "global_due_lookup:successful_query_ns": 10765023281,
+        "global_expiry_lookup:calls": 6398,
+        "global_expiry_lookup:candidate_rows": 349677,
+        "global_expiry_lookup:returned_rows": 154721,
+        "global_expiry_lookup:successful_query_ns": 6062852340,
+        "history_lookup:calls": 8859,
+        "history_lookup:candidate_rows": 181532,
+        "history_lookup:returned_rows": 4980,
+        "history_lookup:successful_query_ns": 94874060
+      },
+      "outcomes_total": {
+        "allocation_deferred": 25,
+        "cancelled_events": 922,
+        "claimed_events": 758,
+        "created_views": 1970,
+        "expired_families": 279,
+        "expired_records": 10484,
+        "ignored_stale": 1460,
+        "missing_family": 477,
+        "outputs": 5809,
+        "rescheduled_events": 1822,
+        "updated_views": 5446
+      },
+      "p99_ms_range": [
+        11955.384435,
+        11955.384435
+      ],
+      "qualified_capacity_trial": 0,
+      "retries_range": [
+        30651,
+        30651
+      ],
+      "retry_causes_total": {
+        "candidate_lookup:serialization_failure": 19,
+        "commit:serialization_failure": 14401,
+        "family_lookup:serialization_failure": 72,
+        "global_due_lookup:serialization_failure": 12401,
+        "global_expiry_lookup:serialization_failure": 3624,
+        "history_lookup:serialization_failure": 134
+      },
+      "seeds": [
+        20260925
+      ],
+      "throughput_with_drain_range": [
+        292.44652078245593,
+        292.44652078245593
+      ],
+      "trials": 1,
+      "workers": 4
+    }
+  ],
+  "history_verified_count": 3,
+  "limits": [
+    "Campaign passed is an execution-validity flag, not a claim that every trial meets the performance policy. High-rate campaigns have one seed and cannot qualify capacity. Only declared rates, workers, seeds, and synthetic contracts were tested. Passing thresholds are lower bounds; absent saturation ceilings prevent capacity-ratio proof.",
+    "Different valid transaction orders can change useful effects and generation occupancy. Missing/deferred outcomes do not establish lost committed data.",
+    "Retry stages do not attribute true overlap versus overly broad predicate conflicts. Global queries can have genuine conflicts.",
+    "Query calls include failed attempts. Candidate rows count after completed index lookups but before point reads; returned rows and successful time count only completed queries. Aggregates include transaction attempts that subsequently abort. Ratios therefore describe collected work, not per-committed-message cost or exact false-positive rates.",
+    "Initial/final fleet counts are snapshots, not concurrent runtime minima; more than configured identities can reflect simultaneous generations in the two-bank pool.",
+    "Native expiry indexing includes every active record event_time while PostgreSQL event_time_idx is partial for active kinds POSITION/OUTBOX/DEDUP. This concrete adapter schema confound calls for a matching narrow native expiry index control before attributing expiry amplification to the engine. Both due indexes are partial; that control alone cannot explain due-query costs or establish retry causes.",
+    "Interactive service results combine ownership with per-operation RPC and serialization overhead; these data do not isolate those costs.",
+    "Metrics companions establish reproducible same-source/configuration recorded cases, not witnesses for the unrecorded execution."
+  ],
+  "oracle_status_counts": {
+    "Valid": 3
+  },
+  "qualified_capacity_trial_count": 1,
+  "scope": "Independent compact report review. No history is inferred for failed or metrics-only executions; all declared trials are retained.",
+  "source_sha256": "d817ba814d857356f29c70d1f5dce340e380ce453601d028b69df939df6a5c4a",
+  "source_stable": true,
+  "trial_count": 3
+}

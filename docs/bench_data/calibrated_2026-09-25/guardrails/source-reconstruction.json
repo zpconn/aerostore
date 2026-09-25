@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "scope": "Every full pilot input reconstructed from the actual archived root source bundle and guardrail extra-input members; hashes equal final522-input proof fingerprint.",
+  "main_archive": "../source.tar.gz",
+  "main_archive_sha256": "5a03531415a1fc79931ea24dd281baa55a0cff7408f2b7996bb8bb4f59600fa7",
+  "main_inputs": 481,
+  "extra_inputs": 41,
+  "full_proof_inputs": 522,
+  "archive_member_validation": "manifest.json verified_archive_members=5444 includes every logical hardlink path"
+}

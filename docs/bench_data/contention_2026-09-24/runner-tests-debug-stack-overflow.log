@@ -1,0 +1,44 @@
+warning: method `commit_with_record_before_publish` is never used
+    --> aerostore_core/src/occ_partitioned.rs:1264:19
+     |
+ 365 | impl<T: Copy + Send + Sync + 'static> OccTable<T> {
+     | ------------------------------------------------- method in this implementation
+...
+1264 |     pub(crate) fn commit_with_record_before_publish<E, F>(
+     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `aerostore_core` (lib) generated 1 warning
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/aerostore_core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.08s
+     Running tests/contention_runner.rs (target/debug/deps/contention_runner-d80a3213f1f2c351)
+
+running 25 tests
+test contention_crucible::runner::isolation_tests::cleanup_failure_cannot_preserve_a_success_verdict ... ok
+test contention_crucible::workers::tests::pacing_accounts_for_execution_time_and_never_extends_deadline ... ok
+test contention_crucible::runner::isolation_tests::private_configuration_is_removed_even_after_early_return ... ok
+test contention_crucible::runner::isolation_tests::repeated_output_paths_get_distinct_evidence_directories ... ok
+test contention_crucible::runner::isolation_tests::stale_success_is_invalidated_before_configuration_or_setup ... ok
+test extended_crucible::model::tests::allocation_hint_is_not_used_to_hide_a_candidate_match ... ok
+test extended_crucible::model::tests::duplicate_has_no_observable_mutation_or_output ... ok
+test extended_crucible::model::tests::empty_candidate_query_cannot_match_through_allocation_hint ... ok
+test extended_crucible::model::tests::family_expiration_requires_terminal_views_and_strict_age_threshold ... ok
+test extended_crucible::model::tests::source_one_never_changes_source_two_or_four_only_views ... ok
+test extended_crucible::model::tests::whole_message_abort_changes_neither_state_nor_output ... ok
+test extended_crucible::model::tests::projection_uses_expected_history_without_replacing_real_observation ... ok
+test extended_crucible::model::tests::failed_family_expiration_rolls_back_every_related_row ... ok
+test extended_crucible::model::tests::independently_expected_coordinates_prove_fork_privacy ... ok
+test extended_crucible::model::tests::invariant_checker_detects_provenance_leak_and_terminal_event ... ok
+test extended_crucible::model::tests::failed_fork_rolls_back_physical_rows_and_buffered_outputs ... ok
+test extended_crucible::model::tests::same_callsign_is_disambiguated_using_route_and_tail ... ok
+test extended_crucible::model::tests::duplicate_delivery_group_has_one_accepted_message_and_three_duplicates ... ok
+test extended_crucible::aerostore::tests::fully_encoded_maximum_transaction_fits_wal_slot ... ok
+test extended_crucible::model::tests::housekeeping_retains_exact_expected_real_position_history ... ok
+
+thread 'extended_crucible::aerostore::tests::attachment_rejects_missing_wrong_size_and_corrupt_files_without_modification' (254) has overflowed its stack
+fatal runtime error: stack overflow, aborting
+error: test failed, to rerun pass `-p aerostore_core --test contention_runner`
+
+Caused by:
+  process didn't exit successfully: `/home/zpconn/code/aerostore/target/debug/deps/contention_runner-d80a3213f1f2c351` (signal: 6, SIGABRT: process abort signal)

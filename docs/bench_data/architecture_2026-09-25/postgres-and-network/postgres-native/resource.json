@@ -1,0 +1,39 @@
+{
+  "source_url": "https://ftp.postgresql.org/pub/source/v16.13/postgresql-16.13.tar.bz2",
+  "published_sha256_url": "https://ftp.postgresql.org/pub/source/v16.13/postgresql-16.13.tar.bz2.sha256",
+  "source_sha256": "dc2ddbbd245c0265a689408e3d2f2f3f9ba2da96bd19318214b313cdd9797287",
+  "published_sha256": "dc2ddbbd245c0265a689408e3d2f2f3f9ba2da96bd19318214b313cdd9797287",
+  "version": "postgres (PostgreSQL) 16.13",
+  "configure": "'--prefix=/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/install' '--without-readline' '--without-icu'",
+  "cc": "gcc",
+  "cflags": "-Wall -Wmissing-prototypes -Wpointer-arith -Wdeclaration-after-statement -Werror=vla -Wendif-labels -Wmissing-format-attribute -Wimplicit-fallthrough=3 -Wcast-function-type -Wshadow=compatible-local -Wformat-security -fno-strict-aliasing -fwrapv -fexcess-precision=standard -Wno-format-truncation -Wno-stringop-truncation -O2",
+  "configure_command": [
+    "./configure",
+    "--prefix=/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/install",
+    "--without-readline",
+    "--without-icu"
+  ],
+  "build_command": [
+    "make",
+    "-j4"
+  ],
+  "install_command": [
+    "make",
+    "install"
+  ],
+  "postgres_binary_sha256": "bc321202e954ea399d7e2fe777d08a07e0acf3b2ef6f337d9042b67629a408b0",
+  "os": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "socket_directory": "/tmp/aerostore-tuned-pg-20260925",
+  "socket_port": 55432,
+  "socket_directory_mode": "0700",
+  "socket_mode": "0700",
+  "listen_addresses": "",
+  "data_directory": "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/data",
+  "database": "contention_test",
+  "role": "postgres",
+  "local_auth": "trust restricted by owner-only socket directory",
+  "postmaster_pid": 39471,
+  "global_installation_modified": false,
+  "topology": "native PostgreSQL process on same WSL host/filesystem as AeroStore; private Unix-domain socket",
+  "status": "running; retained for parent benchmark campaign"
+}

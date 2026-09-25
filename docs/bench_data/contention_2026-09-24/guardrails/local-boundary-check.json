@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "errors": [],
+  "scope": "change detection only; not a whole-engine refinement proof",
+  "checked_files": 352,
+  "baseline_ref": null,
+  "anchoring": "local_bootstrap_only",
+  "open_claims": [
+    "TX-HISTORY-IMPLEMENTATION",
+    "MEMORY-OWNERSHIP",
+    "MEMORY-PROGRESS",
+    "WEAK-MEMORY-MMAP",
+    "DURABILITY-IMPLEMENTATION",
+    "QUERY-APPLICATION"
+  ]
+}

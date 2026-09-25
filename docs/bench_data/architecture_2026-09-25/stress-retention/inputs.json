@@ -1,0 +1,103 @@
+{
+  "aerostore": {
+    "original_history": {
+      "bytes": 140236157,
+      "messages": 12000,
+      "path": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/retention-final/aerostore-r100-w4-s20260925-x8ezlu81/contention-crucible-2GVAA2/aerostore-0/history.jsonl",
+      "sha256": "835bc19d997fb0a40a357a687f6c11ee4521cfe537189dadf515c07d634823b9"
+    },
+    "original_oracle_inputs": {
+      "final.json": {
+        "bytes": 1668175,
+        "path": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/retention-final/aerostore-r100-w4-s20260925-x8ezlu81/contention-crucible-2GVAA2/aerostore-0/final.json",
+        "sha256": "956dd0d2850174dcff0e16929ce53f2684309479cb9701b65873e119988cc589"
+      },
+      "initial.json": {
+        "bytes": 1619628,
+        "path": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/retention-final/aerostore-r100-w4-s20260925-x8ezlu81/contention-crucible-2GVAA2/aerostore-0/initial.json",
+        "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+      },
+      "serial-witness.json": {
+        "bytes": 156178,
+        "path": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/retention-final/aerostore-r100-w4-s20260925-x8ezlu81/contention-crucible-2GVAA2/aerostore-0/serial-witness.json",
+        "sha256": "dff29c5dc90668931929f333f50d05e41f23a5b2d0b10613de69c9f75ea47751"
+      }
+    },
+    "original_report": {
+      "bytes": 254840,
+      "path": "target/architecture-qualification-2026-09-25/retention-final/aerostore-r100-w4-s20260925-x8ezlu81/report.json",
+      "sha256": "37ac9bef3b6aff1297cc38e8f833afdd75c24d0047219d463579d6ff3e0036c2"
+    }
+  },
+  "build": {
+    "binary_sha256": "af39521c16db6244b7a8772a314d8df9a8554128b33a555f336b45f11b784e1f",
+    "provenance": "build-provenance.json",
+    "source_bundle": {
+      "bytes": 1245885,
+      "path": "/home/zpconn/code/aerostore/docs/bench_data/architecture_2026-09-25/stress-source.tar.gz",
+      "sha256": "4a750a509554cbc03a8333ea1344463ccb842f924b19e1d68d8713610b556653"
+    },
+    "source_files_verified": 478,
+    "source_inventory_sha256": "6e955013e6539022447dd3158843f955e58f4c3bb18b00b77a35ce6005369eb6"
+  },
+  "postgres": {
+    "original_history": {
+      "bytes": 140246765,
+      "messages": 12000,
+      "path": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/retention-final/postgres-r100-w4-s20260925-zz8d3ocu/contention-crucible-GcVOga/postgres-0/history.jsonl",
+      "sha256": "9a2caa2608d7fc9ac8c52c1b6d8f5af3c7b86af3b3104f9d4310ec614b05bb80"
+    },
+    "original_oracle_inputs": {
+      "final.json": {
+        "bytes": 1668175,
+        "path": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/retention-final/postgres-r100-w4-s20260925-zz8d3ocu/contention-crucible-GcVOga/postgres-0/final.json",
+        "sha256": "956dd0d2850174dcff0e16929ce53f2684309479cb9701b65873e119988cc589"
+      },
+      "initial.json": {
+        "bytes": 1619628,
+        "path": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/retention-final/postgres-r100-w4-s20260925-zz8d3ocu/contention-crucible-GcVOga/postgres-0/initial.json",
+        "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+      },
+      "serial-witness.json": {
+        "bytes": 156178,
+        "path": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/retention-final/postgres-r100-w4-s20260925-zz8d3ocu/contention-crucible-GcVOga/postgres-0/serial-witness.json",
+        "sha256": "dff29c5dc90668931929f333f50d05e41f23a5b2d0b10613de69c9f75ea47751"
+      }
+    },
+    "original_report": {
+      "bytes": 281681,
+      "path": "target/architecture-qualification-2026-09-25/retention-final/postgres-r100-w4-s20260925-zz8d3ocu/report.json",
+      "sha256": "7db8edf519d2c75dda0de1bf3fc8b1596f70557d7e60c75a1880f75ad7342996"
+    }
+  },
+  "service-unix": {
+    "original_history": {
+      "bytes": 140253289,
+      "messages": 12000,
+      "path": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/retention-final/service-unix-r100-w4-s20260925-3k1ubp2g/contention-crucible-eoRdkD/service-unix-0/history.jsonl",
+      "sha256": "4fc5dd24e9ed020d3c2685a950c0d8c901a04b81fbc6a524f0dc36dc1f8d86e4"
+    },
+    "original_oracle_inputs": {
+      "final.json": {
+        "bytes": 1668175,
+        "path": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/retention-final/service-unix-r100-w4-s20260925-3k1ubp2g/contention-crucible-eoRdkD/service-unix-0/final.json",
+        "sha256": "956dd0d2850174dcff0e16929ce53f2684309479cb9701b65873e119988cc589"
+      },
+      "initial.json": {
+        "bytes": 1619628,
+        "path": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/retention-final/service-unix-r100-w4-s20260925-3k1ubp2g/contention-crucible-eoRdkD/service-unix-0/initial.json",
+        "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+      },
+      "serial-witness.json": {
+        "bytes": 156178,
+        "path": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/retention-final/service-unix-r100-w4-s20260925-3k1ubp2g/contention-crucible-eoRdkD/service-unix-0/serial-witness.json",
+        "sha256": "dff29c5dc90668931929f333f50d05e41f23a5b2d0b10613de69c9f75ea47751"
+      }
+    },
+    "original_report": {
+      "bytes": 255105,
+      "path": "target/architecture-qualification-2026-09-25/retention-final/service-unix-r100-w4-s20260925-3k1ubp2g/report.json",
+      "sha256": "573a46fc77b21bc28d5d1f166dee58c5211a991f06190ed56420922ae8e086d8"
+    }
+  }
+}

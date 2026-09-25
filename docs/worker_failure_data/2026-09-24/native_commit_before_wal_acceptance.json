@@ -1,0 +1,17 @@
+{
+  "arbitrary_partial_publication_kill_tested": false,
+  "arena_bytes": 16777216,
+  "cleared_slots": 1,
+  "fixture_rows": 2,
+  "fresh_replay_index_rebuild_and_first_message_ms": 1.8628740000000001,
+  "kill_reap_ms": 1.156496,
+  "phase": "native_commit_before_wal_acceptance",
+  "predicate_usable_after_warm_attach": false,
+  "replayed_transactions": 1,
+  "replayed_writes": 2,
+  "rows_partially_published": false,
+  "timing_scope": "microfixture, excludes failure detection and stopping other workers",
+  "wait_for_native_wal_cutpoint_ms": 27.078934999999998,
+  "wal_bytes_changed": false,
+  "warm_attach_ms": 0.020823
+}

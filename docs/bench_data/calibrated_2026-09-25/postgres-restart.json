@@ -1,0 +1,29 @@
+{
+  "started_at": "2026-09-25T20:53:43.632541+00:00",
+  "command": [
+    "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/install/bin/pg_ctl",
+    "-D",
+    "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/data",
+    "-l",
+    "/home/zpconn/code/aerostore/target/calibrated-validation/postgres.log",
+    "-w",
+    "-t",
+    "30",
+    "start"
+  ],
+  "returncode": 0,
+  "stdout": "waiting for server to start.... done\nserver started\n",
+  "stderr": "",
+  "private_socket_mode": "0700",
+  "pid_file": [
+    "2467",
+    "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/data",
+    "1790369623",
+    "55432",
+    "/tmp/aerostore-tuned-pg-20260925",
+    "",
+    "  6341268         1",
+    "ready   "
+  ],
+  "proc_start_ticks": "51730"
+}

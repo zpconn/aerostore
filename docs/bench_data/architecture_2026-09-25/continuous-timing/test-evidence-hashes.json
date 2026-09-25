@@ -1,0 +1,9 @@
+{
+  "scope": "Captured negative/positive integration logs, explicit binary attribution receipt, and qualification unit log. Generated interposition C source is embedded in scripts/test_contention_integration.py in the separately archived corrected source; no shared objects copied.",
+  "sha256": {
+    "continuous-negative-control.log": "d8ec98ea3baa31ba62151c98f7da96f14e9f481ebc835fb53335d5a2334b79da",
+    "continuous-integration.log": "2e627ecddb352c7f28927b46d917514a7b6fb9f6b648d115f0022576cf338221",
+    "continuous-integration-executions.json": "a12d9c96e5600a23df9dc4034611b8af3ef7a82aca71658161894488cc47f802",
+    "continuous-timing-qualification-tests.log": "f578c40cf81de16695abafff39f1c39faac469b6c589574325ec2baedb9c66c6"
+  }
+}

@@ -1,0 +1,68 @@
+TLC2 Version 2026.09.22.222048 (rev: 35d40c9)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 24 cores with 491MB heap and 64MB offheap memory [pid: 81] (Linux 6.6.87.2-microsoft-standard-WSL2 amd64, Ubuntu 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /tmp/aerostore-tlc-models-kn3a_qct/ServiceProtocol.tla
+Parsing file /tmp/tlc-17372444677878865270/Naturals.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /tmp/tlc-17372444677878865270/FiniteSets.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /tmp/tlc-17372444677878865270/Sequences.tla (jar:file:/home/zpconn/code/aerostore/target/verification-tools/tla/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module ServiceProtocol
+Linting of module ServiceProtocol
+Starting... (2026-09-25 00:41:43)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-09-25 00:41:43.
+Error: Invariant NoLostReplySurvivorWitness is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ learned = <<"unknown", "unknown">>
+/\ applied = <<0, 0>>
+/\ alive = <<TRUE, TRUE>>
+/\ outcome = <<"unknown", "unknown">>
+/\ phase = <<"new", "new">>
+/\ accepted = <<FALSE, FALSE>>
+/\ registered = <<FALSE, FALSE>>
+
+State 2: <Begin(1) line 19, col 5 to line 22, col 63 of module ServiceProtocol>
+/\ phase = <<"open", "new">>
+/\ registered = <<TRUE, FALSE>>
+
+State 3: <Accept(1) line 25, col 5 to line 29, col 56 of module ServiceProtocol>
+/\ outcome = <<"pending", "unknown">>
+/\ phase = <<"accepted", "new">>
+/\ accepted = <<TRUE, FALSE>>
+
+State 4: <Kill line 41, col 5 to line 43, col 75 of module ServiceProtocol>
+/\ alive = <<FALSE, TRUE>>
+
+State 5: <Finish(1) line 32, col 5 to line 37, col 45 of module ServiceProtocol>
+/\ applied = <<1, 0>>
+/\ outcome = <<"committed", "unknown">>
+/\ phase = <<"committed", "new">>
+/\ registered = <<FALSE, FALSE>>
+
+State 6: <Resolve(1) line 56, col 5 to line 59, col 73 of module ServiceProtocol>
+/\ learned = <<"committed", "unknown">>
+
+State 7: <Begin(2) line 19, col 5 to line 22, col 63 of module ServiceProtocol>
+/\ phase = <<"committed", "open">>
+/\ registered = <<FALSE, TRUE>>
+
+State 8: <Accept(2) line 25, col 5 to line 29, col 56 of module ServiceProtocol>
+/\ outcome = <<"committed", "pending">>
+/\ phase = <<"committed", "accepted">>
+/\ accepted = <<TRUE, TRUE>>
+/\ registered = <<FALSE, TRUE>>
+
+State 9: <Finish(2) line 32, col 5 to line 37, col 45 of module ServiceProtocol>
+/\ learned = <<"committed", "unknown">>
+/\ applied = <<1, 1>>
+/\ alive = <<FALSE, TRUE>>
+/\ outcome = <<"committed", "committed">>
+/\ phase = <<"committed", "committed">>
+/\ accepted = <<TRUE, TRUE>>
+/\ registered = <<FALSE, FALSE>>
+
+459 states generated, 151 distinct states found, 37 states left on queue.
+The depth of the complete state graph search is 9.
+Finished in 00s at (2026-09-25 00:41:43)

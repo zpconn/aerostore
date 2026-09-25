@@ -1,0 +1,1677 @@
+{
+  "all_compressed_member_hashes_verified": true,
+  "archive": "full-final.tar.gz",
+  "archive_bytes": 35402839,
+  "archive_sha256": "8d0eeacd159bcc6d35c9ae3fa045c5f4591db3261e1ed82e55c2182c9af9a422",
+  "campaign_completed": true,
+  "campaign_passed": false,
+  "campaign_trials": 48,
+  "compressed_hardlinks_to_identical_prior_members": 90,
+  "format": "aerostore-campaign-evidence-archive-v1",
+  "interpretation": "Original concentrated lifecycle stress corpus; insufficient live fleet population for architecture qualification. Historical report bytes are preserved without reinterpreting their gates.",
+  "member_paths_relative_to": "source_root",
+  "members": {
+    "aerostore-r100-w1-s20260924-y4k66g4t/contention-crucible-IQ5EXJ/aerostore-0/final.json": {
+      "bytes": 1643203,
+      "sha256": "4c35b79ec1cfca4e413cfd88ee46344725f6e23592a613e824ed255c0c8a7239"
+    },
+    "aerostore-r100-w1-s20260924-y4k66g4t/contention-crucible-IQ5EXJ/aerostore-0/history.jsonl": {
+      "bytes": 5783002,
+      "sha256": "afe599811e844145013eadebdd890a4978817665e41ad064c2fe8d26271ad29d"
+    },
+    "aerostore-r100-w1-s20260924-y4k66g4t/contention-crucible-IQ5EXJ/aerostore-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "aerostore-r100-w1-s20260924-y4k66g4t/contention-crucible-IQ5EXJ/aerostore-0/progress.json": {
+      "bytes": 10593,
+      "sha256": "a5c462a654f5f2ff6b450b1d1a669885dc489fcdf1f478ca77d0c0f583fcc3ce"
+    },
+    "aerostore-r100-w1-s20260924-y4k66g4t/contention-crucible-IQ5EXJ/aerostore-0/result.json": {
+      "bytes": 22533,
+      "sha256": "c506d3211674e9a819816857d0fa5f64c802f6a35e0fd0c8a219044762cb3b43"
+    },
+    "aerostore-r100-w1-s20260924-y4k66g4t/contention-crucible-IQ5EXJ/aerostore-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "aerostore-r100-w1-s20260924-y4k66g4t/report.json": {
+      "bytes": 27215,
+      "sha256": "5f024936651ec8c825c26fd8df4f745f23e69f5dc747d2aa16ffc776088c4716"
+    },
+    "aerostore-r100-w1-s20260924-y4k66g4t/run.log": {
+      "bytes": 116,
+      "sha256": "50753b628e0d87c3fc070ab17f24cec17f6543c68843250ef6d38a813e4221c8"
+    },
+    "aerostore-r100-w1-s20260924-y4k66g4t/trial.json": {
+      "bytes": 35704,
+      "sha256": "fe52273136b154e23372ac863b83f34007a51e63208218ccb0bf1f7f1c9487a7"
+    },
+    "aerostore-r100-w1-s20260925-5b_xth88/contention-crucible-Ql92g3/aerostore-0/final.json": {
+      "bytes": 1638145,
+      "sha256": "ac1c158d3bd40ddcadc00d8d6e62e12af8fccaa9272a16d017ad35fa2cac47ba"
+    },
+    "aerostore-r100-w1-s20260925-5b_xth88/contention-crucible-Ql92g3/aerostore-0/history.jsonl": {
+      "bytes": 5787016,
+      "sha256": "f4168684151857f6bf6a6a5061f4a22fac18df90b54db2ca08ac36b7b76b82df"
+    },
+    "aerostore-r100-w1-s20260925-5b_xth88/contention-crucible-Ql92g3/aerostore-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "aerostore-r100-w1-s20260925-5b_xth88/contention-crucible-Ql92g3/aerostore-0/progress.json": {
+      "bytes": 10593,
+      "sha256": "ae5d96e5c29dbe48e4881bc8323af14a36c3c0803f126aae96434d19497124d9"
+    },
+    "aerostore-r100-w1-s20260925-5b_xth88/contention-crucible-Ql92g3/aerostore-0/result.json": {
+      "bytes": 22535,
+      "sha256": "c38a75c617baa7bb46bbeeedcf08ceac95ab89fa0eb958a65f497e96c815fc55"
+    },
+    "aerostore-r100-w1-s20260925-5b_xth88/contention-crucible-Ql92g3/aerostore-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "aerostore-r100-w1-s20260925-5b_xth88/report.json": {
+      "bytes": 27219,
+      "sha256": "7e674ae0507ed3bd7f7eb480fe9f376e3357cfec8fc7ef06826c2aa067f5aa1d"
+    },
+    "aerostore-r100-w1-s20260925-5b_xth88/run.log": {
+      "bytes": 116,
+      "sha256": "866a1992837cd88a4e04b996dbddd03db80fe7e891c29c25e0d90831ca2e619a"
+    },
+    "aerostore-r100-w1-s20260925-5b_xth88/trial.json": {
+      "bytes": 35712,
+      "sha256": "d5e83fd4867430072e6dd244aa27e6cb6b4677992481317ed6d1cbfd319e9bbe"
+    },
+    "aerostore-r100-w1-s20260926-5s747o9v/contention-crucible-I67RsT/aerostore-0/final.json": {
+      "bytes": 1635521,
+      "sha256": "ef89fa5d7578da10a6f36bb4ffc519c16a0b077b981b424609b3ae71e52b1071"
+    },
+    "aerostore-r100-w1-s20260926-5s747o9v/contention-crucible-I67RsT/aerostore-0/history.jsonl": {
+      "bytes": 5789079,
+      "sha256": "76310a8dacf3d4ebd68532ae5db477dde13d2af6134f598e643ef6c4c9486007"
+    },
+    "aerostore-r100-w1-s20260926-5s747o9v/contention-crucible-I67RsT/aerostore-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "aerostore-r100-w1-s20260926-5s747o9v/contention-crucible-I67RsT/aerostore-0/progress.json": {
+      "bytes": 10593,
+      "sha256": "f370f7382ef5158bbed395eb8540f3acf74be3c59986d6fc1311f4e17ca64b7b"
+    },
+    "aerostore-r100-w1-s20260926-5s747o9v/contention-crucible-I67RsT/aerostore-0/result.json": {
+      "bytes": 22536,
+      "sha256": "88ab4295d639a316d80d134e9c55592e824693ac0c800b29aa431d506bc606cb"
+    },
+    "aerostore-r100-w1-s20260926-5s747o9v/contention-crucible-I67RsT/aerostore-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "aerostore-r100-w1-s20260926-5s747o9v/report.json": {
+      "bytes": 27220,
+      "sha256": "26caa7d676388ca3b7ab74594f74cbaab9e667dc77153d8c148b78afcb405417"
+    },
+    "aerostore-r100-w1-s20260926-5s747o9v/run.log": {
+      "bytes": 115,
+      "sha256": "4707d8f8404ea96939461d4ff11110d631c6baae6dc6f531b6b3412f55fa5e52"
+    },
+    "aerostore-r100-w1-s20260926-5s747o9v/trial.json": {
+      "bytes": 35712,
+      "sha256": "94075ea5efae9e6e05beecd0eae3067a03a61e790744206134bfdb16dc5bebc7"
+    },
+    "aerostore-r100-w4-s20260924-a0s2bzk3/contention-crucible-FWXLOA/aerostore-0/final.json": {
+      "bytes": 1643203,
+      "sha256": "4c35b79ec1cfca4e413cfd88ee46344725f6e23592a613e824ed255c0c8a7239"
+    },
+    "aerostore-r100-w4-s20260924-a0s2bzk3/contention-crucible-FWXLOA/aerostore-0/history.jsonl": {
+      "bytes": 5783038,
+      "sha256": "da55c8f54d4b9e54170a15bc49928af0364e2482b1f2784e4cf4e26ac7e90c46"
+    },
+    "aerostore-r100-w4-s20260924-a0s2bzk3/contention-crucible-FWXLOA/aerostore-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "aerostore-r100-w4-s20260924-a0s2bzk3/contention-crucible-FWXLOA/aerostore-0/progress.json": {
+      "bytes": 10617,
+      "sha256": "546f4b7998dd91b4244ece2e97af0ec35f14c3d84be7aad81dc61a8daa70c54c"
+    },
+    "aerostore-r100-w4-s20260924-a0s2bzk3/contention-crucible-FWXLOA/aerostore-0/result.json": {
+      "bytes": 22935,
+      "sha256": "d668067b2cda3044ff5da531f80fffa1b37c439d3046e7035e9d49a90b7d98b4"
+    },
+    "aerostore-r100-w4-s20260924-a0s2bzk3/contention-crucible-FWXLOA/aerostore-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "aerostore-r100-w4-s20260924-a0s2bzk3/report.json": {
+      "bytes": 27691,
+      "sha256": "b4e70d9362f41593abb4839efbc4b66272f3028d503adabf6c03a2ae11051b35"
+    },
+    "aerostore-r100-w4-s20260924-a0s2bzk3/run.log": {
+      "bytes": 116,
+      "sha256": "02b67db6a47686aab9587721dc15380fa39377d7a0ca048a934d94ff7abdfcc2"
+    },
+    "aerostore-r100-w4-s20260924-a0s2bzk3/trial.json": {
+      "bytes": 36222,
+      "sha256": "3dfcafb2ff45ead51b6a4c533f43a2d944eccff40251e959c21a2ebdf7807b12"
+    },
+    "aerostore-r100-w4-s20260925-0n4tdrhq/contention-crucible-0BKFAd/aerostore-0/final.json": {
+      "bytes": 1638145,
+      "sha256": "ac1c158d3bd40ddcadc00d8d6e62e12af8fccaa9272a16d017ad35fa2cac47ba"
+    },
+    "aerostore-r100-w4-s20260925-0n4tdrhq/contention-crucible-0BKFAd/aerostore-0/history.jsonl": {
+      "bytes": 5787031,
+      "sha256": "94860b37141d99ad01c1543e33dec588caeb9d3bfd27aaef22571368842b53a2"
+    },
+    "aerostore-r100-w4-s20260925-0n4tdrhq/contention-crucible-0BKFAd/aerostore-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "aerostore-r100-w4-s20260925-0n4tdrhq/contention-crucible-0BKFAd/aerostore-0/progress.json": {
+      "bytes": 10617,
+      "sha256": "af3ad30116ca06ba18928bc5e8d6b1dcf68fff97f1139d6182021a59c3cb6694"
+    },
+    "aerostore-r100-w4-s20260925-0n4tdrhq/contention-crucible-0BKFAd/aerostore-0/result.json": {
+      "bytes": 22931,
+      "sha256": "41e0bac8a2058c83afb5f6c8b5d6c7c8d5e2a5e48067f760649af57eb8b95190"
+    },
+    "aerostore-r100-w4-s20260925-0n4tdrhq/contention-crucible-0BKFAd/aerostore-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "aerostore-r100-w4-s20260925-0n4tdrhq/report.json": {
+      "bytes": 27687,
+      "sha256": "4104fae39da9a4705a830e716aa06ff6f66ca3748d548f0c40b5cf0fdb792073"
+    },
+    "aerostore-r100-w4-s20260925-0n4tdrhq/run.log": {
+      "bytes": 116,
+      "sha256": "59f15bae596eb193338c80caa173ef3ae1873e985857cc9a8f835337591a470c"
+    },
+    "aerostore-r100-w4-s20260925-0n4tdrhq/trial.json": {
+      "bytes": 36215,
+      "sha256": "90543f603266e10efbd27ec6471f39abec271c3274f03b750f3fdf9e5fa38742"
+    },
+    "aerostore-r100-w4-s20260926-5is4s4lf/contention-crucible-LDBnBc/aerostore-0/final.json": {
+      "bytes": 1635521,
+      "sha256": "ef89fa5d7578da10a6f36bb4ffc519c16a0b077b981b424609b3ae71e52b1071"
+    },
+    "aerostore-r100-w4-s20260926-5is4s4lf/contention-crucible-LDBnBc/aerostore-0/history.jsonl": {
+      "bytes": 5789105,
+      "sha256": "753238e5b93bd7b29e7320d68b95a3859473af5b9321dbbfe3517138cd0d522a"
+    },
+    "aerostore-r100-w4-s20260926-5is4s4lf/contention-crucible-LDBnBc/aerostore-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "aerostore-r100-w4-s20260926-5is4s4lf/contention-crucible-LDBnBc/aerostore-0/progress.json": {
+      "bytes": 10615,
+      "sha256": "24b64148f48722f6d45c29eeadf984879ce22a45ccaf5b38ba5d332000ae222f"
+    },
+    "aerostore-r100-w4-s20260926-5is4s4lf/contention-crucible-LDBnBc/aerostore-0/result.json": {
+      "bytes": 22932,
+      "sha256": "580645d877e248e275991a9ed34476ae1f6f03eb9c1c0cbf3ed200480aa7dd1c"
+    },
+    "aerostore-r100-w4-s20260926-5is4s4lf/contention-crucible-LDBnBc/aerostore-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "aerostore-r100-w4-s20260926-5is4s4lf/report.json": {
+      "bytes": 27686,
+      "sha256": "3fdba0166441357ae601128350eec7f8482b2c692536bb6685f43a9b575eb476"
+    },
+    "aerostore-r100-w4-s20260926-5is4s4lf/run.log": {
+      "bytes": 116,
+      "sha256": "bc7f8f12b2e3bb2b03613a1f635b3419b3e56acd55bb78fce654cd5600f290c9"
+    },
+    "aerostore-r100-w4-s20260926-5is4s4lf/trial.json": {
+      "bytes": 36225,
+      "sha256": "24b83b77247da5060809d83812ccafaf48fc868471716bfd292c9270c82a623b"
+    },
+    "aerostore-r1000-w1-s20260924-z4hk6lr_/contention-crucible-8qXdpj/aerostore-0/final.json": {
+      "bytes": 1664128,
+      "sha256": "b6bd5fb45b2402f200fd78b94e060a323d7b2da69cbb11ffae52e23a655415ba"
+    },
+    "aerostore-r1000-w1-s20260924-z4hk6lr_/contention-crucible-8qXdpj/aerostore-0/history.jsonl": {
+      "bytes": 58335556,
+      "sha256": "3109558bf051e6bef4377a307a6ae8efbef0e1b99b11a46687577345037ac314"
+    },
+    "aerostore-r1000-w1-s20260924-z4hk6lr_/contention-crucible-8qXdpj/aerostore-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "aerostore-r1000-w1-s20260924-z4hk6lr_/contention-crucible-8qXdpj/aerostore-0/progress.json": {
+      "bytes": 10666,
+      "sha256": "9ddef1bf67187a4ea42dbcb0a3b731a4a692f689b5fba8f04415f03799b19b62"
+    },
+    "aerostore-r1000-w1-s20260924-z4hk6lr_/contention-crucible-8qXdpj/aerostore-0/result.json": {
+      "bytes": 22695,
+      "sha256": "a1c2b31c86d507d500b9cb440b3073a564eb21ee2cc79979c5a37601a3f532f5"
+    },
+    "aerostore-r1000-w1-s20260924-z4hk6lr_/contention-crucible-8qXdpj/aerostore-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "5c85f92e13522675f0ca76c4cc66479039eb4e5d569168b6adbe96615b2223d7"
+    },
+    "aerostore-r1000-w1-s20260924-z4hk6lr_/report.json": {
+      "bytes": 27382,
+      "sha256": "283b5307ecb0e979c4751ff0a8d905888be3df4b00c57a1347de35618dfb469c"
+    },
+    "aerostore-r1000-w1-s20260924-z4hk6lr_/run.log": {
+      "bytes": 117,
+      "sha256": "e66a3c926eb6b5f11bd9ea5ae350a74f7becadd7b292cc0aa956c97cad64ed00"
+    },
+    "aerostore-r1000-w1-s20260924-z4hk6lr_/trial.json": {
+      "bytes": 35910,
+      "sha256": "cc97fe177e33aa5af4ce0c005c6f02266635f3035afa329a6a4087ba77a851db"
+    },
+    "aerostore-r1000-w1-s20260925-xcze3tnq/contention-crucible-CydoWr/aerostore-0/final.json": {
+      "bytes": 1666768,
+      "sha256": "a6c355f42210c12a6823fe15ae3797964b0c23546e23a10933def2657e613656"
+    },
+    "aerostore-r1000-w1-s20260925-xcze3tnq/contention-crucible-CydoWr/aerostore-0/history.jsonl": {
+      "bytes": 58330513,
+      "sha256": "acb67810657e25544af7bb57eda50d1519b8c8f90de65273bf8f032047afcd5e"
+    },
+    "aerostore-r1000-w1-s20260925-xcze3tnq/contention-crucible-CydoWr/aerostore-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "aerostore-r1000-w1-s20260925-xcze3tnq/contention-crucible-CydoWr/aerostore-0/progress.json": {
+      "bytes": 10660,
+      "sha256": "1344bf32f70d91f6d8d5fd4491d5d0a6596ee24eae2a9b2795ff3e18fd5b9b7f"
+    },
+    "aerostore-r1000-w1-s20260925-xcze3tnq/contention-crucible-CydoWr/aerostore-0/result.json": {
+      "bytes": 22688,
+      "sha256": "9d8647b88205ac847826e396e251ab11c1a06ec5d0ca9de005fcc3f235d1a54c"
+    },
+    "aerostore-r1000-w1-s20260925-xcze3tnq/contention-crucible-CydoWr/aerostore-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "5c85f92e13522675f0ca76c4cc66479039eb4e5d569168b6adbe96615b2223d7"
+    },
+    "aerostore-r1000-w1-s20260925-xcze3tnq/report.json": {
+      "bytes": 27375,
+      "sha256": "b9d2621c22622b896753d265649d0c9bcf95ce01a4e8fac88981cf1d7b5b283c"
+    },
+    "aerostore-r1000-w1-s20260925-xcze3tnq/run.log": {
+      "bytes": 117,
+      "sha256": "7475ed1a0ee825a277a362ddb44bba655bdc0deeb3693ce5dcbd733288b67352"
+    },
+    "aerostore-r1000-w1-s20260925-xcze3tnq/trial.json": {
+      "bytes": 35912,
+      "sha256": "1d66d33b02ea54c4c7de34834d00184aee425c868cd57f4d080f914948e0c077"
+    },
+    "aerostore-r1000-w1-s20260926-ui_dvo9l/contention-crucible-xP0E69/aerostore-0/final.json": {
+      "bytes": 1666677,
+      "sha256": "c736bcb89a5248078b0adef3b1593494d5031a77be64df3a900c3e149e684c48"
+    },
+    "aerostore-r1000-w1-s20260926-ui_dvo9l/contention-crucible-xP0E69/aerostore-0/history.jsonl": {
+      "bytes": 58329236,
+      "sha256": "341c8e65ab197ad2ef3999e547fd8734870d78f1a1defa1b98459fabe4646c0f"
+    },
+    "aerostore-r1000-w1-s20260926-ui_dvo9l/contention-crucible-xP0E69/aerostore-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "aerostore-r1000-w1-s20260926-ui_dvo9l/contention-crucible-xP0E69/aerostore-0/progress.json": {
+      "bytes": 10642,
+      "sha256": "eb2a2ec448df01acc29cac24ba45f77a65b9f3c00d280992bbb75606b32f12cb"
+    },
+    "aerostore-r1000-w1-s20260926-ui_dvo9l/contention-crucible-xP0E69/aerostore-0/result.json": {
+      "bytes": 22672,
+      "sha256": "029b9ea3625aa50a14bbf062d604222aa9e6b1f1f8acee65d00912c25e74ffd4"
+    },
+    "aerostore-r1000-w1-s20260926-ui_dvo9l/contention-crucible-xP0E69/aerostore-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "5c85f92e13522675f0ca76c4cc66479039eb4e5d569168b6adbe96615b2223d7"
+    },
+    "aerostore-r1000-w1-s20260926-ui_dvo9l/report.json": {
+      "bytes": 27359,
+      "sha256": "fec4700b4aedb7e69bb448acf18cb3bb7b263ae6679f69121a49116c04fe6452"
+    },
+    "aerostore-r1000-w1-s20260926-ui_dvo9l/run.log": {
+      "bytes": 117,
+      "sha256": "3af0fabbc9fd5493f4b587a62644d9589532354b52b21de6b969624c3adc4987"
+    },
+    "aerostore-r1000-w1-s20260926-ui_dvo9l/trial.json": {
+      "bytes": 35889,
+      "sha256": "5cbc4934476a96ae625e9f5afaadde0073b6f11af6af8f3b56a8dd9f405e5e1d"
+    },
+    "aerostore-r1000-w4-s20260924-p4igxj3v/contention-crucible-hanKnm/aerostore-0/final.json": {
+      "bytes": 1649008,
+      "sha256": "98267ab8464ba08b1f4229156239834ef853d96616f8631ea02a107bd1c22ab1"
+    },
+    "aerostore-r1000-w4-s20260924-p4igxj3v/contention-crucible-hanKnm/aerostore-0/history.jsonl": {
+      "bytes": 19986482,
+      "sha256": "168a4a7c3c29444e92cabc63f12775f460461298fdd75ef663c2511b22734dea"
+    },
+    "aerostore-r1000-w4-s20260924-p4igxj3v/contention-crucible-hanKnm/aerostore-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "aerostore-r1000-w4-s20260924-p4igxj3v/contention-crucible-hanKnm/aerostore-0/progress.json": {
+      "bytes": 10659,
+      "sha256": "03e6940a8689b15268b83a08490f457ce841d27a2f99a91efd953b8f89b501a9"
+    },
+    "aerostore-r1000-w4-s20260924-p4igxj3v/contention-crucible-hanKnm/aerostore-0/result.json": {
+      "bytes": 23431,
+      "sha256": "35e50772bda8f172613183bfbc44522ef8c10f25286284df45259e2277b07cb6"
+    },
+    "aerostore-r1000-w4-s20260924-p4igxj3v/contention-crucible-hanKnm/aerostore-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "391b792527930814ee84e2915e055bd888f17311712d8b7310dc436a93502212"
+    },
+    "aerostore-r1000-w4-s20260924-p4igxj3v/report.json": {
+      "bytes": 28218,
+      "sha256": "066bff232c4b85f3d4f00221b9e7028629bda2fbda3948e7a28b38089e46bfea"
+    },
+    "aerostore-r1000-w4-s20260924-p4igxj3v/run.log": {
+      "bytes": 122,
+      "sha256": "7eb271c5f78d6015a65e54b24096f282659646eb278e2ebb69f3c70d83726ec6"
+    },
+    "aerostore-r1000-w4-s20260924-p4igxj3v/trial.json": {
+      "bytes": 37067,
+      "sha256": "8253b7ce0902c0d3f20a7c657e44ac8d744e795fb7fbfc2c46e525464d485e51"
+    },
+    "aerostore-r1000-w4-s20260925-anmod29d/contention-crucible-56FMTw/aerostore-0/final.json": {
+      "bytes": 1646505,
+      "sha256": "a53f6fc36b37f599bcdaf8310610a6a9345ea29024993db2f67644d9520f098d"
+    },
+    "aerostore-r1000-w4-s20260925-anmod29d/contention-crucible-56FMTw/aerostore-0/history.jsonl": {
+      "bytes": 19585632,
+      "sha256": "0339c3e6a02acd1481fbac1c4f8426d812300ede0d2a3ae15e092c45c4f0ead6"
+    },
+    "aerostore-r1000-w4-s20260925-anmod29d/contention-crucible-56FMTw/aerostore-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "aerostore-r1000-w4-s20260925-anmod29d/contention-crucible-56FMTw/aerostore-0/progress.json": {
+      "bytes": 10655,
+      "sha256": "ee5f759229cae593a27f9bdd97280b3e18c2e7db0aa27aed2ed80c2bbdc86d09"
+    },
+    "aerostore-r1000-w4-s20260925-anmod29d/contention-crucible-56FMTw/aerostore-0/result.json": {
+      "bytes": 23425,
+      "sha256": "7dc55fde108ed7f8d3acc97b22851d04dfcb40cfee2e83db8105205ece22ceb8"
+    },
+    "aerostore-r1000-w4-s20260925-anmod29d/contention-crucible-56FMTw/aerostore-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "6358426123b1d9bbe7dfcf3b22c7f41b8f7d923f2a6d41034944d2debaaeae19"
+    },
+    "aerostore-r1000-w4-s20260925-anmod29d/report.json": {
+      "bytes": 28212,
+      "sha256": "7298a006d109334ea180cdf012d0d79f911ddb864a3abd3610869eb0e79d0605"
+    },
+    "aerostore-r1000-w4-s20260925-anmod29d/run.log": {
+      "bytes": 123,
+      "sha256": "11c6a5f8ccfa140c9193a418eb93b086c0cc22a12a268a017d3849a65db65220"
+    },
+    "aerostore-r1000-w4-s20260925-anmod29d/trial.json": {
+      "bytes": 36983,
+      "sha256": "17ad1d44c5fb22b0323f7a4d1db76d5ce84ad2914e78a122ff4fa46df32aa83c"
+    },
+    "aerostore-r1000-w4-s20260926-0m8wm431/contention-crucible-h1Ydbw/aerostore-0/final.json": {
+      "bytes": 1648365,
+      "sha256": "7f4c31b3f10d3f35786a957775bf16a8df68ae0f5a786409a42189242f3a3267"
+    },
+    "aerostore-r1000-w4-s20260926-0m8wm431/contention-crucible-h1Ydbw/aerostore-0/history.jsonl": {
+      "bytes": 19493602,
+      "sha256": "78e449f4c7162d86e755ad570915ee77516376cb815ddfbac395cb9b598c62e0"
+    },
+    "aerostore-r1000-w4-s20260926-0m8wm431/contention-crucible-h1Ydbw/aerostore-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "aerostore-r1000-w4-s20260926-0m8wm431/contention-crucible-h1Ydbw/aerostore-0/progress.json": {
+      "bytes": 10659,
+      "sha256": "aaf18f26d98a9ede06fbde701ad9f8c0ef4514702fdaa8fc73760bcb4f565072"
+    },
+    "aerostore-r1000-w4-s20260926-0m8wm431/contention-crucible-h1Ydbw/aerostore-0/result.json": {
+      "bytes": 23437,
+      "sha256": "02f8663e09cd1e52acc4279028192f64b5bf3ab3f08623044efdaef2605b20a6"
+    },
+    "aerostore-r1000-w4-s20260926-0m8wm431/contention-crucible-h1Ydbw/aerostore-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "9177843acd3fb6449317cd5ff71e6714c5f0993be90c6919459e732b70a7e4c9"
+    },
+    "aerostore-r1000-w4-s20260926-0m8wm431/report.json": {
+      "bytes": 28224,
+      "sha256": "8e0cd1320cd251fac957de3b5cfee3f007441fa7ea052017e98123a593ac4dab"
+    },
+    "aerostore-r1000-w4-s20260926-0m8wm431/run.log": {
+      "bytes": 124,
+      "sha256": "dda19fac8c7b2c9bef34a6bbce2c73902399b6882065abade663432509a6e1a2"
+    },
+    "aerostore-r1000-w4-s20260926-0m8wm431/trial.json": {
+      "bytes": 37067,
+      "sha256": "03ff2a7ff63e324640616bacb0f489d3577a6e2e98375f85c1cb947e72ca884f"
+    },
+    "campaign.json": {
+      "bytes": 2392910,
+      "sha256": "b3a040b2348230a18b8c755e927292d6dd2d0b5545a801be1e30c5d63e7cd667"
+    },
+    "postgres-r100-w1-s20260924-78mp7tpq/contention-crucible-USNuvK/postgres-0/final.json": {
+      "bytes": 1643203,
+      "sha256": "4c35b79ec1cfca4e413cfd88ee46344725f6e23592a613e824ed255c0c8a7239"
+    },
+    "postgres-r100-w1-s20260924-78mp7tpq/contention-crucible-USNuvK/postgres-0/history.jsonl": {
+      "bytes": 5783414,
+      "sha256": "ff67f3b589f2f584eb66f1830b169ef5b76a7f3863ddf758ada650610727b900"
+    },
+    "postgres-r100-w1-s20260924-78mp7tpq/contention-crucible-USNuvK/postgres-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "postgres-r100-w1-s20260924-78mp7tpq/contention-crucible-USNuvK/postgres-0/progress.json": {
+      "bytes": 11301,
+      "sha256": "84fa99a890aa8755109163e3d4c3507420f7eaa5079023dbc3c2af4fa936f614"
+    },
+    "postgres-r100-w1-s20260924-78mp7tpq/contention-crucible-USNuvK/postgres-0/result.json": {
+      "bytes": 35653,
+      "sha256": "97d1f6da145a28bdf29f130bc9f125bc795fc175e5614f464fb75d7f156ede91"
+    },
+    "postgres-r100-w1-s20260924-78mp7tpq/contention-crucible-USNuvK/postgres-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "postgres-r100-w1-s20260924-78mp7tpq/report.json": {
+      "bytes": 42914,
+      "sha256": "03dfe9e1b4c519aa47b9b0a312bbe7ea2ab7176aa13d4619fd47afa54954245b"
+    },
+    "postgres-r100-w1-s20260924-78mp7tpq/run.log": {
+      "bytes": 114,
+      "sha256": "227fe301089a5df20dd5d38d208b69ed5762b64217383e21c4b4ed2d1d5e5cc6"
+    },
+    "postgres-r100-w1-s20260924-78mp7tpq/trial.json": {
+      "bytes": 52263,
+      "sha256": "708e8c2559b4d5c2f95c706e8a8b44dc1355af49d9d506e302ab89151549c77e"
+    },
+    "postgres-r100-w1-s20260925-4qn5qhfo/contention-crucible-rUsh4g/postgres-0/final.json": {
+      "bytes": 1638145,
+      "sha256": "ac1c158d3bd40ddcadc00d8d6e62e12af8fccaa9272a16d017ad35fa2cac47ba"
+    },
+    "postgres-r100-w1-s20260925-4qn5qhfo/contention-crucible-rUsh4g/postgres-0/history.jsonl": {
+      "bytes": 5787434,
+      "sha256": "d3e047a9e9da9e624e5b442d4b223930ead82642be32e4bea95ae59c6ddcde3f"
+    },
+    "postgres-r100-w1-s20260925-4qn5qhfo/contention-crucible-rUsh4g/postgres-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "postgres-r100-w1-s20260925-4qn5qhfo/contention-crucible-rUsh4g/postgres-0/progress.json": {
+      "bytes": 11325,
+      "sha256": "5515cf207e9bd403fd36d99c660494af991409ee58201fc87851ee8853ddc2be"
+    },
+    "postgres-r100-w1-s20260925-4qn5qhfo/contention-crucible-rUsh4g/postgres-0/result.json": {
+      "bytes": 35681,
+      "sha256": "7402a7095252f275a994dde729cb508450c87ec08b255633287e707ddced24a8"
+    },
+    "postgres-r100-w1-s20260925-4qn5qhfo/contention-crucible-rUsh4g/postgres-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "postgres-r100-w1-s20260925-4qn5qhfo/report.json": {
+      "bytes": 42942,
+      "sha256": "114ee7af81a481f75f4cfa80a49af29b2aefa3d7cb06516e8ecfa6644c47c4d7"
+    },
+    "postgres-r100-w1-s20260925-4qn5qhfo/run.log": {
+      "bytes": 115,
+      "sha256": "7e3d4a6643ccd693d19571a679d6748bef036a24cc04ed3e8f8e6cf3bcf1097c"
+    },
+    "postgres-r100-w1-s20260925-4qn5qhfo/trial.json": {
+      "bytes": 52280,
+      "sha256": "50581d2310813e9cb150ccec4a1eb96ddddf0511d574f907024c64ce107e66ab"
+    },
+    "postgres-r100-w1-s20260926-2kxtf5ta/contention-crucible-sALtaX/postgres-0/final.json": {
+      "bytes": 1635521,
+      "sha256": "ef89fa5d7578da10a6f36bb4ffc519c16a0b077b981b424609b3ae71e52b1071"
+    },
+    "postgres-r100-w1-s20260926-2kxtf5ta/contention-crucible-sALtaX/postgres-0/history.jsonl": {
+      "bytes": 5789462,
+      "sha256": "cdd2faed69cda4295f76471aa29fd3ad8bf07dd22a36765b4f205eae8c565c5f"
+    },
+    "postgres-r100-w1-s20260926-2kxtf5ta/contention-crucible-sALtaX/postgres-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "postgres-r100-w1-s20260926-2kxtf5ta/contention-crucible-sALtaX/postgres-0/progress.json": {
+      "bytes": 11326,
+      "sha256": "22978607f485f47d99185e3967aadea753096e12d245f6f4a4fe2b0cc69ae76d"
+    },
+    "postgres-r100-w1-s20260926-2kxtf5ta/contention-crucible-sALtaX/postgres-0/result.json": {
+      "bytes": 35682,
+      "sha256": "09c621fed67c64ea1a0a95232e7f30a74e7d8982d6d3c0eea780c404244f4b6d"
+    },
+    "postgres-r100-w1-s20260926-2kxtf5ta/contention-crucible-sALtaX/postgres-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "postgres-r100-w1-s20260926-2kxtf5ta/report.json": {
+      "bytes": 42943,
+      "sha256": "434ac6d5f84c165ba820ddf9adfef410f461c072f1621785e6ca792ce9da33fe"
+    },
+    "postgres-r100-w1-s20260926-2kxtf5ta/run.log": {
+      "bytes": 115,
+      "sha256": "bcd2fbde0de182f408a4e604962879f01fd2c42693aa3b91d329ee2a597474e1"
+    },
+    "postgres-r100-w1-s20260926-2kxtf5ta/trial.json": {
+      "bytes": 52281,
+      "sha256": "83aea15788d636df0de7a2a8c7b15a32d0252ea116e9644e3c81f54d08c67d98"
+    },
+    "postgres-r100-w4-s20260924-vv8eygs2/contention-crucible-1UMkUZ/postgres-0/final.json": {
+      "bytes": 1643203,
+      "sha256": "4c35b79ec1cfca4e413cfd88ee46344725f6e23592a613e824ed255c0c8a7239"
+    },
+    "postgres-r100-w4-s20260924-vv8eygs2/contention-crucible-1UMkUZ/postgres-0/history.jsonl": {
+      "bytes": 5783488,
+      "sha256": "b998c09b1588a2957afa07791818afdbf5c0c2bf32ee61b90457145757b1a8aa"
+    },
+    "postgres-r100-w4-s20260924-vv8eygs2/contention-crucible-1UMkUZ/postgres-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "postgres-r100-w4-s20260924-vv8eygs2/contention-crucible-1UMkUZ/postgres-0/progress.json": {
+      "bytes": 11327,
+      "sha256": "bef4eae3f397c836d286bf3cd4ed37bbd7739b83318a6459d4d1d26e60c2e94b"
+    },
+    "postgres-r100-w4-s20260924-vv8eygs2/contention-crucible-1UMkUZ/postgres-0/result.json": {
+      "bytes": 36046,
+      "sha256": "2fe79da8a050350f9fd868d416bf569b58b3b5340751f5354ffba90ce311d2f5"
+    },
+    "postgres-r100-w4-s20260924-vv8eygs2/contention-crucible-1UMkUZ/postgres-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "postgres-r100-w4-s20260924-vv8eygs2/report.json": {
+      "bytes": 43379,
+      "sha256": "297a22283471c2b2d59d02b53de6bbf3b03a8cc86d5c10d475d256d5ee4eff0a"
+    },
+    "postgres-r100-w4-s20260924-vv8eygs2/run.log": {
+      "bytes": 115,
+      "sha256": "89555dc704c4255782b51f7440e8efc3f9b8f941806e1a0b1c8ad8390ead230b"
+    },
+    "postgres-r100-w4-s20260924-vv8eygs2/trial.json": {
+      "bytes": 52750,
+      "sha256": "8747e7785ac77ffa3a6b979a063456d6c76bdcd93c3920723f52d31ec89d6619"
+    },
+    "postgres-r100-w4-s20260925-j9i5tm0n/contention-crucible-f6av3Z/postgres-0/final.json": {
+      "bytes": 1638145,
+      "sha256": "ac1c158d3bd40ddcadc00d8d6e62e12af8fccaa9272a16d017ad35fa2cac47ba"
+    },
+    "postgres-r100-w4-s20260925-j9i5tm0n/contention-crucible-f6av3Z/postgres-0/history.jsonl": {
+      "bytes": 5787461,
+      "sha256": "a64163095cb46046d9815a8cb7f832a8bde84cfc404ecc78b5ec77269b015f2d"
+    },
+    "postgres-r100-w4-s20260925-j9i5tm0n/contention-crucible-f6av3Z/postgres-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "postgres-r100-w4-s20260925-j9i5tm0n/contention-crucible-f6av3Z/postgres-0/progress.json": {
+      "bytes": 11350,
+      "sha256": "f128bf32df4afb88f9e7674d8e86213c72eaf2ae771b3be91a7186895f6c75d8"
+    },
+    "postgres-r100-w4-s20260925-j9i5tm0n/contention-crucible-f6av3Z/postgres-0/result.json": {
+      "bytes": 36078,
+      "sha256": "485810ab13b503c92446a1c554c2426996a4afc5fd4fd3692f36a9a35706fb2d"
+    },
+    "postgres-r100-w4-s20260925-j9i5tm0n/contention-crucible-f6av3Z/postgres-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "postgres-r100-w4-s20260925-j9i5tm0n/report.json": {
+      "bytes": 43411,
+      "sha256": "41e801fb65e24ec2c0c9273b5a5fdf4d76c47624de831b5dc257e38723d5af0c"
+    },
+    "postgres-r100-w4-s20260925-j9i5tm0n/run.log": {
+      "bytes": 115,
+      "sha256": "2188fa2bcdccccf535f13c1d29152f16e53f57fb24a53534e539e63bee77af18"
+    },
+    "postgres-r100-w4-s20260925-j9i5tm0n/trial.json": {
+      "bytes": 52785,
+      "sha256": "b366d6f928772a196c7867c36714852a748f02b98935a1c4ccd604c09f1853c8"
+    },
+    "postgres-r100-w4-s20260926-ylm34484/contention-crucible-zQWaeP/postgres-0/final.json": {
+      "bytes": 1635521,
+      "sha256": "ef89fa5d7578da10a6f36bb4ffc519c16a0b077b981b424609b3ae71e52b1071"
+    },
+    "postgres-r100-w4-s20260926-ylm34484/contention-crucible-zQWaeP/postgres-0/history.jsonl": {
+      "bytes": 5789609,
+      "sha256": "d88b8a1e7ca0f0908221c6b9be4a56ce42e8e3411c908ca8b0683735d3a0a878"
+    },
+    "postgres-r100-w4-s20260926-ylm34484/contention-crucible-zQWaeP/postgres-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "postgres-r100-w4-s20260926-ylm34484/contention-crucible-zQWaeP/postgres-0/progress.json": {
+      "bytes": 11350,
+      "sha256": "8924d440c07812982150d8c5c6b63d4a0ca050c9efb5a6a9a7cd453bf65e8524"
+    },
+    "postgres-r100-w4-s20260926-ylm34484/contention-crucible-zQWaeP/postgres-0/result.json": {
+      "bytes": 36078,
+      "sha256": "ba6f5bdc67fe7274caf4a6a2c8be1a43de368353708c9bbb99b7334f724427b2"
+    },
+    "postgres-r100-w4-s20260926-ylm34484/contention-crucible-zQWaeP/postgres-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "postgres-r100-w4-s20260926-ylm34484/report.json": {
+      "bytes": 43410,
+      "sha256": "8844b4e99d4d564f0b17531edad45e878c45973d1e6ada529d92e4298fbfa516"
+    },
+    "postgres-r100-w4-s20260926-ylm34484/run.log": {
+      "bytes": 115,
+      "sha256": "acc05064a92a3252e6807e3843190b46ebf3dc3b434515ba7f8eee1592bb981a"
+    },
+    "postgres-r100-w4-s20260926-ylm34484/trial.json": {
+      "bytes": 52793,
+      "sha256": "d5f933ad4c8c0f8799907404ed4532868ef62d17d76bf5b026e3f98113e04e4f"
+    },
+    "postgres-r1000-w1-s20260924-be9nf7jx/contention-crucible-vIVZmT/postgres-0/final.json": {
+      "bytes": 1664128,
+      "sha256": "b6bd5fb45b2402f200fd78b94e060a323d7b2da69cbb11ffae52e23a655415ba"
+    },
+    "postgres-r1000-w1-s20260924-be9nf7jx/contention-crucible-vIVZmT/postgres-0/history.jsonl": {
+      "bytes": 58334898,
+      "sha256": "2913abbbd2b956fd040d4a607c5f3ebad8a9ff93a704d025b6e43d1ba7d93daa"
+    },
+    "postgres-r1000-w1-s20260924-be9nf7jx/contention-crucible-vIVZmT/postgres-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "postgres-r1000-w1-s20260924-be9nf7jx/contention-crucible-vIVZmT/postgres-0/progress.json": {
+      "bytes": 11331,
+      "sha256": "9cc9a519d33e659933453ae7840fa37863a9f7e68cc41d74467b961c2e1b05f9"
+    },
+    "postgres-r1000-w1-s20260924-be9nf7jx/contention-crucible-vIVZmT/postgres-0/result.json": {
+      "bytes": 35734,
+      "sha256": "169d5ee28722980c4bf7302e0b6a970d6d84b4c5d922370ef3e252f9fafb8c70"
+    },
+    "postgres-r1000-w1-s20260924-be9nf7jx/contention-crucible-vIVZmT/postgres-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "5c85f92e13522675f0ca76c4cc66479039eb4e5d569168b6adbe96615b2223d7"
+    },
+    "postgres-r1000-w1-s20260924-be9nf7jx/report.json": {
+      "bytes": 42998,
+      "sha256": "750079e8071043f0a14e66738a345ba7a394f45ba403abc13d2df046669ed6ec"
+    },
+    "postgres-r1000-w1-s20260924-be9nf7jx/run.log": {
+      "bytes": 116,
+      "sha256": "3a1d6a117d8dbde9c86dc6e9738251a39f844aae469d2d6d50e4fc32bed22f4b"
+    },
+    "postgres-r1000-w1-s20260924-be9nf7jx/trial.json": {
+      "bytes": 52379,
+      "sha256": "755811af361e67e1d0616aded407f1db922eedc873ba3e2aef8ae282f7e24804"
+    },
+    "postgres-r1000-w1-s20260925-q5ags27w/contention-crucible-T54BVi/postgres-0/final.json": {
+      "bytes": 1666768,
+      "sha256": "a6c355f42210c12a6823fe15ae3797964b0c23546e23a10933def2657e613656"
+    },
+    "postgres-r1000-w1-s20260925-q5ags27w/contention-crucible-T54BVi/postgres-0/history.jsonl": {
+      "bytes": 58329854,
+      "sha256": "e39040b4ca1ab1701f07e6add04acc533bc9a3914159247c8fc50cd09e6cbcfc"
+    },
+    "postgres-r1000-w1-s20260925-q5ags27w/contention-crucible-T54BVi/postgres-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "postgres-r1000-w1-s20260925-q5ags27w/contention-crucible-T54BVi/postgres-0/progress.json": {
+      "bytes": 11348,
+      "sha256": "adfd9c9bdcbf18ff3895c7697cadb1fc31f5de705305382a005fac8aab62bbd6"
+    },
+    "postgres-r1000-w1-s20260925-q5ags27w/contention-crucible-T54BVi/postgres-0/result.json": {
+      "bytes": 35753,
+      "sha256": "cc8afa9bb80d6afcabc3f05e06e505da1dacdbbc0b7e06f3251a99e124597be0"
+    },
+    "postgres-r1000-w1-s20260925-q5ags27w/contention-crucible-T54BVi/postgres-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "5c85f92e13522675f0ca76c4cc66479039eb4e5d569168b6adbe96615b2223d7"
+    },
+    "postgres-r1000-w1-s20260925-q5ags27w/report.json": {
+      "bytes": 43017,
+      "sha256": "d186dbd086ab9640d568c2f1fdab6d769b0aa23aa4533785f784f561f8c408b7"
+    },
+    "postgres-r1000-w1-s20260925-q5ags27w/run.log": {
+      "bytes": 116,
+      "sha256": "f82db33c37f848f94a44aed74a106c2295b59fabb7d5abeb094c9464ca0bb1dc"
+    },
+    "postgres-r1000-w1-s20260925-q5ags27w/trial.json": {
+      "bytes": 52388,
+      "sha256": "d5529c79c061046d270d8dad9c50c40ac55b16df37449c128f934bfdce9992e4"
+    },
+    "postgres-r1000-w1-s20260926-yuc3rvrh/contention-crucible-YLqq5O/postgres-0/final.json": {
+      "bytes": 1666677,
+      "sha256": "c736bcb89a5248078b0adef3b1593494d5031a77be64df3a900c3e149e684c48"
+    },
+    "postgres-r1000-w1-s20260926-yuc3rvrh/contention-crucible-YLqq5O/postgres-0/history.jsonl": {
+      "bytes": 58328771,
+      "sha256": "9a87dd78bde5936c5ff63be1171716379ebf942d0bbc4c28920963ae31667757"
+    },
+    "postgres-r1000-w1-s20260926-yuc3rvrh/contention-crucible-YLqq5O/postgres-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "postgres-r1000-w1-s20260926-yuc3rvrh/contention-crucible-YLqq5O/postgres-0/progress.json": {
+      "bytes": 11347,
+      "sha256": "f9f38b4d8cb77e4e43a0ef789f4aa5c2e9e57d5864a870fbc3a6880f257775f2"
+    },
+    "postgres-r1000-w1-s20260926-yuc3rvrh/contention-crucible-YLqq5O/postgres-0/result.json": {
+      "bytes": 35752,
+      "sha256": "242c758e063894b00435011bb3c1d744d99465044bec34b898b022fd1297d606"
+    },
+    "postgres-r1000-w1-s20260926-yuc3rvrh/contention-crucible-YLqq5O/postgres-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "5c85f92e13522675f0ca76c4cc66479039eb4e5d569168b6adbe96615b2223d7"
+    },
+    "postgres-r1000-w1-s20260926-yuc3rvrh/report.json": {
+      "bytes": 43016,
+      "sha256": "b09dcfdc45593d06ab840aec6b154b905eec6d1c19905a149f266a8dbe545868"
+    },
+    "postgres-r1000-w1-s20260926-yuc3rvrh/run.log": {
+      "bytes": 116,
+      "sha256": "1666a35f8ce6b2477ea5ba776600baea9018e33c0950be1c584d458f761e86c3"
+    },
+    "postgres-r1000-w1-s20260926-yuc3rvrh/trial.json": {
+      "bytes": 52386,
+      "sha256": "30ff86127fe2c94cfb59739b9a6c68ccf107c12e1abb0fc5bcea69863f480576"
+    },
+    "postgres-r1000-w4-s20260924-f50ze6zd/contention-crucible-6xN0Bl/postgres-0/final.json": {
+      "bytes": 1662888,
+      "sha256": "f7e08e9a3db945573d765fa59469100756abdcbfee51a1420d5e2af96954ae4e"
+    },
+    "postgres-r1000-w4-s20260924-f50ze6zd/contention-crucible-6xN0Bl/postgres-0/history.jsonl": {
+      "bytes": 49982461,
+      "sha256": "f78f73c778bfd1f862d7d65075932e55da039d798777b905d3053d69ba750e3c"
+    },
+    "postgres-r1000-w4-s20260924-f50ze6zd/contention-crucible-6xN0Bl/postgres-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "postgres-r1000-w4-s20260924-f50ze6zd/contention-crucible-6xN0Bl/postgres-0/progress.json": {
+      "bytes": 11374,
+      "sha256": "b9e7f4a139036d3ebc599d694c78ae205b5a33a479c214c1ca69a19dbf8f9b9b"
+    },
+    "postgres-r1000-w4-s20260924-f50ze6zd/contention-crucible-6xN0Bl/postgres-0/result.json": {
+      "bytes": 36260,
+      "sha256": "3aeba9ce1d32b577e24398f4096a27213002fe34ae765c430b315caefe61be21"
+    },
+    "postgres-r1000-w4-s20260924-f50ze6zd/contention-crucible-6xN0Bl/postgres-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "9394cba2e0f0a409e42e5a5ccce0a2b7df8ac0401e08f699b507502e71cbab69"
+    },
+    "postgres-r1000-w4-s20260924-f50ze6zd/report.json": {
+      "bytes": 43612,
+      "sha256": "542f03621d6617d0d2a808b0c926acc1665d8e0b68dd38035766f7e724d0a464"
+    },
+    "postgres-r1000-w4-s20260924-f50ze6zd/run.log": {
+      "bytes": 118,
+      "sha256": "9dff78afa008c3557989eec77134b1c3d53e14c774c94ddfb09b23039c75a4c7"
+    },
+    "postgres-r1000-w4-s20260924-f50ze6zd/trial.json": {
+      "bytes": 53057,
+      "sha256": "76d7fe2ec0d710bd422f879c748e95edac0b0f0816bc3b73cc88e1eea416e0b9"
+    },
+    "postgres-r1000-w4-s20260925-iu1fj2en/contention-crucible-1G4bOO/postgres-0/final.json": {
+      "bytes": 1665289,
+      "sha256": "26e023ea95da67c1f51f4b3f3306517e82d56db10f2b8b81809a5351346694f9"
+    },
+    "postgres-r1000-w4-s20260925-iu1fj2en/contention-crucible-1G4bOO/postgres-0/history.jsonl": {
+      "bytes": 51561912,
+      "sha256": "5f5ab09c9cdb40e122a40508037fd33ea0e0d17d3fbc59c99f226e84e0cbbeea"
+    },
+    "postgres-r1000-w4-s20260925-iu1fj2en/contention-crucible-1G4bOO/postgres-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "postgres-r1000-w4-s20260925-iu1fj2en/contention-crucible-1G4bOO/postgres-0/progress.json": {
+      "bytes": 11380,
+      "sha256": "6ec0eba3cfb32dfcbd0ed3f9920a5a45a8d61da5aeb167b5064353660dc50591"
+    },
+    "postgres-r1000-w4-s20260925-iu1fj2en/contention-crucible-1G4bOO/postgres-0/result.json": {
+      "bytes": 36264,
+      "sha256": "7dfa2ab8f533e2981e21e84838cf84e36ae302273baf66aa193b9f91870a37d9"
+    },
+    "postgres-r1000-w4-s20260925-iu1fj2en/contention-crucible-1G4bOO/postgres-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "aaf9356c4470c31b49bbec3ce0fb4b1a60366a1ca6fe4f36474f163460e5c0b6"
+    },
+    "postgres-r1000-w4-s20260925-iu1fj2en/report.json": {
+      "bytes": 43616,
+      "sha256": "a82a22ad8c1d0d00284d685badea8d79cc61a6c0c283720c0127cd277628dd4d"
+    },
+    "postgres-r1000-w4-s20260925-iu1fj2en/run.log": {
+      "bytes": 118,
+      "sha256": "c76db8e342afb63a8f0ccf0e952a5f455958aeb23d8feba6e0144bc050bfe4ae"
+    },
+    "postgres-r1000-w4-s20260925-iu1fj2en/trial.json": {
+      "bytes": 53059,
+      "sha256": "82421de90bbd5ecd1c240e6218919cb73d7c5415d3040090d29cab239b54e97a"
+    },
+    "postgres-r1000-w4-s20260926-jje7pll1/contention-crucible-upySs2/postgres-0/final.json": {
+      "bytes": 1666020,
+      "sha256": "878cb02b101b289ffe2d88b1bccc7ee581341759480f2c66fa1c022369a6330c"
+    },
+    "postgres-r1000-w4-s20260926-jje7pll1/contention-crucible-upySs2/postgres-0/history.jsonl": {
+      "bytes": 51707311,
+      "sha256": "04873109a041abf74b776a4c1007750b82fb78cfe19334496289ec8aa1cb6dbd"
+    },
+    "postgres-r1000-w4-s20260926-jje7pll1/contention-crucible-upySs2/postgres-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "postgres-r1000-w4-s20260926-jje7pll1/contention-crucible-upySs2/postgres-0/progress.json": {
+      "bytes": 11380,
+      "sha256": "1b8c76a00257f870e0d6d888f5c9795bdc787086e7910914037bebd4c51777a0"
+    },
+    "postgres-r1000-w4-s20260926-jje7pll1/contention-crucible-upySs2/postgres-0/result.json": {
+      "bytes": 36263,
+      "sha256": "a40b4565c5674a7e75cfa16d9273000528275d388f91a479e0e6f364bebb6a64"
+    },
+    "postgres-r1000-w4-s20260926-jje7pll1/contention-crucible-upySs2/postgres-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "99053b6b7967056bfdf77d073657098ab6c0b8a76ebe4b9528a5ea52d78f498a"
+    },
+    "postgres-r1000-w4-s20260926-jje7pll1/report.json": {
+      "bytes": 43615,
+      "sha256": "306478f3c1bc5c6e7e2c40b7e369b8d9fb5b8a116f87a2b0ce66aa93b97124b0"
+    },
+    "postgres-r1000-w4-s20260926-jje7pll1/run.log": {
+      "bytes": 118,
+      "sha256": "6846f5e97c1414d01e852182accbeb3207ad84739dd408784f346ed397ce568f"
+    },
+    "postgres-r1000-w4-s20260926-jje7pll1/trial.json": {
+      "bytes": 53055,
+      "sha256": "d218ec5f92f942a6678ab6c2a84a2f45b7d608f98c0d38e1f87c2ad68c10bc9b"
+    },
+    "service-tcp-r100-w1-s20260924-r334cxnb/contention-crucible-7ERv2Q/service-tcp-0/final.json": {
+      "bytes": 1643203,
+      "sha256": "4c35b79ec1cfca4e413cfd88ee46344725f6e23592a613e824ed255c0c8a7239"
+    },
+    "service-tcp-r100-w1-s20260924-r334cxnb/contention-crucible-7ERv2Q/service-tcp-0/history.jsonl": {
+      "bytes": 5784014,
+      "sha256": "83d7c36dce72e03a6f8c365435c1df7ebe27fb71df253e9ca73a3b9504df4132"
+    },
+    "service-tcp-r100-w1-s20260924-r334cxnb/contention-crucible-7ERv2Q/service-tcp-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-tcp-r100-w1-s20260924-r334cxnb/contention-crucible-7ERv2Q/service-tcp-0/progress.json": {
+      "bytes": 10593,
+      "sha256": "ca3d75447a38e1ffd82e3be4dd7ff25652d6e59fede66a568ff5470c1d4828cc"
+    },
+    "service-tcp-r100-w1-s20260924-r334cxnb/contention-crucible-7ERv2Q/service-tcp-0/result.json": {
+      "bytes": 22764,
+      "sha256": "be304d47b0a553ff0a41b3ca69af8527370e594d199283a452091a514a40997e"
+    },
+    "service-tcp-r100-w1-s20260924-r334cxnb/contention-crucible-7ERv2Q/service-tcp-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "service-tcp-r100-w1-s20260924-r334cxnb/report.json": {
+      "bytes": 27490,
+      "sha256": "e77bc556113328ffc7e80fa5c83562fd0dd8eb6c502cca940097fb3a72159a01"
+    },
+    "service-tcp-r100-w1-s20260924-r334cxnb/run.log": {
+      "bytes": 118,
+      "sha256": "df3015037f58d6676d4a96ca1ec1c82caf589f326d9dc608d5ff6fe3494f2310"
+    },
+    "service-tcp-r100-w1-s20260924-r334cxnb/trial.json": {
+      "bytes": 36014,
+      "sha256": "65c302623969a7b1882b49fa729dc0dd0aac1bbd2baa089e56552fc8abd1144d"
+    },
+    "service-tcp-r100-w1-s20260925-vy5wa_g9/contention-crucible-8fJw3o/service-tcp-0/final.json": {
+      "bytes": 1638145,
+      "sha256": "ac1c158d3bd40ddcadc00d8d6e62e12af8fccaa9272a16d017ad35fa2cac47ba"
+    },
+    "service-tcp-r100-w1-s20260925-vy5wa_g9/contention-crucible-8fJw3o/service-tcp-0/history.jsonl": {
+      "bytes": 5788031,
+      "sha256": "864e8f7f87b5272ea188f2f023c68bdf68c20865ded30c947910b6f6c51ac26b"
+    },
+    "service-tcp-r100-w1-s20260925-vy5wa_g9/contention-crucible-8fJw3o/service-tcp-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-tcp-r100-w1-s20260925-vy5wa_g9/contention-crucible-8fJw3o/service-tcp-0/progress.json": {
+      "bytes": 10589,
+      "sha256": "5a24dce4388bc941985c11c3a9db05968c61a72b8e94deffc5ed5cb57647fbbc"
+    },
+    "service-tcp-r100-w1-s20260925-vy5wa_g9/contention-crucible-8fJw3o/service-tcp-0/result.json": {
+      "bytes": 22762,
+      "sha256": "093700250f9291464c4fd0f98c865b1f99259ffdec6cb6fad182bfb0fd068244"
+    },
+    "service-tcp-r100-w1-s20260925-vy5wa_g9/contention-crucible-8fJw3o/service-tcp-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "service-tcp-r100-w1-s20260925-vy5wa_g9/report.json": {
+      "bytes": 27488,
+      "sha256": "3dda30304348ea52185d91c9cd8c0aa9ede838d6b211646c694e240d4ab0b270"
+    },
+    "service-tcp-r100-w1-s20260925-vy5wa_g9/run.log": {
+      "bytes": 119,
+      "sha256": "bdc790c4093ae16d53577c141ed98551c6c21b1512f0e67493a52c4e0f8e3129"
+    },
+    "service-tcp-r100-w1-s20260925-vy5wa_g9/trial.json": {
+      "bytes": 36013,
+      "sha256": "3d12049732f58c55cb1ca261ebfd151a22cb389f8ffe8422155cef6124b7921f"
+    },
+    "service-tcp-r100-w1-s20260926-4_xbktmm/contention-crucible-0XcGT0/service-tcp-0/final.json": {
+      "bytes": 1635521,
+      "sha256": "ef89fa5d7578da10a6f36bb4ffc519c16a0b077b981b424609b3ae71e52b1071"
+    },
+    "service-tcp-r100-w1-s20260926-4_xbktmm/contention-crucible-0XcGT0/service-tcp-0/history.jsonl": {
+      "bytes": 5790099,
+      "sha256": "ef6e786f678b3a82b00c181e72a3cc839de19717b2d27358313a65cfe0f145c6"
+    },
+    "service-tcp-r100-w1-s20260926-4_xbktmm/contention-crucible-0XcGT0/service-tcp-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-tcp-r100-w1-s20260926-4_xbktmm/contention-crucible-0XcGT0/service-tcp-0/progress.json": {
+      "bytes": 10593,
+      "sha256": "4202197c643ca1990a79fa251be2541c698d34dbd2fad15babd1e759ad103eb2"
+    },
+    "service-tcp-r100-w1-s20260926-4_xbktmm/contention-crucible-0XcGT0/service-tcp-0/result.json": {
+      "bytes": 22760,
+      "sha256": "b8afa35eb4ce0c49357a440589657af5131744a80a8e40b47d5d6fc807109653"
+    },
+    "service-tcp-r100-w1-s20260926-4_xbktmm/contention-crucible-0XcGT0/service-tcp-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "service-tcp-r100-w1-s20260926-4_xbktmm/report.json": {
+      "bytes": 27486,
+      "sha256": "6feeb005f180129b2ffb9f95e0275721268ef5969e5c82e6a90effb728452791"
+    },
+    "service-tcp-r100-w1-s20260926-4_xbktmm/run.log": {
+      "bytes": 119,
+      "sha256": "1cdf6038b4012e1cc4e2eee9f36af6392b7e4a070093cb2c39d06fe7e88f4be5"
+    },
+    "service-tcp-r100-w1-s20260926-4_xbktmm/trial.json": {
+      "bytes": 36016,
+      "sha256": "0a4996536b24c1987dfc365c5e01a0605d00c91862943853552f6117a9a0405c"
+    },
+    "service-tcp-r100-w4-s20260924-y_788jt2/contention-crucible-CY0Jin/service-tcp-0/final.json": {
+      "bytes": 1643203,
+      "sha256": "4c35b79ec1cfca4e413cfd88ee46344725f6e23592a613e824ed255c0c8a7239"
+    },
+    "service-tcp-r100-w4-s20260924-y_788jt2/contention-crucible-CY0Jin/service-tcp-0/history.jsonl": {
+      "bytes": 5784004,
+      "sha256": "ca1ccc38f2b5b0530eee0e5ae11a2d9cc721906377b435f4f82b6b234ecd43cb"
+    },
+    "service-tcp-r100-w4-s20260924-y_788jt2/contention-crucible-CY0Jin/service-tcp-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-tcp-r100-w4-s20260924-y_788jt2/contention-crucible-CY0Jin/service-tcp-0/progress.json": {
+      "bytes": 10621,
+      "sha256": "b62bd590bcc2d9d1568a144d09084ab541c3188a7382f5d589099d3340841b22"
+    },
+    "service-tcp-r100-w4-s20260924-y_788jt2/contention-crucible-CY0Jin/service-tcp-0/result.json": {
+      "bytes": 23214,
+      "sha256": "0d48e36a63071085f1274b22c2e76ad57bb7aaf5316538de760e236c65aff9c9"
+    },
+    "service-tcp-r100-w4-s20260924-y_788jt2/contention-crucible-CY0Jin/service-tcp-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9666a42a1539124b0680fcaaf672857ba5169683f08eee50b89bcafc348a96a2"
+    },
+    "service-tcp-r100-w4-s20260924-y_788jt2/report.json": {
+      "bytes": 28020,
+      "sha256": "cb277f0e8e241d27cb2e65eb84f2e6a1ee2ccfdecf4c9f6881fdb3c149e9217c"
+    },
+    "service-tcp-r100-w4-s20260924-y_788jt2/run.log": {
+      "bytes": 120,
+      "sha256": "83f97f088d7c48fe88145a3c5c4db8d485d6881a99e9a553e17d8c2adc62d18b"
+    },
+    "service-tcp-r100-w4-s20260924-y_788jt2/trial.json": {
+      "bytes": 36587,
+      "sha256": "165c969648fd566b04fcb5955a47bf02737314ad217710a7e108eebc0912c784"
+    },
+    "service-tcp-r100-w4-s20260925-0xbdcpji/contention-crucible-eBPXLY/service-tcp-0/final.json": {
+      "bytes": 1638145,
+      "sha256": "ac1c158d3bd40ddcadc00d8d6e62e12af8fccaa9272a16d017ad35fa2cac47ba"
+    },
+    "service-tcp-r100-w4-s20260925-0xbdcpji/contention-crucible-eBPXLY/service-tcp-0/history.jsonl": {
+      "bytes": 5788032,
+      "sha256": "7da545d450149c83ddd973ed11dacab8f6e4885cb03cdeedfad8f110ac2d0604"
+    },
+    "service-tcp-r100-w4-s20260925-0xbdcpji/contention-crucible-eBPXLY/service-tcp-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-tcp-r100-w4-s20260925-0xbdcpji/contention-crucible-eBPXLY/service-tcp-0/progress.json": {
+      "bytes": 10623,
+      "sha256": "ac41c911bce8d4edf3d7849caae7d303eda4a03df69d1e070bf832155933b195"
+    },
+    "service-tcp-r100-w4-s20260925-0xbdcpji/contention-crucible-eBPXLY/service-tcp-0/result.json": {
+      "bytes": 23216,
+      "sha256": "748e3dfb72d0ffd91eb0ded6a5c7de3619d7fa9d9b0dfd6454c8b8a4dedcc0a4"
+    },
+    "service-tcp-r100-w4-s20260925-0xbdcpji/contention-crucible-eBPXLY/service-tcp-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "6006d0e3e2310ff59d4081204e3afc817011de50d180fd61e8dfde5208f6937b"
+    },
+    "service-tcp-r100-w4-s20260925-0xbdcpji/report.json": {
+      "bytes": 28022,
+      "sha256": "dc9b66347c45c521d67365e2263ce1386da31cee9096f38405b5a98bb952828d"
+    },
+    "service-tcp-r100-w4-s20260925-0xbdcpji/run.log": {
+      "bytes": 119,
+      "sha256": "6b77360f1a451598b5b9fd997c6ba6f1befd3a2c1b487194fafe96af218189fd"
+    },
+    "service-tcp-r100-w4-s20260925-0xbdcpji/trial.json": {
+      "bytes": 36589,
+      "sha256": "305f80bbbffc0c92ea2cc8292df775e8c7f1954132b309c7e110d12bbb6b10a2"
+    },
+    "service-tcp-r100-w4-s20260926-krzi6jh8/contention-crucible-Be3PGK/service-tcp-0/final.json": {
+      "bytes": 1635521,
+      "sha256": "ef89fa5d7578da10a6f36bb4ffc519c16a0b077b981b424609b3ae71e52b1071"
+    },
+    "service-tcp-r100-w4-s20260926-krzi6jh8/contention-crucible-Be3PGK/service-tcp-0/history.jsonl": {
+      "bytes": 5790082,
+      "sha256": "a082df7c735f1150f6ee1c5c02549a51bfde5c16bfd34e3edb9c0139c822bf62"
+    },
+    "service-tcp-r100-w4-s20260926-krzi6jh8/contention-crucible-Be3PGK/service-tcp-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-tcp-r100-w4-s20260926-krzi6jh8/contention-crucible-Be3PGK/service-tcp-0/progress.json": {
+      "bytes": 10617,
+      "sha256": "9b23b810cded22f283637346bdf292a9e813cd7c2cca42d14ddac3af747244f5"
+    },
+    "service-tcp-r100-w4-s20260926-krzi6jh8/contention-crucible-Be3PGK/service-tcp-0/result.json": {
+      "bytes": 23212,
+      "sha256": "fca18666fbd6c3f8e7a205841629f4bcb32e8c4873f2a8b09a56caa08d67b094"
+    },
+    "service-tcp-r100-w4-s20260926-krzi6jh8/contention-crucible-Be3PGK/service-tcp-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "453878739ee65ee2f477a0ca4605b2e12aaaa0a53d1fcaa1ee3206fa96824b07"
+    },
+    "service-tcp-r100-w4-s20260926-krzi6jh8/report.json": {
+      "bytes": 28017,
+      "sha256": "5c015ee413db109dcf80d5f7cf8420b1252767cc26e1b17908dd54424c47f751"
+    },
+    "service-tcp-r100-w4-s20260926-krzi6jh8/run.log": {
+      "bytes": 120,
+      "sha256": "e369749e09bf89e59c0373938fe3add028827cb052738cc1027ee3fb856c9ea3"
+    },
+    "service-tcp-r100-w4-s20260926-krzi6jh8/trial.json": {
+      "bytes": 36594,
+      "sha256": "2b25886ea314a3046b807d69ba57e44af5fb762d74813742435763a1231deaf2"
+    },
+    "service-tcp-r1000-w1-s20260924-93pnne4i/contention-crucible-bwuCeG/service-tcp-0/history.jsonl": {
+      "bytes": 3887936,
+      "sha256": "26ad0d96604ec893ed91cf6abdf48cd96e2c5c6c672dac03316f7f0a4224de34"
+    },
+    "service-tcp-r1000-w1-s20260924-93pnne4i/contention-crucible-bwuCeG/service-tcp-0/progress.json": {
+      "bytes": 3627,
+      "sha256": "a109e7ce9809691c5c7f92ffcd256c03e9e75db7e03ea0d48937245bd6947652"
+    },
+    "service-tcp-r1000-w1-s20260924-93pnne4i/contention-crucible-bwuCeG/service-tcp-0/result.json": {
+      "bytes": 422,
+      "sha256": "72e2c8522fec7c8beea762abc3fb07e85a9a90c98bd27054298138aa5f5f3fea"
+    },
+    "service-tcp-r1000-w1-s20260924-93pnne4i/report.json": {
+      "bytes": 2332,
+      "sha256": "314ab3cf5f6dc797882cdfa352c7b376e57236bc8c99303840748a5ed23cb1b7"
+    },
+    "service-tcp-r1000-w1-s20260924-93pnne4i/run.log": {
+      "bytes": 436,
+      "sha256": "ca3a7c84d1328c713b83306cc07662dce3d0413f1bea4b70c5a0fd90458a9694"
+    },
+    "service-tcp-r1000-w1-s20260924-93pnne4i/trial.json": {
+      "bytes": 5391,
+      "sha256": "5748db4682d2f716b05c29d5581a53ffbb3b4f84030eda5422269131cdb241d2"
+    },
+    "service-tcp-r1000-w1-s20260925-5wuin1ie/contention-crucible-1vY7Sh/service-tcp-0/history.jsonl": {
+      "bytes": 3418399,
+      "sha256": "47b7f0ddd75b1934585bf97ec49f1205875d3c916b7948267d2641799e093f98"
+    },
+    "service-tcp-r1000-w1-s20260925-5wuin1ie/contention-crucible-1vY7Sh/service-tcp-0/progress.json": {
+      "bytes": 3624,
+      "sha256": "cda90edb81cfbeccc41958007ef5c0a915ce82df8a85a6f7e4d5504ef20428d9"
+    },
+    "service-tcp-r1000-w1-s20260925-5wuin1ie/contention-crucible-1vY7Sh/service-tcp-0/result.json": {
+      "bytes": 422,
+      "sha256": "f2458e95be97a81d904e68508aef29e2f65d86e1011b104a48ba36596d6f945e"
+    },
+    "service-tcp-r1000-w1-s20260925-5wuin1ie/report.json": {
+      "bytes": 2332,
+      "sha256": "dc7574bc271b74ba62f278338156c7ebab5e089068f7022b008eb6fbf6d8b704"
+    },
+    "service-tcp-r1000-w1-s20260925-5wuin1ie/run.log": {
+      "bytes": 436,
+      "sha256": "e1bf90d764cfbb91364cd55bb9e385ee0485fa088432a6a472f48a5327d3cbe5"
+    },
+    "service-tcp-r1000-w1-s20260925-5wuin1ie/trial.json": {
+      "bytes": 5390,
+      "sha256": "79123be406d294eabcdff03b8ca61da8ba39e2b8f2281f399165314a671f10d1"
+    },
+    "service-tcp-r1000-w1-s20260926-ury6t11e/contention-crucible-UCkBvR/service-tcp-0/history.jsonl": {
+      "bytes": 3167525,
+      "sha256": "395c7eafb62683741f47b4d5f4525cca5ac22f5db1ffe55af62f7d405aff52cd"
+    },
+    "service-tcp-r1000-w1-s20260926-ury6t11e/contention-crucible-UCkBvR/service-tcp-0/progress.json": {
+      "bytes": 3630,
+      "sha256": "35702fbcf63897179dffa4d0d4f4571b2f0c62d1d947cfdcf67a4bfa1890fb9d"
+    },
+    "service-tcp-r1000-w1-s20260926-ury6t11e/contention-crucible-UCkBvR/service-tcp-0/result.json": {
+      "bytes": 422,
+      "sha256": "3cf8be6308d1eeb526f9b50c017686716c0adb32a240d458a6b7416d5dac15d0"
+    },
+    "service-tcp-r1000-w1-s20260926-ury6t11e/report.json": {
+      "bytes": 2332,
+      "sha256": "b2db4e01775078af699f93315023507e2a4d9ff56dc42d7ec46e48b34f817fb1"
+    },
+    "service-tcp-r1000-w1-s20260926-ury6t11e/run.log": {
+      "bytes": 436,
+      "sha256": "a31fc840ad580d40810afc0dd8f0d2695de42615beb9b0a7c0719c02f3bb288f"
+    },
+    "service-tcp-r1000-w1-s20260926-ury6t11e/trial.json": {
+      "bytes": 5391,
+      "sha256": "9b54315f70c79cc3447494c72b18b3cf9b832f11d6002be91886b9f7fa234d71"
+    },
+    "service-tcp-r1000-w4-s20260924-r8tqk5be/contention-crucible-voK3RG/service-tcp-0/final.json": {
+      "bytes": 1629393,
+      "sha256": "78f813dfa22b18461c3ac69b548ce29c7dad439a31891ae8a1c9164ce763eebd"
+    },
+    "service-tcp-r1000-w4-s20260924-r8tqk5be/contention-crucible-voK3RG/service-tcp-0/history.jsonl": {
+      "bytes": 9330042,
+      "sha256": "71a90ce37bc33aa215238b9f6e8b8520f6838c761d0ac4657ce40a9e479ed67e"
+    },
+    "service-tcp-r1000-w4-s20260924-r8tqk5be/contention-crucible-voK3RG/service-tcp-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-tcp-r1000-w4-s20260924-r8tqk5be/contention-crucible-voK3RG/service-tcp-0/progress.json": {
+      "bytes": 14125,
+      "sha256": "c03968f11265fd474ed0880cb7f9c3abdabb42813079f371587357726e63975b"
+    },
+    "service-tcp-r1000-w4-s20260924-r8tqk5be/contention-crucible-voK3RG/service-tcp-0/result.json": {
+      "bytes": 27092,
+      "sha256": "e6d72cff6675a8078fe0ca7f6c1a207fac10d3aed749a701d184c401638f5f71"
+    },
+    "service-tcp-r1000-w4-s20260924-r8tqk5be/contention-crucible-voK3RG/service-tcp-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "1c9d778f99fc038860f90188d344e459cf6948349de824bac7a863483bf87fc6"
+    },
+    "service-tcp-r1000-w4-s20260924-r8tqk5be/report.json": {
+      "bytes": 32393,
+      "sha256": "a5f0d48ea43ce5a322658976c4c5bda499e0c1473847258dcb52e758623210c3"
+    },
+    "service-tcp-r1000-w4-s20260924-r8tqk5be/run.log": {
+      "bytes": 125,
+      "sha256": "892c4c9bf0f0341c356e077bd0fe8c3fadf45ff2e80120f309103beef9ee7d15"
+    },
+    "service-tcp-r1000-w4-s20260924-r8tqk5be/trial.json": {
+      "bytes": 41486,
+      "sha256": "7f3ed4a41bc23d52081a71803db03f84b184e24ece7bd8cc7eac0f5b48a2301f"
+    },
+    "service-tcp-r1000-w4-s20260925-yoi7v3hv/contention-crucible-uW5jgr/service-tcp-0/final.json": {
+      "bytes": 1627843,
+      "sha256": "0f4700b4a5b889276c2d2433e0fa1233518f6feb03c173b0650584a5f073d1b1"
+    },
+    "service-tcp-r1000-w4-s20260925-yoi7v3hv/contention-crucible-uW5jgr/service-tcp-0/history.jsonl": {
+      "bytes": 8989873,
+      "sha256": "53a5ca5628ed4e3d713f7b491e2c38c650e0bb3dc0fce3f36bb61231de47c0fc"
+    },
+    "service-tcp-r1000-w4-s20260925-yoi7v3hv/contention-crucible-uW5jgr/service-tcp-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-tcp-r1000-w4-s20260925-yoi7v3hv/contention-crucible-uW5jgr/service-tcp-0/progress.json": {
+      "bytes": 14123,
+      "sha256": "54b5038836a6e7c7d673a37a90cc158f987b3f8d53e77aff03eecf047d52d57e"
+    },
+    "service-tcp-r1000-w4-s20260925-yoi7v3hv/contention-crucible-uW5jgr/service-tcp-0/result.json": {
+      "bytes": 27090,
+      "sha256": "ddb6918b3540a3d66ac6e936873953baa12ac48752125b2eee4f2c9ce52d1243"
+    },
+    "service-tcp-r1000-w4-s20260925-yoi7v3hv/contention-crucible-uW5jgr/service-tcp-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "2eca2e7a25a723d6c6229c63af9ff5ec6eb2112ae0352410b1744c783745ff70"
+    },
+    "service-tcp-r1000-w4-s20260925-yoi7v3hv/report.json": {
+      "bytes": 32391,
+      "sha256": "1307b1b52f6ab410e3d94941bc928cb8f8d3bde071384447c8fa933e28233316"
+    },
+    "service-tcp-r1000-w4-s20260925-yoi7v3hv/run.log": {
+      "bytes": 125,
+      "sha256": "399f10b7602a97f4d5012405a82b44acfa4e3134f027dfa1984cae94f2aa3264"
+    },
+    "service-tcp-r1000-w4-s20260925-yoi7v3hv/trial.json": {
+      "bytes": 41476,
+      "sha256": "2b4aa2ebeaf24b8f7a08c9470416b79309ec0270337b7db09cae2bad963e9223"
+    },
+    "service-tcp-r1000-w4-s20260926-qk1gkquf/contention-crucible-9OZvpp/service-tcp-0/final.json": {
+      "bytes": 1628902,
+      "sha256": "31a073fc98e271751b300e694435056ff51b59079cd16190303383a8cf2bb9ea"
+    },
+    "service-tcp-r1000-w4-s20260926-qk1gkquf/contention-crucible-9OZvpp/service-tcp-0/history.jsonl": {
+      "bytes": 11030078,
+      "sha256": "3f863b9452cc445f74b6edce9e615742cbdeacd442da6087f8e8c19f834210ca"
+    },
+    "service-tcp-r1000-w4-s20260926-qk1gkquf/contention-crucible-9OZvpp/service-tcp-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-tcp-r1000-w4-s20260926-qk1gkquf/contention-crucible-9OZvpp/service-tcp-0/progress.json": {
+      "bytes": 15873,
+      "sha256": "0792cb695ddb8361619a0fdaa1e7c46f5d52363fd7c119e09d57b9d63dcf99e0"
+    },
+    "service-tcp-r1000-w4-s20260926-qk1gkquf/contention-crucible-9OZvpp/service-tcp-0/result.json": {
+      "bytes": 28841,
+      "sha256": "ec743b5577cc4d0f2ab823eea8c3eb01fe1590ce49eb2ccd115af7852cb7043a"
+    },
+    "service-tcp-r1000-w4-s20260926-qk1gkquf/contention-crucible-9OZvpp/service-tcp-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "997c57516c02e43c512ede1003338b42b8abecb0395f49946383fee4ef3ee284"
+    },
+    "service-tcp-r1000-w4-s20260926-qk1gkquf/report.json": {
+      "bytes": 34378,
+      "sha256": "39dd9db5fa16d3d1756e26301b4b5c8ef1b998fe4c4eaf260cac1fb936bd1c67"
+    },
+    "service-tcp-r1000-w4-s20260926-qk1gkquf/run.log": {
+      "bytes": 124,
+      "sha256": "76903650bcec2abd9f72b0141abfdbca2bac67b0311c2d807102a8c52a0c9630"
+    },
+    "service-tcp-r1000-w4-s20260926-qk1gkquf/trial.json": {
+      "bytes": 43579,
+      "sha256": "e229fffd992351a3a69560218a1abc7e25d806ead2518b5bbc81f62541b01a3d"
+    },
+    "service-unix-r100-w1-s20260924-w34btcm8/contention-crucible-TKXE7G/service-unix-0/final.json": {
+      "bytes": 1643203,
+      "sha256": "4c35b79ec1cfca4e413cfd88ee46344725f6e23592a613e824ed255c0c8a7239"
+    },
+    "service-unix-r100-w1-s20260924-w34btcm8/contention-crucible-TKXE7G/service-unix-0/history.jsonl": {
+      "bytes": 5783731,
+      "sha256": "da6d1bec72ee1db93e93aca5d3a6189b259d89c19e77547a9dd938043778c913"
+    },
+    "service-unix-r100-w1-s20260924-w34btcm8/contention-crucible-TKXE7G/service-unix-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-unix-r100-w1-s20260924-w34btcm8/contention-crucible-TKXE7G/service-unix-0/progress.json": {
+      "bytes": 10592,
+      "sha256": "0c45609a5719cad97b5e6f228229f7ba2f82eddd76a531e815665e30eca25df0"
+    },
+    "service-unix-r100-w1-s20260924-w34btcm8/contention-crucible-TKXE7G/service-unix-0/result.json": {
+      "bytes": 22758,
+      "sha256": "17b5b57b28f8999a2940725e9d2e863b1d39922f93ba3b12d2720e0ffa97bf3e"
+    },
+    "service-unix-r100-w1-s20260924-w34btcm8/contention-crucible-TKXE7G/service-unix-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "service-unix-r100-w1-s20260924-w34btcm8/report.json": {
+      "bytes": 27487,
+      "sha256": "0af08dc0e720d5f7c8c797b2b5604bd5b8b8330666c5938333b8c363006411fb"
+    },
+    "service-unix-r100-w1-s20260924-w34btcm8/run.log": {
+      "bytes": 119,
+      "sha256": "55a9223ac961b7f7f4d41a7b5508ec1576c5fe437f089787b5d45392b09d6438"
+    },
+    "service-unix-r100-w1-s20260924-w34btcm8/trial.json": {
+      "bytes": 36011,
+      "sha256": "f96fa909e736639e3fb997177c8bf8e5b7cfa2f7b2939c8a2ee324ba7271842a"
+    },
+    "service-unix-r100-w1-s20260925-xkrgbzh8/contention-crucible-YMV4pP/service-unix-0/final.json": {
+      "bytes": 1638145,
+      "sha256": "ac1c158d3bd40ddcadc00d8d6e62e12af8fccaa9272a16d017ad35fa2cac47ba"
+    },
+    "service-unix-r100-w1-s20260925-xkrgbzh8/contention-crucible-YMV4pP/service-unix-0/history.jsonl": {
+      "bytes": 5787712,
+      "sha256": "4c7afd96c1ad2a414e818f854dab12337d8452112b80534e5d4a6d0ca027aaf2"
+    },
+    "service-unix-r100-w1-s20260925-xkrgbzh8/contention-crucible-YMV4pP/service-unix-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-unix-r100-w1-s20260925-xkrgbzh8/contention-crucible-YMV4pP/service-unix-0/progress.json": {
+      "bytes": 10593,
+      "sha256": "d05d5b1ab013341694a8b0ef9214868ee31458a8f218f25143f22472d45354a0"
+    },
+    "service-unix-r100-w1-s20260925-xkrgbzh8/contention-crucible-YMV4pP/service-unix-0/result.json": {
+      "bytes": 22760,
+      "sha256": "30955e317a1a210e327a84081d353ed6eab411163c2fd92f582acabfca34a4c2"
+    },
+    "service-unix-r100-w1-s20260925-xkrgbzh8/contention-crucible-YMV4pP/service-unix-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "service-unix-r100-w1-s20260925-xkrgbzh8/report.json": {
+      "bytes": 27489,
+      "sha256": "d50f080940a2221d03140aab236b21816df83c35dbfd2ec3479205cc6b86fbd6"
+    },
+    "service-unix-r100-w1-s20260925-xkrgbzh8/run.log": {
+      "bytes": 119,
+      "sha256": "58ddc0accd8ee5b0ae83c8748365bf9068fa92aeaeef43a5f478c41db5b467c9"
+    },
+    "service-unix-r100-w1-s20260925-xkrgbzh8/trial.json": {
+      "bytes": 36015,
+      "sha256": "028fd5fade3536d725a6498a9a7836ac8ed66c4529ca2daed362b6a1c4e3f4ca"
+    },
+    "service-unix-r100-w1-s20260926-uamm32xi/contention-crucible-78osKW/service-unix-0/final.json": {
+      "bytes": 1635521,
+      "sha256": "ef89fa5d7578da10a6f36bb4ffc519c16a0b077b981b424609b3ae71e52b1071"
+    },
+    "service-unix-r100-w1-s20260926-uamm32xi/contention-crucible-78osKW/service-unix-0/history.jsonl": {
+      "bytes": 5789794,
+      "sha256": "8e4438417607ed7291749faec9edd634a5ea6f1a2eed3c095cc1b4c6980f3d49"
+    },
+    "service-unix-r100-w1-s20260926-uamm32xi/contention-crucible-78osKW/service-unix-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-unix-r100-w1-s20260926-uamm32xi/contention-crucible-78osKW/service-unix-0/progress.json": {
+      "bytes": 10590,
+      "sha256": "9b66af35ce6b7560a294be60e89bcbfa3ec107d87715435328c074a0d1786258"
+    },
+    "service-unix-r100-w1-s20260926-uamm32xi/contention-crucible-78osKW/service-unix-0/result.json": {
+      "bytes": 22758,
+      "sha256": "bb2f5f3d5772abe0b5085220aaf8d81ed504a62c197d89b636514d2a070a6baf"
+    },
+    "service-unix-r100-w1-s20260926-uamm32xi/contention-crucible-78osKW/service-unix-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "service-unix-r100-w1-s20260926-uamm32xi/report.json": {
+      "bytes": 27487,
+      "sha256": "f19ca25a9b1d32953d583c9bb5c554f43e44f981bd3e3e71b32726badd7eec7b"
+    },
+    "service-unix-r100-w1-s20260926-uamm32xi/run.log": {
+      "bytes": 119,
+      "sha256": "072ae21868efdf2e10f7a76d65b39dc0974899e58ef245266d17a3e323c5d616"
+    },
+    "service-unix-r100-w1-s20260926-uamm32xi/trial.json": {
+      "bytes": 36014,
+      "sha256": "90e8676604fcf6095478e7b90374e8edc026327b69e01f7036854e4e191f6d01"
+    },
+    "service-unix-r100-w4-s20260924-qkrj3125/contention-crucible-Uv1fEY/service-unix-0/final.json": {
+      "bytes": 1643203,
+      "sha256": "4c35b79ec1cfca4e413cfd88ee46344725f6e23592a613e824ed255c0c8a7239"
+    },
+    "service-unix-r100-w4-s20260924-qkrj3125/contention-crucible-Uv1fEY/service-unix-0/history.jsonl": {
+      "bytes": 5783729,
+      "sha256": "815d5f04604a1e845063bd0838853ca75ad5b968b319b6ff3470444896f14208"
+    },
+    "service-unix-r100-w4-s20260924-qkrj3125/contention-crucible-Uv1fEY/service-unix-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-unix-r100-w4-s20260924-qkrj3125/contention-crucible-Uv1fEY/service-unix-0/progress.json": {
+      "bytes": 10619,
+      "sha256": "7460b4b0896db1541b1de65861c325e51d87356d7adafad4eaef427d37cd937e"
+    },
+    "service-unix-r100-w4-s20260924-qkrj3125/contention-crucible-Uv1fEY/service-unix-0/result.json": {
+      "bytes": 23160,
+      "sha256": "84af661e7533995dcbade90b31b098bc3929239f2b5ca0017dce3825b418dc41"
+    },
+    "service-unix-r100-w4-s20260924-qkrj3125/contention-crucible-Uv1fEY/service-unix-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "service-unix-r100-w4-s20260924-qkrj3125/report.json": {
+      "bytes": 27961,
+      "sha256": "e25b74469a5ff56f9ceea56863dd5fe14182fc49d669d9e9fa730b1b3cbd426f"
+    },
+    "service-unix-r100-w4-s20260924-qkrj3125/run.log": {
+      "bytes": 119,
+      "sha256": "fb159b0426d58a5add08e403338f1717602441459b05f24fec83ab9967a3e4f1"
+    },
+    "service-unix-r100-w4-s20260924-qkrj3125/trial.json": {
+      "bytes": 36524,
+      "sha256": "1b7456357e341c747e5ad1ddb3e09948916264522e3eb16b3c8f8f8461fdbe8c"
+    },
+    "service-unix-r100-w4-s20260925-k4tlqspx/contention-crucible-8qddjG/service-unix-0/final.json": {
+      "bytes": 1638145,
+      "sha256": "ac1c158d3bd40ddcadc00d8d6e62e12af8fccaa9272a16d017ad35fa2cac47ba"
+    },
+    "service-unix-r100-w4-s20260925-k4tlqspx/contention-crucible-8qddjG/service-unix-0/history.jsonl": {
+      "bytes": 5787697,
+      "sha256": "e85b1bbfe34a9e9fdf1d95621c694d7dc1198e01517345dd1d1fa925deb9c1a7"
+    },
+    "service-unix-r100-w4-s20260925-k4tlqspx/contention-crucible-8qddjG/service-unix-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-unix-r100-w4-s20260925-k4tlqspx/contention-crucible-8qddjG/service-unix-0/progress.json": {
+      "bytes": 10619,
+      "sha256": "51f1c0fd52e1192fe6add913319745eebdcef5cf7437eec4f1a189d894dd6e1f"
+    },
+    "service-unix-r100-w4-s20260925-k4tlqspx/contention-crucible-8qddjG/service-unix-0/result.json": {
+      "bytes": 23159,
+      "sha256": "c1604552b8891ea62f142f8e3a640c611fd445e980ec7ed74d41979aea126be5"
+    },
+    "service-unix-r100-w4-s20260925-k4tlqspx/contention-crucible-8qddjG/service-unix-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "service-unix-r100-w4-s20260925-k4tlqspx/report.json": {
+      "bytes": 27960,
+      "sha256": "bd8da1c564fceba85a23902c0e822f6939a8db96603ee9ebbd14b64d82cdd9c3"
+    },
+    "service-unix-r100-w4-s20260925-k4tlqspx/run.log": {
+      "bytes": 119,
+      "sha256": "96e598a1e49a8021356cb175e5cbc0b842b522f2e38e501793e1d93fee18357c"
+    },
+    "service-unix-r100-w4-s20260925-k4tlqspx/trial.json": {
+      "bytes": 36522,
+      "sha256": "1068450bf58b495d8dad56886b4d9c5db0dee5447586ae3d71bdb4e8b2767281"
+    },
+    "service-unix-r100-w4-s20260926-dwfium7r/contention-crucible-Ppt7DE/service-unix-0/final.json": {
+      "bytes": 1635521,
+      "sha256": "ef89fa5d7578da10a6f36bb4ffc519c16a0b077b981b424609b3ae71e52b1071"
+    },
+    "service-unix-r100-w4-s20260926-dwfium7r/contention-crucible-Ppt7DE/service-unix-0/history.jsonl": {
+      "bytes": 5789790,
+      "sha256": "fb741f93155e60c1d4b33da1edd00819b1d5cdb4d2e683363ef86b48a540ec8c"
+    },
+    "service-unix-r100-w4-s20260926-dwfium7r/contention-crucible-Ppt7DE/service-unix-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-unix-r100-w4-s20260926-dwfium7r/contention-crucible-Ppt7DE/service-unix-0/progress.json": {
+      "bytes": 10620,
+      "sha256": "0f00e03e48e4197e1a36b0ca93b3b1f94cf7a262b36655dd63864b6b90235098"
+    },
+    "service-unix-r100-w4-s20260926-dwfium7r/contention-crucible-Ppt7DE/service-unix-0/result.json": {
+      "bytes": 23158,
+      "sha256": "43e86bfd47209e99fff9608d4370517edcd45bd40170b3d35068bb8444235699"
+    },
+    "service-unix-r100-w4-s20260926-dwfium7r/contention-crucible-Ppt7DE/service-unix-0/serial-witness.json": {
+      "bytes": 6676,
+      "sha256": "9578141c136062b6fcf021fea21fcc71a1f200bb24f6934191851825f954224f"
+    },
+    "service-unix-r100-w4-s20260926-dwfium7r/report.json": {
+      "bytes": 27959,
+      "sha256": "9d8f0826b2d56d4fc629e9e556770783cfd2e6c9f2602cb24de3e88531231c6a"
+    },
+    "service-unix-r100-w4-s20260926-dwfium7r/run.log": {
+      "bytes": 119,
+      "sha256": "7f7867197e400884db54d8217c0784e88cb26bfcf587d16244cd32e3148d346a"
+    },
+    "service-unix-r100-w4-s20260926-dwfium7r/trial.json": {
+      "bytes": 36519,
+      "sha256": "db67571e641394d227e4668375d073197a573e16b33a4557ee124c2423cfddd7"
+    },
+    "service-unix-r1000-w1-s20260924-z_xfyyp2/contention-crucible-7MTBvW/service-unix-0/history.jsonl": {
+      "bytes": 24414013,
+      "sha256": "e9f7c5f574339e40455c71299f8b863985c52e10ce131dd108c456af438ee410"
+    },
+    "service-unix-r1000-w1-s20260924-z_xfyyp2/contention-crucible-7MTBvW/service-unix-0/progress.json": {
+      "bytes": 7128,
+      "sha256": "dcdc7efb555d3ae1cdc74b2a1f0b8c5499bc0aa19dbfe7ca6a55aea0f8408ad6"
+    },
+    "service-unix-r1000-w1-s20260924-z_xfyyp2/contention-crucible-7MTBvW/service-unix-0/result.json": {
+      "bytes": 426,
+      "sha256": "5dd453fae12e08fbbe28aeaea66961878b6d6098483b86c1b12ee2347400d978"
+    },
+    "service-unix-r1000-w1-s20260924-z_xfyyp2/report.json": {
+      "bytes": 2339,
+      "sha256": "0ce319f015531fca22df35c451c8308094da0e2e2a780e03076f7daf9273ce8c"
+    },
+    "service-unix-r1000-w1-s20260924-z_xfyyp2/run.log": {
+      "bytes": 439,
+      "sha256": "5b134edf57cf7c2e998a64c96e7e09cc84879b8014f05f64ccda6580398613a6"
+    },
+    "service-unix-r1000-w1-s20260924-z_xfyyp2/trial.json": {
+      "bytes": 5403,
+      "sha256": "c6be36f9a3f73c61fcec01376dacbd1e15b83bfe2294c0211571dbf88ad27c46"
+    },
+    "service-unix-r1000-w1-s20260925-_cweh8_t/contention-crucible-TLyPcj/service-unix-0/history.jsonl": {
+      "bytes": 23761638,
+      "sha256": "8f3658697502ec6e052481918b3542dae54f74cc42bb99995393785ab3403b36"
+    },
+    "service-unix-r1000-w1-s20260925-_cweh8_t/contention-crucible-TLyPcj/service-unix-0/progress.json": {
+      "bytes": 7137,
+      "sha256": "c6910809735d48fff3e70609f7593000d7b78f2250eaa3ea26a610e59def85c7"
+    },
+    "service-unix-r1000-w1-s20260925-_cweh8_t/contention-crucible-TLyPcj/service-unix-0/result.json": {
+      "bytes": 426,
+      "sha256": "245c32df14e109e62b5e06c07de4cfdd047a820cf8eca1da6f194911ec1f2d4a"
+    },
+    "service-unix-r1000-w1-s20260925-_cweh8_t/report.json": {
+      "bytes": 2339,
+      "sha256": "060a5d93b998a2e8e5e3147a33fd4ae676443fb429b497c30fc6fc197f635cb0"
+    },
+    "service-unix-r1000-w1-s20260925-_cweh8_t/run.log": {
+      "bytes": 439,
+      "sha256": "38c8ff43d9131f9a74155eac11fef9b5c3f74813dad93f656d3645c5b54c2bda"
+    },
+    "service-unix-r1000-w1-s20260925-_cweh8_t/trial.json": {
+      "bytes": 5402,
+      "sha256": "6b004aadda83a763885511f1e1528c40b3dd3ff89f76c63a7035f792be682800"
+    },
+    "service-unix-r1000-w1-s20260926-jc3nxkfb/contention-crucible-8kaK3V/service-unix-0/history.jsonl": {
+      "bytes": 22725556,
+      "sha256": "4d81be15ee0d726286599a7068491123b22b8443dc2dfc015428dd1d52ac7ed3"
+    },
+    "service-unix-r1000-w1-s20260926-jc3nxkfb/contention-crucible-8kaK3V/service-unix-0/progress.json": {
+      "bytes": 7135,
+      "sha256": "6571e9d5187abd91d0cd30af29d6a325eb8df9adc8e6ad4f0afd116822a11499"
+    },
+    "service-unix-r1000-w1-s20260926-jc3nxkfb/contention-crucible-8kaK3V/service-unix-0/result.json": {
+      "bytes": 426,
+      "sha256": "917e99d826f8f229c14e56605afa398d043294701804fcec8964efa1f5a311fd"
+    },
+    "service-unix-r1000-w1-s20260926-jc3nxkfb/report.json": {
+      "bytes": 2339,
+      "sha256": "f99fe1f0641dc0b45c11243b0d24e11607320c39fb4060d8c85e094031f4dd82"
+    },
+    "service-unix-r1000-w1-s20260926-jc3nxkfb/run.log": {
+      "bytes": 439,
+      "sha256": "2820e5b16e89d7bba54ff8b272ca5fb1574d17f7a23d52d004da82c678bd45b9"
+    },
+    "service-unix-r1000-w1-s20260926-jc3nxkfb/trial.json": {
+      "bytes": 5401,
+      "sha256": "340a1f4211fd6e7c349f6ee47edf098411c0973c63291cd3f12183e6006b9f98"
+    },
+    "service-unix-r1000-w4-s20260924-yomk0x4p/contention-crucible-cx5mI9/service-unix-0/final.json": {
+      "bytes": 1637542,
+      "sha256": "35dd28a665201e01b33b75709ea8bfeabf02d9eb055cd609d7f12db7187bd13a"
+    },
+    "service-unix-r1000-w4-s20260924-yomk0x4p/contention-crucible-cx5mI9/service-unix-0/history.jsonl": {
+      "bytes": 12438757,
+      "sha256": "2f3109cfd8f9b73f9c7e14bb251584cec75cf1884434acd021ef1a4a0f473115"
+    },
+    "service-unix-r1000-w4-s20260924-yomk0x4p/contention-crucible-cx5mI9/service-unix-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-unix-r1000-w4-s20260924-yomk0x4p/contention-crucible-cx5mI9/service-unix-0/progress.json": {
+      "bytes": 10651,
+      "sha256": "058cffd20e5ce6cff081cc369c4bbfc7d4fc7a2d81c0dd05a52c021978099214"
+    },
+    "service-unix-r1000-w4-s20260924-yomk0x4p/contention-crucible-cx5mI9/service-unix-0/result.json": {
+      "bytes": 23644,
+      "sha256": "ede6b6facece495c1628f7ac18b8c3e1432586239690932927202036d7628131"
+    },
+    "service-unix-r1000-w4-s20260924-yomk0x4p/contention-crucible-cx5mI9/service-unix-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "698fe7b3da8270fc3d5811919dd574df2f9fe8922eafe631fbed2b2864b57d90"
+    },
+    "service-unix-r1000-w4-s20260924-yomk0x4p/report.json": {
+      "bytes": 28476,
+      "sha256": "a9989088305e03494953fdd5d6a6af025f104aa39680e387b1277386ff06ff31"
+    },
+    "service-unix-r1000-w4-s20260924-yomk0x4p/run.log": {
+      "bytes": 127,
+      "sha256": "a64cb9c332611f8eb1690f3c796f50771486948a5b2f251e8c67f8b30bb090cd"
+    },
+    "service-unix-r1000-w4-s20260924-yomk0x4p/trial.json": {
+      "bytes": 37344,
+      "sha256": "6dd2a9b0ff81998a921d2fccbef4923884e5a0df6744b027cbe925140f35afae"
+    },
+    "service-unix-r1000-w4-s20260925-lk25hs87/contention-crucible-6ywOqQ/service-unix-0/final.json": {
+      "bytes": 1639196,
+      "sha256": "b6ce02931c26e46a329c44100198ed2735e6a35869985bdf2c89f819a5d01ada"
+    },
+    "service-unix-r1000-w4-s20260925-lk25hs87/contention-crucible-6ywOqQ/service-unix-0/history.jsonl": {
+      "bytes": 12501343,
+      "sha256": "6af31ca64621e253253f54dec61797139a60b37e810a2e1a0e8b0c068355ea84"
+    },
+    "service-unix-r1000-w4-s20260925-lk25hs87/contention-crucible-6ywOqQ/service-unix-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-unix-r1000-w4-s20260925-lk25hs87/contention-crucible-6ywOqQ/service-unix-0/progress.json": {
+      "bytes": 10649,
+      "sha256": "461714a2c2ee5723b4aef2668080c9f582d7ff8c6fb95c615f67887973fc01a1"
+    },
+    "service-unix-r1000-w4-s20260925-lk25hs87/contention-crucible-6ywOqQ/service-unix-0/result.json": {
+      "bytes": 23650,
+      "sha256": "f54eef4ee2d983f9b4ee41825f7a937c356d9b6f2ed442247e435d0dac9e0c4f"
+    },
+    "service-unix-r1000-w4-s20260925-lk25hs87/contention-crucible-6ywOqQ/service-unix-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "8430c534db0438bc68902567b7a64e0c3cc92035fe6f1280dafe461c2ace8212"
+    },
+    "service-unix-r1000-w4-s20260925-lk25hs87/report.json": {
+      "bytes": 28482,
+      "sha256": "13462db28ba08166718f8a6ef710fdb0e13253e795ec654612535e3cbff6d8b3"
+    },
+    "service-unix-r1000-w4-s20260925-lk25hs87/run.log": {
+      "bytes": 127,
+      "sha256": "b0c4aff6ffc7585b93366ab3d59bacf8460ab941943b774b6aae4ff7523fbe0c"
+    },
+    "service-unix-r1000-w4-s20260925-lk25hs87/trial.json": {
+      "bytes": 37355,
+      "sha256": "ae86b8b81a9913b6ca24501eb576f033878a5856382e1837e7af03e3e366896e"
+    },
+    "service-unix-r1000-w4-s20260926-pbws7483/contention-crucible-42KDoP/service-unix-0/final.json": {
+      "bytes": 1638331,
+      "sha256": "7f38f0131467fa7e7daa09961318e61f97d407588e3f5a360e789c9d078bfe25"
+    },
+    "service-unix-r1000-w4-s20260926-pbws7483/contention-crucible-42KDoP/service-unix-0/history.jsonl": {
+      "bytes": 12723003,
+      "sha256": "56e04f983fec1cc0ce8eeec5b94a4325abe6fb260b208d6a790b0b5338995e9a"
+    },
+    "service-unix-r1000-w4-s20260926-pbws7483/contention-crucible-42KDoP/service-unix-0/initial.json": {
+      "bytes": 1619628,
+      "sha256": "19cf53dca550610a96bf8c88280c06b7c4099e0c5117511ad49df381ad085344"
+    },
+    "service-unix-r1000-w4-s20260926-pbws7483/contention-crucible-42KDoP/service-unix-0/progress.json": {
+      "bytes": 10648,
+      "sha256": "13b7340d28e9f46e06c3cc8765c38488890cc15f3a65877b14c06262d59f81f6"
+    },
+    "service-unix-r1000-w4-s20260926-pbws7483/contention-crucible-42KDoP/service-unix-0/result.json": {
+      "bytes": 23648,
+      "sha256": "766adb4701611e98dc3391fb10591ff2aab40388d893742bbf779f949904ae99"
+    },
+    "service-unix-r1000-w4-s20260926-pbws7483/contention-crucible-42KDoP/service-unix-0/serial-witness.json": {
+      "bytes": 65177,
+      "sha256": "9b416d4bf4a5bcdafb19bb2d4d37296231efe6bbd9ee1dc5349a05bbd31c6670"
+    },
+    "service-unix-r1000-w4-s20260926-pbws7483/report.json": {
+      "bytes": 28480,
+      "sha256": "bc6e5d18f4b169b4cfb22e77237de813ba2015ea40df0ba4a93c29fe1eadff3b"
+    },
+    "service-unix-r1000-w4-s20260926-pbws7483/run.log": {
+      "bytes": 127,
+      "sha256": "e301a2a4b74f130d3062028ebe4d15004c0f10810f1229b75820029eb91c49a5"
+    },
+    "service-unix-r1000-w4-s20260926-pbws7483/trial.json": {
+      "bytes": 37352,
+      "sha256": "a4eb4d9ad9ca000acdf226a6b6215d23389c559c04ceca1587d095c3512b6808"
+    }
+  },
+  "selection": "Regular non-symlink .json, .jsonl, .log files only; private-config.json and worker-[0-9]+.json excluded. No mappings, WAL, sockets, binaries or temporary files.",
+  "source_root": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/full-final"
+}

@@ -1,0 +1,11 @@
+# Corrected continuous-timing campaign evidence
+
+These four campaigns use the populated fleet workload and the corrected continuous client-monotonic clock from admission through worker shutdown and confirmed drain. All original cells are retained, including performance-policy failures. A successful campaign execution does not mean every offered rate passed latency/drain policy, nor does it establish a 10× capacity advantage, architecture promotion, production HyperFeed compatibility or MMHF qualification.
+
+The 18-trial full/metrics companions use 100 offered messages per second for three seconds. The three-trial high-rate companions use 1,000 offered messages per second for five seconds with four workers and one seed. Exact configurations and gates are preserved in the inspectable `*-campaign.json` receipts; the [compact review](../continuous-timing/README.md) interprets them. [archive-summary.json](archive-summary.json) records original campaign status and trial counts without changing their meaning.
+
+Each compressed bundle preserves regular JSON, JSONL, and log files at original relative paths. Adjacent `*-manifest.json` files contain the original source directory, every selected file's SHA-256 and byte length, and the bundle hash. Every logical archive member was read back and checked. Identical files may use ordinary tar hardlinks to earlier members.
+
+Private coordinator/worker configurations, mappings, WAL files, sockets, binaries and temporary files are excluded. Retained receipts are exact bytes, including any failed case. Absolute paths describe the original workspace; resolve artifacts by their suffix relative to the manifest's `source_root`. The main architecture archive retains build provenance and source snapshots separately. Service client-death checks and component formal verification are separate evidence and cannot override performance failures.
+
+The earlier [stress](../stress-campaigns/README.md) and [fleet](../fleet-campaigns/README.md) reports remain immutable historical evidence. Their histories, retries and per-message latency retain their stated scope, but their earlier admission-to-drain throughput omitted an intervening cleanup interval and must not be used as corrected capacity measurements.

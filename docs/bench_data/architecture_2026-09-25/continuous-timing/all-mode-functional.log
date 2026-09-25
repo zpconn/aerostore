@@ -1,0 +1,6 @@
+contention_crucible engine=aerostore scenario="competing-empty-creation" passed=true completed=4 retries=4 p99_us=755.705
+contention_crucible engine=aerostore scenario="mixed-matching-projection-housekeeping" passed=true completed=6 retries=11 p99_us=1266.071
+contention_crucible engine=aerostore scenario="indexed-key-move" passed=true completed=4 retries=6 p99_us=1001.667
+contention_crucible engine=aerostore scenario="global-due-claim-cancel-reschedule" passed=true completed=5 retries=44 p99_us=15706.026
+contention_crucible engine=aerostore scenario="creation-versus-whole-family-expiry" passed=true completed=6 retries=14 p99_us=5162.504
+contention_crucible engine=aerostore scenario="sustained-mixed" passed=true completed=300 retries=0 p99_us=2879.152

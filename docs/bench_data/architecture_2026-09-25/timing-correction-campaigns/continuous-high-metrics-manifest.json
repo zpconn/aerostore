@@ -1,0 +1,129 @@
+{
+  "all_compressed_member_hashes_verified": true,
+  "archive": "continuous-high-metrics.tar.gz",
+  "archive_bytes": 1604645,
+  "archive_sha256": "105c932e706a50709b0eb0a6d01c3225e77f488f02cf0df2487dc35a910ca96d",
+  "campaign_completed": true,
+  "campaign_passed": true,
+  "campaign_trials": 3,
+  "compressed_hardlinks_to_identical_prior_members": 4,
+  "format": "aerostore-campaign-evidence-archive-v1",
+  "interpretation": "Populated fleet workload after the continuous admission-to-confirmed-drain clock correction. All cells including performance-policy failures are preserved. Campaign completion/pass is not every-cell capacity qualification or architecture promotion.",
+  "member_paths_relative_to": "source_root",
+  "members": {
+    "aerostore-r1000-w4-s20260925-43y74kkn/contention-crucible-YgACyl/aerostore-0/final.json": {
+      "bytes": 1697696,
+      "sha256": "18739a24a82cf18bb63b893b0fb3857193c5120c1f0e67b764defed23984a9fb"
+    },
+    "aerostore-r1000-w4-s20260925-43y74kkn/contention-crucible-YgACyl/aerostore-0/history.jsonl": {
+      "bytes": 4217659,
+      "sha256": "de1dff1a34f7b00d95288e71e99cd5d784d5d1873f5812bc4cb4fd0b91ca1697"
+    },
+    "aerostore-r1000-w4-s20260925-43y74kkn/contention-crucible-YgACyl/aerostore-0/initial.json": {
+      "bytes": 1647970,
+      "sha256": "64f8f1ad6380b6388f8eb144123a2dd9f5a6a1e6622970776d2d95b8720fcc24"
+    },
+    "aerostore-r1000-w4-s20260925-43y74kkn/contention-crucible-YgACyl/aerostore-0/progress.json": {
+      "bytes": 12408,
+      "sha256": "c2707a27c375232a5cc797996cc8c09cb907c8222343a5071fc513aa15eba95f"
+    },
+    "aerostore-r1000-w4-s20260925-43y74kkn/contention-crucible-YgACyl/aerostore-0/result.json": {
+      "bytes": 26175,
+      "sha256": "169ecc7be5307110c3a533b97949526058e3bfe5624f0e498a88a224b1484f73"
+    },
+    "aerostore-r1000-w4-s20260925-43y74kkn/contention-crucible-YgACyl/aerostore-0/serial-witness.json": {
+      "bytes": 164,
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    "aerostore-r1000-w4-s20260925-43y74kkn/report.json": {
+      "bytes": 31310,
+      "sha256": "24f6c25cca9ba575eca3c7c4dc3d54ef7d99df22214888d4cf4f6c2e00bfc038"
+    },
+    "aerostore-r1000-w4-s20260925-43y74kkn/run.log": {
+      "bytes": 124,
+      "sha256": "5bf4ff60caf77c6a985705157b89a01d7beca448e147bae0cc6da1b19d259c13"
+    },
+    "aerostore-r1000-w4-s20260925-43y74kkn/trial.json": {
+      "bytes": 40990,
+      "sha256": "0049ac45ea5e29ce5ed3e331290597cdcec54fcc6a7e7bebbd46cccefa81bebe"
+    },
+    "campaign.json": {
+      "bytes": 329879,
+      "sha256": "8eadc3609429c3f55f428fe95ef7970b5f4a022cc59904833442bd6bf63b8bd5"
+    },
+    "postgres-r1000-w4-s20260925-vjepcvvb/contention-crucible-kC9hGo/postgres-0/final.json": {
+      "bytes": 1711269,
+      "sha256": "c211d3cfa654f6a71a7ca6c0c462f737595b322411798def2d822b5a2d74bd94"
+    },
+    "postgres-r1000-w4-s20260925-vjepcvvb/contention-crucible-kC9hGo/postgres-0/history.jsonl": {
+      "bytes": 5218358,
+      "sha256": "ea51b9af2175ffd2eccf1f256a5e40b8e52f2427f2f0484f5e887555bd8a4546"
+    },
+    "postgres-r1000-w4-s20260925-vjepcvvb/contention-crucible-kC9hGo/postgres-0/initial.json": {
+      "bytes": 1647970,
+      "sha256": "64f8f1ad6380b6388f8eb144123a2dd9f5a6a1e6622970776d2d95b8720fcc24"
+    },
+    "postgres-r1000-w4-s20260925-vjepcvvb/contention-crucible-kC9hGo/postgres-0/progress.json": {
+      "bytes": 11430,
+      "sha256": "720f796c6fe05b16e4a00e80a03628dadd33174c95e9c98acad5d3ccc40e7db5"
+    },
+    "postgres-r1000-w4-s20260925-vjepcvvb/contention-crucible-kC9hGo/postgres-0/result.json": {
+      "bytes": 37896,
+      "sha256": "681ac788f04c8182246e787cb6423b81d16135d79fbf3d8c3df02221aa8a19e2"
+    },
+    "postgres-r1000-w4-s20260925-vjepcvvb/contention-crucible-kC9hGo/postgres-0/serial-witness.json": {
+      "bytes": 164,
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    "postgres-r1000-w4-s20260925-vjepcvvb/report.json": {
+      "bytes": 45403,
+      "sha256": "bbc3e5fcb3eb5dc80d0fe5ace9fb34a8a00cbbe48f297b0ae40e9d9f86215366"
+    },
+    "postgres-r1000-w4-s20260925-vjepcvvb/run.log": {
+      "bytes": 117,
+      "sha256": "eeb13c73fbbae841d139d4f0c5d544e8aea49754d18035db6baebd34c1ebb87b"
+    },
+    "postgres-r1000-w4-s20260925-vjepcvvb/trial.json": {
+      "bytes": 55563,
+      "sha256": "54d660cd7a431ce08bf5f4b0738c155d817485f70c190dc0dc5f45fe9eeffd2c"
+    },
+    "service-unix-r1000-w4-s20260925-ebzpalcv/contention-crucible-bbOdJN/service-unix-0/final.json": {
+      "bytes": 1708656,
+      "sha256": "8fb83c4a6369691dc4e58c3b94e6bf5c982f5c34ddf91f3205bc23ebd21f532f"
+    },
+    "service-unix-r1000-w4-s20260925-ebzpalcv/contention-crucible-bbOdJN/service-unix-0/history.jsonl": {
+      "bytes": 4728811,
+      "sha256": "b5bede0f4b0759f4b8eaeb0c9d04835908cfc5e87896f8cde1dfa4118e8c893b"
+    },
+    "service-unix-r1000-w4-s20260925-ebzpalcv/contention-crucible-bbOdJN/service-unix-0/initial.json": {
+      "bytes": 1647970,
+      "sha256": "64f8f1ad6380b6388f8eb144123a2dd9f5a6a1e6622970776d2d95b8720fcc24"
+    },
+    "service-unix-r1000-w4-s20260925-ebzpalcv/contention-crucible-bbOdJN/service-unix-0/progress.json": {
+      "bytes": 31713,
+      "sha256": "c1a5f32aa6d21b33acb94f7b5e79ec4956fa3ed4ff0986ead8cf7ea948e91622"
+    },
+    "service-unix-r1000-w4-s20260925-ebzpalcv/contention-crucible-bbOdJN/service-unix-0/result.json": {
+      "bytes": 45747,
+      "sha256": "f026f34d4bc7acb2c5b35c25a39ada189a7f02f25592f881dd814b5ee6f406e6"
+    },
+    "service-unix-r1000-w4-s20260925-ebzpalcv/contention-crucible-bbOdJN/service-unix-0/serial-witness.json": {
+      "bytes": 164,
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    "service-unix-r1000-w4-s20260925-ebzpalcv/report.json": {
+      "bytes": 53523,
+      "sha256": "66540bebdc4c93b3b480fc246750fefa91d056d9fc92817e9d8fa372e2ae1b73"
+    },
+    "service-unix-r1000-w4-s20260925-ebzpalcv/run.log": {
+      "bytes": 128,
+      "sha256": "3167265f4cf4c2cf67ba24c5421298c958d645e04ff6cd57296d9ce7fb8cb605"
+    },
+    "service-unix-r1000-w4-s20260925-ebzpalcv/trial.json": {
+      "bytes": 64462,
+      "sha256": "8225677e9f75765a5a2fea1d499218a09dfca2bf06d7863d7e940b2d8ed88c1f"
+    }
+  },
+  "selection": "Regular non-symlink .json, .jsonl, .log files only; private-config.json and worker-[0-9]+.json excluded. No mappings, WAL, sockets, binaries or temporary files.",
+  "source_root": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/continuous-high-metrics"
+}

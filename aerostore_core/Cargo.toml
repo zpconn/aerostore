@@ -70,6 +70,10 @@ name = "hyperfeed_extended_crucible"
 harness = false
 
 [[bench]]
+name = "hyperfeed_contention_crucible"
+harness = false
+
+[[bench]]
 name = "verified_bucket_sets"
 harness = false
 

@@ -1,0 +1,243 @@
+{
+  "source_failure_wal": "/tmp/aerostore_wal_recovery_1790306388495087670/aerostore_tcl_like_savepoint.wal",
+  "archived_wal": "independent-failed-savepoint.wal",
+  "wal_sha256": "4d7ee6b326b2ca3bf1671ec1f4ce98e1bf88a69ece879e56e8f88604b96304aa",
+  "wal_bytes": 372,
+  "strict_read_wal_file_succeeded": true,
+  "complete_records": 3,
+  "applied_write_count": 3,
+  "expected_precrash_plus_postcrash_keys": 4,
+  "first_wave_only_missing_key": "DAL789",
+  "decoded_rows_equal_complete_second_wave": true,
+  "interpretation": "The failed fixture requires one first-wave-only asynchronous row that was not in the surviving WAL. All three surviving records are correct full post-restart baselines, with no rolled-back churn values.",
+  "records": [
+    {
+      "txid": 20,
+      "version": 2,
+      "writes": [
+        {
+          "base_offset": 293184,
+          "flight": "UAL123",
+          "full_row": {
+            "altitude": 12200,
+            "exists": 1,
+            "flight": [
+              85,
+              65,
+              76,
+              49,
+              50,
+              51,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "gs": 450
+          },
+          "logical_full_row": {
+            "altitude": 12200,
+            "exists": 1,
+            "flight": [
+              85,
+              65,
+              76,
+              49,
+              50,
+              51,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "gs": 450
+          },
+          "logical_record": {
+            "UpdateFull": {
+              "payload": [
+                1,
+                85,
+                65,
+                76,
+                49,
+                50,
+                51,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                168,
+                47,
+                0,
+                0,
+                194,
+                1
+              ],
+              "pk": "0"
+            }
+          },
+          "new_offset": 293376,
+          "row_id": 0
+        }
+      ]
+    },
+    {
+      "txid": 21,
+      "version": 2,
+      "writes": [
+        {
+          "base_offset": 293248,
+          "flight": "AAL456",
+          "full_row": {
+            "altitude": 13100,
+            "exists": 1,
+            "flight": [
+              65,
+              65,
+              76,
+              52,
+              53,
+              54,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "gs": 410
+          },
+          "logical_full_row": {
+            "altitude": 13100,
+            "exists": 1,
+            "flight": [
+              65,
+              65,
+              76,
+              52,
+              53,
+              54,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "gs": 410
+          },
+          "logical_record": {
+            "UpdateFull": {
+              "payload": [
+                1,
+                65,
+                65,
+                76,
+                52,
+                53,
+                54,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                44,
+                51,
+                0,
+                0,
+                154,
+                1
+              ],
+              "pk": "1"
+            }
+          },
+          "new_offset": 293440,
+          "row_id": 1
+        }
+      ]
+    },
+    {
+      "txid": 22,
+      "version": 2,
+      "writes": [
+        {
+          "base_offset": 95680,
+          "flight": "SWA321",
+          "full_row": {
+            "altitude": 10900,
+            "exists": 1,
+            "flight": [
+              83,
+              87,
+              65,
+              51,
+              50,
+              49,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "gs": 382
+          },
+          "logical_full_row": {
+            "altitude": 10900,
+            "exists": 1,
+            "flight": [
+              83,
+              87,
+              65,
+              51,
+              50,
+              49,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "gs": 382
+          },
+          "logical_record": {
+            "UpdateFull": {
+              "payload": [
+                1,
+                83,
+                87,
+                65,
+                51,
+                50,
+                49,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                148,
+                42,
+                0,
+                0,
+                126,
+                1
+              ],
+              "pk": "3"
+            }
+          },
+          "new_offset": 293504,
+          "row_id": 3
+        }
+      ]
+    }
+  ]
+}

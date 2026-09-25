@@ -1,0 +1,9 @@
+test_full_and_metrics_process_the_same_fixed_single_worker_corpus (test_contention_integration.ContentionIntegrationTests.test_full_and_metrics_process_the_same_fixed_single_worker_corpus) ... ok
+test_interactive_delay_exposes_backlog_instead_of_throttling_arrivals (test_contention_integration.ContentionIntegrationTests.test_interactive_delay_exposes_backlog_instead_of_throttling_arrivals) ... ok
+test_message_cap_cannot_silently_truncate_offered_corpus (test_contention_integration.ContentionIntegrationTests.test_message_cap_cannot_silently_truncate_offered_corpus) ... ok
+test_one_arrival_waits_for_full_admission_interval_and_metrics_omit_history (test_contention_integration.ContentionIntegrationTests.test_one_arrival_waits_for_full_admission_interval_and_metrics_omit_history) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 3.978s
+
+OK

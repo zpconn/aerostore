@@ -1,0 +1,88 @@
+{
+  "original_binary": "/home/zpconn/code/aerostore/target/release/deps/hyperfeed_contention_crucible-2e74481266f642b5",
+  "executed_binary": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/fleet-benchmark",
+  "binary_sha256": "f37b288b38be0b86a29f1db32079f5819c4fe28220937219f41260c9c8549033",
+  "source_inventory_sha256": "7b02ad0fd7c2e1a04db8603c4321015c10c4d82ee3bfaa2cfd6adda457558d87",
+  "commands": [
+    {
+      "label": "remote-script-tests",
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "scripts",
+        "-p",
+        "test_run_remote_contention.py",
+        "-v"
+      ],
+      "exit_code": 0
+    },
+    {
+      "label": "remote-script-run",
+      "command": [
+        "python3",
+        "scripts/run_remote_contention.py",
+        "--binary",
+        "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/fleet-benchmark",
+        "--output-dir",
+        "target/architecture-qualification-2026-09-25/fleet-functional-final/remote-loopback",
+        "--workload",
+        "fleet",
+        "--families",
+        "16",
+        "--hot-percent",
+        "0",
+        "--evidence",
+        "full",
+        "--seconds",
+        "2",
+        "--arrival-rate",
+        "100",
+        "--workers",
+        "4",
+        "--shm-mib",
+        "256",
+        "--seed",
+        "20260925"
+      ],
+      "exit_code": 0
+    },
+    {
+      "label": "native-postgres-run",
+      "command": [
+        "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/fleet-functional-final/fleet-benchmark",
+        "--engine",
+        "both",
+        "--mode",
+        "sustained",
+        "--workload",
+        "fleet",
+        "--families",
+        "64",
+        "--hot-percent",
+        "0",
+        "--evidence",
+        "full",
+        "--seconds",
+        "2",
+        "--arrival-rate",
+        "100",
+        "--workers",
+        "4",
+        "--shm-mib",
+        "256",
+        "--seed",
+        "20260925",
+        "--pg-write-mode",
+        "buffered",
+        "--pg-url",
+        "host=/tmp/aerostore-tuned-pg-20260925 port=55432 user=postgres dbname=contention_test connect_timeout=5",
+        "--output",
+        "target/architecture-qualification-2026-09-25/fleet-functional-final/native-postgres-report.json"
+      ],
+      "exit_code": 0
+    }
+  ]
+}

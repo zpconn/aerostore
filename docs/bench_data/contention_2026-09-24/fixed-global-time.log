@@ -1,0 +1,3 @@
+contention-crucible: message 1764 after 128 retries: transaction conflict; cleanup=Ok(())
+contention_crucible engine=aerostore scenario=null passed=false completed=null retries=null p99_us=null
+contention-crucible: contention correctness/progress check failed: /home/zpconn/code/aerostore/target/contention-validation/fixed-global-time.json

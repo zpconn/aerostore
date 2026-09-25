@@ -1,0 +1,40 @@
+{
+  "format_version": 1,
+  "passed": true,
+  "debug_tests": 27,
+  "scope": "Final frozen fleet-workspace service regression rerun after all timed campaigns; selected native application-client death cuts, not owner crash recovery or throughput evidence.",
+  "command": "source target/verification-tools/environment.sh; AEROSTORE_SERVICE_EVIDENCE=$PWD/target/service-prototype/final-fleet cargo test --locked -p aerostore_core --test contention_service -- --nocapture",
+  "test_binary_sha256": "d653a9ae9e3dde9d166d8bf5cbf79ca0dcd45c6c25beeff1a6b989bfa7f36589",
+  "test_source_bundle": "../service-availability/source.tar.gz",
+  "test_source_sha256": {
+    "aerostore_core/benches/contention_crucible/service.rs": "3fb494a3c7606a1e2c2fdbe610e8c1c9e6afb40dd18aee509176bb65bc7b830b",
+    "aerostore_core/benches/contention_crucible/storage.rs": "1b891dc30fb772981d96e709b7401490f2e842d40ab7d0ca26a231bb33aaccde",
+    "aerostore_core/benches/contention_crucible/aerostore.rs": "73e79afde1a41d88ea6f99155ddad633b2020aa7d03ed9774a1871fa404f844a",
+    "aerostore_core/tests/contention_service.rs": "3624ac4f6185e05410c67f23e8d004f4e8eea9c66db84da86210ef3d571cfe0e",
+    "aerostore_core/benches/extended_crucible/model.rs": "7ac59bbc4be37689968bd00b2a7081b842afabd04357bcbbd42ebed424c37234",
+    "aerostore_core/benches/extended_crucible/metrics.rs": "0974e0d10ed2072182a3b3c0b8b5d4d4bdec86726faa31108163da395170f42f",
+    "scripts/check_tla.py": "327c4f7de04fc9a8832c1b0d3d164ea6410694107a888872646cbf1b4b2fc9e5",
+    "scripts/check_formal_coverage.py": "efa2a2f8f0632074e059cbe33326abc4e0d6f3f3fb5c1e9a5a0e0f96346156ec",
+    "Cargo.lock": "6c0d2df18dbfba1408aaedf361cd480eb20ea629bdc6b185ce6b02fa9f31ab2d",
+    "aerostore_core/Cargo.toml": "c2a7ddadf907c74884553b3971ccab2854481df38ce09bb2dfac3093fc6a7870",
+    "verification/service_protocol/README.md": "9a130c6ed4a1aae94fd144f015889138bf9df762be852b59f8ce049ba88ad437",
+    "verification/service_protocol/ServiceProtocol.tla": "cf753c217870484b7b5cd996348286648491394652fcf08b125ee2a29dfd4d30",
+    "verification/service_protocol/campaign.json": "4cc12942b1da0666e277ffd7b43444400d2b96eb8e081c05d72210fd97b32953",
+    "verification/service_protocol/check.py": "8c6644c1d0dc1c3b139463fee14f74c3b954bf2d587443eee865740e927cc755",
+    "verification/service_protocol/test_boundary.py": "0a54f58c679a1c5863453ae7682fab2ac3aeae8e87c6361a3cb7a42783a4bcd1",
+    "verification/service_protocol/toolchain.json": "f6f72abbc2db47f467bd2939c84658f256ebeacb188f03635b36b61fb1655b49"
+  },
+  "all_test_bundle_sources_identical_to_prior_receipt": true,
+  "frozen_boundary_sha256": "8a97f148cd83284cbca1292c012277e600862df627b7e64fb04465da4d366944",
+  "frozen_boundary_entries": 370,
+  "whole_engine_verified": false,
+  "architecture_promotion_eligible": false,
+  "direct_worker_failure_fixed": false,
+  "artifacts_sha256": {
+    "tcp.log": "d203cfee9b436de6a962d312d932effc67134b8d39c59c646bdd0707409785a7",
+    "tests.log": "20f94690900d2e5745833d7e2ba966f13f2ce729a2ae795c2167c13e6ffe221a",
+    "tcp.json": "508af4be5291ee5e8affafcc3b9ae09760bc580050a335fba2740d17b11a7527",
+    "unix.json": "87714daef94ef68513dc0901cfd2d3a5d06ee6e4cad06debbe7e6a776a49fd23",
+    "unix.log": "fe7030859ca5fb015365cad6d7a72c7cff30132d6b0286c16e394382bd0a2ed6"
+  }
+}

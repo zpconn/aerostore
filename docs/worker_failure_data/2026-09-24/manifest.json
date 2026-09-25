@@ -1,0 +1,36 @@
+{
+  "baseline_commit": "6291200b4383538d960f3b1c73942715193f464b",
+  "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "rustc": "rustc 1.93.1 (01f6ddf75 2026-02-11)",
+  "command": "AEROSTORE_WORKER_FAILURE_REPORT_DIR=target/worker-failure-contract cargo test -p aerostore_core --release --test worker_failure_contract -- --nocapture --test-threads=1",
+  "characterization_test_count": 7,
+  "characterization_passed": true,
+  "required_worker_failure_availability_satisfied": false,
+  "mapping": "disposable MAP_SHARED regular files under tempfile directory; not a tmpfs performance claim",
+  "source_sha256": {
+    "aerostore_core/tests/worker_failure_contract.rs": "a256d814611f35ba9699e0e549b6db325577476ffb373fb13b64db30ca125dc0",
+    "aerostore_core/src/occ_partitioned.rs": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d",
+    "aerostore_core/src/procarray.rs": "5bb6765c5bd1b0a63423404a874b6adfe093115291a7cb1116eb330f6a8e4364",
+    "aerostore_core/src/bootloader.rs": "6c29c8fd5ead2aadb61f4fb77342a0705985110b5b0b3f5354e39d1a78e3e890",
+    "aerostore_core/src/shm_lock.rs": "60c189fef3e17644f8470c2baf7e148c7096c06fc062ef280e315b21eb165fa2",
+    "aerostore_core/src/shm.rs": "434964bde214af5b9ca4c4828447e995edc9074f117d61ee1173fa0ae0418884",
+    "aerostore_core/src/shm_index.rs": "3ee2c2b8bb1f29e50e1f7177b238c794a12558b03fb8f948ac26c8ed6714c151",
+    "aerostore_core/src/shm_skiplist.rs": "a3b8862e481cb9a95345d9eafc88d8f2bdb102b28f001d70c7e01fd581f7c184",
+    "aerostore_core/src/wal_writer.rs": "619be861775b8b1942750f427d6ecef55abc5e208fb165e5dd4c6cf5d123a70a",
+    "aerostore_core/src/wal_delta.rs": "72175f6a106b5880208c65f29cd2a5758819ecf93af6507a054b95889a67365e",
+    "aerostore_core/src/shm_tmpfs.rs": "08b0db51eef49a71f00ac75f16b4503927d9d52d406af0bd04b088382dbb2e74",
+    "aerostore_core/Cargo.toml": "c2a7ddadf907c74884553b3971ccab2854481df38ce09bb2dfac3093fc6a7870",
+    "Cargo.lock": "6c0d2df18dbfba1408aaedf361cd480eb20ea629bdc6b185ce6b02fa9f31ab2d"
+  },
+  "artifact_sha256": {
+    "idle.json": "2895d1ecaadee1eeb7e33df7a040d2094cf9dc21f9ad728a948ed1d23ed57b0c",
+    "indexed_update_guard.json": "a3ef197a51628bbfebf2393bc96ddc36c9bc5a47d59fef23d3d951c48b8e5c3b",
+    "native_commit_before_wal_acceptance.json": "51943956b98e7024aabf7e5afd50c860b8088709b5ff104c383c855a31f223a6",
+    "private_write.json": "2d759b0c1d6760ec0effc5774312850d646cd7f5db73255a6b49767d65ea0963",
+    "row_lock.json": "cc083ffd13ad940ae6f3d2a1845aa38a8970773380322be37a3a6bc3966ec97f",
+    "survivor_availability.json": "b977b58f84428e03424097e413a75ae8dca9f5e5fa6a5c3ffcd7d4b610e143ff",
+    "test.log": "2dc48e4222b9c37419ab2131112d57f619feb5047acc8b2635cc40ebd25b48f9"
+  },
+  "report_path_note": "Cargo executed tests with package cwd; JSON copied from aerostore_core/target/worker-failure-contract alongside the command log. Prefer an absolute report directory when rerunning.",
+  "characterization_parent_test_count": 6
+}

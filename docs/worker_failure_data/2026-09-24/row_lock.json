@@ -1,0 +1,8 @@
+{
+  "cleared_slots": 1,
+  "kill_reap_ms": 1.096695,
+  "locked_row_usable_after_warm_attach": false,
+  "phase": "row_lock",
+  "unrelated_update_succeeded": true,
+  "warm_attach_ms": 0.019333
+}

@@ -1,0 +1,8 @@
+{
+  "cleanup_executed": false,
+  "automatic_approval_review": "rejected before process creation",
+  "review_reason": "Stopping native fixture and removing Docker container were classified as scoped but destructive service/data mutations without explicit user approval for cleanup.",
+  "subsequent_instruction": "Coordinator requested both fixtures remain running for corrected timing checks.",
+  "mutations_performed": false,
+  "availability_receipt": "availability-after-cleanup-hold.json"
+}

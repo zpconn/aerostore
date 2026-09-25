@@ -1,0 +1,5 @@
+contention_crucible engine=service-tcp scenario="competing-empty-creation" passed=true completed=4 retries=6 p99_us=13675.047
+contention_crucible engine=service-tcp scenario="mixed-matching-projection-housekeeping" passed=true completed=6 retries=14 p99_us=31368.524
+contention_crucible engine=service-tcp scenario="indexed-key-move" passed=true completed=4 retries=6 p99_us=22105.934
+contention_crucible engine=service-tcp scenario="global-due-claim-cancel-reschedule" passed=true completed=5 retries=21 p99_us=26777.11
+contention_crucible engine=service-tcp scenario="creation-versus-whole-family-expiry" passed=true completed=6 retries=3 p99_us=16599.772

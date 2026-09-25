@@ -1,0 +1,587 @@
+{
+  "passed": true,
+  "completed_at": "2026-09-25T21:32:49.944023+00:00",
+  "scope": "Functional validation of a partially calibrated HyperFeed workload; no architecture promotion.",
+  "binary_sha256": "8842cd00f64fd6964536dadd058b928c7d27574b53a80d7b513c7255ef93ddb5",
+  "source_sha256": "29f53f412ab151ce026c189a95e67c477015ffa0489a59c8bdc5e254f7451add",
+  "source_stable": true,
+  "campaigns": {
+    "accelerated-full": [
+      {
+        "engine": "aerostore",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": true,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 30,
+        "report": "accelerated-full/aerostore-r64-w4-s20260924-t8jtnl7x/report.json"
+      },
+      {
+        "engine": "service-unix",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": true,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 9,
+        "report": "accelerated-full/service-unix-r64-w4-s20260924-7ko5vzyg/report.json"
+      },
+      {
+        "engine": "postgres",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": true,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 4,
+        "report": "accelerated-full/postgres-r64-w4-s20260924-ydmj7jzo/report.json"
+      },
+      {
+        "engine": "postgres",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": true,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 5,
+        "report": "accelerated-full/postgres-r64-w4-s20260925-12n7jad3/report.json"
+      },
+      {
+        "engine": "service-unix",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": true,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 13,
+        "report": "accelerated-full/service-unix-r64-w4-s20260925-lhwo653y/report.json"
+      },
+      {
+        "engine": "aerostore",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": true,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 29,
+        "report": "accelerated-full/aerostore-r64-w4-s20260925-9oz33p21/report.json"
+      },
+      {
+        "engine": "aerostore",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": true,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 32,
+        "report": "accelerated-full/aerostore-r64-w4-s20260926-pmyppnm4/report.json"
+      },
+      {
+        "engine": "service-unix",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": true,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 9,
+        "report": "accelerated-full/service-unix-r64-w4-s20260926-i6w6t5po/report.json"
+      },
+      {
+        "engine": "postgres",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": true,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 6,
+        "report": "accelerated-full/postgres-r64-w4-s20260926-frh8phgs/report.json"
+      }
+    ],
+    "accelerated-metrics": [
+      {
+        "engine": "aerostore",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": false,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 27,
+        "report": "accelerated-metrics/aerostore-r64-w4-s20260924-e493ln85/report.json"
+      },
+      {
+        "engine": "service-unix",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": false,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 10,
+        "report": "accelerated-metrics/service-unix-r64-w4-s20260924-q75rfq90/report.json"
+      },
+      {
+        "engine": "postgres",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": false,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 6,
+        "report": "accelerated-metrics/postgres-r64-w4-s20260924-qp3vm0ee/report.json"
+      },
+      {
+        "engine": "postgres",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": false,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 6,
+        "report": "accelerated-metrics/postgres-r64-w4-s20260925-cujeogcu/report.json"
+      },
+      {
+        "engine": "service-unix",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": false,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 12,
+        "report": "accelerated-metrics/service-unix-r64-w4-s20260925-hq6cxcvj/report.json"
+      },
+      {
+        "engine": "aerostore",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": false,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 31,
+        "report": "accelerated-metrics/aerostore-r64-w4-s20260925-zl55pv4z/report.json"
+      },
+      {
+        "engine": "aerostore",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": false,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 30,
+        "report": "accelerated-metrics/aerostore-r64-w4-s20260926-g35pky4u/report.json"
+      },
+      {
+        "engine": "service-unix",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": false,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 13,
+        "report": "accelerated-metrics/service-unix-r64-w4-s20260926-x56jm1yn/report.json"
+      },
+      {
+        "engine": "postgres",
+        "counts": {
+          "foreground": {
+            "offered": 320,
+            "completed": 320,
+            "positive_effect_jobs": 320
+          },
+          "projection": {
+            "offered": 4,
+            "completed": 4,
+            "positive_effect_jobs": 4
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": false,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 6,
+        "report": "accelerated-metrics/postgres-r64-w4-s20260926-pk4kbeih/report.json"
+      }
+    ],
+    "cadence-native": [
+      {
+        "engine": "aerostore",
+        "counts": {
+          "foreground": {
+            "offered": 19232,
+            "completed": 19232,
+            "positive_effect_jobs": 19232
+          },
+          "projection": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": true,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 16,
+        "report": "cadence-native/aerostore-r32-w4-s20260925-g6vpse0d/report.json"
+      }
+    ],
+    "cadence-postgres": [
+      {
+        "engine": "postgres",
+        "counts": {
+          "foreground": {
+            "offered": 19232,
+            "completed": 19232,
+            "positive_effect_jobs": 19232
+          },
+          "projection": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          },
+          "housekeeping": {
+            "offered": 2,
+            "completed": 2,
+            "positive_effect_jobs": 2
+          }
+        },
+        "full_history_verified": true,
+        "continuous_timing_passed": true,
+        "foreground_order_passed": true,
+        "retries": 2,
+        "report": "cadence-postgres/postgres-r32-w4-s20260925-5bqiv1oc/report.json"
+      }
+    ]
+  },
+  "tests": {
+    "integration-final": {
+      "passed": 11,
+      "log": "integration-final.log"
+    },
+    "pause-tests": {
+      "passed": 2,
+      "log": "pause-tests.log"
+    },
+    "qualification-tests": {
+      "passed": 37,
+      "log": "qualification-tests.log"
+    },
+    "remote-tests": {
+      "passed": 8,
+      "log": "remote-tests.log"
+    },
+    "rust_model_and_measurement": {
+      "passed": [
+        27,
+        45,
+        6
+      ],
+      "log": "model-and-measurement-tests.log",
+      "note": "The 27-test calibrated target includes 15 imported existing model tests."
+    }
+  },
+  "loopback": {
+    "passed": true,
+    "messages": 196,
+    "history_verified": true
+  },
+  "preserved_stress": {
+    "passed": 12,
+    "histories_verified": 12
+  },
+  "guardrails": {
+    "passed": 71,
+    "anchoring": "local_bootstrap_only",
+    "report": "guardrails/report.json",
+    "p0_contract_audit_complete": true,
+    "full_P1_complete": false,
+    "p0_scope": "Reviewed contract coverage and exact-source freshness; not semantic verification or inferred deadlock freedom."
+  },
+  "negative_controls": [
+    "Delayed maintenance retains original offered ticks and drains after admission.",
+    "A paused maintenance worker exceeding backlog fails, preserving uncompleted offers.",
+    "Worker message caps fail rather than silently truncating timer work.",
+    "Invalid/overflowing model clocks fail before mutation."
+  ],
+  "independent_reviews": [
+    "cadence-review.json",
+    "preservation-review.json"
+  ],
+  "postgres_cleanup": "postgres-cleanup.json",
+  "timing_scope": "Runs overlapped other same-host validation; timing values are diagnostics, not controlled rankings.",
+  "capacity_qualified": false,
+  "tenfold_speedup_established": false,
+  "physical_mm_hf_measured": false,
+  "whole_engine_verified": false,
+  "full_maintenance_sweeps": false,
+  "population_turnover": false,
+  "worker_failure_contract_changed": false,
+  "remaining": [
+    "Complete maintenance jobs as bounded transaction batches.",
+    "Calibrate population, lifecycle turnover, message/source mix and offered-rate ranges.",
+    "Run isolated sustained matched-contract comparisons and saturation brackets.",
+    "Measure physical two-host behavior and close production worker-failure availability."
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "format_version": 1,
+  "scope": [
+    "Finite service-ownership and volatile outcome-bookkeeping abstraction; no production Rust refinement proof",
+    "Two one-shot clients; client 1 can die, client 2 survives; weak fairness only in conditional progress case",
+    "Native engine operations are atomic abstract steps; no engine/service crash recovery, weak-memory, durability or reclamation theorem"
+  ],
+  "cases": [
+    {
+      "name": "service_safety",
+      "model": "ServiceProtocol",
+      "constants": {
+        "CancelAccepted": false,
+        "LeakRegistration": false,
+        "ReplayAccepted": false,
+        "UnknownMeansAbort": false
+      },
+      "expected": "complete",
+      "safety_property": "Safety"
+    },
+    {
+      "name": "service_conditional_progress",
+      "model": "ServiceProtocol",
+      "constants": {
+        "CancelAccepted": false,
+        "LeakRegistration": false,
+        "ReplayAccepted": false,
+        "UnknownMeansAbort": false
+      },
+      "expected": "complete",
+      "safety_property": "Safety",
+      "use_spec": true,
+      "temporal_property": "Progress"
+    },
+    {
+      "name": "service_lost_reply_survivor_witness",
+      "model": "ServiceProtocol",
+      "constants": {
+        "CancelAccepted": false,
+        "LeakRegistration": false,
+        "ReplayAccepted": false,
+        "UnknownMeansAbort": false
+      },
+      "expected": "witness",
+      "safety_property": "Safety",
+      "failure_property": "NoLostReplySurvivorWitness"
+    },
+    {
+      "name": "service_reject_CancelAccepted",
+      "model": "ServiceProtocol",
+      "constants": {
+        "CancelAccepted": true,
+        "LeakRegistration": false,
+        "ReplayAccepted": false,
+        "UnknownMeansAbort": false
+      },
+      "expected": "counterexample",
+      "safety_property": "Safety",
+      "failure_property": "Safety"
+    },
+    {
+      "name": "service_reject_LeakRegistration",
+      "model": "ServiceProtocol",
+      "constants": {
+        "CancelAccepted": false,
+        "LeakRegistration": true,
+        "ReplayAccepted": false,
+        "UnknownMeansAbort": false
+      },
+      "expected": "counterexample",
+      "safety_property": "Safety",
+      "failure_property": "Safety"
+    },
+    {
+      "name": "service_reject_ReplayAccepted",
+      "model": "ServiceProtocol",
+      "constants": {
+        "CancelAccepted": false,
+        "LeakRegistration": false,
+        "ReplayAccepted": true,
+        "UnknownMeansAbort": false
+      },
+      "expected": "counterexample",
+      "safety_property": "Safety",
+      "failure_property": "Safety"
+    },
+    {
+      "name": "service_reject_UnknownMeansAbort",
+      "model": "ServiceProtocol",
+      "constants": {
+        "CancelAccepted": false,
+        "LeakRegistration": false,
+        "ReplayAccepted": false,
+        "UnknownMeansAbort": true
+      },
+      "expected": "counterexample",
+      "safety_property": "Safety",
+      "failure_property": "Safety"
+    }
+  ]
+}

@@ -1,0 +1,142 @@
+{
+  "completed": true,
+  "passed": true,
+  "scope": "Frozen-binary existing stress regression after calibrated clock-unit changes; correctness only, concurrent with other functional checks; no performance interpretation.",
+  "argv": [
+    "/home/zpconn/code/aerostore/target/calibrated-validation/benchmark-final",
+    "--engine",
+    "both",
+    "--mode",
+    "all",
+    "--workload",
+    "fleet",
+    "--families",
+    "16",
+    "--hot-percent",
+    "0",
+    "--workers",
+    "4",
+    "--seconds",
+    "1",
+    "--arrival-rate",
+    "64",
+    "--evidence",
+    "full",
+    "--seed",
+    "20260925",
+    "--shm-mib",
+    "256",
+    "--pg-url",
+    "<private local PostgreSQL DSN>",
+    "--output",
+    "/home/zpconn/code/aerostore/target/calibrated-validation/preserved-stress/report.json"
+  ],
+  "binary_before_sha256": "8842cd00f64fd6964536dadd058b928c7d27574b53a80d7b513c7255ef93ddb5",
+  "exit_code": 0,
+  "timed_out": false,
+  "error": null,
+  "wall_seconds": 3.8216517989999375,
+  "owned_processes_terminated": true,
+  "private_configs_removed": [],
+  "binary_after_sha256": "8842cd00f64fd6964536dadd058b928c7d27574b53a80d7b513c7255ef93ddb5",
+  "binary_stable": true,
+  "run_checks": [
+    {
+      "engine": "aerostore",
+      "scenario": "competing-empty-creation",
+      "passed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 4,
+      "error": null
+    },
+    {
+      "engine": "aerostore",
+      "scenario": "mixed-matching-projection-housekeeping",
+      "passed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 6,
+      "error": null
+    },
+    {
+      "engine": "aerostore",
+      "scenario": "indexed-key-move",
+      "passed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 4,
+      "error": null
+    },
+    {
+      "engine": "aerostore",
+      "scenario": "global-due-claim-cancel-reschedule",
+      "passed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 5,
+      "error": null
+    },
+    {
+      "engine": "aerostore",
+      "scenario": "creation-versus-whole-family-expiry",
+      "passed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 6,
+      "error": null
+    },
+    {
+      "engine": "aerostore",
+      "scenario": "sustained-mixed",
+      "passed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 64,
+      "error": null
+    },
+    {
+      "engine": "postgres",
+      "scenario": "competing-empty-creation",
+      "passed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 4,
+      "error": null
+    },
+    {
+      "engine": "postgres",
+      "scenario": "mixed-matching-projection-housekeeping",
+      "passed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 6,
+      "error": null
+    },
+    {
+      "engine": "postgres",
+      "scenario": "indexed-key-move",
+      "passed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 4,
+      "error": null
+    },
+    {
+      "engine": "postgres",
+      "scenario": "global-due-claim-cancel-reschedule",
+      "passed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 5,
+      "error": null
+    },
+    {
+      "engine": "postgres",
+      "scenario": "creation-versus-whole-family-expiry",
+      "passed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 6,
+      "error": null
+    },
+    {
+      "engine": "postgres",
+      "scenario": "sustained-mixed",
+      "passed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 64,
+      "error": null
+    }
+  ],
+  "report_sha256": "cf495e4d99efcd22517f392781b42bf94e59672734beb12937c9911405d3ae81"
+}

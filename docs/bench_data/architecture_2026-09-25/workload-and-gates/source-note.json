@@ -1,0 +1,15 @@
+{
+  "scope": "Post-test source note for unchanged model and qualification files. The final repaired integration run uses the frozen binary/source captured in build-provenance.json; the previous build/integration metadata is retained separately as pre-reply-deadline evidence.",
+  "sha256": {
+    "aerostore_core/benches/contention_crucible/model.rs": "2ac14809e29549a0f5d1412b192fbab0c3c6115d9d5d358e2b648ac46102d6dc",
+    "aerostore_core/benches/contention_crucible/oracle.rs": "e440262b1b69c3fd0b43d565b9696b5494afdc0abd20dadcb29c8be974053cb3",
+    "aerostore_core/benches/contention_crucible/storage.rs": "1b891dc30fb772981d96e709b7401490f2e842d40ab7d0ca26a231bb33aaccde",
+    "aerostore_core/tests/contention_crucible_model.rs": "b06468e326db5fb939580236cc196eb2616fcecf21034d34a89e94928799a061",
+    "scripts/qualify_hyperfeed.py": "34c90a01d96efaa384bd60baa5d68dbefb7b12ed07e5053610fa290f717de4ce",
+    "scripts/test_hyperfeed_qualification.py": "286ef94524348a34708bcacfe4dd22e1d9eb49f8890bcace49c9a926ec55bddb",
+    "scripts/test_contention_integration.py": "198d0660139c3efe40f17976b0694407db0a37e9343642a56d54878ea6c9ce6a"
+  },
+  "pre_reply_deadline_integration_binary_sha256": "eec5f61f5d026b538fd994dad60994c0097c27ca2080838a355e8713f783d3af",
+  "final_integration_binary_sha256": "af39521c16db6244b7a8772a314d8df9a8554128b33a555f336b45f11b784e1f",
+  "final_build_source_sha256": "6e955013e6539022447dd3158843f955e58f4c3bb18b00b77a35ce6005369eb6"
+}

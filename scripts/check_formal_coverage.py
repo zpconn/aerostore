@@ -43,7 +43,7 @@ def frozen_paths(root: Path) -> list[str]:
                       "scripts", ".github", ".cargo"]:
         paths.update(str(p.relative_to(root)) for p in (root / directory).rglob("*")
                      if p.is_file() and not any(part in {"target", "__pycache__"} for part in p.relative_to(root).parts))
-    for directory in ["verification/verus", "verification/tla", "verification/concurrent",
+    for directory in ["verification/verus", "verification/tla", "verification/service_protocol", "verification/concurrent",
                       "verification/predicate", "verification/predicate_capture",
                       "verification/predicate_composition", "verification/skiplist_detach", "verification/postings",
                       "verification/guards", "verification/lifecycle", "verification/publication_slice",

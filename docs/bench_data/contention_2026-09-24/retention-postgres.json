@@ -1,0 +1,2194 @@
+{
+  "architecture_promotion_eligible": false,
+  "completed": true,
+  "config": {
+    "engine": "postgres",
+    "families": 16,
+    "global_time_predicates": false,
+    "hot_percent": 80,
+    "max_messages": 100000,
+    "message_interval_us": 10000,
+    "mode": "sustained",
+    "oracle_budget": 2000000,
+    "output": "/home/zpconn/code/aerostore/target/contention-validation/retention-postgres.json",
+    "seconds": 120,
+    "seed": 20260924,
+    "shm_mib": 256,
+    "workers": 4
+  },
+  "durability_contract": "both use WAL with asynchronous acknowledgement; fsync on PostgreSQL; native writer drained on normal completion; equal crash loss windows and crash recovery NOT claimed",
+  "evidence_directory": "/home/zpconn/code/aerostore/target/contention-validation/contention-crucible-j6vurb",
+  "git_revision": "6291200b4383538d960f3b1c73942715193f464b",
+  "passed": true,
+  "postgres_configuration": {
+    "application_prelocks": false,
+    "fsync": "on",
+    "full_page_writes": "on",
+    "max_connections": "100",
+    "predeclared_write_sets": false,
+    "server_version": "16.13 (Debian 16.13-1.pgdg13+1)",
+    "shared_buffers": "128MB",
+    "snapshot_established": "first business query",
+    "synchronous_commit": "off",
+    "transaction_isolation": "serializable",
+    "wal_level": "replica",
+    "wal_writer_delay": "10s"
+  },
+  "runs": [
+    {
+      "after_drain": {
+        "autovacuum_count": 2,
+        "estimated_dead_tuples": 14338,
+        "estimated_live_tuples": 4096,
+        "index_bytes": 917504,
+        "resident_memory_measured": false,
+        "table_bytes": 1982464,
+        "total_bytes": 2899968,
+        "tuple_counts_are_estimates": true,
+        "vacuum_count": 0
+      },
+      "completed_by_worker": [
+        796,
+        799,
+        795,
+        794
+      ],
+      "completed_messages": 3184,
+      "completed_messages_per_second": 26.223975605403663,
+      "elapsed_seconds": 121.4156102,
+      "engine": "postgres",
+      "evidence_directory": "/home/zpconn/code/aerostore/target/contention-validation/contention-crucible-j6vurb/postgres-0",
+      "execution_completed": true,
+      "invariants": {
+        "checks": {
+          "active_dedup": 108,
+          "active_events": 112,
+          "active_families": 16,
+          "active_flights": 112,
+          "active_outputs": 233,
+          "active_positions": 166,
+          "provenance_checked": 623
+        },
+        "passed": true
+      },
+      "message_kinds": {
+        "housekeeping": 399,
+        "key_move": 397,
+        "plan": 397,
+        "position": 1194,
+        "projection": 797
+      },
+      "message_latency_max_us_including_retries": 4116277.59,
+      "message_latency_p50_us_including_retries": 10226.058,
+      "message_latency_p99_us_including_retries": 2071045.343,
+      "native_audit": null,
+      "oracle_detail": "complete observations, effects, outcomes and final state have a serial witness respecting non-overlap",
+      "oracle_explored": 3184,
+      "oracle_seconds": 0.099927586,
+      "oracle_status": "Valid",
+      "passed": true,
+      "per_kind": {
+        "housekeeping": {
+          "completed": 399,
+          "outcomes": {
+            "created_views": 0,
+            "expired_records": 6876,
+            "ignored_stale": 0,
+            "outputs": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 2182005.277,
+          "retries": 2038
+        },
+        "key_move": {
+          "completed": 397,
+          "outcomes": {
+            "created_views": 0,
+            "expired_records": 0,
+            "ignored_stale": 669,
+            "outputs": 919,
+            "updated_views": 919
+          },
+          "p99_us_including_retries": 1049477.013,
+          "retries": 334
+        },
+        "plan": {
+          "completed": 397,
+          "outcomes": {
+            "created_views": 0,
+            "expired_records": 0,
+            "ignored_stale": 701,
+            "outputs": 887,
+            "updated_views": 887
+          },
+          "p99_us_including_retries": 1026845.504,
+          "retries": 303
+        },
+        "position": {
+          "completed": 1194,
+          "outcomes": {
+            "created_views": 0,
+            "expired_records": 0,
+            "ignored_stale": 2080,
+            "outputs": 2696,
+            "updated_views": 2696
+          },
+          "p99_us_including_retries": 2056320.454,
+          "retries": 2415
+        },
+        "projection": {
+          "completed": 797,
+          "outcomes": {
+            "created_views": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "outputs": 2376,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 2116020.98,
+          "retries": 2428
+        }
+      },
+      "performance_comparison_eligible": false,
+      "performance_scope": "diagnostic instrumented workload; repeated matched trials, noise analysis and availability acceptance are required before architecture promotion",
+      "postgres_configuration": {
+        "application_prelocks": false,
+        "fsync": "on",
+        "full_page_writes": "on",
+        "max_connections": "100",
+        "predeclared_write_sets": false,
+        "server_version": "16.13 (Debian 16.13-1.pgdg13+1)",
+        "shared_buffers": "128MB",
+        "snapshot_established": "first business query",
+        "synchronous_commit": "off",
+        "transaction_isolation": "serializable",
+        "wal_level": "replica",
+        "wal_writer_delay": "10s"
+      },
+      "requested_duration_reached": true,
+      "retention_samples": [
+        {
+          "completed_messages": 0,
+          "elapsed_seconds": 0.0,
+          "sample_finished_ns": 2629516182471,
+          "sample_started_ns": 2629510791335,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 0,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 196608,
+            "resident_memory_measured": false,
+            "table_bytes": 843776,
+            "total_bytes": 1040384,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 13,
+          "elapsed_seconds": 1.099480687,
+          "sample_finished_ns": 2630615663140,
+          "sample_started_ns": 2630608149035,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 388,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 196608,
+            "resident_memory_measured": false,
+            "table_bytes": 892928,
+            "total_bytes": 1089536,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 19,
+          "elapsed_seconds": 2.127187983,
+          "sample_finished_ns": 2631643370423,
+          "sample_started_ns": 2631637215067,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 469,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 196608,
+            "resident_memory_measured": false,
+            "table_bytes": 892928,
+            "total_bytes": 1089536,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 72,
+          "elapsed_seconds": 3.170975227,
+          "sample_finished_ns": 2632687157677,
+          "sample_started_ns": 2632680049686,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 469,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 221184,
+            "resident_memory_measured": false,
+            "table_bytes": 950272,
+            "total_bytes": 1171456,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 99,
+          "elapsed_seconds": 4.251647048,
+          "sample_finished_ns": 2633767829497,
+          "sample_started_ns": 2633760013435,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 1591,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 221184,
+            "resident_memory_measured": false,
+            "table_bytes": 974848,
+            "total_bytes": 1196032,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 133,
+          "elapsed_seconds": 5.328653499,
+          "sample_finished_ns": 2634844835949,
+          "sample_started_ns": 2634837998754,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 2086,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 237568,
+            "resident_memory_measured": false,
+            "table_bytes": 983040,
+            "total_bytes": 1220608,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 134,
+          "elapsed_seconds": 6.431763297,
+          "sample_finished_ns": 2635947945747,
+          "sample_started_ns": 2635939923040,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 2941,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 237568,
+            "resident_memory_measured": false,
+            "table_bytes": 983040,
+            "total_bytes": 1220608,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 135,
+          "elapsed_seconds": 7.442768152,
+          "sample_finished_ns": 2636958950601,
+          "sample_started_ns": 2636951305523,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 2990,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 237568,
+            "resident_memory_measured": false,
+            "table_bytes": 983040,
+            "total_bytes": 1220608,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 136,
+          "elapsed_seconds": 8.457014005,
+          "sample_finished_ns": 2637973196456,
+          "sample_started_ns": 2637964680577,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 3028,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 237568,
+            "resident_memory_measured": false,
+            "table_bytes": 983040,
+            "total_bytes": 1220608,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 170,
+          "elapsed_seconds": 9.475247484,
+          "sample_finished_ns": 2638991429936,
+          "sample_started_ns": 2638984258661,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 3078,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 262144,
+            "resident_memory_measured": false,
+            "table_bytes": 1032192,
+            "total_bytes": 1294336,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 197,
+          "elapsed_seconds": 10.57066264,
+          "sample_finished_ns": 2640086845086,
+          "sample_started_ns": 2640078840779,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 3970,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 262144,
+            "resident_memory_measured": false,
+            "table_bytes": 1073152,
+            "total_bytes": 1335296,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 224,
+          "elapsed_seconds": 11.640671614,
+          "sample_finished_ns": 2641156854057,
+          "sample_started_ns": 2641148515895,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 4940,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 262144,
+            "resident_memory_measured": false,
+            "table_bytes": 1081344,
+            "total_bytes": 1343488,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 228,
+          "elapsed_seconds": 12.656071198,
+          "sample_finished_ns": 2642172253650,
+          "sample_started_ns": 2642163994349,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 5604,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 270336,
+            "resident_memory_measured": false,
+            "table_bytes": 1081344,
+            "total_bytes": 1351680,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 239,
+          "elapsed_seconds": 13.717322628,
+          "sample_finished_ns": 2643233505075,
+          "sample_started_ns": 2643223907582,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 5680,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 270336,
+            "resident_memory_measured": false,
+            "table_bytes": 1081344,
+            "total_bytes": 1351680,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 276,
+          "elapsed_seconds": 14.728849636,
+          "sample_finished_ns": 2644245032084,
+          "sample_started_ns": 2644239563998,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 5909,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 286720,
+            "resident_memory_measured": false,
+            "table_bytes": 1081344,
+            "total_bytes": 1368064,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 298,
+          "elapsed_seconds": 15.834329872,
+          "sample_finished_ns": 2645350512323,
+          "sample_started_ns": 2645344825276,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 6938,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 311296,
+            "resident_memory_measured": false,
+            "table_bytes": 1105920,
+            "total_bytes": 1417216,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 362,
+          "elapsed_seconds": 16.925179673,
+          "sample_finished_ns": 2646441362124,
+          "sample_started_ns": 2646432388071,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 6938,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 311296,
+            "resident_memory_measured": false,
+            "table_bytes": 1130496,
+            "total_bytes": 1441792,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 454,
+          "elapsed_seconds": 18.010715523,
+          "sample_finished_ns": 2647526897964,
+          "sample_started_ns": 2647518846637,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 8316,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 352256,
+            "resident_memory_measured": false,
+            "table_bytes": 1155072,
+            "total_bytes": 1507328,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 455,
+          "elapsed_seconds": 19.104475742,
+          "sample_finished_ns": 2648620658135,
+          "sample_started_ns": 2648612197203,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 10055,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 368640,
+            "resident_memory_measured": false,
+            "table_bytes": 1163264,
+            "total_bytes": 1531904,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 526,
+          "elapsed_seconds": 20.119073236,
+          "sample_finished_ns": 2649635255677,
+          "sample_started_ns": 2649629663994,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 10085,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 409600,
+            "resident_memory_measured": false,
+            "table_bytes": 1220608,
+            "total_bytes": 1630208,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 582,
+          "elapsed_seconds": 21.159438993,
+          "sample_finished_ns": 2650675621442,
+          "sample_started_ns": 2650668263542,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 10085,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 409600,
+            "resident_memory_measured": false,
+            "table_bytes": 1253376,
+            "total_bytes": 1662976,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 585,
+          "elapsed_seconds": 22.170762271,
+          "sample_finished_ns": 2651686944722,
+          "sample_started_ns": 2651678531436,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 12519,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 409600,
+            "resident_memory_measured": false,
+            "table_bytes": 1253376,
+            "total_bytes": 1662976,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 614,
+          "elapsed_seconds": 23.223494789,
+          "sample_finished_ns": 2652739677217,
+          "sample_started_ns": 2652731979011,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 12613,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 417792,
+            "resident_memory_measured": false,
+            "table_bytes": 1269760,
+            "total_bytes": 1687552,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 698,
+          "elapsed_seconds": 24.250722654,
+          "sample_finished_ns": 2653766905105,
+          "sample_started_ns": 2653758980958,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 13147,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 483328,
+            "resident_memory_measured": false,
+            "table_bytes": 1368064,
+            "total_bytes": 1851392,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 718,
+          "elapsed_seconds": 25.26691428,
+          "sample_finished_ns": 2654783096722,
+          "sample_started_ns": 2654777644573,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 15046,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 483328,
+            "resident_memory_measured": false,
+            "table_bytes": 1368064,
+            "total_bytes": 1851392,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 741,
+          "elapsed_seconds": 26.311631521,
+          "sample_finished_ns": 2655827813971,
+          "sample_started_ns": 2655821912923,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 15046,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 483328,
+            "resident_memory_measured": false,
+            "table_bytes": 1384448,
+            "total_bytes": 1867776,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 741,
+          "elapsed_seconds": 27.320397539,
+          "sample_finished_ns": 2656836579959,
+          "sample_started_ns": 2656828657998,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 15569,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 483328,
+            "resident_memory_measured": false,
+            "table_bytes": 1384448,
+            "total_bytes": 1867776,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 745,
+          "elapsed_seconds": 28.367293636,
+          "sample_finished_ns": 2657883476089,
+          "sample_started_ns": 2657877697223,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 15903,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 483328,
+            "resident_memory_measured": false,
+            "table_bytes": 1384448,
+            "total_bytes": 1867776,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 745,
+          "elapsed_seconds": 29.373574805,
+          "sample_finished_ns": 2658889757253,
+          "sample_started_ns": 2658884137324,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 15925,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 483328,
+            "resident_memory_measured": false,
+            "table_bytes": 1384448,
+            "total_bytes": 1867776,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 761,
+          "elapsed_seconds": 30.456634119,
+          "sample_finished_ns": 2659972816569,
+          "sample_started_ns": 2659965154074,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 16164,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 491520,
+            "resident_memory_measured": false,
+            "table_bytes": 1384448,
+            "total_bytes": 1875968,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 807,
+          "elapsed_seconds": 31.502269024,
+          "sample_finished_ns": 2661018451475,
+          "sample_started_ns": 2661008224015,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 16164,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 499712,
+            "resident_memory_measured": false,
+            "table_bytes": 1433600,
+            "total_bytes": 1933312,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 809,
+          "elapsed_seconds": 32.554254988,
+          "sample_finished_ns": 2662070437345,
+          "sample_started_ns": 2662061589073,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 17187,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 499712,
+            "resident_memory_measured": false,
+            "table_bytes": 1433600,
+            "total_bytes": 1933312,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 834,
+          "elapsed_seconds": 33.621328844,
+          "sample_finished_ns": 2663137511286,
+          "sample_started_ns": 2663129630726,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 17277,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 516096,
+            "resident_memory_measured": false,
+            "table_bytes": 1433600,
+            "total_bytes": 1949696,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 870,
+          "elapsed_seconds": 34.694989413,
+          "sample_finished_ns": 2664211171864,
+          "sample_started_ns": 2664202907644,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 17765,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 516096,
+            "resident_memory_measured": false,
+            "table_bytes": 1458176,
+            "total_bytes": 1974272,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 880,
+          "elapsed_seconds": 35.750049844,
+          "sample_finished_ns": 2665266232277,
+          "sample_started_ns": 2665259985411,
+          "storage": {
+            "autovacuum_count": 0,
+            "estimated_dead_tuples": 18555,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 524288,
+            "resident_memory_measured": false,
+            "table_bytes": 1466368,
+            "total_bytes": 1990656,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 891,
+          "elapsed_seconds": 36.822388873,
+          "sample_finished_ns": 2666338571325,
+          "sample_started_ns": 2666329199931,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 274,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 524288,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 1998848,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 893,
+          "elapsed_seconds": 37.89589891,
+          "sample_finished_ns": 2667412081361,
+          "sample_started_ns": 2667404605559,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 394,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 524288,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 1998848,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 975,
+          "elapsed_seconds": 38.909484228,
+          "sample_finished_ns": 2668425666677,
+          "sample_started_ns": 2668419134834,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 439,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 540672,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2015232,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1126,
+          "elapsed_seconds": 39.9159993,
+          "sample_finished_ns": 2669432181749,
+          "sample_started_ns": 2669426829547,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 2521,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 557056,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2031616,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1273,
+          "elapsed_seconds": 40.931927939,
+          "sample_finished_ns": 2670448110389,
+          "sample_started_ns": 2670441312813,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 6218,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 589824,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2064384,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1311,
+          "elapsed_seconds": 42.02164937,
+          "sample_finished_ns": 2671537831741,
+          "sample_started_ns": 2671530669278,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 7050,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 589824,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2064384,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1355,
+          "elapsed_seconds": 43.033812967,
+          "sample_finished_ns": 2672549995419,
+          "sample_started_ns": 2672542723565,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 7123,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 589824,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2064384,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1402,
+          "elapsed_seconds": 44.0397801,
+          "sample_finished_ns": 2673555962548,
+          "sample_started_ns": 2673550213492,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 8406,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 598016,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2072576,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1408,
+          "elapsed_seconds": 45.056047154,
+          "sample_finished_ns": 2674572229604,
+          "sample_started_ns": 2674566249152,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 9551,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 598016,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2072576,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1409,
+          "elapsed_seconds": 46.064428799,
+          "sample_finished_ns": 2675580611250,
+          "sample_started_ns": 2675573220943,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 9555,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 598016,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2072576,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1421,
+          "elapsed_seconds": 47.133953936,
+          "sample_finished_ns": 2676650136383,
+          "sample_started_ns": 2676644138619,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 9709,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 598016,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2072576,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1430,
+          "elapsed_seconds": 48.146416468,
+          "sample_finished_ns": 2677662598919,
+          "sample_started_ns": 2677656884967,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 9818,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 606208,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2080768,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1446,
+          "elapsed_seconds": 49.153613112,
+          "sample_finished_ns": 2678669795555,
+          "sample_started_ns": 2678662992043,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 9818,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 606208,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2080768,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1456,
+          "elapsed_seconds": 50.245851631,
+          "sample_finished_ns": 2679762034069,
+          "sample_started_ns": 2679754518389,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 10369,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 606208,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2080768,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1471,
+          "elapsed_seconds": 51.300294262,
+          "sample_finished_ns": 2680816476678,
+          "sample_started_ns": 2680808869469,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 10720,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 606208,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2080768,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1488,
+          "elapsed_seconds": 52.341235317,
+          "sample_finished_ns": 2681857417729,
+          "sample_started_ns": 2681847439131,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 11127,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 606208,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2080768,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1544,
+          "elapsed_seconds": 53.436933651,
+          "sample_finished_ns": 2682953116084,
+          "sample_started_ns": 2682944918580,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 11705,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 614400,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2088960,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1544,
+          "elapsed_seconds": 54.4611107,
+          "sample_finished_ns": 2683977293150,
+          "sample_started_ns": 2683968428773,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 11949,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 614400,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2088960,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1608,
+          "elapsed_seconds": 55.541718841,
+          "sample_finished_ns": 2685057901290,
+          "sample_started_ns": 2685049103471,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 13013,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 630784,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2105344,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1643,
+          "elapsed_seconds": 56.554321603,
+          "sample_finished_ns": 2686070504053,
+          "sample_started_ns": 2686064696909,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 14359,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 638976,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2113536,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1676,
+          "elapsed_seconds": 57.618362366,
+          "sample_finished_ns": 2687134544751,
+          "sample_started_ns": 2687126330747,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 14359,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 647168,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2121728,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1700,
+          "elapsed_seconds": 58.688723715,
+          "sample_finished_ns": 2688204906166,
+          "sample_started_ns": 2688195758611,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 15727,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 655360,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2129920,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1702,
+          "elapsed_seconds": 59.770562864,
+          "sample_finished_ns": 2689286745311,
+          "sample_started_ns": 2689277833836,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 16383,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 655360,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2129920,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1710,
+          "elapsed_seconds": 60.823648377,
+          "sample_finished_ns": 2690339830827,
+          "sample_started_ns": 2690329804067,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 16463,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 655360,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2129920,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1712,
+          "elapsed_seconds": 61.917545164,
+          "sample_finished_ns": 2691433727588,
+          "sample_started_ns": 2691426964961,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 16577,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 655360,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2129920,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1721,
+          "elapsed_seconds": 62.959290903,
+          "sample_finished_ns": 2692475473354,
+          "sample_started_ns": 2692469921093,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 16739,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 655360,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2129920,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1730,
+          "elapsed_seconds": 64.029410418,
+          "sample_finished_ns": 2693545592833,
+          "sample_started_ns": 2693537963368,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 16803,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 655360,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2129920,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1764,
+          "elapsed_seconds": 65.048214475,
+          "sample_finished_ns": 2694564396917,
+          "sample_started_ns": 2694555568768,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 16927,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 663552,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2138112,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1770,
+          "elapsed_seconds": 66.078480824,
+          "sample_finished_ns": 2695594663275,
+          "sample_started_ns": 2695586554744,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 17863,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 663552,
+            "resident_memory_measured": false,
+            "table_bytes": 1474560,
+            "total_bytes": 2138112,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1865,
+          "elapsed_seconds": 67.148108968,
+          "sample_finished_ns": 2696664291414,
+          "sample_started_ns": 2696656089632,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 18070,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 671744,
+            "resident_memory_measured": false,
+            "table_bytes": 1507328,
+            "total_bytes": 2179072,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1876,
+          "elapsed_seconds": 68.207242463,
+          "sample_finished_ns": 2697723424902,
+          "sample_started_ns": 2697714627048,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 20001,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 671744,
+            "resident_memory_measured": false,
+            "table_bytes": 1515520,
+            "total_bytes": 2187264,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1896,
+          "elapsed_seconds": 69.2414451,
+          "sample_finished_ns": 2698757627547,
+          "sample_started_ns": 2698748668955,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 20211,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 679936,
+            "resident_memory_measured": false,
+            "table_bytes": 1515520,
+            "total_bytes": 2195456,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1910,
+          "elapsed_seconds": 70.259840009,
+          "sample_finished_ns": 2699776022459,
+          "sample_started_ns": 2699767875825,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 20608,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 679936,
+            "resident_memory_measured": false,
+            "table_bytes": 1531904,
+            "total_bytes": 2211840,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1910,
+          "elapsed_seconds": 71.269008445,
+          "sample_finished_ns": 2700785190897,
+          "sample_started_ns": 2700777215190,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 20699,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 679936,
+            "resident_memory_measured": false,
+            "table_bytes": 1531904,
+            "total_bytes": 2211840,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1920,
+          "elapsed_seconds": 72.335042847,
+          "sample_finished_ns": 2701851225224,
+          "sample_started_ns": 2701841842475,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 20955,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 679936,
+            "resident_memory_measured": false,
+            "table_bytes": 1531904,
+            "total_bytes": 2211840,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1921,
+          "elapsed_seconds": 73.345830406,
+          "sample_finished_ns": 2702862012820,
+          "sample_started_ns": 2702853222768,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 21213,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 679936,
+            "resident_memory_measured": false,
+            "table_bytes": 1531904,
+            "total_bytes": 2211840,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1940,
+          "elapsed_seconds": 74.356126001,
+          "sample_finished_ns": 2703872308450,
+          "sample_started_ns": 2703866853421,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 21232,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 679936,
+            "resident_memory_measured": false,
+            "table_bytes": 1556480,
+            "total_bytes": 2236416,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 1958,
+          "elapsed_seconds": 75.375767288,
+          "sample_finished_ns": 2704891949683,
+          "sample_started_ns": 2704883941305,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 21232,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 688128,
+            "resident_memory_measured": false,
+            "table_bytes": 1564672,
+            "total_bytes": 2252800,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2007,
+          "elapsed_seconds": 76.416225019,
+          "sample_finished_ns": 2705932407470,
+          "sample_started_ns": 2705925002498,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 22198,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 688128,
+            "resident_memory_measured": false,
+            "table_bytes": 1572864,
+            "total_bytes": 2260992,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2013,
+          "elapsed_seconds": 77.478439652,
+          "sample_finished_ns": 2706994622104,
+          "sample_started_ns": 2706987302382,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 23289,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 696320,
+            "resident_memory_measured": false,
+            "table_bytes": 1572864,
+            "total_bytes": 2269184,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2044,
+          "elapsed_seconds": 78.542604113,
+          "sample_finished_ns": 2708058786548,
+          "sample_started_ns": 2708050836663,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 23358,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 696320,
+            "resident_memory_measured": false,
+            "table_bytes": 1597440,
+            "total_bytes": 2293760,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2090,
+          "elapsed_seconds": 79.625342273,
+          "sample_finished_ns": 2709141524724,
+          "sample_started_ns": 2709133301225,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 23930,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 704512,
+            "resident_memory_measured": false,
+            "table_bytes": 1630208,
+            "total_bytes": 2334720,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2118,
+          "elapsed_seconds": 80.688205956,
+          "sample_finished_ns": 2710204388406,
+          "sample_started_ns": 2710195009747,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 24918,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 704512,
+            "resident_memory_measured": false,
+            "table_bytes": 1638400,
+            "total_bytes": 2342912,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2208,
+          "elapsed_seconds": 81.699643541,
+          "sample_finished_ns": 2711215825993,
+          "sample_started_ns": 2711210164882,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 25300,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 712704,
+            "resident_memory_measured": false,
+            "table_bytes": 1753088,
+            "total_bytes": 2465792,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2289,
+          "elapsed_seconds": 82.710083695,
+          "sample_finished_ns": 2712226266144,
+          "sample_started_ns": 2712220140844,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 25967,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 729088,
+            "resident_memory_measured": false,
+            "table_bytes": 1900544,
+            "total_bytes": 2629632,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2314,
+          "elapsed_seconds": 83.804577745,
+          "sample_finished_ns": 2713320760197,
+          "sample_started_ns": 2713312907106,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 28011,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 729088,
+            "resident_memory_measured": false,
+            "table_bytes": 1916928,
+            "total_bytes": 2646016,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2372,
+          "elapsed_seconds": 84.831161837,
+          "sample_finished_ns": 2714347344209,
+          "sample_started_ns": 2714339972746,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 28533,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 737280,
+            "resident_memory_measured": false,
+            "table_bytes": 1925120,
+            "total_bytes": 2662400,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2379,
+          "elapsed_seconds": 85.866323573,
+          "sample_finished_ns": 2715382506024,
+          "sample_started_ns": 2715373790892,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 29561,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 737280,
+            "resident_memory_measured": false,
+            "table_bytes": 1925120,
+            "total_bytes": 2662400,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2381,
+          "elapsed_seconds": 86.964251049,
+          "sample_finished_ns": 2716480433500,
+          "sample_started_ns": 2716474527537,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 29694,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 737280,
+            "resident_memory_measured": false,
+            "table_bytes": 1925120,
+            "total_bytes": 2662400,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2381,
+          "elapsed_seconds": 87.975424293,
+          "sample_finished_ns": 2717491606745,
+          "sample_started_ns": 2717481361529,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 29738,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 737280,
+            "resident_memory_measured": false,
+            "table_bytes": 1925120,
+            "total_bytes": 2662400,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2405,
+          "elapsed_seconds": 89.02966991,
+          "sample_finished_ns": 2718545852361,
+          "sample_started_ns": 2718537181466,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 29780,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 745472,
+            "resident_memory_measured": false,
+            "table_bytes": 1925120,
+            "total_bytes": 2670592,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2407,
+          "elapsed_seconds": 90.133331666,
+          "sample_finished_ns": 2719649514085,
+          "sample_started_ns": 2719642069189,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 30288,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 745472,
+            "resident_memory_measured": false,
+            "table_bytes": 1925120,
+            "total_bytes": 2670592,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2437,
+          "elapsed_seconds": 91.23554397,
+          "sample_finished_ns": 2720751726422,
+          "sample_started_ns": 2720743767668,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 30329,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 770048,
+            "resident_memory_measured": false,
+            "table_bytes": 1933312,
+            "total_bytes": 2703360,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2442,
+          "elapsed_seconds": 92.245891523,
+          "sample_finished_ns": 2721762073890,
+          "sample_started_ns": 2721755400687,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 30969,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 770048,
+            "resident_memory_measured": false,
+            "table_bytes": 1933312,
+            "total_bytes": 2703360,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2507,
+          "elapsed_seconds": 93.266260788,
+          "sample_finished_ns": 2722782443239,
+          "sample_started_ns": 2722776462826,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 31157,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 786432,
+            "resident_memory_measured": false,
+            "table_bytes": 1966080,
+            "total_bytes": 2752512,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2531,
+          "elapsed_seconds": 94.303337045,
+          "sample_finished_ns": 2723819519497,
+          "sample_started_ns": 2723811628682,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 31157,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 786432,
+            "resident_memory_measured": false,
+            "table_bytes": 1974272,
+            "total_bytes": 2760704,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2586,
+          "elapsed_seconds": 95.377151354,
+          "sample_finished_ns": 2724893333802,
+          "sample_started_ns": 2724885511427,
+          "storage": {
+            "autovacuum_count": 1,
+            "estimated_dead_tuples": 33243,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 802816,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2785280,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2592,
+          "elapsed_seconds": 96.476093563,
+          "sample_finished_ns": 2725992276015,
+          "sample_started_ns": 2725984990344,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 3,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 851968,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2834432,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2598,
+          "elapsed_seconds": 97.52526921,
+          "sample_finished_ns": 2727041451661,
+          "sample_started_ns": 2727033040878,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 95,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 851968,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2834432,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2600,
+          "elapsed_seconds": 98.534362055,
+          "sample_finished_ns": 2728050544505,
+          "sample_started_ns": 2728042831329,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 210,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 851968,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2834432,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2615,
+          "elapsed_seconds": 99.546251302,
+          "sample_finished_ns": 2729062433744,
+          "sample_started_ns": 2729054486049,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 260,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 851968,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2834432,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2628,
+          "elapsed_seconds": 100.61210808,
+          "sample_finished_ns": 2730128290522,
+          "sample_started_ns": 2730120704272,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 720,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 851968,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2834432,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2703,
+          "elapsed_seconds": 101.70223462,
+          "sample_finished_ns": 2731218417059,
+          "sample_started_ns": 2731210861724,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 949,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 860160,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2842624,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2716,
+          "elapsed_seconds": 102.738721218,
+          "sample_finished_ns": 2732254903669,
+          "sample_started_ns": 2732246118923,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 3524,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 860160,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2842624,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2735,
+          "elapsed_seconds": 103.746595286,
+          "sample_finished_ns": 2733262777658,
+          "sample_started_ns": 2733256320216,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 3819,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 868352,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2850816,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2741,
+          "elapsed_seconds": 104.802171285,
+          "sample_finished_ns": 2734318353732,
+          "sample_started_ns": 2734310142103,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 4287,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 868352,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2850816,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2749,
+          "elapsed_seconds": 105.898097463,
+          "sample_finished_ns": 2735414279907,
+          "sample_started_ns": 2735405724151,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 4387,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 868352,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2850816,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2781,
+          "elapsed_seconds": 106.911630881,
+          "sample_finished_ns": 2736427813332,
+          "sample_started_ns": 2736421827490,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 4489,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 868352,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2850816,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2809,
+          "elapsed_seconds": 108.012742126,
+          "sample_finished_ns": 2737528924576,
+          "sample_started_ns": 2737521984615,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 4489,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 876544,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2859008,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2848,
+          "elapsed_seconds": 109.037236876,
+          "sample_finished_ns": 2738553419328,
+          "sample_started_ns": 2738544922516,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 5856,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 876544,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2859008,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2849,
+          "elapsed_seconds": 110.047572741,
+          "sample_finished_ns": 2739563755192,
+          "sample_started_ns": 2739555094986,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 6634,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 884736,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2867200,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2928,
+          "elapsed_seconds": 111.145390464,
+          "sample_finished_ns": 2740661572915,
+          "sample_started_ns": 2740654076550,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 6654,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 892928,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2875392,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2953,
+          "elapsed_seconds": 112.189576035,
+          "sample_finished_ns": 2741705758387,
+          "sample_started_ns": 2741697212148,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 8776,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 892928,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2875392,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 2988,
+          "elapsed_seconds": 113.199848847,
+          "sample_finished_ns": 2742716031288,
+          "sample_started_ns": 2742710498227,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 9133,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 892928,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2875392,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 3013,
+          "elapsed_seconds": 114.243680973,
+          "sample_finished_ns": 2743759863423,
+          "sample_started_ns": 2743749949941,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 9133,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 901120,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2883584,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 3042,
+          "elapsed_seconds": 115.329769404,
+          "sample_finished_ns": 2744845951856,
+          "sample_started_ns": 2744838014877,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 10445,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 901120,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2883584,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 3081,
+          "elapsed_seconds": 116.408911137,
+          "sample_finished_ns": 2745925093589,
+          "sample_started_ns": 2745916216191,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 11136,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 909312,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2891776,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 3114,
+          "elapsed_seconds": 117.432044788,
+          "sample_finished_ns": 2746948227237,
+          "sample_started_ns": 2746940860445,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 12289,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 909312,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2891776,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 3145,
+          "elapsed_seconds": 118.537540762,
+          "sample_finished_ns": 2748053723164,
+          "sample_started_ns": 2748045482958,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 13027,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 917504,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2899968,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 3180,
+          "elapsed_seconds": 119.615814617,
+          "sample_finished_ns": 2749131997066,
+          "sample_started_ns": 2749123587213,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 13612,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 917504,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2899968,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        },
+        {
+          "completed_messages": 3180,
+          "elapsed_seconds": 120.626090269,
+          "sample_finished_ns": 2750142272647,
+          "sample_started_ns": 2750133039705,
+          "storage": {
+            "autovacuum_count": 2,
+            "estimated_dead_tuples": 14090,
+            "estimated_live_tuples": 4096,
+            "index_bytes": 917504,
+            "resident_memory_measured": false,
+            "table_bytes": 1982464,
+            "total_bytes": 2899968,
+            "tuple_counts_are_estimates": true,
+            "vacuum_count": 0
+          }
+        }
+      ],
+      "retries": 7518,
+      "retry_cause_limit": "native stages do not distinguish exact predicate bucket collisions, row validation or underlying newer-stamp causes; PostgreSQL reports SQLSTATE",
+      "retry_causes": {
+        "commit:40001": 124,
+        "query:40001": 163,
+        "read:40001": 1399,
+        "write:40001": 5721,
+        "write:40P01": 111
+      },
+      "scenario": "sustained-mixed",
+      "scratch_cleanup_completed": true,
+      "store_metrics": {
+        "aborts": 7518,
+        "begins": 10702,
+        "commits": 3184,
+        "index_mutations": 0,
+        "queries": 35641,
+        "reads": 94071,
+        "returned_rows": 416391,
+        "savepoint_rollbacks": 0,
+        "savepoints": 0,
+        "writes": 66941
+      },
+      "timing_contract": "instrumented closed-loop completion throughput includes process/receipt IPC; service latency includes full query/write recording, retries/backoff, excludes queue/IPC; scenarios include their deliberate first-query wait; oracle and final audit are outside timing",
+      "worker_failure_availability_tested": false,
+      "worker_message_cap_reached": false,
+      "worker_stops": [
+        {
+          "finished_ns": 2750913714944,
+          "stop_reason": "deadline"
+        },
+        {
+          "finished_ns": 2750911727342,
+          "stop_reason": "deadline"
+        },
+        {
+          "finished_ns": 2750931665228,
+          "stop_reason": "deadline"
+        },
+        {
+          "finished_ns": 2750927070080,
+          "stop_reason": "deadline"
+        }
+      ]
+    }
+  ],
+  "schema": 1,
+  "scope": "synthetic harder HyperFeed storage workload, not proprietary handler compatibility or architecture superiority",
+  "transaction_contract": "single-table native optimistic transactions versus PostgreSQL SERIALIZABLE; dynamic reads/writes, no family prelocks; strict serial witness checked for every successful attempt",
+  "whole_engine_verified": false,
+  "worker_failure_requirement": "surviving workers must continue; separate worker_failure_contract test reports current violations"
+}

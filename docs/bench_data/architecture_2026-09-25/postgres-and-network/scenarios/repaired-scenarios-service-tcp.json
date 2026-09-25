@@ -1,0 +1,1833 @@
+{
+  "architecture_promotion_eligible": false,
+  "completed": true,
+  "config": {
+    "arrival_rate": 0,
+    "engine": "service-tcp",
+    "evidence": "full",
+    "families": 16,
+    "global_time_predicates": false,
+    "hot_percent": 80,
+    "max_backlog": 1000,
+    "max_messages": 20000,
+    "message_interval_us": 0,
+    "mode": "scenarios",
+    "oracle_budget": 2000000,
+    "output": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/repaired-scenarios-service-tcp.json",
+    "pg_write_mode": "buffered",
+    "remote_final": null,
+    "remote_setup": null,
+    "rpc_delay_us": 0,
+    "seconds": 30,
+    "seed": 20260925,
+    "service_bind": "127.0.0.1:0",
+    "shm_mib": 256,
+    "workers": 4,
+    "workload": "legacy"
+  },
+  "durability_contract": "both use WAL with asynchronous acknowledgement; fsync on PostgreSQL; native writer drained on normal completion; equal crash loss windows and crash recovery NOT claimed",
+  "evidence_directory": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/contention-crucible-307U46",
+  "git_revision": "6291200b4383538d960f3b1c73942715193f464b",
+  "passed": true,
+  "runs": [
+    {
+      "admission_seconds": 30,
+      "after_drain": {
+        "active_transactions": 0,
+        "arena_capacity_bytes": 268435456,
+        "arena_high_water_bytes": 1605864,
+        "indexes": [
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 0,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 1,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 2,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 3,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 4,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          }
+        ],
+        "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+        "row_fresh_allocations": 550,
+        "row_recycled": 55,
+        "row_reuse_allocations": 17,
+        "snapshot_xmax": 631,
+        "snapshot_xmin": 631
+      },
+      "arrival_mode": "closed_loop",
+      "arrival_queue_delay_p99_us": 0.0,
+      "completed_by_worker": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "completed_messages": 4,
+      "completed_messages_per_second": 285.1662166149672,
+      "completed_messages_per_second_including_drain": 62.36655019973277,
+      "completion_drain_seconds": 0.050110038,
+      "correctness_history_verified": true,
+      "elapsed_seconds": 0.014026907,
+      "engine": "service-tcp",
+      "evidence_directory": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/contention-crucible-307U46/service-tcp-0",
+      "execution_completed": true,
+      "history_checked": true,
+      "invariants": {
+        "checks": {
+          "active_dedup": 4,
+          "active_events": 3,
+          "active_families": 1,
+          "active_flights": 7,
+          "active_outputs": 3,
+          "active_positions": 2,
+          "provenance_checked": 15
+        },
+        "passed": true
+      },
+      "message_kinds": {
+        "plan": 2,
+        "position": 2
+      },
+      "message_latency_max_us_including_retries": 13675.047,
+      "message_latency_p50_us_including_retries": 5796.139,
+      "message_latency_p99_us_including_retries": 13675.047,
+      "native_audit": {
+        "arena_high_water_bytes": 1605864,
+        "indexes": [
+          {
+            "index": "callsign",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 2, postings: 7, towers: 2, tower_lanes: 35 }, reachable: ShmSkipAllocationCounts { nodes: 2, postings: 7, towers: 2, tower_lanes: 35 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 } }",
+            "postings": 7,
+            "retired_postings": 0
+          },
+          {
+            "index": "tail",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 2, postings: 7, towers: 2, tower_lanes: 35 }, reachable: ShmSkipAllocationCounts { nodes: 2, postings: 7, towers: 2, tower_lanes: 35 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 } }",
+            "postings": 7,
+            "retired_postings": 0
+          },
+          {
+            "index": "family",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 2, postings: 19, towers: 2, tower_lanes: 35 }, reachable: ShmSkipAllocationCounts { nodes: 2, postings: 19, towers: 2, tower_lanes: 35 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 } }",
+            "postings": 19,
+            "retired_postings": 0
+          },
+          {
+            "index": "due",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 4, postings: 3, towers: 4, tower_lanes: 37 }, reachable: ShmSkipAllocationCounts { nodes: 4, postings: 3, towers: 4, tower_lanes: 37 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 } }",
+            "postings": 3,
+            "retired_postings": 0
+          },
+          {
+            "index": "event_time",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 5, postings: 19, towers: 5, tower_lanes: 38 }, reachable: ShmSkipAllocationCounts { nodes: 5, postings: 19, towers: 5, tower_lanes: 38 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 } }",
+            "postings": 19,
+            "retired_postings": 0
+          }
+        ]
+      },
+      "offered_messages": null,
+      "offered_rate_per_second": 0,
+      "operation_diagnostics": {
+        "candidate_lookup:calls": 10,
+        "candidate_lookup:candidate_rows": 8,
+        "candidate_lookup:returned_rows": 8,
+        "candidate_lookup:successful_query_ns": 62155,
+        "family_lookup:calls": 20,
+        "family_lookup:candidate_rows": 76,
+        "family_lookup:returned_rows": 29,
+        "family_lookup:successful_query_ns": 99362
+      },
+      "oracle_detail": "complete observations, effects, outcomes and final state have a serial witness respecting non-overlap",
+      "oracle_explored": 4,
+      "oracle_seconds": 0.000561534,
+      "oracle_status": "Valid",
+      "passed": true,
+      "per_kind": {
+        "plan": {
+          "completed": 2,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 1,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 1,
+            "missing_family": 0,
+            "outputs": 1,
+            "rescheduled_events": 0,
+            "updated_views": 1
+          },
+          "p99_us_including_retries": 5796.139,
+          "retries": 1
+        },
+        "position": {
+          "completed": 2,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 6,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 4,
+            "missing_family": 0,
+            "outputs": 2,
+            "rescheduled_events": 0,
+            "updated_views": 2
+          },
+          "p99_us_including_retries": 13675.047,
+          "retries": 5
+        }
+      },
+      "performance_comparison_eligible": false,
+      "performance_scope": "diagnostic instrumented workload; repeated matched trials, noise analysis and availability acceptance are required before architecture promotion",
+      "physical_remote_workers_measured": false,
+      "requested_duration_reached": false,
+      "retention_samples": [
+        {
+          "completed_messages": 0,
+          "elapsed_seconds": 0.0,
+          "sample_finished_ns": 13123689157178,
+          "sample_started_ns": 13123689140470,
+          "storage": {
+            "active_transactions": 0,
+            "arena_capacity_bytes": 268435456,
+            "arena_high_water_bytes": 1592960,
+            "indexes": [
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 0,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 1,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 2,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 3,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 4,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              }
+            ],
+            "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+            "row_fresh_allocations": 512,
+            "row_recycled": 0,
+            "row_reuse_allocations": 0,
+            "snapshot_xmax": 518,
+            "snapshot_xmin": 518
+          }
+        }
+      ],
+      "retries": 6,
+      "retry_cause_limit": "native stages do not distinguish exact predicate bucket collisions, row validation or underlying newer-stamp causes; PostgreSQL reports SQLSTATE",
+      "retry_causes": {
+        "commit:serialization_failure": 5,
+        "family_lookup:serialization_failure": 1
+      },
+      "scenario": "competing-empty-creation",
+      "scratch_cleanup_completed": true,
+      "service_latency_p99_us_including_retries": 13567.987,
+      "service_stats": {
+        "accepted_sessions": 4,
+        "active_sessions": 0,
+        "backend_failures": [],
+        "completed_sessions": 4,
+        "disconnect_aborts": 0,
+        "protocol_errors": 0,
+        "rejected_sessions": 0,
+        "retained_outcomes": 0
+      },
+      "store_metrics": {
+        "aborts": 6,
+        "begins": 10,
+        "commits": 4,
+        "index_mutations": 0,
+        "queries": 30,
+        "reads": 177,
+        "returned_rows": 37,
+        "savepoint_rollbacks": 0,
+        "savepoints": 0,
+        "writes": 55
+      },
+      "timing_contract": "message latency measures scheduled arrival (open loop) or first attempt (closed loop) through coordinator receipt, including queue, transaction RPC, retries/backoff and result IPC; service latency separately excludes arrival queue and receipt IPC; scenarios include deliberate barrier; oracle and final audit outside timing",
+      "transport": "tcp_loopback",
+      "wal_bytes_after_drain": 7288,
+      "worker_failure_availability_tested": false,
+      "worker_message_cap_reached": false,
+      "worker_stops": [
+        {
+          "finished_ns": 13123694962270,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13123702988636,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13123698248237,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13123693247423,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        }
+      ]
+    },
+    {
+      "admission_seconds": 30,
+      "after_drain": {
+        "active_transactions": 0,
+        "arena_capacity_bytes": 268435456,
+        "arena_high_water_bytes": 1623568,
+        "indexes": [
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 0,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 1,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 2,
+            "reclaimed_postings": 17,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 3,
+            "reclaimed_postings": 9,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 4,
+            "reclaimed_postings": 37,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          }
+        ],
+        "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+        "row_fresh_allocations": 605,
+        "row_recycled": 239,
+        "row_reuse_allocations": 146,
+        "snapshot_xmax": 881,
+        "snapshot_xmin": 881
+      },
+      "arrival_mode": "closed_loop",
+      "arrival_queue_delay_p99_us": 0.0,
+      "completed_by_worker": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "completed_messages": 6,
+      "completed_messages_per_second": 189.99463550146663,
+      "completed_messages_per_second_including_drain": 75.62842970989753,
+      "completion_drain_seconds": 0.047755406,
+      "correctness_history_verified": true,
+      "elapsed_seconds": 0.031579839,
+      "engine": "service-tcp",
+      "evidence_directory": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/contention-crucible-307U46/service-tcp-1",
+      "execution_completed": true,
+      "history_checked": true,
+      "invariants": {
+        "checks": {
+          "active_dedup": 5,
+          "active_events": 7,
+          "active_families": 1,
+          "active_flights": 7,
+          "active_outputs": 11,
+          "active_positions": 2,
+          "provenance_checked": 27
+        },
+        "passed": true
+      },
+      "message_kinds": {
+        "housekeeping": 1,
+        "plan": 1,
+        "position": 2,
+        "projection": 2
+      },
+      "message_latency_max_us_including_retries": 31368.524,
+      "message_latency_p50_us_including_retries": 14495.506,
+      "message_latency_p99_us_including_retries": 31368.524,
+      "native_audit": {
+        "arena_high_water_bytes": 1623568,
+        "indexes": [
+          {
+            "index": "callsign",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 2, postings: 7, towers: 2, tower_lanes: 35 }, reachable: ShmSkipAllocationCounts { nodes: 2, postings: 7, towers: 2, tower_lanes: 35 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 } }",
+            "postings": 7,
+            "retired_postings": 0
+          },
+          {
+            "index": "tail",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 2, postings: 7, towers: 2, tower_lanes: 35 }, reachable: ShmSkipAllocationCounts { nodes: 2, postings: 7, towers: 2, tower_lanes: 35 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 } }",
+            "postings": 7,
+            "retired_postings": 0
+          },
+          {
+            "index": "family",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 2, postings: 49, towers: 2, tower_lanes: 35 }, reachable: ShmSkipAllocationCounts { nodes: 2, postings: 32, towers: 2, tower_lanes: 35 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 17, towers: 0, tower_lanes: 0 } }",
+            "postings": 32,
+            "retired_postings": 0
+          },
+          {
+            "index": "due",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 7, postings: 15, towers: 7, tower_lanes: 40 }, reachable: ShmSkipAllocationCounts { nodes: 2, postings: 7, towers: 2, tower_lanes: 33 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 5, postings: 8, towers: 5, tower_lanes: 7 } }",
+            "postings": 7,
+            "retired_postings": 0
+          },
+          {
+            "index": "event_time",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 10, postings: 62, towers: 10, tower_lanes: 45 }, reachable: ShmSkipAllocationCounts { nodes: 7, postings: 32, towers: 7, tower_lanes: 40 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 3, postings: 30, towers: 3, tower_lanes: 5 } }",
+            "postings": 32,
+            "retired_postings": 0
+          }
+        ]
+      },
+      "offered_messages": null,
+      "offered_rate_per_second": 0,
+      "operation_diagnostics": {
+        "candidate_lookup:calls": 20,
+        "candidate_lookup:candidate_rows": 140,
+        "candidate_lookup:returned_rows": 140,
+        "candidate_lookup:successful_query_ns": 180765,
+        "due_lookup:calls": 9,
+        "due_lookup:candidate_rows": 331,
+        "due_lookup:returned_rows": 56,
+        "due_lookup:successful_query_ns": 106786,
+        "expiry_lookup:calls": 5,
+        "expiry_lookup:candidate_rows": 190,
+        "expiry_lookup:returned_rows": 83,
+        "expiry_lookup:successful_query_ns": 70792,
+        "family_lookup:calls": 12,
+        "family_lookup:candidate_rows": 392,
+        "family_lookup:returned_rows": 84,
+        "family_lookup:successful_query_ns": 135503,
+        "history_lookup:calls": 43,
+        "history_lookup:candidate_rows": 1400,
+        "history_lookup:returned_rows": 45,
+        "history_lookup:successful_query_ns": 403068
+      },
+      "oracle_detail": "complete observations, effects, outcomes and final state have a serial witness respecting non-overlap",
+      "oracle_explored": 6,
+      "oracle_seconds": 0.000624959,
+      "oracle_status": "Valid",
+      "passed": true,
+      "per_kind": {
+        "housekeeping": {
+          "completed": 1,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 17,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 31368.524,
+          "retries": 4
+        },
+        "plan": {
+          "completed": 1,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 4,
+            "rescheduled_events": 0,
+            "updated_views": 4
+          },
+          "p99_us_including_retries": 5297.159,
+          "retries": 0
+        },
+        "position": {
+          "completed": 2,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 4,
+            "missing_family": 0,
+            "outputs": 4,
+            "rescheduled_events": 0,
+            "updated_views": 4
+          },
+          "p99_us_including_retries": 14495.506,
+          "retries": 3
+        },
+        "projection": {
+          "completed": 2,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 7,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 23002.642,
+          "retries": 7
+        }
+      },
+      "performance_comparison_eligible": false,
+      "performance_scope": "diagnostic instrumented workload; repeated matched trials, noise analysis and availability acceptance are required before architecture promotion",
+      "physical_remote_workers_measured": false,
+      "requested_duration_reached": false,
+      "retention_samples": [
+        {
+          "completed_messages": 0,
+          "elapsed_seconds": 0.0,
+          "sample_finished_ns": 13123790902115,
+          "sample_started_ns": 13123790883957,
+          "storage": {
+            "active_transactions": 0,
+            "arena_capacity_bytes": 268435456,
+            "arena_high_water_bytes": 1599360,
+            "indexes": [
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 0,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 1,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 2,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 3,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 4,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              }
+            ],
+            "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+            "row_fresh_allocations": 512,
+            "row_recycled": 0,
+            "row_reuse_allocations": 0,
+            "snapshot_xmax": 601,
+            "snapshot_xmin": 601
+          }
+        }
+      ],
+      "retries": 14,
+      "retry_cause_limit": "native stages do not distinguish exact predicate bucket collisions, row validation or underlying newer-stamp causes; PostgreSQL reports SQLSTATE",
+      "retry_causes": {
+        "commit:serialization_failure": 8,
+        "history_lookup:serialization_failure": 6
+      },
+      "scenario": "mixed-matching-projection-housekeeping",
+      "scratch_cleanup_completed": true,
+      "service_latency_p99_us_including_retries": 31212.793,
+      "service_stats": {
+        "accepted_sessions": 6,
+        "active_sessions": 0,
+        "backend_failures": [],
+        "completed_sessions": 6,
+        "disconnect_aborts": 0,
+        "protocol_errors": 0,
+        "rejected_sessions": 0,
+        "retained_outcomes": 0
+      },
+      "store_metrics": {
+        "aborts": 14,
+        "begins": 20,
+        "commits": 6,
+        "index_mutations": 0,
+        "queries": 89,
+        "reads": 2755,
+        "returned_rows": 408,
+        "savepoint_rollbacks": 0,
+        "savepoints": 0,
+        "writes": 239
+      },
+      "timing_contract": "message latency measures scheduled arrival (open loop) or first attempt (closed loop) through coordinator receipt, including queue, transaction RPC, retries/backoff and result IPC; service latency separately excludes arrival queue and receipt IPC; scenarios include deliberate barrier; oracle and final audit outside timing",
+      "transport": "tcp_loopback",
+      "wal_bytes_after_drain": 24632,
+      "worker_failure_availability_tested": false,
+      "worker_message_cap_reached": false,
+      "worker_stops": [
+        {
+          "finished_ns": 13123801409152,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13123805407062,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13123796170339,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13123813988151,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13123822255216,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13123812342469,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        }
+      ]
+    },
+    {
+      "admission_seconds": 30,
+      "after_drain": {
+        "active_transactions": 0,
+        "arena_capacity_bytes": 268435456,
+        "arena_high_water_bytes": 1616400,
+        "indexes": [
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 0,
+            "reclaimed_postings": 6,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 1,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 2,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 3,
+            "reclaimed_postings": 9,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 4,
+            "reclaimed_postings": 17,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          }
+        ],
+        "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+        "row_fresh_allocations": 569,
+        "row_recycled": 109,
+        "row_reuse_allocations": 52,
+        "snapshot_xmax": 782,
+        "snapshot_xmin": 782
+      },
+      "arrival_mode": "closed_loop",
+      "arrival_queue_delay_p99_us": 0.0,
+      "completed_by_worker": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "completed_messages": 4,
+      "completed_messages_per_second": 178.9430869722454,
+      "completed_messages_per_second_including_drain": 62.17690161680462,
+      "completion_drain_seconds": 0.041979096,
+      "correctness_history_verified": true,
+      "elapsed_seconds": 0.022353476,
+      "engine": "service-tcp",
+      "evidence_directory": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/contention-crucible-307U46/service-tcp-2",
+      "execution_completed": true,
+      "history_checked": true,
+      "invariants": {
+        "checks": {
+          "active_dedup": 7,
+          "active_events": 7,
+          "active_families": 1,
+          "active_flights": 7,
+          "active_outputs": 21,
+          "active_positions": 9,
+          "provenance_checked": 44
+        },
+        "passed": true
+      },
+      "message_kinds": {
+        "key_move": 2,
+        "position": 1,
+        "projection": 1
+      },
+      "message_latency_max_us_including_retries": 22105.934,
+      "message_latency_p50_us_including_retries": 8733.795,
+      "message_latency_p99_us_including_retries": 22105.934,
+      "native_audit": {
+        "arena_high_water_bytes": 1616400,
+        "indexes": [
+          {
+            "index": "callsign",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 4, postings: 13, towers: 4, tower_lanes: 37 }, reachable: ShmSkipAllocationCounts { nodes: 4, postings: 7, towers: 4, tower_lanes: 37 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 6, towers: 0, tower_lanes: 0 } }",
+            "postings": 7,
+            "retired_postings": 0
+          },
+          {
+            "index": "tail",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 2, postings: 7, towers: 2, tower_lanes: 35 }, reachable: ShmSkipAllocationCounts { nodes: 2, postings: 7, towers: 2, tower_lanes: 35 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 } }",
+            "postings": 7,
+            "retired_postings": 0
+          },
+          {
+            "index": "family",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 2, postings: 51, towers: 2, tower_lanes: 35 }, reachable: ShmSkipAllocationCounts { nodes: 2, postings: 51, towers: 2, tower_lanes: 35 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 } }",
+            "postings": 51,
+            "retired_postings": 0
+          },
+          {
+            "index": "due",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 7, postings: 15, towers: 7, tower_lanes: 40 }, reachable: ShmSkipAllocationCounts { nodes: 2, postings: 7, towers: 2, tower_lanes: 33 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 5, postings: 8, towers: 5, tower_lanes: 7 } }",
+            "postings": 7,
+            "retired_postings": 0
+          },
+          {
+            "index": "event_time",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 8, postings: 60, towers: 8, tower_lanes: 41 }, reachable: ShmSkipAllocationCounts { nodes: 8, postings: 51, towers: 8, tower_lanes: 41 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 9, towers: 0, tower_lanes: 0 } }",
+            "postings": 51,
+            "retired_postings": 0
+          }
+        ]
+      },
+      "offered_messages": null,
+      "offered_rate_per_second": 0,
+      "operation_diagnostics": {
+        "candidate_lookup:calls": 10,
+        "candidate_lookup:candidate_rows": 40,
+        "candidate_lookup:returned_rows": 40,
+        "candidate_lookup:successful_query_ns": 75580,
+        "due_lookup:calls": 4,
+        "due_lookup:candidate_rows": 150,
+        "due_lookup:returned_rows": 28,
+        "due_lookup:successful_query_ns": 54463,
+        "family_lookup:calls": 12,
+        "family_lookup:candidate_rows": 408,
+        "family_lookup:returned_rows": 84,
+        "family_lookup:successful_query_ns": 133819,
+        "history_lookup:calls": 23,
+        "history_lookup:candidate_rows": 808,
+        "history_lookup:returned_rows": 22,
+        "history_lookup:successful_query_ns": 247492
+      },
+      "oracle_detail": "complete observations, effects, outcomes and final state have a serial witness respecting non-overlap",
+      "oracle_explored": 4,
+      "oracle_seconds": 0.000570055,
+      "oracle_status": "Valid",
+      "passed": true,
+      "per_kind": {
+        "key_move": {
+          "completed": 2,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 2,
+            "missing_family": 0,
+            "outputs": 6,
+            "rescheduled_events": 0,
+            "updated_views": 6
+          },
+          "p99_us_including_retries": 8733.795,
+          "retries": 1
+        },
+        "position": {
+          "completed": 1,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 2,
+            "missing_family": 0,
+            "outputs": 2,
+            "rescheduled_events": 0,
+            "updated_views": 2
+          },
+          "p99_us_including_retries": 13894.124,
+          "retries": 2
+        },
+        "projection": {
+          "completed": 1,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 7,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 22105.934,
+          "retries": 3
+        }
+      },
+      "performance_comparison_eligible": false,
+      "performance_scope": "diagnostic instrumented workload; repeated matched trials, noise analysis and availability acceptance are required before architecture promotion",
+      "physical_remote_workers_measured": false,
+      "requested_duration_reached": false,
+      "retention_samples": [
+        {
+          "completed_messages": 0,
+          "elapsed_seconds": 0.0,
+          "sample_finished_ns": 13123932881776,
+          "sample_started_ns": 13123932862993,
+          "storage": {
+            "active_transactions": 0,
+            "arena_capacity_bytes": 268435456,
+            "arena_high_water_bytes": 1599360,
+            "indexes": [
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 0,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 1,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 2,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 3,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 4,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              }
+            ],
+            "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+            "row_fresh_allocations": 512,
+            "row_recycled": 0,
+            "row_reuse_allocations": 0,
+            "snapshot_xmax": 601,
+            "snapshot_xmin": 601
+          }
+        }
+      ],
+      "retries": 6,
+      "retry_cause_limit": "native stages do not distinguish exact predicate bucket collisions, row validation or underlying newer-stamp causes; PostgreSQL reports SQLSTATE",
+      "retry_causes": {
+        "commit:serialization_failure": 3,
+        "history_lookup:serialization_failure": 3
+      },
+      "scenario": "indexed-key-move",
+      "scratch_cleanup_completed": true,
+      "service_latency_p99_us_including_retries": 21941.297,
+      "service_stats": {
+        "accepted_sessions": 4,
+        "active_sessions": 0,
+        "backend_failures": [],
+        "completed_sessions": 4,
+        "disconnect_aborts": 0,
+        "protocol_errors": 0,
+        "rejected_sessions": 0,
+        "retained_outcomes": 0
+      },
+      "store_metrics": {
+        "aborts": 6,
+        "begins": 10,
+        "commits": 4,
+        "index_mutations": 0,
+        "queries": 49,
+        "reads": 1548,
+        "returned_rows": 174,
+        "savepoint_rollbacks": 0,
+        "savepoints": 0,
+        "writes": 109
+      },
+      "timing_contract": "message latency measures scheduled arrival (open loop) or first attempt (closed loop) through coordinator receipt, including queue, transaction RPC, retries/backoff and result IPC; service latency separately excludes arrival queue and receipt IPC; scenarios include deliberate barrier; oracle and final audit outside timing",
+      "transport": "tcp_loopback",
+      "wal_bytes_after_drain": 16664,
+      "worker_failure_availability_tested": false,
+      "worker_message_cap_reached": false,
+      "worker_stops": [
+        {
+          "finished_ns": 13123941783416,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13123946766263,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13123938538757,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13123954937721,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        }
+      ]
+    },
+    {
+      "admission_seconds": 30,
+      "after_drain": {
+        "active_transactions": 0,
+        "arena_capacity_bytes": 268435456,
+        "arena_high_water_bytes": 1740496,
+        "indexes": [
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 0,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 1,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 2,
+            "reclaimed_postings": 20,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 3,
+            "reclaimed_postings": 12,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 4,
+            "reclaimed_postings": 29,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          }
+        ],
+        "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+        "row_fresh_allocations": 1088,
+        "row_recycled": 103,
+        "row_reuse_allocations": 39,
+        "snapshot_xmax": 1446,
+        "snapshot_xmin": 1446
+      },
+      "arrival_mode": "closed_loop",
+      "arrival_queue_delay_p99_us": 0.0,
+      "completed_by_worker": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "completed_messages": 5,
+      "completed_messages_per_second": 186.05103915831103,
+      "completed_messages_per_second_including_drain": 59.22277031185265,
+      "completion_drain_seconds": 0.05755264,
+      "correctness_history_verified": true,
+      "elapsed_seconds": 0.026874346,
+      "engine": "service-tcp",
+      "evidence_directory": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/contention-crucible-307U46/service-tcp-3",
+      "execution_completed": true,
+      "history_checked": true,
+      "invariants": {
+        "checks": {
+          "active_dedup": 8,
+          "active_events": 13,
+          "active_families": 3,
+          "active_flights": 21,
+          "active_outputs": 22,
+          "active_positions": 18,
+          "provenance_checked": 74
+        },
+        "passed": true
+      },
+      "message_kinds": {
+        "global_cancel": 1,
+        "global_housekeeping": 1,
+        "global_projection": 1,
+        "global_reschedule": 1,
+        "position": 1
+      },
+      "message_latency_max_us_including_retries": 26777.11,
+      "message_latency_p50_us_including_retries": 14265.51,
+      "message_latency_p99_us_including_retries": 26777.11,
+      "native_audit": {
+        "arena_high_water_bytes": 1740496,
+        "indexes": [
+          {
+            "index": "callsign",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 2, postings: 21, towers: 2, tower_lanes: 35 }, reachable: ShmSkipAllocationCounts { nodes: 2, postings: 21, towers: 2, tower_lanes: 35 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 } }",
+            "postings": 21,
+            "retired_postings": 0
+          },
+          {
+            "index": "tail",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 4, postings: 21, towers: 4, tower_lanes: 37 }, reachable: ShmSkipAllocationCounts { nodes: 4, postings: 21, towers: 4, tower_lanes: 37 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 } }",
+            "postings": 21,
+            "retired_postings": 0
+          },
+          {
+            "index": "family",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 4, postings: 102, towers: 4, tower_lanes: 37 }, reachable: ShmSkipAllocationCounts { nodes: 4, postings: 82, towers: 4, tower_lanes: 37 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 20, towers: 0, tower_lanes: 0 } }",
+            "postings": 82,
+            "retired_postings": 0
+          },
+          {
+            "index": "due",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 12, postings: 33, towers: 12, tower_lanes: 53 }, reachable: ShmSkipAllocationCounts { nodes: 4, postings: 13, towers: 4, tower_lanes: 39 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 8, postings: 20, towers: 8, tower_lanes: 14 } }",
+            "postings": 13,
+            "retired_postings": 0
+          },
+          {
+            "index": "event_time",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 12, postings: 110, towers: 12, tower_lanes: 48 }, reachable: ShmSkipAllocationCounts { nodes: 12, postings: 82, towers: 12, tower_lanes: 48 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 28, towers: 0, tower_lanes: 0 } }",
+            "postings": 82,
+            "retired_postings": 0
+          }
+        ]
+      },
+      "offered_messages": null,
+      "offered_rate_per_second": 0,
+      "operation_diagnostics": {
+        "candidate_lookup:calls": 1,
+        "candidate_lookup:candidate_rows": 21,
+        "candidate_lookup:returned_rows": 21,
+        "candidate_lookup:successful_query_ns": 28783,
+        "family_lookup:calls": 2,
+        "family_lookup:candidate_rows": 62,
+        "family_lookup:returned_rows": 14,
+        "family_lookup:successful_query_ns": 27327,
+        "global_due_lookup:calls": 23,
+        "global_due_lookup:candidate_rows": 112,
+        "global_due_lookup:returned_rows": 112,
+        "global_due_lookup:successful_query_ns": 18669222,
+        "global_expiry_lookup:calls": 2,
+        "global_expiry_lookup:candidate_rows": 126,
+        "global_expiry_lookup:returned_rows": 74,
+        "global_expiry_lookup:successful_query_ns": 4595907,
+        "history_lookup:calls": 8,
+        "history_lookup:candidate_rows": 236,
+        "history_lookup:returned_rows": 7,
+        "history_lookup:successful_query_ns": 189230
+      },
+      "oracle_detail": "complete observations, effects, outcomes and final state have a serial witness respecting non-overlap",
+      "oracle_explored": 5,
+      "oracle_seconds": 0.000468162,
+      "oracle_status": "Valid",
+      "passed": true,
+      "per_kind": {
+        "global_cancel": {
+          "completed": 1,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 8,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 22118.293,
+          "retries": 3
+        },
+        "global_housekeeping": {
+          "completed": 1,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 12,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 13021.143,
+          "retries": 1
+        },
+        "global_projection": {
+          "completed": 1,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 1,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1,
+            "rescheduled_events": 1,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 26777.11,
+          "retries": 13
+        },
+        "global_reschedule": {
+          "completed": 1,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 8,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 14265.51,
+          "retries": 4
+        },
+        "position": {
+          "completed": 1,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 4,
+            "rescheduled_events": 0,
+            "updated_views": 4
+          },
+          "p99_us_including_retries": 6442.564,
+          "retries": 0
+        }
+      },
+      "performance_comparison_eligible": false,
+      "performance_scope": "diagnostic instrumented workload; repeated matched trials, noise analysis and availability acceptance are required before architecture promotion",
+      "physical_remote_workers_measured": false,
+      "requested_duration_reached": false,
+      "retention_samples": [
+        {
+          "completed_messages": 0,
+          "elapsed_seconds": 0.0,
+          "sample_finished_ns": 13124034251338,
+          "sample_started_ns": 13124034232905,
+          "storage": {
+            "active_transactions": 0,
+            "arena_capacity_bytes": 268435456,
+            "arena_high_water_bytes": 1724288,
+            "indexes": [
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 0,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 1,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 2,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 3,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 4,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              }
+            ],
+            "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+            "row_fresh_allocations": 1024,
+            "row_recycled": 0,
+            "row_reuse_allocations": 0,
+            "snapshot_xmax": 1279,
+            "snapshot_xmin": 1279
+          }
+        }
+      ],
+      "retries": 21,
+      "retry_cause_limit": "native stages do not distinguish exact predicate bucket collisions, row validation or underlying newer-stamp causes; PostgreSQL reports SQLSTATE",
+      "retry_causes": {
+        "commit:serialization_failure": 5,
+        "global_due_lookup:serialization_failure": 15,
+        "history_lookup:serialization_failure": 1
+      },
+      "scenario": "global-due-claim-cancel-reschedule",
+      "scratch_cleanup_completed": true,
+      "service_latency_p99_us_including_retries": 26716.938,
+      "service_stats": {
+        "accepted_sessions": 5,
+        "active_sessions": 0,
+        "backend_failures": [],
+        "completed_sessions": 5,
+        "disconnect_aborts": 0,
+        "protocol_errors": 0,
+        "rejected_sessions": 0,
+        "retained_outcomes": 0
+      },
+      "store_metrics": {
+        "aborts": 21,
+        "begins": 26,
+        "commits": 5,
+        "index_mutations": 0,
+        "queries": 36,
+        "reads": 669,
+        "returned_rows": 228,
+        "savepoint_rollbacks": 0,
+        "savepoints": 0,
+        "writes": 103
+      },
+      "timing_contract": "message latency measures scheduled arrival (open loop) or first attempt (closed loop) through coordinator receipt, including queue, transaction RPC, retries/backoff and result IPC; service latency separately excludes arrival queue and receipt IPC; scenarios include deliberate barrier; oracle and final audit outside timing",
+      "transport": "tcp_loopback",
+      "wal_bytes_after_drain": 17868,
+      "worker_failure_availability_tested": false,
+      "worker_message_cap_reached": false,
+      "worker_stops": [
+        {
+          "finished_ns": 13124061033158,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13124056355820,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13124048517839,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13124040652927,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13124047333029,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        }
+      ]
+    },
+    {
+      "admission_seconds": 30,
+      "after_drain": {
+        "active_transactions": 0,
+        "arena_capacity_bytes": 268435456,
+        "arena_high_water_bytes": 1612056,
+        "indexes": [
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 0,
+            "reclaimed_postings": 7,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 1,
+            "reclaimed_postings": 6,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 2,
+            "reclaimed_postings": 34,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 3,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 4,
+            "reclaimed_postings": 29,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          }
+        ],
+        "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+        "row_fresh_allocations": 565,
+        "row_recycled": 65,
+        "row_reuse_allocations": 12,
+        "snapshot_xmax": 736,
+        "snapshot_xmin": 736
+      },
+      "arrival_mode": "closed_loop",
+      "arrival_queue_delay_p99_us": 0.0,
+      "completed_by_worker": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "completed_messages": 6,
+      "completed_messages_per_second": 359.67956147867864,
+      "completed_messages_per_second_including_drain": 67.46870084799724,
+      "completion_drain_seconds": 0.07224861,
+      "correctness_history_verified": true,
+      "elapsed_seconds": 0.016681515,
+      "engine": "service-tcp",
+      "evidence_directory": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/contention-crucible-307U46/service-tcp-4",
+      "execution_completed": true,
+      "history_checked": true,
+      "invariants": {
+        "checks": {
+          "active_dedup": 1,
+          "active_events": 1,
+          "active_families": 1,
+          "active_flights": 1,
+          "active_outputs": 1,
+          "active_positions": 0,
+          "provenance_checked": 3
+        },
+        "passed": true
+      },
+      "message_kinds": {
+        "expire_family": 1,
+        "global_housekeeping": 1,
+        "global_projection": 1,
+        "plan": 2,
+        "position": 1
+      },
+      "message_latency_max_us_including_retries": 16599.772,
+      "message_latency_p50_us_including_retries": 3415.978,
+      "message_latency_p99_us_including_retries": 16599.772,
+      "native_audit": {
+        "arena_high_water_bytes": 1612056,
+        "indexes": [
+          {
+            "index": "callsign",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 2, postings: 8, towers: 2, tower_lanes: 35 }, reachable: ShmSkipAllocationCounts { nodes: 2, postings: 1, towers: 2, tower_lanes: 35 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 7, towers: 0, tower_lanes: 0 } }",
+            "postings": 1,
+            "retired_postings": 0
+          },
+          {
+            "index": "tail",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 3, postings: 8, towers: 3, tower_lanes: 36 }, reachable: ShmSkipAllocationCounts { nodes: 2, postings: 1, towers: 2, tower_lanes: 33 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 1, postings: 7, towers: 1, tower_lanes: 3 } }",
+            "postings": 1,
+            "retired_postings": 0
+          },
+          {
+            "index": "family",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 3, postings: 39, towers: 3, tower_lanes: 36 }, reachable: ShmSkipAllocationCounts { nodes: 2, postings: 4, towers: 2, tower_lanes: 33 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 1, postings: 35, towers: 1, tower_lanes: 3 } }",
+            "postings": 4,
+            "retired_postings": 0
+          },
+          {
+            "index": "due",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 3, postings: 2, towers: 3, tower_lanes: 36 }, reachable: ShmSkipAllocationCounts { nodes: 2, postings: 1, towers: 2, tower_lanes: 33 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 1, postings: 1, towers: 1, tower_lanes: 3 } }",
+            "postings": 1,
+            "retired_postings": 0
+          },
+          {
+            "index": "event_time",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 8, postings: 39, towers: 8, tower_lanes: 41 }, reachable: ShmSkipAllocationCounts { nodes: 2, postings: 4, towers: 2, tower_lanes: 33 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 6, postings: 35, towers: 6, tower_lanes: 8 } }",
+            "postings": 4,
+            "retired_postings": 0
+          }
+        ]
+      },
+      "offered_messages": null,
+      "offered_rate_per_second": 0,
+      "operation_diagnostics": {
+        "candidate_lookup:calls": 3,
+        "candidate_lookup:candidate_rows": 21,
+        "candidate_lookup:returned_rows": 0,
+        "candidate_lookup:successful_query_ns": 43557,
+        "family_lookup:calls": 8,
+        "family_lookup:candidate_rows": 211,
+        "family_lookup:returned_rows": 43,
+        "family_lookup:successful_query_ns": 83775,
+        "global_due_lookup:calls": 2,
+        "global_due_lookup:candidate_rows": 1,
+        "global_due_lookup:returned_rows": 1,
+        "global_due_lookup:successful_query_ns": 4431538,
+        "global_expiry_lookup:calls": 3,
+        "global_expiry_lookup:candidate_rows": 70,
+        "global_expiry_lookup:returned_rows": 56,
+        "global_expiry_lookup:successful_query_ns": 6674839,
+        "history_lookup:calls": 1,
+        "history_lookup:candidate_rows": 4,
+        "history_lookup:returned_rows": 0,
+        "history_lookup:successful_query_ns": 11790
+      },
+      "oracle_detail": "complete observations, effects, outcomes and final state have a serial witness respecting non-overlap",
+      "oracle_explored": 6,
+      "oracle_seconds": 0.000628558,
+      "oracle_status": "Valid",
+      "passed": true,
+      "per_kind": {
+        "expire_family": {
+          "completed": 1,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 1,
+            "expired_records": 35,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 9908.919,
+          "retries": 0
+        },
+        "global_housekeeping": {
+          "completed": 1,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 16599.772,
+          "retries": 2
+        },
+        "global_projection": {
+          "completed": 1,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 1,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 0,
+            "rescheduled_events": 1,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 7179.117,
+          "retries": 1
+        },
+        "plan": {
+          "completed": 2,
+          "outcomes": {
+            "allocation_deferred": 1,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 1,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 0,
+            "outputs": 1,
+            "rescheduled_events": 0,
+            "updated_views": 1
+          },
+          "p99_us_including_retries": 3415.978,
+          "retries": 0
+        },
+        "position": {
+          "completed": 1,
+          "outcomes": {
+            "allocation_deferred": 0,
+            "cancelled_events": 0,
+            "claimed_events": 0,
+            "created_views": 0,
+            "duplicate_messages": 0,
+            "expired_families": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "missing_family": 1,
+            "outputs": 0,
+            "rescheduled_events": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 677.367,
+          "retries": 0
+        }
+      },
+      "performance_comparison_eligible": false,
+      "performance_scope": "diagnostic instrumented workload; repeated matched trials, noise analysis and availability acceptance are required before architecture promotion",
+      "physical_remote_workers_measured": false,
+      "requested_duration_reached": false,
+      "retention_samples": [
+        {
+          "completed_messages": 0,
+          "elapsed_seconds": 0.0,
+          "sample_finished_ns": 13124175909870,
+          "sample_started_ns": 13124175891846,
+          "storage": {
+            "active_transactions": 0,
+            "arena_capacity_bytes": 268435456,
+            "arena_high_water_bytes": 1599424,
+            "indexes": [
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 0,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 1,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 2,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 3,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 4,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              }
+            ],
+            "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+            "row_fresh_allocations": 512,
+            "row_recycled": 0,
+            "row_reuse_allocations": 0,
+            "snapshot_xmax": 602,
+            "snapshot_xmin": 602
+          }
+        }
+      ],
+      "retries": 3,
+      "retry_cause_limit": "native stages do not distinguish exact predicate bucket collisions, row validation or underlying newer-stamp causes; PostgreSQL reports SQLSTATE",
+      "retry_causes": {
+        "commit:serialization_failure": 3
+      },
+      "scenario": "creation-versus-whole-family-expiry",
+      "scratch_cleanup_completed": true,
+      "service_latency_p99_us_including_retries": 16522.726,
+      "service_stats": {
+        "accepted_sessions": 6,
+        "active_sessions": 0,
+        "backend_failures": [],
+        "completed_sessions": 6,
+        "disconnect_aborts": 0,
+        "protocol_errors": 0,
+        "rejected_sessions": 0,
+        "retained_outcomes": 0
+      },
+      "store_metrics": {
+        "aborts": 3,
+        "begins": 9,
+        "commits": 6,
+        "index_mutations": 0,
+        "queries": 17,
+        "reads": 388,
+        "returned_rows": 100,
+        "savepoint_rollbacks": 0,
+        "savepoints": 0,
+        "writes": 65
+      },
+      "timing_contract": "message latency measures scheduled arrival (open loop) or first attempt (closed loop) through coordinator receipt, including queue, transaction RPC, retries/backoff and result IPC; service latency separately excludes arrival queue and receipt IPC; scenarios include deliberate barrier; oracle and final audit outside timing",
+      "transport": "tcp_loopback",
+      "wal_bytes_after_drain": 15224,
+      "worker_failure_availability_tested": false,
+      "worker_message_cap_reached": false,
+      "worker_stops": [
+        {
+          "finished_ns": 13124185785555,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13124177687174,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13124179333378,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13124176584871,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13124192501045,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        },
+        {
+          "finished_ns": 13124183123606,
+          "maximum_backlog": 0,
+          "stop_reason": "scenario_complete"
+        }
+      ]
+    }
+  ],
+  "schema": 2,
+  "scope": "synthetic harder HyperFeed storage workload, not proprietary handler compatibility or architecture superiority",
+  "transaction_contract": "single-table native optimistic transactions versus PostgreSQL SERIALIZABLE; dynamic reads/writes, no family prelocks; full evidence mode checks every successful attempt against a serial witness; metrics mode explicitly omits history checking",
+  "whole_engine_verified": false,
+  "worker_failure_requirement": "surviving workers must continue; separate worker_failure_contract test reports current violations"
+}

@@ -1,0 +1,48 @@
+{
+  "passed": true,
+  "container_name": "aerostore-contention-validation-20260924",
+  "container_id": "dda24fcaa9e916310a85e2a768a757372edbcd20dc48154c4cd75bf83d07a3e7",
+  "auto_remove_requested_at_creation": true,
+  "container_absent_after_stop": true,
+  "recorded_at_utc": "2026-09-25T03:00:49.431424+00:00",
+  "operations": [
+    {
+      "command": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Id}}",
+        "aerostore-contention-validation-20260924"
+      ],
+      "exit_code": 0,
+      "stdout": "dda24fcaa9e916310a85e2a768a757372edbcd20dc48154c4cd75bf83d07a3e7\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "docker",
+        "stop",
+        "--time",
+        "10",
+        "dda24fcaa9e916310a85e2a768a757372edbcd20dc48154c4cd75bf83d07a3e7"
+      ],
+      "exit_code": 0,
+      "stdout": "Flag --time has been deprecated, use --timeout instead\ndda24fcaa9e916310a85e2a768a757372edbcd20dc48154c4cd75bf83d07a3e7\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "docker",
+        "ps",
+        "-a",
+        "--filter",
+        "id=dda24fcaa9e916310a85e2a768a757372edbcd20dc48154c4cd75bf83d07a3e7",
+        "--format",
+        "{{.ID}}"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ]
+}

@@ -1,0 +1,625 @@
+{
+  "architecture_promotion_eligible": false,
+  "completed": true,
+  "config": {
+    "engine": "aerostore",
+    "families": 16,
+    "global_time_predicates": false,
+    "hot_percent": 80,
+    "max_messages": 100000,
+    "message_interval_us": 0,
+    "mode": "sustained",
+    "oracle_budget": 2000000,
+    "output": "/home/zpconn/code/aerostore/target/contention-validation/load-20260924-aerostore.json",
+    "seconds": 5,
+    "seed": 20260924,
+    "shm_mib": 256,
+    "workers": 4
+  },
+  "durability_contract": "both use WAL with asynchronous acknowledgement; fsync on PostgreSQL; native writer drained on normal completion; equal crash loss windows and crash recovery NOT claimed",
+  "evidence_directory": "/home/zpconn/code/aerostore/target/contention-validation/contention-crucible-PQ8x69",
+  "git_revision": "6291200b4383538d960f3b1c73942715193f464b",
+  "passed": true,
+  "runs": [
+    {
+      "after_drain": {
+        "active_transactions": 0,
+        "arena_capacity_bytes": 268435456,
+        "arena_high_water_bytes": 4056592,
+        "indexes": [
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 0,
+            "reclaimed_postings": 11686,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 1,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 2,
+            "reclaimed_postings": 153825,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 3,
+            "reclaimed_postings": 110954,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 4,
+            "reclaimed_postings": 379987,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          }
+        ],
+        "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+        "row_fresh_allocations": 9666,
+        "row_recycled": 1071960,
+        "row_reuse_allocations": 1066390,
+        "snapshot_xmax": 2198837,
+        "snapshot_xmin": 2198837
+      },
+      "completed_by_worker": [
+        15603,
+        15607,
+        15601,
+        15603
+      ],
+      "completed_messages": 62414,
+      "completed_messages_per_second": 10835.317524597427,
+      "elapsed_seconds": 5.760237285,
+      "engine": "aerostore",
+      "evidence_directory": "/home/zpconn/code/aerostore/target/contention-validation/contention-crucible-PQ8x69/aerostore-0",
+      "execution_completed": true,
+      "invariants": {
+        "checks": {
+          "active_dedup": 107,
+          "active_events": 112,
+          "active_families": 16,
+          "active_flights": 112,
+          "active_outputs": 230,
+          "active_positions": 163,
+          "provenance_checked": 617
+        },
+        "passed": true
+      },
+      "message_kinds": {
+        "housekeeping": 7802,
+        "key_move": 7801,
+        "plan": 7801,
+        "position": 23407,
+        "projection": 15603
+      },
+      "message_latency_max_us_including_retries": 6011.933,
+      "message_latency_p50_us_including_retries": 72.614,
+      "message_latency_p99_us_including_retries": 1895.789,
+      "native_audit": {
+        "arena_high_water_bytes": 4056592,
+        "indexes": [
+          {
+            "index": "callsign",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 13, postings: 191, towers: 14, tower_lanes: 61 }, reachable: ShmSkipAllocationCounts { nodes: 9, postings: 112, towers: 9, tower_lanes: 44 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 4, postings: 79, towers: 5, tower_lanes: 17 } }",
+            "postings": 112,
+            "retired_postings": 0
+          },
+          {
+            "index": "tail",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 17, postings: 112, towers: 17, tower_lanes: 57 }, reachable: ShmSkipAllocationCounts { nodes: 17, postings: 112, towers: 17, tower_lanes: 57 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 } }",
+            "postings": 112,
+            "retired_postings": 0
+          },
+          {
+            "index": "family",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 17, postings: 1714, towers: 17, tower_lanes: 68 }, reachable: ShmSkipAllocationCounts { nodes: 17, postings: 724, towers: 17, tower_lanes: 68 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 0, postings: 990, towers: 0, tower_lanes: 0 } }",
+            "postings": 724,
+            "retired_postings": 0
+          },
+          {
+            "index": "due",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 251, postings: 1014, towers: 265, tower_lanes: 685 }, reachable: ShmSkipAllocationCounts { nodes: 27, postings: 112, towers: 27, tower_lanes: 78 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 224, postings: 902, towers: 238, tower_lanes: 607 } }",
+            "postings": 112,
+            "retired_postings": 0
+          },
+          {
+            "index": "event_time",
+            "ownership": "ShmSkipAllocationAudit { allocated: ShmSkipAllocationCounts { nodes: 515, postings: 3370, towers: 527, tower_lanes: 1275 }, reachable: ShmSkipAllocationCounts { nodes: 143, postings: 724, towers: 143, tower_lanes: 300 }, retired: ShmSkipAllocationCounts { nodes: 0, postings: 0, towers: 0, tower_lanes: 0 }, reusable: ShmSkipAllocationCounts { nodes: 372, postings: 2646, towers: 384, tower_lanes: 975 } }",
+            "postings": 724,
+            "retired_postings": 0
+          }
+        ]
+      },
+      "oracle_detail": "complete observations, effects, outcomes and final state have a serial witness respecting non-overlap",
+      "oracle_explored": 62415,
+      "oracle_seconds": 1.962334832,
+      "oracle_status": "Valid",
+      "passed": true,
+      "per_kind": {
+        "housekeeping": {
+          "completed": 7802,
+          "outcomes": {
+            "created_views": 0,
+            "expired_records": 155751,
+            "ignored_stale": 0,
+            "outputs": 0,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 1744.902,
+          "retries": 5550
+        },
+        "key_move": {
+          "completed": 7801,
+          "outcomes": {
+            "created_views": 0,
+            "expired_records": 0,
+            "ignored_stale": 11152,
+            "outputs": 20052,
+            "updated_views": 20052
+          },
+          "p99_us_including_retries": 1375.209,
+          "retries": 4903
+        },
+        "plan": {
+          "completed": 7801,
+          "outcomes": {
+            "created_views": 0,
+            "expired_records": 0,
+            "ignored_stale": 15572,
+            "outputs": 15632,
+            "updated_views": 15632
+          },
+          "p99_us_including_retries": 1357.225,
+          "retries": 4178
+        },
+        "position": {
+          "completed": 23407,
+          "outcomes": {
+            "created_views": 0,
+            "expired_records": 0,
+            "ignored_stale": 35877,
+            "outputs": 57751,
+            "updated_views": 57751
+          },
+          "p99_us_including_retries": 1721.156,
+          "retries": 16402
+        },
+        "projection": {
+          "completed": 15603,
+          "outcomes": {
+            "created_views": 0,
+            "expired_records": 0,
+            "ignored_stale": 0,
+            "outputs": 42065,
+            "updated_views": 0
+          },
+          "p99_us_including_retries": 2317.454,
+          "retries": 24990
+        }
+      },
+      "performance_comparison_eligible": false,
+      "performance_scope": "diagnostic instrumented workload; repeated matched trials, noise analysis and availability acceptance are required before architecture promotion",
+      "requested_duration_reached": true,
+      "retention_samples": [
+        {
+          "completed_messages": 0,
+          "elapsed_seconds": 0.0,
+          "sample_finished_ns": 2441092563192,
+          "sample_started_ns": 2441092557162,
+          "storage": {
+            "active_transactions": 0,
+            "arena_capacity_bytes": 268435456,
+            "arena_high_water_bytes": 2480896,
+            "indexes": [
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 0,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 1,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 2,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 3,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 4,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              }
+            ],
+            "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+            "row_fresh_allocations": 4096,
+            "row_recycled": 0,
+            "row_reuse_allocations": 0,
+            "snapshot_xmax": 5430,
+            "snapshot_xmin": 5430
+          }
+        },
+        {
+          "completed_messages": 11540,
+          "elapsed_seconds": 1.000052135,
+          "sample_finished_ns": 2442092615234,
+          "sample_started_ns": 2442092603463,
+          "storage": {
+            "active_transactions": 0,
+            "arena_capacity_bytes": 268435456,
+            "arena_high_water_bytes": 3956176,
+            "indexes": [
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 0,
+                "reclaimed_postings": 2392,
+                "retired_nodes": 0,
+                "retired_postings": 13
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 1,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 2,
+                "reclaimed_postings": 31238,
+                "retired_nodes": 0,
+                "retired_postings": 146
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 3,
+                "reclaimed_postings": 22532,
+                "retired_nodes": 33,
+                "retired_postings": 96
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 4,
+                "reclaimed_postings": 77292,
+                "retired_nodes": 15,
+                "retired_postings": 90
+              }
+            ],
+            "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+            "row_fresh_allocations": 9194,
+            "row_recycled": 216869,
+            "row_reuse_allocations": 213335,
+            "snapshot_xmax": 451479,
+            "snapshot_xmin": 451479
+          }
+        },
+        {
+          "completed_messages": 22116,
+          "elapsed_seconds": 2.000206601,
+          "sample_finished_ns": 2443092769781,
+          "sample_started_ns": 2443092764453,
+          "storage": {
+            "active_transactions": 0,
+            "arena_capacity_bytes": 268435456,
+            "arena_high_water_bytes": 3989960,
+            "indexes": [
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 0,
+                "reclaimed_postings": 4644,
+                "retired_nodes": 0,
+                "retired_postings": 10
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 1,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 2,
+                "reclaimed_postings": 60647,
+                "retired_nodes": 0,
+                "retired_postings": 643
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 3,
+                "reclaimed_postings": 43885,
+                "retired_nodes": 163,
+                "retired_postings": 523
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 4,
+                "reclaimed_postings": 150671,
+                "retired_nodes": 236,
+                "retired_postings": 1428
+              }
+            ],
+            "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+            "row_fresh_allocations": 9355,
+            "row_recycled": 425979,
+            "row_reuse_allocations": 423222,
+            "snapshot_xmax": 882022,
+            "snapshot_xmin": 882022
+          }
+        },
+        {
+          "completed_messages": 32790,
+          "elapsed_seconds": 3.000411644,
+          "sample_finished_ns": 2444092974828,
+          "sample_started_ns": 2444092969557,
+          "storage": {
+            "active_transactions": 0,
+            "arena_capacity_bytes": 268435456,
+            "arena_high_water_bytes": 4024464,
+            "indexes": [
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 0,
+                "reclaimed_postings": 6992,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 1,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 2,
+                "reclaimed_postings": 91937,
+                "retired_nodes": 0,
+                "retired_postings": 624
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 3,
+                "reclaimed_postings": 66523,
+                "retired_nodes": 160,
+                "retired_postings": 515
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 4,
+                "reclaimed_postings": 228431,
+                "retired_nodes": 162,
+                "retired_postings": 906
+              }
+            ],
+            "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+            "row_fresh_allocations": 9520,
+            "row_recycled": 646624,
+            "row_reuse_allocations": 642856,
+            "snapshot_xmax": 1327736,
+            "snapshot_xmin": 1327736
+          }
+        },
+        {
+          "completed_messages": 43824,
+          "elapsed_seconds": 4.000880657,
+          "sample_finished_ns": 2445093443840,
+          "sample_started_ns": 2445093438902,
+          "storage": {
+            "active_transactions": 1,
+            "arena_capacity_bytes": 268435456,
+            "arena_high_water_bytes": 4043600,
+            "indexes": [
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 0,
+                "reclaimed_postings": 9277,
+                "retired_nodes": 0,
+                "retired_postings": 54
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 1,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 2,
+                "reclaimed_postings": 122733,
+                "retired_nodes": 0,
+                "retired_postings": 492
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 3,
+                "reclaimed_postings": 88758,
+                "retired_nodes": 119,
+                "retired_postings": 370
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 4,
+                "reclaimed_postings": 304456,
+                "retired_nodes": 79,
+                "retired_postings": 449
+              }
+            ],
+            "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+            "row_fresh_allocations": 9606,
+            "row_recycled": 862332,
+            "row_reuse_allocations": 857217,
+            "snapshot_xmax": 1765097,
+            "snapshot_xmin": 1765093
+          }
+        },
+        {
+          "completed_messages": 54531,
+          "elapsed_seconds": 5.001116483,
+          "sample_finished_ns": 2446093679659,
+          "sample_started_ns": 2446093675180,
+          "storage": {
+            "active_transactions": 0,
+            "arena_capacity_bytes": 268435456,
+            "arena_high_water_bytes": 4056592,
+            "indexes": [
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 0,
+                "reclaimed_postings": 11651,
+                "retired_nodes": 0,
+                "retired_postings": 35
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 1,
+                "reclaimed_postings": 0,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 2,
+                "reclaimed_postings": 153423,
+                "retired_nodes": 0,
+                "retired_postings": 402
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 3,
+                "reclaimed_postings": 110702,
+                "retired_nodes": 92,
+                "retired_postings": 252
+              },
+              {
+                "alloc_failures": 0,
+                "gc_recycle_errors": 0,
+                "index": 4,
+                "reclaimed_postings": 379987,
+                "retired_nodes": 0,
+                "retired_postings": 0
+              }
+            ],
+            "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+            "row_fresh_allocations": 9666,
+            "row_recycled": 1069627,
+            "row_reuse_allocations": 1066390,
+            "snapshot_xmax": 2198832,
+            "snapshot_xmin": 2198832
+          }
+        }
+      ],
+      "retries": 56023,
+      "retry_cause_limit": "native stages do not distinguish exact predicate bucket collisions, row validation or underlying newer-stamp causes; PostgreSQL reports SQLSTATE",
+      "retry_causes": {
+        "candidate_lookup:serialization_failure": 1418,
+        "commit:serialization_failure": 23230,
+        "due_lookup:serialization_failure": 5776,
+        "expiry_lookup:serialization_failure": 1437,
+        "family_lookup:serialization_failure": 11890,
+        "history_lookup:serialization_failure": 12272
+      },
+      "scenario": "sustained-mixed",
+      "scratch_cleanup_completed": true,
+      "store_metrics": {
+        "aborts": 56023,
+        "begins": 118437,
+        "commits": 62414,
+        "index_mutations": 0,
+        "queries": 418134,
+        "reads": 19945222,
+        "returned_rows": 3458508,
+        "savepoint_rollbacks": 0,
+        "savepoints": 0,
+        "writes": 1071960
+      },
+      "timing_contract": "instrumented closed-loop completion throughput includes process/receipt IPC; service latency includes full query/write recording, retries/backoff, excludes queue/IPC; scenarios include their deliberate first-query wait; oracle and final audit are outside timing",
+      "worker_failure_availability_tested": false,
+      "worker_message_cap_reached": false,
+      "worker_stops": [
+        {
+          "finished_ns": 2446092594445,
+          "stop_reason": "deadline"
+        },
+        {
+          "finished_ns": 2446092749898,
+          "stop_reason": "deadline"
+        },
+        {
+          "finished_ns": 2446092716907,
+          "stop_reason": "deadline"
+        },
+        {
+          "finished_ns": 2446093102380,
+          "stop_reason": "deadline"
+        }
+      ]
+    }
+  ],
+  "schema": 1,
+  "scope": "synthetic harder HyperFeed storage workload, not proprietary handler compatibility or architecture superiority",
+  "transaction_contract": "single-table native optimistic transactions versus PostgreSQL SERIALIZABLE; dynamic reads/writes, no family prelocks; strict serial witness checked for every successful attempt",
+  "whole_engine_verified": false,
+  "worker_failure_requirement": "surviving workers must continue; separate worker_failure_contract test reports current violations"
+}

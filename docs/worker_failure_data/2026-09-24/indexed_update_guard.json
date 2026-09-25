@@ -1,0 +1,9 @@
+{
+  "cleared_slots": 0,
+  "guard_available_after_warm_attach": false,
+  "kill_reap_ms": 1.089231,
+  "phase": "indexed_update_guard",
+  "scope": "optional application guard, not every native transaction",
+  "unrelated_guard_available": true,
+  "warm_attach_ms": 0.018958
+}

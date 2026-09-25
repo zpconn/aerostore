@@ -1,0 +1,84 @@
+{
+  "scope": "Functional all-mode smoke run performed alongside the proof pilot; latency/throughput values are not comparison evidence. Frozen build identity is supplied by the coordinating run and matching build provenance, not inferred from git revision.",
+  "report_sha256": "0974f6026cccb8569bfcd92026f8b47ad00c69e017b3845ce318237e4d90edc4",
+  "log_sha256": "91639fedcd9bd42738f8e70c1a1965b91bad293abf13c5bb871a6e3a9eb7e833",
+  "build_provenance": "../continuous-build-provenance.json",
+  "source_sha256": "d817ba814d857356f29c70d1f5dce340e380ce453601d028b69df939df6a5c4a",
+  "binary_sha256": "346d9393338c7ebdbce5c8975f05a06057176d0a53ef9d4de5739dcdc4db20a3",
+  "config": {
+    "arrival_rate": 100,
+    "engine": "aerostore",
+    "evidence": "full",
+    "families": 16,
+    "global_time_predicates": false,
+    "hot_percent": 0,
+    "max_backlog": 1000,
+    "max_messages": 20000,
+    "message_interval_us": 0,
+    "mode": "all",
+    "oracle_budget": 2000000,
+    "output": "/home/zpconn/code/aerostore/target/architecture-qualification-2026-09-25/continuous-all-mode-smoke.json",
+    "pg_write_mode": "buffered",
+    "remote_final": null,
+    "remote_setup": null,
+    "rpc_delay_us": 0,
+    "seconds": 3,
+    "seed": 20260924,
+    "service_bind": "127.0.0.1:0",
+    "shm_mib": 256,
+    "workers": 4,
+    "workload": "fleet"
+  },
+  "completed": true,
+  "passed": true,
+  "cases": [
+    {
+      "scenario": "competing-empty-creation",
+      "passed": true,
+      "execution_completed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 4,
+      "timing_scope": "continuous_client_monotonic"
+    },
+    {
+      "scenario": "mixed-matching-projection-housekeeping",
+      "passed": true,
+      "execution_completed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 6,
+      "timing_scope": "continuous_client_monotonic"
+    },
+    {
+      "scenario": "indexed-key-move",
+      "passed": true,
+      "execution_completed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 4,
+      "timing_scope": "continuous_client_monotonic"
+    },
+    {
+      "scenario": "global-due-claim-cancel-reschedule",
+      "passed": true,
+      "execution_completed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 5,
+      "timing_scope": "continuous_client_monotonic"
+    },
+    {
+      "scenario": "creation-versus-whole-family-expiry",
+      "passed": true,
+      "execution_completed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 6,
+      "timing_scope": "continuous_client_monotonic"
+    },
+    {
+      "scenario": "sustained-mixed",
+      "passed": true,
+      "execution_completed": true,
+      "oracle_status": "Valid",
+      "completed_messages": 300,
+      "timing_scope": "continuous_client_monotonic"
+    }
+  ]
+}

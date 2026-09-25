@@ -1,0 +1,19 @@
+{
+  "binary_sha256": "f37b288b38be0b86a29f1db32079f5819c4fe28220937219f41260c9c8549033",
+  "command": [
+    "/usr/bin/python3",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "scripts",
+    "-p",
+    "test_contention_integration.py",
+    "-v"
+  ],
+  "log_sha256": "b1e951b95cc2ad4b4af8ce215d58713c4ce93bc8ac35e8b054e4b2bea9170ec4",
+  "passed": true,
+  "returncode": 0,
+  "source_sha256": "7b02ad0fd7c2e1a04db8603c4321015c10c4d82ee3bfaa2cfd6adda457558d87",
+  "source_stable": true
+}
