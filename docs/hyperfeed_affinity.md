@@ -108,8 +108,12 @@ including partial traces with actual same-flight reordering. These runs are
 instrumented diagnostics, not a speed ranking.
 
 Next complete scheduled maintenance jobs with explicit transaction boundaries,
-job-versus-batch accounting and terminal completion witnesses. Use those results
-and precise retry attribution to guide performance changes. The archive's
+job-versus-batch accounting and terminal completion witnesses. The architect's
+subsequent recollection supports batches of updates committed together; use
+multiple batch transactions as the working sweep contract, with configurable
+sizes rather than an assumed historical value. The [calibration ledger](hyperfeed_workload_calibration.md)
+records this guidance and the existing PostgreSQL prepared-statement reuse.
+Use those results and precise retry attribution to guide performance changes. The archive's
 [next-milestone review](bench_data/affinity_2026-09-25/next-milestone-review.md)
 also lists the registration, admission, session, WAL and query-size constraints
 to resolve before 100/200/300-worker experiments.
