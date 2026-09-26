@@ -1,0 +1,28 @@
+{
+  "admission_finished_ns": 38163515066042,
+  "admission_started_ns": 38156515066042,
+  "config": {
+    "affinity_ttl_ms": 600,
+    "dispatch": "signature-affinity",
+    "duration_ns": 7000000000,
+    "families": 16,
+    "foreground_rate": 128,
+    "foreground_workers": 4,
+    "housekeeping_interval_seconds": 2,
+    "maintenance_mode": "sweep",
+    "projection_interval_seconds": 1,
+    "seed": 20260926,
+    "signature_pattern": "mixed"
+  },
+  "format": "calibrated-fixed-timeline-v1",
+  "offered_by_worker": [
+    250,
+    250,
+    246,
+    150,
+    6,
+    3
+  ],
+  "offered_messages": 905,
+  "scope": "Compact deterministic schedule includes every admitted foreground message and maintenance tick, independent of completions; failed runs retain uncompleted offered work."
+}

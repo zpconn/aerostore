@@ -1,8 +1,33 @@
 //! Controlled schedules identify conservative conflicts without changing the
 //! production failure enum or adding counters to its verified hot path.
+use aerostore_core::retry_diagnostics::{self as diagnostics, Cause, Event};
 use aerostore_core::{IndexCompare, IndexValue, OccError, OccTable, SecondaryIndex, ShmArena};
 use serde_json::{json, Value};
 use std::sync::Arc;
+
+struct Observe;
+impl Observe {
+    fn new() -> Self {
+        diagnostics::set_enabled(true);
+        Self
+    }
+}
+impl Drop for Observe {
+    fn drop(&mut self) {
+        diagnostics::set_enabled(false);
+    }
+}
+fn observed(cause: Cause, index_offset: Option<u32>, row_id: Option<usize>) {
+    assert_eq!(
+        diagnostics::take(),
+        diagnostics::compiled().then_some(Event {
+            cause,
+            index_offset,
+            row_id,
+        })
+    );
+    assert_eq!(diagnostics::take(), None);
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct Row {
@@ -43,6 +68,7 @@ fn record(name: &str, value: Value) {
 
 #[test]
 fn completed_unrelated_key_move_rejects_old_range_before_any_materialization() {
+    let _observe = Observe::new();
     let (arena, table, index) = fixture();
     let mut equality = table.begin_transaction().unwrap();
     let mut broad = table.begin_transaction().unwrap();
@@ -68,6 +94,11 @@ fn completed_unrelated_key_move_rejects_old_range_before_any_materialization() {
         table.index_lookup(&mut broad, &index, &range()),
         Err(OccError::SerializationFailure)
     );
+    observed(
+        Cause::LookupPostSnapshotStamp,
+        Some(index.header_offset()),
+        None,
+    );
     table.abort(&mut broad).unwrap();
     table.commit(&mut equality).unwrap();
     let mut fresh = table.begin_transaction().unwrap();
@@ -89,6 +120,7 @@ fn completed_unrelated_key_move_rejects_old_range_before_any_materialization() {
 
 #[test]
 fn unchanged_captured_range_rejects_at_commit_after_disjoint_key_move() {
+    let _observe = Observe::new();
     let (arena, table, index) = fixture();
     let mut reader = table.begin_transaction().unwrap();
     assert_eq!(
@@ -118,6 +150,11 @@ fn unchanged_captured_range_rejects_at_commit_after_disjoint_key_move() {
         table.commit(&mut reader),
         Err(OccError::SerializationFailure)
     );
+    observed(
+        Cause::PredicateValidationStamp,
+        Some(index.header_offset()),
+        None,
+    );
     table.abort(&mut reader).unwrap();
     assert!(arena.create_snapshot().is_empty());
     record(
@@ -130,6 +167,7 @@ fn unchanged_captured_range_rejects_at_commit_after_disjoint_key_move() {
 
 #[test]
 fn concrete_row_validation_is_separate_from_predicate_rejection() {
+    let _observe = Observe::new();
     let (arena, table, _) = fixture();
     let mut reader = table.begin_transaction().unwrap();
     table.read(&mut reader, 0).unwrap();
@@ -149,6 +187,7 @@ fn concrete_row_validation_is_separate_from_predicate_rejection() {
         table.commit(&mut reader),
         Err(OccError::SerializationFailure)
     );
+    observed(Cause::ReadVersionDeletedAfterSnapshot, None, Some(0));
     table.abort(&mut reader).unwrap();
     assert!(arena.create_snapshot().is_empty());
     record(
@@ -160,6 +199,7 @@ fn concrete_row_validation_is_separate_from_predicate_rejection() {
 
 #[test]
 fn historical_key_move_retains_row_history_but_rejects_old_index_search() {
+    let _observe = Observe::new();
     let (arena, table, index) = fixture();
     let mut reader = table.begin_transaction().unwrap();
     let mut writer = table.begin_transaction().unwrap();
@@ -185,6 +225,11 @@ fn historical_key_move_retains_row_history_but_rejects_old_index_search() {
         table.index_lookup(&mut reader, &index, &eq(10)),
         Err(OccError::SerializationFailure)
     );
+    observed(
+        Cause::LookupPostSnapshotStamp,
+        Some(index.header_offset()),
+        None,
+    );
     table.abort(&mut reader).unwrap();
     let mut fresh = table.begin_transaction().unwrap();
     assert!(table
@@ -203,4 +248,177 @@ fn historical_key_move_retains_row_history_but_rejects_old_index_search() {
         "old_key_query_explicitly_rejected":true,"fresh_key_queries_complete":true,
         "diagnosis":"current-posting index cannot serve this historical key lookup; safe rejection, not a successful incomplete result"}),
     );
+}
+
+#[test]
+fn held_row_rejections_preserve_decisions_with_observations_on_and_off() {
+    let _observe = Observe::new();
+    for enabled in [false, true] {
+        diagnostics::set_enabled(enabled);
+        let (_, table, _) = fixture();
+        let mut holder = table.begin_transaction().unwrap();
+        let mut contender = table.begin_transaction().unwrap();
+        let guard = table.lock_for_update(&holder, 0).unwrap();
+        let expected = |cause| {
+            let event = Event {
+                cause,
+                index_offset: None,
+                row_id: Some(0),
+            };
+            assert_eq!(
+                diagnostics::take(),
+                (enabled && diagnostics::compiled()).then_some(event)
+            );
+        };
+        assert_eq!(
+            table.read(&mut contender, 0),
+            Err(OccError::SerializationFailure)
+        );
+        expected(Cause::ReadRowLocked);
+        assert_eq!(
+            table.write(
+                &mut contender,
+                0,
+                Row {
+                    key: 10,
+                    payload: 2
+                }
+            ),
+            Err(OccError::SerializationFailure)
+        );
+        expected(Cause::WriteRowLocked);
+        assert_eq!(
+            table.write_with_dirty_mask(
+                &mut contender,
+                0,
+                Row {
+                    key: 10,
+                    payload: 2
+                },
+                1
+            ),
+            Err(OccError::SerializationFailure)
+        );
+        expected(Cause::WriteDirtyRowLocked);
+        assert!(matches!(
+            table.lock_for_update(&contender, 0),
+            Err(OccError::SerializationFailure)
+        ));
+        expected(Cause::LockForUpdateHeld);
+        assert!(matches!(
+            table.read(&mut contender, 99),
+            Err(OccError::RowOutOfBounds { .. })
+        ));
+        assert_eq!(
+            diagnostics::take(),
+            None,
+            "non-serialization errors have no fabricated rejection cause"
+        );
+        drop(guard);
+        assert_eq!(
+            table.read(&mut contender, 0).unwrap(),
+            Some(Row {
+                key: 10,
+                payload: 0
+            })
+        );
+        assert_eq!(diagnostics::take(), None);
+        table.commit(&mut contender).unwrap();
+        table.abort(&mut holder).unwrap();
+    }
+}
+
+#[test]
+fn commit_reports_a_row_lock_taken_after_the_read() {
+    let _observe = Observe::new();
+    let (_, table, _) = fixture();
+    let mut reader = table.begin_transaction().unwrap();
+    table.read(&mut reader, 0).unwrap();
+    let mut holder = table.begin_transaction().unwrap();
+    let guard = table.lock_for_update(&holder, 0).unwrap();
+    assert_eq!(
+        table.commit(&mut reader),
+        Err(OccError::SerializationFailure)
+    );
+    observed(Cause::CommitRowLocked, None, Some(0));
+    drop(guard);
+    table.abort(&mut reader).unwrap();
+    table.abort(&mut holder).unwrap();
+}
+
+#[test]
+fn competing_blind_writes_report_changed_base_without_a_read_dependency() {
+    let _observe = Observe::new();
+    let (_, table, _) = fixture();
+    let mut first = table.begin_transaction().unwrap();
+    table
+        .write(
+            &mut first,
+            0,
+            Row {
+                key: 10,
+                payload: 1,
+            },
+        )
+        .unwrap();
+    let mut second = table.begin_transaction().unwrap();
+    table
+        .write(
+            &mut second,
+            0,
+            Row {
+                key: 10,
+                payload: 2,
+            },
+        )
+        .unwrap();
+    table.commit(&mut second).unwrap();
+    assert_eq!(
+        table.commit(&mut first),
+        Err(OccError::SerializationFailure)
+    );
+    observed(Cause::WriteBaseHeadChanged, None, Some(0));
+    assert_eq!(
+        table.latest_value(0).unwrap(),
+        Some(Row {
+            key: 10,
+            payload: 2
+        })
+    );
+    table.abort(&mut first).unwrap();
+}
+
+#[test]
+fn later_commit_of_failed_lookup_reports_sticky_dependency_without_stale_context() {
+    let _observe = Observe::new();
+    let (_, table, index) = fixture();
+    let mut reader = table.begin_transaction().unwrap();
+    let mut writer = table.begin_transaction().unwrap();
+    table
+        .write(
+            &mut writer,
+            0,
+            Row {
+                key: 11,
+                payload: 0,
+            },
+        )
+        .unwrap();
+    table.commit(&mut writer).unwrap();
+    assert_eq!(
+        table.index_lookup(&mut reader, &index, &eq(10)),
+        Err(OccError::SerializationFailure)
+    );
+    observed(
+        Cause::LookupPostSnapshotStamp,
+        Some(index.header_offset()),
+        None,
+    );
+    diagnostics::clear();
+    assert_eq!(
+        table.commit(&mut reader),
+        Err(OccError::SerializationFailure)
+    );
+    observed(Cause::StickyIndexConflict, None, None);
+    table.abort(&mut reader).unwrap();
 }

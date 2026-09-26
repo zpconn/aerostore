@@ -1,0 +1,366 @@
+{
+  "completed_by_worker": [
+    9,
+    8,
+    8,
+    8,
+    1,
+    1
+  ],
+  "completed_messages": 35,
+  "completed_transactions": 45,
+  "due_uncompleted_by_worker": [
+    0,
+    0,
+    0,
+    0,
+    1,
+    1
+  ],
+  "execution_completed": false,
+  "offered_by_worker": [
+    12,
+    12,
+    12,
+    12,
+    2,
+    2
+  ],
+  "oldest_due_job_age_ns_by_worker": [
+    null,
+    null,
+    null,
+    null,
+    666188,
+    666188
+  ],
+  "passed": false,
+  "pending_maintenance": [
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    }
+  ],
+  "retention_samples": [
+    {
+      "completed_messages": 0,
+      "elapsed_seconds": 0.0,
+      "sample_finished_ns": 37841216644824,
+      "sample_started_ns": 37841216627879,
+      "storage": {
+        "active_transactions": 0,
+        "arena_capacity_bytes": 134217728,
+        "arena_high_water_bytes": 2504120,
+        "indexes": [
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 0,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 1,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 2,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 3,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 4,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          }
+        ],
+        "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+        "row_fresh_allocations": 4096,
+        "row_recycled": 0,
+        "row_reuse_allocations": 0,
+        "snapshot_xmax": 5822,
+        "snapshot_xmin": 5822
+      }
+    },
+    {
+      "completed_messages": 16,
+      "completed_transactions": 16,
+      "elapsed_seconds": 1.038288445,
+      "sample_finished_ns": 37842254933298,
+      "sample_started_ns": 37842254927227,
+      "storage": {
+        "active_transactions": 0,
+        "arena_capacity_bytes": 134217728,
+        "arena_high_water_bytes": 2548848,
+        "indexes": [
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 0,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 1,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 2,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 3,
+            "reclaimed_postings": 59,
+            "retired_nodes": 0,
+            "retired_postings": 4
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 4,
+            "reclaimed_postings": 136,
+            "retired_nodes": 0,
+            "retired_postings": 10
+          }
+        ],
+        "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+        "row_fresh_allocations": 4237,
+        "row_recycled": 207,
+        "row_reuse_allocations": 83,
+        "snapshot_xmax": 6494,
+        "snapshot_xmin": 6494
+      }
+    },
+    {
+      "completed_messages": 35,
+      "completed_transactions": 45,
+      "elapsed_seconds": 2.100657254,
+      "sample_finished_ns": 37843317302103,
+      "sample_started_ns": 37843317295921,
+      "storage": {
+        "active_transactions": 0,
+        "arena_capacity_bytes": 134217728,
+        "arena_high_water_bytes": 2591672,
+        "indexes": [
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 0,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 1,
+            "reclaimed_postings": 0,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 2,
+            "reclaimed_postings": 66,
+            "retired_nodes": 0,
+            "retired_postings": 0
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 3,
+            "reclaimed_postings": 151,
+            "retired_nodes": 0,
+            "retired_postings": 4
+          },
+          {
+            "alloc_failures": 0,
+            "gc_recycle_errors": 0,
+            "index": 4,
+            "reclaimed_postings": 360,
+            "retired_nodes": 0,
+            "retired_postings": 9
+          }
+        ],
+        "measurement": "arena allocation high-water and retirement counts; not physical RSS or live bytes",
+        "row_fresh_allocations": 4364,
+        "row_recycled": 782,
+        "row_reuse_allocations": 531,
+        "snapshot_xmax": 7665,
+        "snapshot_xmin": 7665
+      }
+    }
+  ],
+  "retries": 11
+}

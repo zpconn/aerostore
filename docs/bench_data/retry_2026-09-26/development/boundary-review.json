@@ -1,0 +1,136 @@
+{
+  "passed": true,
+  "baseline_revision": "4da551bbc2a17614ae11795cfee7764cb252d56a",
+  "scope": "Reviewed experimental observer and contention fixture boundary refresh; not independent-baseline promotion or whole-engine verification.",
+  "changes": {
+    "aerostore_core/Cargo.toml": {
+      "before": "c2a7ddadf907c74884553b3971ccab2854481df38ce09bb2dfac3093fc6a7870",
+      "after": "576b2988775fcb3151d46cbf672e8f3c1d103166402e6a13091dfd7b13a7fbcb"
+    },
+    "aerostore_core/benches/contention_crucible/aerostore.rs": {
+      "before": "73e79afde1a41d88ea6f99155ddad633b2020aa7d03ed9774a1871fa404f844a",
+      "after": "802301e43c1576c14ae66d542e41eecf7bf6e1df3e23d6f39b43641d129b2313"
+    },
+    "aerostore_core/benches/contention_crucible/fixture.rs": {
+      "before": null,
+      "after": "69bc36b979a672574cd66b52365e3a915bad11ed46bed0fd53ee692304e0751b"
+    },
+    "aerostore_core/benches/contention_crucible/mod.rs": {
+      "before": "58c7f178bea77da31c06f083177900a4908ad67eb665739f2e4b00b6b6b46d61",
+      "after": "e828449ff9a9b5ed2fd050696e3f773a840f50e403d1ff5a149644abb0d87cdb"
+    },
+    "aerostore_core/benches/contention_crucible/remote.rs": {
+      "before": "a49438aebbc119c8dbd3440cc85f1b5c140bdd1d1198004f04d0c8dd9ebc8ec8",
+      "after": "85b42d0122de5306b5b918cf95ed3631aec8658c90a4408cf2752f4f7a22fb6f"
+    },
+    "aerostore_core/benches/contention_crucible/runner.rs": {
+      "before": "fe5d58e00f25088f0774578bc76bada1cd7cf1e88311df177a55712688b2bce5",
+      "after": "b5a407079e4cfc1a8f9e67dfa240409c3f7790c51070e59af76a8551195827be"
+    },
+    "aerostore_core/benches/contention_crucible/service.rs": {
+      "before": "3fb494a3c7606a1e2c2fdbe610e8c1c9e6afb40dd18aee509176bb65bc7b830b",
+      "after": "d81aecc28661fd38d2bbed18bb2f4dd46cd894ac9a21e456f7cef305a8adf5c7"
+    },
+    "aerostore_core/benches/contention_crucible/workers.rs": {
+      "before": "cb33ac6d3ed3b0b72e6b023eb868a424a52031acc2bd6608f1567050e2e15618",
+      "after": "f4d961baa3f15095f07f6fbefc2f7689141af1f1803a5d60558d8585ae5be78a"
+    },
+    "aerostore_core/src/lib.rs": {
+      "before": "5dd1dd237df07e2bd055a702af67a2fcf47825de356877cd12f2b42d49f59fad",
+      "after": "22e46a4818bf4fdc540ac7e30a81f9d6deb80e6997380d93fd03fc58646f1c19"
+    },
+    "aerostore_core/src/occ_partitioned.rs": {
+      "before": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d",
+      "after": "03719920d5553b5edc1f240a8e2490c96d67b5f0d0145d7be2285d3ffe97eb1a"
+    },
+    "aerostore_core/src/retry_diagnostics.rs": {
+      "before": null,
+      "after": "3026b4d86979df4bc99ea72d91ea911dd86c577a7d1fb01ac46839dd0eb78183"
+    },
+    "aerostore_core/src/wal_writer.rs": {
+      "before": "619be861775b8b1942750f427d6ecef55abc5e208fb165e5dd4c6cf5d123a70a",
+      "after": "41892dd78aebea459bb8303821974a60da4cd40f6e2862e5717e07cf17b35f63"
+    },
+    "aerostore_core/tests/contention_diagnostics.rs": {
+      "before": "0d5118fd4bbc68b85983813d00092815526c9c2931046decd5858e6cdb79daf9",
+      "after": "386957ff4a3136ca141c3495d9ad3ce566eb34d3e80572162ed566bff71387de"
+    },
+    "aerostore_core/tests/contention_expiry_policy.rs": {
+      "before": null,
+      "after": "a3374130f01bf6dd64ad95acdbe4febbd6aeab9c0ba2857c82f02f7dbadb2604"
+    },
+    "aerostore_core/tests/contention_retry_diagnostics.rs": {
+      "before": null,
+      "after": "46e1020e0f30adcc10b67505f35a7794aa04a95ed77c798a9e989051c7e71d07"
+    },
+    "scripts/check_formal_coverage.py": {
+      "before": "efa2a2f8f0632074e059cbe33326abc4e0d6f3f3fb5c1e9a5a0e0f96346156ec",
+      "after": "78e3ad8e790a05c1e978803f464495f956a1aca2611021f26bc8261c3f869a95"
+    },
+    "scripts/qualify_hyperfeed.py": {
+      "before": "014098d425510c4b455744f51afc27f9e271c430eadc37a4895fc957f9680a37",
+      "after": "098b689854619189e1cd75caf8d3e17814bbebae6cd4478d0c9410214b54bf23"
+    },
+    "scripts/run_remote_contention.py": {
+      "before": "5aca6b8cb46d29333256a560899c7bb7fcd5f29eb22796452f474f6929556a1b",
+      "after": "8c49d75286ac71647ed16b3c7d5a6fefbee2a014d536dec7bd7c5d7ec5fc9252"
+    },
+    "scripts/test_hyperfeed_qualification.py": {
+      "before": "82e0c4a57b3e0846a09ae0d734e51cf1de061641bd95e4d98e8d808150e9f4a7",
+      "after": "0026d896299232ddd9b6b6e660781a039db0e1fb147f3110a65fb38f7697c976"
+    },
+    "scripts/test_retry_diagnostics_process.py": {
+      "before": null,
+      "after": "80ccaf21806ddfc17d0b620180a6d4169f4c8ddede27ec23557fad706fcffcb8"
+    },
+    "scripts/test_run_remote_contention.py": {
+      "before": "fd8c329430fc64c8cf967b2ea0f43f1b6ed87999c841ea19c2ad15be7ffc240c",
+      "after": "f1035a8a630bb81a901f04845ebc53e8f7f77eaf65fa67871626cc8fbd384a79"
+    },
+    "verification/concurrent/generate.py": {
+      "before": "997dbc19711816210716a1ad00916901cdff0cb7ba8fb681f4df8248c3e07279",
+      "after": "55dac4597460477d6034b1b0c77f8478c50c74ebef617705071fefb3fb7d7a8d"
+    },
+    "verification/concurrent/test_generate.py": {
+      "before": "5c853ef57f96732462a495b6ecb81b00d75697c0bff16afcf302302a045f0a51",
+      "after": "0ea3ac6b738635697f8a29d43b97e186b39dabfd81e1e735504c7793b5965469"
+    },
+    "verification/contracts/p0_audit.md": {
+      "before": "a0a42eb2e071f62b678336f4ab4c23a1fa7e07c19c1f8fbe6e173baa5af02e0c",
+      "after": "a8953cbf48d6938e041067bb1e16d2a49a208d7f7ea3e2a6e4da7a13b6309519"
+    },
+    "verification/contracts/p0_inventory.json": {
+      "before": "2825cefd2fbccebd9ec58dd71f5fa10bfe98dbe34aeee35472463245dba510eb",
+      "after": "c22ed7f76c8597b867e6fbbf36507da824a048e51c5d81751a295c171ce4a266"
+    },
+    "verification/retry_diagnostics/README.md": {
+      "before": null,
+      "after": "f59bc23ad1be8097b11ea9765de68cb264fdc152afefa374e007c4f48b2eebca"
+    },
+    "verification/retry_diagnostics/check_default.py": {
+      "before": null,
+      "after": "3f2d46b4fb281d2b634ed9f57c743bcef88594d63b621f7067db26c96ef7b086"
+    },
+    "verification/retry_diagnostics/default_sources.json": {
+      "before": null,
+      "after": "90b4952ea89a54740cc8666f15673ef4ddc9947a307a9da746b50bd0e48473b4"
+    },
+    "verification/retry_diagnostics/normalize.py": {
+      "before": null,
+      "after": "c741c113689c7afe0ca94473cf9c029abfae647cefef656b4d3e40787ee7cb8c"
+    },
+    "verification/retry_diagnostics/test_normalize.py": {
+      "before": null,
+      "after": "8d8f89b8c3c4af7dbd1803178bdec05e4abf54598084308ed118366713faf6b7"
+    }
+  },
+  "rationale": [
+    "Eighteen exact feature-gated rejection observations; default native OCC/WAL tokens pinned to prior accepted revision.",
+    "Optional first-event TLS observer has no transaction mutation; feature-on behavior receives targeted native tests, not new refinement claim.",
+    "Contention-only fixture policy marker and expiry extractor variants preserve complete query semantics; original Extended fixture remains unchanged.",
+    "Failure evidence preserves cumulative counters and bounded attempt tails; service freshness explicit, no diagnostic error RPC or replay.",
+    "Qualification/remote tools require exact diagnostic and policy companions and validate traces.",
+    "Adapter normalization dependency hash pinned, exact guards and placements checked with mutation negatives; reviewed P0 boundary expanded."
+  ],
+  "unchanged_extended_fixture_sha256": "5e626f5953784e59b8f3ed42ff32f3e39d8b65c780f5cc5055cc17f6756fde10"
+}

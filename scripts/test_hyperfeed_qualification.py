@@ -1004,5 +1004,82 @@ class QualificationTests(unittest.TestCase):
             self.assertEqual(report["stage"], "configuration")
 
 
+class RetryDiagnosticGateTests(unittest.TestCase):
+    @staticmethod
+    def trace(count=3, enabled=True):
+        samples = []
+        for attempt in range(max(0, count - 32), count) if enabled else []:
+            samples.append(dict(message_id=9, attempt_index=attempt,
+                started_ns=attempt*10+1, finished_ns=attempt*10+2, cleanup_finished_ns=attempt*10+3,
+                error_kind="conflict", error="transaction conflict", cleanup_ok=True, cleanup_error=None,
+                retry_causes_delta={"commit:serialization_failure":1},
+                diagnostics_delta={"conflict_origin:commit:captured_predicate_stamp:event_time":1},
+                cleanup_retry_causes_delta={}, cleanup_diagnostics_delta={}, counter_regression=False,
+                metrics_status={"source":"local_adapter","complete":True}))
+        return dict(version=1, enabled=enabled, sample_limit=32, failed_attempts=count,
+                    dropped_attempts=count-len(samples), samples=samples)
+
+    def test_exact_tail_and_disabled_counts_retain_terminal_attempt(self):
+        for enabled in (False, True):
+            trace = self.trace(129, enabled)
+            self.assertEqual(gate.retry_trace_errors(trace, enabled), [])
+            if enabled:
+                self.assertEqual(trace["samples"][-1]["attempt_index"], 128)
+                self.assertEqual(trace["dropped_attempts"], 97)
+            for field, value in (("failed_attempts", True), ("dropped_attempts", 0), ("sample_limit", 64)):
+                changed = copy.deepcopy(trace); changed[field] = value
+                self.assertTrue(gate.retry_trace_errors(changed, enabled), field)
+
+    def test_stale_remote_counters_must_remain_explicitly_incomplete(self):
+        trace = self.trace(1)
+        status = dict(source="service_cache", complete=False, last_attempted_sequence=8,
+                      last_completed_sequence=7, last_metrics_sequence=7, transport_failed=True, connected=False)
+        trace["samples"][0]["metrics_status"] = status
+        self.assertEqual(gate.retry_trace_errors(trace, True), [])
+        status["complete"] = True
+        self.assertIn("stale service counters reported complete", gate.retry_trace_errors(trace, True))
+        status.update(last_attempted_sequence=7, transport_failed=False)
+        self.assertEqual(gate.retry_trace_errors(trace, True), [])
+
+    def test_attempt_order_cleanup_and_counter_negative_controls(self):
+        changes = [("attempt_index", 9), ("started_ns", 0), ("cleanup_ok", False),
+                   ("counter_regression", True), ("diagnostics_delta", {"x":-1}),
+                   ("error", "x"*513), ("metrics_status", {"source":"local_adapter","complete":False})]
+        for field, value in changes:
+            trace = self.trace(); trace["samples"][1][field] = value
+            self.assertTrue(gate.retry_trace_errors(trace, True), field)
+        trace = self.trace(); trace["samples"][1]["message_id"] = 10
+        self.assertTrue(gate.retry_trace_errors(trace, True))
+
+    def test_companions_match_diagnostic_mode_and_native_expiry_policy(self):
+        legacy = trial(evidence="metrics")
+        explicit = {**legacy["config"], **gate.EXPERIMENT_DEFAULTS}
+        self.assertEqual(gate.key(legacy["config"]), gate.key(explicit))
+        for changed in ({"expiry_index_policy":"housekeeping"}, {"retry_diagnostics":True}):
+            self.assertNotEqual(gate.key(explicit), gate.key({**explicit, **changed}))
+            self.assertFalse(gate.assess_trial(legacy, POLICY, {gate.key({**explicit, **changed})})["correctness_companion_verified"])
+
+    def test_successful_report_reconciles_failures_and_feature_support(self):
+        item = trial(); item["config"].update(expiry_index_policy="housekeeping", retry_diagnostics=True)
+        item["report"]["config"].update(item["config"])
+        run = item["report"]["runs"][0]
+        run.update(expiry_index_policy="housekeeping", effective_expiry_index_policy="housekeeping",
+                   retry_diagnostics_compiled=True, worker_retry_diagnostics=[self.trace()], retries=3)
+        self.assertTrue(gate.assess_trial(item, POLICY)["execution_valid"])
+        for field, value in (("retries",2), ("retry_diagnostics_compiled",False),
+                             ("effective_expiry_index_policy","all-active"), ("worker_retry_diagnostics",[])):
+            bad = copy.deepcopy(item); bad["report"]["runs"][0][field] = value
+            self.assertFalse(gate.assess_trial(bad, POLICY)["execution_valid"], field)
+
+        for changes in ({"error_kind":"fatal"}, {"cleanup_ok":False,"cleanup_error":"failed abort"},
+                        {"attempt_index":128},
+                        {"metrics_status":dict(source="service_cache", complete=False,
+                         last_attempted_sequence=8,last_completed_sequence=7,last_metrics_sequence=7,
+                         transport_failed=True,connected=False)}):
+            bad = copy.deepcopy(item)
+            bad["report"]["runs"][0]["worker_retry_diagnostics"][0]["samples"][-1].update(changes)
+            self.assertFalse(gate.assess_trial(bad, POLICY)["execution_valid"], changes)
+
+
 if __name__ == "__main__":
     unittest.main()

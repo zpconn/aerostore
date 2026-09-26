@@ -1,0 +1,8 @@
+{
+  "engine": "aerostore",
+  "error": "worker 4: message 8000000001 after 128 retries: transaction conflict; cleanup=Ok(())",
+  "evidence_directory": "/home/zpconn/code/aerostore/target/retry-final-validation/controlled-campaign/083-aerostore-r2048-s20260926-housekeeping-diag-on-full/aerostore-r2048-w4-s20260926-677u67ll/contention-crucible-dEbevL/aerostore-0",
+  "execution_completed": false,
+  "passed": false,
+  "scenario": null
+}

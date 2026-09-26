@@ -1,0 +1,204 @@
+{
+  "completed_by_worker": [
+    6,
+    0,
+    2
+  ],
+  "completed_message_retries": 14,
+  "completed_messages": 8,
+  "completed_transactions": 8,
+  "completed_worker_metrics_snapshots": [
+    {
+      "diagnostics": {
+        "candidate_lookup:calls": 18,
+        "candidate_lookup:candidate_rows": 504,
+        "candidate_lookup:returned_rows": 504,
+        "candidate_lookup:successful_query_ns": 355398,
+        "family_lookup:calls": 36,
+        "family_lookup:candidate_rows": 1192,
+        "family_lookup:returned_rows": 252,
+        "family_lookup:successful_query_ns": 233775
+      },
+      "metrics": {
+        "aborts": 12,
+        "begins": 18,
+        "commits": 6,
+        "index_mutations": 0,
+        "queries": 54,
+        "reads": 1984,
+        "returned_rows": 756,
+        "savepoint_rollbacks": 0,
+        "savepoints": 0,
+        "writes": 270
+      },
+      "retry_causes": {
+        "commit:serialization_failure": 12
+      },
+      "scope": "completed_worker_cumulative"
+    },
+    null,
+    {
+      "diagnostics": {
+        "global_expiry_lookup:calls": 4,
+        "global_expiry_lookup:candidate_rows": 132,
+        "global_expiry_lookup:returned_rows": 132,
+        "global_expiry_lookup:successful_query_ns": 8756411
+      },
+      "metrics": {
+        "aborts": 2,
+        "begins": 4,
+        "commits": 2,
+        "index_mutations": 0,
+        "queries": 4,
+        "reads": 230,
+        "returned_rows": 132,
+        "savepoint_rollbacks": 0,
+        "savepoints": 0,
+        "writes": 98
+      },
+      "retry_causes": {
+        "commit:serialization_failure": 2
+      },
+      "scope": "completed_worker_cumulative"
+    }
+  ],
+  "counter_coverage": "Failed worker snapshot and already completed workers only; running peers may have additional commits/retries not received by the coordinator. Do not sum repeated cumulative snapshots or equate failed-run commits with received history.",
+  "error": "calibrated offered backlog 2 exceeds worker bound 1 after 0 completions; all independently due jobs remain admitted",
+  "execution_completed": false,
+  "failure_evidence": {
+    "diagnostics": {},
+    "metrics": {
+      "aborts": 0,
+      "begins": 0,
+      "commits": 0,
+      "index_mutations": 0,
+      "queries": 0,
+      "reads": 0,
+      "returned_rows": 0,
+      "savepoint_rollbacks": 0,
+      "savepoints": 0,
+      "writes": 0
+    },
+    "metrics_status": {
+      "complete": true,
+      "scope": "Cumulative counters captured directly while this worker's adapter remains alive; not evidence that cleanup or commit succeeded.",
+      "source": "local_adapter"
+    },
+    "retry_causes": {},
+    "retry_diagnostics": {
+      "dropped_attempts": 0,
+      "enabled": false,
+      "failed_attempts": 0,
+      "sample_limit": 32,
+      "samples": [],
+      "version": 1
+    },
+    "version": 1
+  },
+  "note": "Offered schedule remains authoritative; failed message retry count is retained in worker error. Uncompleted offered events are not dropped or called successful.",
+  "offered_by_worker": [
+    6,
+    2,
+    2
+  ],
+  "oldest_due_job_age_ns_by_worker": [
+    null,
+    2200536117,
+    null
+  ],
+  "passed": false,
+  "pending_maintenance": [
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    }
+  ],
+  "worker": 1,
+  "worker_retry_diagnostics": [
+    {
+      "dropped_attempts": 12,
+      "enabled": false,
+      "failed_attempts": 12,
+      "sample_limit": 32,
+      "samples": [],
+      "version": 1
+    },
+    null,
+    {
+      "dropped_attempts": 2,
+      "enabled": false,
+      "failed_attempts": 2,
+      "sample_limit": 32,
+      "samples": [],
+      "version": 1
+    }
+  ]
+}

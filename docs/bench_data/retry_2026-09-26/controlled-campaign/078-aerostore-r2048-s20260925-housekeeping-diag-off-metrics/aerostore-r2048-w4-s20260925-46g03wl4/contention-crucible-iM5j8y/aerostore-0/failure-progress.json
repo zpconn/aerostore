@@ -1,0 +1,239 @@
+{
+  "completed_by_worker": [
+    977,
+    977,
+    977,
+    586,
+    0,
+    0
+  ],
+  "completed_message_retries": 1482,
+  "completed_messages": 3517,
+  "completed_transactions": 3517,
+  "completed_worker_metrics_snapshots": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "counter_coverage": "Failed worker snapshot and already completed workers only; running peers may have additional commits/retries not received by the coordinator. Do not sum repeated cumulative snapshots or equate failed-run commits with received history.",
+  "error": "message 8000000000 after 128 retries: transaction conflict; cleanup=Ok(())",
+  "execution_completed": false,
+  "failure_evidence": {
+    "diagnostics": {
+      "global_due_lookup:calls": 129,
+      "global_due_lookup:candidate_rows": 3276,
+      "global_due_lookup:returned_rows": 3276,
+      "global_due_lookup:successful_query_ns": 254463423,
+      "history_lookup:calls": 468,
+      "history_lookup:candidate_rows": 37440,
+      "history_lookup:returned_rows": 3744,
+      "history_lookup:successful_query_ns": 8071780
+    },
+    "metrics": {
+      "aborts": 129,
+      "begins": 129,
+      "commits": 0,
+      "index_mutations": 0,
+      "queries": 597,
+      "reads": 42120,
+      "returned_rows": 7020,
+      "savepoint_rollbacks": 0,
+      "savepoints": 0,
+      "writes": 936
+    },
+    "metrics_status": {
+      "complete": true,
+      "scope": "Cumulative counters captured directly while this worker's adapter remains alive; not evidence that cleanup or commit succeeded.",
+      "source": "local_adapter"
+    },
+    "retry_causes": {
+      "commit:serialization_failure": 117,
+      "global_due_lookup:serialization_failure": 12
+    },
+    "retry_diagnostics": {
+      "dropped_attempts": 129,
+      "enabled": false,
+      "failed_attempts": 129,
+      "sample_limit": 32,
+      "samples": [],
+      "version": 1
+    },
+    "version": 1
+  },
+  "note": "Offered schedule remains authoritative; failed message retry count is retained in worker error. Uncompleted offered events are not dropped or called successful.",
+  "offered_by_worker": [
+    3982,
+    3982,
+    3982,
+    2390,
+    6,
+    3
+  ],
+  "oldest_due_job_age_ns_by_worker": [
+    165538,
+    null,
+    null,
+    null,
+    717450694,
+    null
+  ],
+  "passed": false,
+  "pending_maintenance": [
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    }
+  ],
+  "worker": 4,
+  "worker_retry_diagnostics": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ]
+}

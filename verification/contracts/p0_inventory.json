@@ -34,7 +34,7 @@
       "reason": "Alternate in-process/MVCC/logical-database or service family; not the partitioned single-OccTable target."
     },
     "aerostore_core/src/lib.rs": {
-      "sha256": "5dd1dd237df07e2bd055a702af67a2fcf47825de356877cd12f2b42d49f59fad",
+      "sha256": "22e46a4818bf4fdc540ac7e30a81f9d6deb80e6997380d93fd03fc58646f1c19",
       "classification": "reexport",
       "reason": "Exports/aliases only; target identity follows the defining module, including occ alias to occ_partitioned."
     },
@@ -54,7 +54,7 @@
       "reason": "Alternate in-process/MVCC/logical-database or service family; not the partitioned single-OccTable target."
     },
     "aerostore_core/src/occ_partitioned.rs": {
-      "sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d",
+      "sha256": "03719920d5553b5edc1f240a8e2490c96d67b5f0d0145d7be2285d3ffe97eb1a",
       "classification": "covered",
       "reason": "Single-table transaction/query/managed durability/bootstrap/vacuum support within stated modes and preconditions."
     },
@@ -92,6 +92,11 @@
       "sha256": "010a40c9e58560bbb9a1d2a9cceb858ebd290bdf25e401bacf6597d6d20b4e98",
       "classification": "covered",
       "reason": "Single-table transaction/query/managed durability/bootstrap/vacuum support within stated modes and preconditions."
+    },
+    "aerostore_core/src/retry_diagnostics.rs": {
+      "sha256": "3026b4d86979df4bc99ea72d91ea911dd86c577a7d1fb01ac46839dd0eb78183",
+      "classification": "boundary",
+      "reason": "Optional thread-local observations; no transaction proof claims for the enabled retry-diagnostics feature. Default native calls are compiled out; state never owns engine objects or shared locks."
     },
     "aerostore_core/src/shm.rs": {
       "sha256": "434964bde214af5b9ca4c4828447e995edc9074f117d61ee1173fa0ae0418884",
@@ -154,7 +159,7 @@
       "reason": "Public storage/encoding/registration primitive; contract requires explicit caller ownership or representation, not unrestricted transactional use."
     },
     "aerostore_core/src/wal_writer.rs": {
-      "sha256": "619be861775b8b1942750f427d6ecef55abc5e208fb165e5dd4c6cf5d123a70a",
+      "sha256": "41892dd78aebea459bb8303821974a60da4cd40f6e2862e5717e07cf17b35f63",
       "classification": "covered",
       "reason": "Single-table transaction/query/managed durability/bootstrap/vacuum support within stated modes and preconditions."
     },
@@ -983,6 +988,17 @@
         "verification/contracts/transactions.md",
         "verification/assumptions.toml"
       ]
+    },
+    "retry-observation": {
+      "preconditions": "Observe one synchronous operation on its execution thread: enable explicitly, clear immediately before the operation, and take immediately after its result before cleanup or another operation. Coordinate adapters sharing a thread. No async/thread migration propagation is provided.",
+      "success": "compiled reports the Cargo feature. set_enabled resets pending state. clear discards a pending event while preserving enablement; take consumes it. With the feature enabled, record retains only the first rejecting branch while runtime enabled, with exact optional index offset/row ID. Default builds always return no event. Cause::name is a fixed branch label.",
+      "failure": "Observation APIs return no engine error and perform no allocation or shared engine writes. Inaccessible TLS produces no event via try_with. Empty observation does not establish absence of conflict and must remain unclassified.",
+      "limitations": "Observations are branch labels, not proof of unnecessary conflict, historical query need, or all simultaneous blockers. Commit short-circuit order is retained. Feature-on behavior is tested/reviewed but excluded from existing default-feature transaction refinement claims; timing effects are not proved absent. The fixed-size public Event/Cause values convey no ownership or authority.",
+      "references": [
+        "verification/retry_diagnostics/README.md",
+        "verification/retry_diagnostics/default_sources.json",
+        "aerostore_core/tests/contention_diagnostics.rs"
+      ]
     }
   },
   "apis": [
@@ -1745,7 +1761,7 @@
     {
       "id": "occ_partitioned::OccTable::index_lookup",
       "signature": "pub fn index_lookup( &self, tx: &mut OccTransaction<T>, index: &SecondaryIndex<usize>, predicate: &IndexCompare, ) -> Result<Vec<usize>, Error>",
-      "body_sha256": "416e30f9961269c8893ae3f98cad2b4bfbbd22a023008680326d778148455e6e",
+      "body_sha256": "e3f9c5edb48c4266d2d468df314b5dae68162f2f965a3745a24a8ccc7dbec418",
       "source": "aerostore_core/src/occ_partitioned.rs",
       "contract": "index-read",
       "classification": "covered",
@@ -1808,7 +1824,7 @@
     {
       "id": "occ_partitioned::OccTable::lock_for_update",
       "signature": "pub fn lock_for_update( &self, tx: &OccTransaction<T>, row_id: usize, ) -> Result<RowLockGuard<'_, T>, Error>",
-      "body_sha256": "12edaa5c520dc0e84c13fdf46f60741874039454bec1a9ca1698d54a5a79cb01",
+      "body_sha256": "d0c948e08683540cb2c7e655a589add3165628d8e26fe6d0555bdb7568cbbc97",
       "source": "aerostore_core/src/occ_partitioned.rs",
       "contract": "row-owner-lock",
       "classification": "covered",
@@ -1817,7 +1833,7 @@
     {
       "id": "occ_partitioned::OccTable::read",
       "signature": "pub fn read(&self, tx: &mut OccTransaction<T>, row_id: usize) -> Result<Option<T>, Error>",
-      "body_sha256": "97581159b5245e3eb5e4974518d69f3b7a13561611ba333ea6992fafd9808a25",
+      "body_sha256": "02c0929828a8ca80c2697b2e713974ebb5b4589f35429cec2f81ebc006b1d789",
       "source": "aerostore_core/src/occ_partitioned.rs",
       "contract": "read",
       "classification": "covered",
@@ -1826,7 +1842,7 @@
     {
       "id": "occ_partitioned::OccTable::write",
       "signature": "pub fn write(&self, tx: &mut OccTransaction<T>, row_id: usize, value: T) -> Result<(), Error>",
-      "body_sha256": "c6949dbc2c11366a0ac7e06baa8ad51a02848ffca5cf40a56154620aa0eed1ad",
+      "body_sha256": "1fd74a24e2fc27afb1c70079eeb743159ac2974ef089f1327d7a0af9a2311092",
       "source": "aerostore_core/src/occ_partitioned.rs",
       "contract": "write",
       "classification": "covered",
@@ -1835,7 +1851,7 @@
     {
       "id": "occ_partitioned::OccTable::write_with_dirty_mask",
       "signature": "pub fn write_with_dirty_mask( &self, tx: &mut OccTransaction<T>, row_id: usize, value: T, dirty_columns_bitmask: u64, ) -> Result<(), Error>",
-      "body_sha256": "359222abf8d2687381ec99b78ac3134f3f429c4f9ea516d7e02218b1beb07543",
+      "body_sha256": "63d7162260c598b4dc8356a2f45715499cdd1c8ae27e2d47e107a0425884b7d2",
       "source": "aerostore_core/src/occ_partitioned.rs",
       "contract": "write-mask",
       "classification": "covered",
@@ -4679,7 +4695,7 @@
     {
       "id": "wal_writer::OccCommitter::commit",
       "signature": "pub fn commit<T: Copy + Send + Sync + 'static>( &mut self, table: &OccTable<T>, tx: &mut OccTransaction<T>, ) -> Result<usize, WalWriterError> where T: WalDeltaCodec,",
-      "body_sha256": "4c049faf76ba54de5cc27d0ef80aa764715415ba590899843df99caca8c277a0",
+      "body_sha256": "d3a642ec608ff90de5ae1586f7f8f22acb9b3f535852412bcaad51a41cd357a1",
       "source": "aerostore_core/src/wal_writer.rs",
       "contract": "wal-commit",
       "classification": "covered",
@@ -4809,6 +4825,51 @@
       "source": "aerostore_core/src/watch.rs",
       "contract": "excluded",
       "classification": "excluded",
+      "semantics": "defined"
+    },
+    {
+      "id": "retry_diagnostics::Cause::name",
+      "signature": "pub const fn name(self) -> &'static str",
+      "body_sha256": "dd5d08183c6bc40791db5fd3beec537f20ad67cbd85429cdbab8951c4d9f8bd4",
+      "source": "aerostore_core/src/retry_diagnostics.rs",
+      "contract": "retry-observation",
+      "classification": "boundary",
+      "semantics": "defined"
+    },
+    {
+      "id": "retry_diagnostics::clear",
+      "signature": "pub fn clear()",
+      "body_sha256": "939f00483f1a5a6cfe804a56df99804eda61fc9ca24727b0726c7e4201efa04b",
+      "source": "aerostore_core/src/retry_diagnostics.rs",
+      "contract": "retry-observation",
+      "classification": "boundary",
+      "semantics": "defined"
+    },
+    {
+      "id": "retry_diagnostics::compiled",
+      "signature": "pub const fn compiled() -> bool",
+      "body_sha256": "f06cee730f17c3f57aed2705427182b52a361c581919067f0d93b398cd0b55d7",
+      "source": "aerostore_core/src/retry_diagnostics.rs",
+      "contract": "retry-observation",
+      "classification": "boundary",
+      "semantics": "defined"
+    },
+    {
+      "id": "retry_diagnostics::set_enabled",
+      "signature": "pub fn set_enabled(enabled: bool)",
+      "body_sha256": "bc9f3e16892fc103e622c6f32029e4c755d3e6f1f42ddfab9ee21d5831c30aae",
+      "source": "aerostore_core/src/retry_diagnostics.rs",
+      "contract": "retry-observation",
+      "classification": "boundary",
+      "semantics": "defined"
+    },
+    {
+      "id": "retry_diagnostics::take",
+      "signature": "pub fn take() -> Option<Event>",
+      "body_sha256": "77dd97af7d4a1c6bb29563ee8d4aaab6f7836f79f773418ee9f886cd26de91f6",
+      "source": "aerostore_core/src/retry_diagnostics.rs",
+      "contract": "retry-observation",
+      "classification": "boundary",
       "semantics": "defined"
     }
   ],
@@ -5291,7 +5352,7 @@
     }
   ],
   "nonfunction_surface": {
-    "public_data": "Public configuration/result structs and fields carry the same family contract as the operations consuming/producing them. Fabricating offsets, registrations, snapshots, OccRow values, WAL records or schema metadata does not create ownership, pinning or a valid history. Public atomics returned through shared_arena/proc_array/global_txid may not be mutated outside explicit lifecycle authority.",
+    "public_data": "Public configuration/result structs and fields carry the same family contract as the operations consuming/producing them. Fabricating offsets, registrations, snapshots, OccRow values, WAL records or schema metadata does not create ownership, pinning or a valid history. Public atomics returned through shared_arena/proc_array/global_txid may not be mutated outside explicit lifecycle authority. Retry diagnostic Event/Cause values are observations only: fabricating or copying them grants no transaction, index, row, or lock authority.",
     "implicit_traits": "Derived Clone/Copy/Default/From/Display and generated scalar WalDeltaCodec implementations are covered by exact module hashes and reviewed containing-type/codec contracts, not individually enumerated as source pub fn declarations. Copying a registration or RelPtr never duplicates ownership; ShmArena/guard/daemon Drop follow resource lifetime/cleanup rules.",
     "macros_and_reexports": "occ reexports occ_partitioned; index reexports shared SecondaryIndex. lib.rs reexports both target and excluded families; no reexport expands the target. No arbitrary external macro expansion, feature set or compiler semantics are claimed by this lexical inventory."
   },

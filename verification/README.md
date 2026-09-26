@@ -6,7 +6,7 @@ This workspace implements component proofs and model campaigns from the [verific
 
 | Layer | Current coverage | Boundary |
 | --- | --- | --- |
-| P0 API audit | Source-bound inventory of 425 public declarations across 32 core modules, conditional success/error contracts and 31 lock relationships | Reviewed contract coverage; does not prove enforcement, infer the complete lock graph or certify raw safe APIs |
+| P0 API audit | Source-bound inventory of 430 public declarations across 33 core modules, conditional success/error contracts and 31 lock relationships | Reviewed contract coverage; does not prove enforcement, infer the complete lock graph or certify raw safe APIs |
 | Native write planning | Actual last-write selection is complete, unique and ordered by row; actual key extraction/prevalidation and current-base validation feed publication on the same row image | Key planning and joined publication use one selected row/index; map, callback and physical storage projections remain explicit |
 | Ordinary commit data | Actual prepare/remove/ordinary-publish interval, exact selected row/posting relation and returned record, rollback/poison failures | One selected write/index; guard handoff, other validation paths and native physical projection remain explicit |
 | Publication completion | Native data publication joined to actual token consumption/deregistration and same-clock stamp publication; captured dependency invalidation | Acquired cutpoint with physical identity/framing and cleanup premises; not a complete transaction entry-to-return refinement |
@@ -211,3 +211,5 @@ The additional histogram storage is benchmark instrumentation, not production
 engine memory. Earlier measurements retain their original fixture identity.
 
 Extend the optimization boundary only when those implementation obligations close. The existing plan retains their original exit criteria.
+
+Optional [retry observations](retry_diagnostics/README.md) preserve the default-build native token stream and existing generated component bodies. Feature-enabled observation code is separately tested and outside the transaction-refinement claim.

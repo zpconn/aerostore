@@ -1,0 +1,3 @@
+contention-crucible: maintenance job 4000000000 exhausted 1 committed batches without a terminal empty query; prior batch effects remain committed
+contention_crucible engine=service-unix scenario=null passed=false completed=null retries=null p99_us=null
+contention-crucible: contention correctness/progress check failed: /home/zpconn/code/aerostore/target/retry-final-validation/process-regressions/retry_diagnostics_process/cases/retry-evidence-y163pn7y/failed-job-service-unix-True/report.json

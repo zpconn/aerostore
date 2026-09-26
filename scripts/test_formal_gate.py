@@ -216,6 +216,11 @@ class RefinementEvidenceTests(unittest.TestCase):
             path = self.root / filename
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("synthetic input: " + filename)
+        dependency = self.root / "verification/retry_diagnostics/normalize.py"
+        dependency.parent.mkdir(parents=True)
+        dependency.write_text("synthetic reviewed normalization dependency")
+        (self.root / "verification/concurrent/generate.py").write_text(
+            '_DIAGNOSTIC_NORMALIZER_SHA256 = "' + refinement.digest(dependency) + '"\n')
         (self.root / refinement.MANIFEST).write_text(json.dumps(manifest))
         distribution = "target/tools"
         tool = self.root / distribution / "verus"
@@ -336,6 +341,20 @@ class RefinementEvidenceTests(unittest.TestCase):
     def test_stale_native_source(self):
         (self.root / "aerostore_core/src/occ_partitioned.rs").write_text("changed native source")
         with self.assertRaisesRegex(RuntimeError, "stale proof source"):
+            self.validate()
+
+    def test_normalizer_only_mutation_rejects_previously_valid_receipt(self):
+        self.validate()
+        dependency = self.root / "verification/retry_diagnostics/normalize.py"
+        self.assertNotIn(str(dependency.relative_to(self.root)), self.receipt["input_sha256"])
+        dependency.write_text("changed source-normalization dependency only")
+        with self.assertRaisesRegex(RuntimeError, "stale source-normalization dependency"):
+            self.validate()
+
+    def test_missing_normalizer_rejects_previously_valid_receipt(self):
+        self.validate()
+        (self.root / "verification/retry_diagnostics/normalize.py").unlink()
+        with self.assertRaisesRegex(RuntimeError, "missing source-normalization dependency"):
             self.validate()
 
     def test_stale_tool(self):

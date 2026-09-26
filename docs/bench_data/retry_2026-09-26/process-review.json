@@ -1,0 +1,162 @@
+{
+  "scope": "Independent functional evidence review; no performance comparison. Expected failure cases remain failed, and source/binary labels refer to the executions before any later proof-checker-only edits.",
+  "process_receipt_sha256": "bf5f658c1e09a380176c95e9daec6140c70e1971edb9fbfa7a36d60bae6b0a31",
+  "source_sha256": "36d17a26ea29ec41bbd305e87091f0992af8904bdb986a2e515a49f211c17be9",
+  "binary_sha256": {
+    "feature": "603e528a21620e6cf610d15b923182907ffd7ea2ba317210cefd4696492ce11e",
+    "default": "a7694868a9c398e1c0a86de32028f3424c52dc1a9db97c358346d4f570c20991"
+  },
+  "tests": 23,
+  "suites": [
+    {
+      "name": "retry_diagnostics_process",
+      "tests": 4,
+      "binary": "feature",
+      "log_sha256": "614a70de8cff5253049dbfd9599b43efed7ba4d48a8e06ebea805176d851756e"
+    },
+    {
+      "name": "contention_integration",
+      "tests": 11,
+      "binary": "default",
+      "log_sha256": "601822fb3df12e7a0cfc12287c8573a2cf165150645b6dcc5e2a9163a872669c"
+    },
+    {
+      "name": "calibrated_worker_pause",
+      "tests": 2,
+      "binary": "default",
+      "log_sha256": "40633c2b1b7d44f44d637e21f8b8df62ad9a457d7d6fbc40e8be7d4014ee6206"
+    },
+    {
+      "name": "affinity_dispatch",
+      "tests": 2,
+      "binary": "default",
+      "log_sha256": "d409be66c44972d54c229f4679beed1de5288c698a4842a893749fd6ee34a2a2"
+    },
+    {
+      "name": "maintenance_sweeps",
+      "tests": 4,
+      "binary": "default",
+      "log_sha256": "c78ffd003479ba05b817fb4790711670079ec21ea82617cd4a124b913e49fd82"
+    }
+  ],
+  "diagnostic_cases": [
+    {
+      "case": "failed-job-aerostore-False",
+      "report_sha256": "118aed5e4d095d3ff7a98ad4d7a8e6f4abdc8df82f08ef419e5d575ab4708d9f",
+      "execution_passed": false,
+      "expected_failure": true,
+      "failed_worker": 5,
+      "failed_worker_commits": 1,
+      "failed_worker_completed_jobs": 0,
+      "failed_attempts": 0,
+      "retained_samples": 0,
+      "metric_source": "local_adapter",
+      "fresh_counters": true,
+      "coverage": "Failed worker and already-Done peers only; live peers can have additional work.",
+      "failure_progress_sha256": "1bf632c53f7215f5b8a7721e7b9ae86f28b84d44489280fb93371c8dafffc26b"
+    },
+    {
+      "case": "failed-job-aerostore-True",
+      "report_sha256": "1f15eeabb37d00a55098cf8346feef75a558f7ce88272b8c56d47645dd160ae2",
+      "execution_passed": false,
+      "expected_failure": true,
+      "failed_worker": 5,
+      "failed_worker_commits": 1,
+      "failed_worker_completed_jobs": 0,
+      "failed_attempts": 1,
+      "retained_samples": 1,
+      "metric_source": "local_adapter",
+      "fresh_counters": true,
+      "coverage": "Failed worker and already-Done peers only; live peers can have additional work.",
+      "failure_progress_sha256": "7f2998143978a57115afeafa453326c90c86327736e2c825f78f20857dbfde94"
+    },
+    {
+      "case": "failed-job-service-unix-False",
+      "report_sha256": "291194983c9d16b505889f941f50366d1897d259b05568401d751489e90021ca",
+      "execution_passed": false,
+      "expected_failure": true,
+      "failed_worker": 4,
+      "failed_worker_commits": 1,
+      "failed_worker_completed_jobs": 0,
+      "failed_attempts": 1,
+      "retained_samples": 0,
+      "metric_source": "service_cache",
+      "fresh_counters": true,
+      "coverage": "Failed worker and already-Done peers only; live peers can have additional work.",
+      "failure_progress_sha256": "90cd2882693b6cb327eabf9f6b903378aa8c14f67c4c0ae666be02e7aae2743b"
+    },
+    {
+      "case": "failed-job-service-unix-True",
+      "report_sha256": "59750d0f99346b5f9fc50762678f1c1037f980e1df57579cb2a8d5cbaba7d449",
+      "execution_passed": false,
+      "expected_failure": true,
+      "failed_worker": 4,
+      "failed_worker_commits": 1,
+      "failed_worker_completed_jobs": 0,
+      "failed_attempts": 1,
+      "retained_samples": 1,
+      "metric_source": "service_cache",
+      "fresh_counters": true,
+      "coverage": "Failed worker and already-Done peers only; live peers can have additional work.",
+      "failure_progress_sha256": "12a330068059ef62ee48b455794fd4959204b4f9c8864f61c969a18166117479"
+    },
+    {
+      "case": "sweeps-aerostore-False",
+      "report_sha256": "01dcf9fd47eb858b5c2779a5de3ddd3b05aaae4c1fcae1933101132f1d0a83e7",
+      "execution_passed": true,
+      "completed_jobs": 196,
+      "completed_transactions": 209,
+      "failed_attempts": 18,
+      "retained_samples": 0
+    },
+    {
+      "case": "sweeps-aerostore-True",
+      "report_sha256": "4cdb187b3d075781293aa21feb4f364082b96d7768dbd714147655384011d5fe",
+      "execution_passed": true,
+      "completed_jobs": 196,
+      "completed_transactions": 209,
+      "failed_attempts": 19,
+      "retained_samples": 19
+    },
+    {
+      "case": "sweeps-service-unix-False",
+      "report_sha256": "821d6ed759109f7a8def81d042a6f47902ad469e482b08e56fb794a61fdbec3f",
+      "execution_passed": true,
+      "completed_jobs": 196,
+      "completed_transactions": 209,
+      "failed_attempts": 26,
+      "retained_samples": 0
+    },
+    {
+      "case": "sweeps-service-unix-True",
+      "report_sha256": "eae91cae3de92020a12f287c69d11ad483a11ef9172b2c80b6b45b177ff4ae8c",
+      "execution_passed": true,
+      "completed_jobs": 196,
+      "completed_transactions": 209,
+      "failed_attempts": 24,
+      "retained_samples": 24
+    }
+  ],
+  "tcp": {
+    "passed": true,
+    "topology": "local_loopback",
+    "completed_jobs": 196,
+    "completed_transactions": 209,
+    "retries": 30,
+    "checks": {
+      "process_succeeded": true,
+      "helper_passed": true,
+      "loopback_only": true,
+      "clean_drain": true,
+      "full_history_verified": true,
+      "complete_sweep": true,
+      "job_count": true,
+      "transaction_count": true,
+      "expiry_selection": true,
+      "diagnostic_selection": true,
+      "retry_trace_validation": true
+    },
+    "receipt_sha256": "aa80cc5f52b6b8c4accb3ee4b451df427aa88d19096e242ea946dab6c6db2946"
+  },
+  "passed": true
+}

@@ -1,0 +1,8 @@
+{
+  "engine": "aerostore",
+  "error": "offered corpus must give every worker work and fit --max-messages without truncation",
+  "evidence_directory": "/home/zpconn/code/aerostore/target/retry-final-validation/process-regressions/contention_integration/cases/regression-ou68_qo4/truncated/contention-crucible-j4CIJf/aerostore-0",
+  "execution_completed": false,
+  "passed": false,
+  "scenario": null
+}

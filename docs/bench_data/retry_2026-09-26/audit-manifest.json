@@ -1,0 +1,54 @@
+{
+  "scope": "Separate independent archive audit; does not alter or circularly include the original artifact manifest. Initial reviewer assumptions and their corrections are retained transparently; archive-review.json is the final passing result. Guardrail archive is outside this audit.",
+  "main_artifact_manifest_sha256": "61948a06cf0122b4536657247d2a6d5e7f00c637bd226344a462bc987d085bcd",
+  "files": [
+    {
+      "path": "archive-doc-review.json",
+      "source": "target/retry-final-validation/archive-doc-review.json",
+      "sha256": "123c4ca45f91c29e8e1b241657eadb55c6d1b5130cf43d848fed5ec6262fbc86",
+      "bytes": 9782
+    },
+    {
+      "path": "archive-review-initial.log",
+      "source": "target/retry-final-validation/archive-review-initial.log",
+      "sha256": "f6c7b9073b0c8fab9a940049622c931b9b294e6cad6c83a3a2f0f9a070174f46",
+      "bytes": 1225
+    },
+    {
+      "path": "archive-review-scope-check.json",
+      "source": "target/retry-final-validation/archive-review-scope-check.json",
+      "sha256": "b71534991a264fc827a86b9e36eaab4ce9b9d47d967071eb93dd27be60452a00",
+      "bytes": 572260
+    },
+    {
+      "path": "archive-review-scope-check.log",
+      "source": "target/retry-final-validation/archive-review-scope-check.log",
+      "sha256": "603b44ebb7fe584cc341ee4b24629f01a9d00315d5ffc47aca97187e44fed913",
+      "bytes": 5691
+    },
+    {
+      "path": "archive-review.json",
+      "source": "target/retry-final-validation/archive-review.json",
+      "sha256": "6554f429a26ce2986dccf630292e4a0e5d2f6eb6582ed7feb2c956defa51de13",
+      "bytes": 567309
+    },
+    {
+      "path": "archive-review.log",
+      "source": "target/retry-final-validation/archive-review.log",
+      "sha256": "b374e1bd91a70fbc3a273ba4dc3d7acbd78472992ac49c3fd425f937daf81140",
+      "bytes": 740
+    },
+    {
+      "path": "review_archive.py",
+      "source": "target/retry-final-validation/review_archive.py",
+      "sha256": "08123efce7d0f69c26230e630e93020fc88d63d75b33d3a4552db0258523f838",
+      "bytes": 15844
+    },
+    {
+      "path": "review_archive_links.py",
+      "source": "target/retry-final-validation/review_archive_links.py",
+      "sha256": "07efa97b6a08eb14f370513e7ea0d22ac17d8122fc43d1412932eb84333d89cf",
+      "bytes": 3418
+    }
+  ]
+}

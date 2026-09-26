@@ -8,7 +8,7 @@ use super::supervision::{
     DEFAULT_OUTPUT,
 };
 use super::{
-    aerostore, calibrated, maintenance, model, oracle, postgres, remote, service, workers,
+    aerostore, calibrated, fixture, maintenance, model, oracle, postgres, remote, service, workers,
 };
 use crate::extended_crucible::{metrics::StoreMetrics, model::Record};
 use serde::{Deserialize, Serialize};
@@ -44,6 +44,10 @@ struct Config {
     housekeeping_batch_size: usize,
     #[serde(default = "calibrated::default_max_maintenance_batches")]
     max_maintenance_batches: u64,
+    #[serde(default)]
+    expiry_index_policy: fixture::ExpiryIndexPolicy,
+    #[serde(default)]
+    retry_diagnostics: bool,
     max_backlog: u64,
     pg_write_mode: postgres::WriteMode,
     rpc_delay_us: u64,
@@ -80,6 +84,8 @@ impl Default for Config {
             projection_batch_size: 4,
             housekeeping_batch_size: 32,
             max_maintenance_batches: 4096,
+            expiry_index_policy: fixture::ExpiryIndexPolicy::AllActive,
+            retry_diagnostics: false,
             max_backlog: 1000,
             pg_write_mode: postgres::WriteMode::Buffered,
             rpc_delay_us: 0,
@@ -248,6 +254,8 @@ struct Completed {
     retries: u64,
     message_retries: Vec<u64>,
     worker_stops: Vec<Value>,
+    worker_retry_diagnostics: Vec<Value>,
+    worker_metrics_snapshots: Vec<Value>,
     metrics: StoreMetrics,
     causes: BTreeMap<String, u64>,
     diagnostics: BTreeMap<String, u64>,
@@ -330,6 +338,7 @@ fn exercise(
             seed: cfg.seed,
             hot_percent: cfg.hot_percent,
             retry_limit: 128,
+            retry_diagnostics: cfg.retry_diagnostics,
             message_interval_us: cfg.message_interval_us,
             expected_parent_pid: std::process::id(),
             calibrated_schedule: calibrated.as_ref().map(|plan| plan.worker_schedule(id)),
@@ -436,6 +445,8 @@ fn exercise(
         retries: 0,
         message_retries: Vec::new(),
         worker_stops: vec![Value::Null; count],
+        worker_retry_diagnostics: vec![Value::Null; count],
+        worker_metrics_snapshots: vec![Value::Null; count],
         metrics: StoreMetrics::default(),
         causes: BTreeMap::new(),
         diagnostics: BTreeMap::new(),
@@ -692,6 +703,7 @@ fn exercise(
                         metrics,
                         retry_causes,
                         diagnostics,
+                        retry_diagnostics,
                         maximum_backlog,
                         finished_ns,
                         stop_reason,
@@ -727,6 +739,8 @@ fn exercise(
                         {
                             return Err("calibrated worker did not drain every independently admitted event".into());
                         }
+                        result.worker_retry_diagnostics[id] = json!(retry_diagnostics);
+                        result.worker_metrics_snapshots[id] = json!({"scope":"completed_worker_cumulative", "metrics":metrics,"retry_causes":retry_causes,"diagnostics":diagnostics});
                         result.worker_stops[id] = json!({"finished_ns":finished_ns,"stop_reason":stop_reason,"maximum_backlog":maximum_backlog});
                         for (name, value) in diagnostics {
                             *result.diagnostics.entry(name).or_default() += value;
@@ -736,12 +750,15 @@ fn exercise(
                             *result.causes.entry(cause).or_default() += count;
                         }
                     }
-                    workers::Reply::Error { message } => {
+                    workers::Reply::Error { message, evidence } => {
                         history.flush().map_err(|e| e.to_string())?;
                         write_json(
                             &case.directory.join("failure-progress.json"),
                             &json!({
                             "passed":false,"execution_completed":false,"worker":id,"error":message,
+                            "failure_evidence":evidence,"completed_worker_metrics_snapshots":result.worker_metrics_snapshots,
+                            "worker_retry_diagnostics":result.worker_retry_diagnostics,
+                            "counter_coverage":"Failed worker snapshot and already completed workers only; running peers may have additional commits/retries not received by the coordinator. Do not sum repeated cumulative snapshots or equate failed-run commits with received history.",
                             "completed_by_worker":result.completed_by_worker,"offered_by_worker":result.offered_by_worker,
                             "completed_messages":result.completed_by_worker.iter().sum::<usize>(),"completed_transactions":result.receipts.len(),"completed_message_retries":result.retries,"pending_maintenance":result.pending_maintenance,
                             "oldest_due_job_age_ns_by_worker":oldest_due_ages(calibrated.as_ref(), &result.completed_by_worker, workers::monotonic_ns().saturating_sub(admission_start_ns)),
@@ -934,12 +951,16 @@ fn summarize(
         "message_latency_p50_us_including_retries":quantile(50),"message_latency_p99_us_including_retries":quantile(99),
         "message_latency_max_us_including_retries":quantile(100),"retries":completed.retries,"retry_causes":completed.causes,
         "store_metrics":completed.metrics,"operation_diagnostics":completed.diagnostics,
+        "retry_diagnostics_compiled":aerostore_core::retry_diagnostics::compiled(),
+        "worker_retry_diagnostics":completed.worker_retry_diagnostics,
+        "expiry_index_policy":case.config.expiry_index_policy,
+        "effective_expiry_index_policy":if case.engine=="postgres" {"housekeeping"} else {case.config.expiry_index_policy.name()},
         "service_latency_p99_us_including_retries":p99(&service_latencies),"arrival_queue_delay_p99_us":p99(&completed.queue_delays),
         "arrival_mode":if case.config.arrival_rate > 0 && case.scenario.is_none() {"independent_fixed_corpus"} else {"closed_loop"},
         "offered_messages":if case.config.arrival_rate > 0 && case.scenario.is_none() {json!(case.config.arrival_rate * case.config.seconds)} else {Value::Null},
         "admission_seconds":case.config.seconds,"offered_rate_per_second":case.config.arrival_rate,"retention_samples":completed.samples,"after_drain":drained,"native_audit":audit,
         "evidence_directory":case.directory,"timing_contract":"message latency measures scheduled arrival (open loop) or first attempt (closed loop) through coordinator receipt, including queue, transaction RPC, retries/backoff and result IPC; service latency separately excludes arrival queue and receipt IPC; scenarios include deliberate barrier; drained throughput uses a continuous client monotonic interval from admission through worker shutdown and drain confirmation, including intervening cleanup and remote confirmation delivery; local oracle/final audit outside timing",
-        "retry_cause_limit":"native stages do not distinguish exact predicate bucket collisions, row validation or underlying newer-stamp causes; PostgreSQL reports SQLSTATE",
+        "retry_cause_limit":if case.config.retry_diagnostics {"native origins identify observed rejection branches and indexes, not whether conflicts were logically necessary; PostgreSQL reports SQLSTATE; per-worker samples retain only the last 32 failed attempts"} else {"native stages do not distinguish exact predicate bucket collisions, row validation or underlying newer-stamp causes; PostgreSQL reports SQLSTATE"},
         "requested_duration_reached":case.scenario.is_none() && completed.worker_stops.iter().all(|s| s["stop_reason"] == "deadline" || s["stop_reason"] == "arrival_corpus_drained"),
         "worker_message_cap_reached":completed.worker_stops.iter().any(|s| s["stop_reason"] == "message_cap"),
         "performance_comparison_eligible":false,
@@ -1079,6 +1100,8 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
             || setup.projection_batch_size != case.config.projection_batch_size
             || setup.housekeeping_batch_size != case.config.housekeeping_batch_size
             || setup.max_maintenance_batches != case.config.max_maintenance_batches
+            || setup.expiry_index_policy != case.config.expiry_index_policy
+            || setup.retry_diagnostics != case.config.retry_diagnostics
             || setup.global_time_predicates != case.config.global_time_predicates
             || setup.initial_rows != initial
             || setup.max_seconds <= case.config.seconds
@@ -1180,7 +1203,12 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
         };
     }
     let path = case.directory.join("arena.mmap");
-    let shared = aerostore::Shared::create(&path, case.config.shm_mib << 20, &initial)?;
+    let shared = aerostore::Shared::create_with_policy(
+        &path,
+        case.config.shm_mib << 20,
+        &initial,
+        case.config.expiry_index_policy,
+    )?;
     // Fork helpers before reader/vacuum threads exist in this coordinator.
     let writer =
         aerostore_core::spawn_wal_writer_daemon(shared.ring.clone(), &case.directory.join("wal"))
@@ -1220,11 +1248,13 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
         };
         let attachment = shared.attachment(&path);
         let global = case.config.global_time_predicates;
+        let retry_diagnostics = case.config.retry_diagnostics;
         let mut limits = service::Limits::default();
         limits.idle_timeout = Duration::from_secs(case.config.seconds + 300);
         Some(service::Server::start(endpoint, limits, move |session| {
             let mapping = aerostore::Shared::attach(&attachment)?;
-            let mut adapter = aerostore::Adapter::new(&mapping, global);
+            let mut adapter =
+                aerostore::Adapter::new_with_diagnostics(&mapping, global, retry_diagnostics);
             session.serve(&mut adapter, |adapter| service::BackendMetrics {
                 metrics: adapter.metrics.clone(),
                 retry_causes: adapter.retry_causes.clone(),
@@ -1345,7 +1375,7 @@ fn parse() -> Result<Option<Config>, String> {
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         if arg == "--help" {
-            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--maintenance-mode batch|sweep --projection-batch-size 4 --housekeeping-batch-size 32 --max-maintenance-batches 4096 (calibrated only; terminal empty transaction counts toward cap)\n--pg-write-mode buffered|immediate --rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
+            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--maintenance-mode batch|sweep --projection-batch-size 4 --housekeeping-batch-size 32 --max-maintenance-batches 4096 (calibrated only; terminal empty transaction counts toward cap)\n--expiry-index all-active|housekeeping (native fixture only; PostgreSQL already has a partial expiry index)\n--retry-diagnostics off|on (on requires retry-diagnostics build feature; bounded failed-attempt evidence)\n--pg-write-mode buffered|immediate --rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
             return Ok(None);
         }
         if arg == "--bench" || arg == "--noplot" {
@@ -1395,6 +1425,20 @@ fn parse() -> Result<Option<Config>, String> {
             "--max-maintenance-batches" => {
                 config.max_maintenance_batches =
                     value.parse().map_err(|_| "invalid maintenance batch cap")?
+            }
+            "--expiry-index" => {
+                config.expiry_index_policy = match value.as_str() {
+                    "all-active" => fixture::ExpiryIndexPolicy::AllActive,
+                    "housekeeping" => fixture::ExpiryIndexPolicy::Housekeeping,
+                    _ => return Err("invalid native expiry index policy".into()),
+                };
+            }
+            "--retry-diagnostics" => {
+                config.retry_diagnostics = match value.as_str() {
+                    "off" => false,
+                    "on" => true,
+                    _ => return Err("retry diagnostics must be off or on".into()),
+                };
             }
             "--arrival-rate" => {
                 config.arrival_rate = value.parse().map_err(|_| "invalid arrival rate")?
@@ -1627,6 +1671,9 @@ pub fn run() -> Result<(), String> {
         }
     };
     config.output = output;
+    if config.retry_diagnostics && !aerostore_core::retry_diagnostics::compiled() {
+        return Err("--retry-diagnostics on requires --features retry-diagnostics".into());
+    }
     if config.mode == "serve" {
         return remote::serve(
             &config.output,
@@ -1646,6 +1693,8 @@ pub fn run() -> Result<(), String> {
             config.projection_batch_size,
             config.housekeeping_batch_size,
             config.max_maintenance_batches,
+            config.expiry_index_policy,
+            config.retry_diagnostics,
         );
     }
     if config.engine == "service-remote" {
@@ -1672,6 +1721,7 @@ pub fn run() -> Result<(), String> {
         "durability_contract":"both use WAL with asynchronous acknowledgement; fsync on PostgreSQL; native writer drained on normal completion; equal crash loss windows and crash recovery NOT claimed",
         "scope":"synthetic harder HyperFeed storage workload, not proprietary handler compatibility or architecture superiority",
         "worker_failure_requirement":"surviving workers must continue; separate worker_failure_contract test reports current violations",
+        "retry_diagnostics_compiled":aerostore_core::retry_diagnostics::compiled(),
         "whole_engine_verified":false,"architecture_promotion_eligible":false});
     write_json(&config.output, &report)?;
     let outcome = (|| {

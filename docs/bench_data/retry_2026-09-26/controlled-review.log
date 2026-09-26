@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "reviewed_cells": 90,
+  "execution_valid": 65,
+  "numeric_comparison_eligible": 60,
+  "errors": [],
+  "output": "/home/zpconn/code/aerostore/target/retry-final-validation/controlled-review.json"
+}

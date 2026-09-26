@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/home/zpconn/code/aerostore/target/retry-final-validation/benchmark-default",
+    "--engine",
+    "aerostore",
+    "--retry-diagnostics",
+    "on",
+    "--output",
+    "/home/zpconn/code/aerostore/target/retry-final-validation/process-regressions/retry_diagnostics_process/cases/retry-evidence-y163pn7y/default-feature-rejection/report.json"
+  ],
+  "exit_code": 2,
+  "binary_sha256": "a7694868a9c398e1c0a86de32028f3424c52dc1a9db97c358346d4f570c20991"
+}

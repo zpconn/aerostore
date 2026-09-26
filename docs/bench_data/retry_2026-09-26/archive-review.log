@@ -1,0 +1,26 @@
+checked 250/1393 archive artifacts
+checked 500/1393 archive artifacts
+checked 750/1393 archive artifacts
+checked 1000/1393 archive artifacts
+checked 1250/1393 archive artifacts
+{
+  "passed": true,
+  "errors": [],
+  "elapsed_seconds": 8.904235975001939,
+  "artifact_count": 1393,
+  "archive_bytes": 194715050,
+  "original_bytes": 4596384943,
+  "documented_counts": {
+    "low_rate_useful_trials": 60,
+    "overload_native_trials": 24,
+    "overload_native_failed": 19,
+    "traced_native_failures": 10,
+    "retained_tail_samples": 320,
+    "tail_due_commit": 295,
+    "tail_due_lookup": 25,
+    "overload_native_completed": 5,
+    "overload_full_completed": 3,
+    "overload_metrics_completed": 2,
+    "postgres_overload_failures": 6
+  }
+}

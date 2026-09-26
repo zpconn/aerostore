@@ -1,0 +1,232 @@
+{
+  "completed_by_worker": [
+    4,
+    4,
+    4,
+    4,
+    0,
+    0
+  ],
+  "completed_message_retries": 0,
+  "completed_messages": 16,
+  "completed_transactions": 17,
+  "completed_worker_metrics_snapshots": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "counter_coverage": "Failed worker snapshot and already completed workers only; running peers may have additional commits/retries not received by the coordinator. Do not sum repeated cumulative snapshots or equate failed-run commits with received history.",
+  "error": "maintenance job 4000000001 exhausted 1 committed batches without a terminal empty query; prior batch effects remain committed",
+  "execution_completed": false,
+  "failure_evidence": {
+    "diagnostics": {
+      "global_expiry_lookup:calls": 1,
+      "global_expiry_lookup:candidate_rows": 66,
+      "global_expiry_lookup:returned_rows": 66,
+      "global_expiry_lookup:successful_query_ns": 2314398
+    },
+    "metrics": {
+      "aborts": 0,
+      "begins": 1,
+      "commits": 1,
+      "index_mutations": 0,
+      "queries": 1,
+      "reads": 98,
+      "returned_rows": 66,
+      "savepoint_rollbacks": 0,
+      "savepoints": 0,
+      "writes": 32
+    },
+    "metrics_status": {
+      "complete": true,
+      "scope": "Cumulative counters captured directly while this worker's adapter remains alive; not evidence that cleanup or commit succeeded.",
+      "source": "local_adapter"
+    },
+    "retry_causes": {},
+    "retry_diagnostics": {
+      "dropped_attempts": 0,
+      "enabled": false,
+      "failed_attempts": 0,
+      "sample_limit": 32,
+      "samples": [],
+      "version": 1
+    },
+    "version": 1
+  },
+  "note": "Offered schedule remains authoritative; failed message retry count is retained in worker error. Uncompleted offered events are not dropped or called successful.",
+  "offered_by_worker": [
+    12,
+    12,
+    12,
+    12,
+    2,
+    2
+  ],
+  "oldest_due_job_age_ns_by_worker": [
+    3703732,
+    null,
+    null,
+    null,
+    3703732,
+    3703732
+  ],
+  "passed": false,
+  "pending_maintenance": [
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 1,
+      "finished_ns": 37841135437549,
+      "job_id": 4000000001,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        32,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": true,
+      "processed_rows": 32,
+      "retries": 0,
+      "started_ns": 37841132678190
+    }
+  ],
+  "worker": 5,
+  "worker_retry_diagnostics": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ]
+}

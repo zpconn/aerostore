@@ -1,0 +1,102 @@
+{
+  "created_at": "2026-09-26T07:38:00.809759+00:00",
+  "review_passed": true,
+  "scope": "Independent read-only review of current implementation diff, public diagnostic guidance, proof-normalization boundary and existing receipts. No new tests, benchmarks or proofs were run. Does not independently replay serial histories or certify whole-engine correctness.",
+  "baseline_commit": "4da551bbc2a17614ae11795cfee7764cb252d56a",
+  "reviewed_file_sha256": {
+    "docs/hyperfeed_retry_diagnostics.md": "a6dc903fe1983d419cc7ff855a9b422de554ec5342ad0aa4adc6f8475a6990b3",
+    "docs/hyperfeed_qualification.md": "b1a10b96bc7323d33dbd8a0ea35feefa908a419150779b0ee2e2a8dbbdee29fe",
+    "docs/formal_verification_plan.md": "407adb2d43fa520a79fdf34edf4ff48c1068b967774e7030d026d78e23d555d9",
+    "verification/README.md": "ec90e447e408b7f50bb8c0028a94768b2d6aa8142aa3c96024cc9bd3314e5edb",
+    "verification/retry_diagnostics/README.md": "7be25e266acaaf4ee520c815a0f2c9a052069a2a89114cc5defbb120245bf0c9",
+    "verification/retry_diagnostics/normalize.py": "c741c113689c7afe0ca94473cf9c029abfae647cefef656b4d3e40787ee7cb8c",
+    "verification/retry_diagnostics/check_default.py": "3f2d46b4fb281d2b634ed9f57c743bcef88594d63b621f7067db26c96ef7b086",
+    "verification/retry_diagnostics/default_sources.json": "90b4952ea89a54740cc8666f15673ef4ddc9947a307a9da746b50bd0e48473b4",
+    "verification/retry_diagnostics/test_normalize.py": "8d8f89b8c3c4af7dbd1803178bdec05e4abf54598084308ed118366713faf6b7",
+    "verification/concurrent/generate.py": "55dac4597460477d6034b1b0c77f8478c50c74ebef617705071fefb3fb7d7a8d",
+    "verification/concurrent/test_generate.py": "0ea3ac6b738635697f8a29d43b97e186b39dabfd81e1e735504c7793b5965469",
+    "scripts/check_refinement_evidence.py": "d458cc2bcb6839df53939864bca913d491d01973a7237bff5009033b3089c08c",
+    "scripts/test_formal_gate.py": "39fdc8f96360a2cbc6a81a58eff4ea76afcef857ae41d5a0d250f7adaf9b91db",
+    "scripts/check_formal_coverage.py": "78e3ad8e790a05c1e978803f464495f956a1aca2611021f26bc8261c3f869a95",
+    "aerostore_core/Cargo.toml": "576b2988775fcb3151d46cbf672e8f3c1d103166402e6a13091dfd7b13a7fbcb",
+    "aerostore_core/src/lib.rs": "22e46a4818bf4fdc540ac7e30a81f9d6deb80e6997380d93fd03fc58646f1c19",
+    "aerostore_core/src/retry_diagnostics.rs": "3026b4d86979df4bc99ea72d91ea911dd86c577a7d1fb01ac46839dd0eb78183",
+    "aerostore_core/src/occ_partitioned.rs": "03719920d5553b5edc1f240a8e2490c96d67b5f0d0145d7be2285d3ffe97eb1a",
+    "aerostore_core/src/wal_writer.rs": "41892dd78aebea459bb8303821974a60da4cd40f6e2862e5717e07cf17b35f63",
+    "aerostore_core/benches/contention_crucible/aerostore.rs": "802301e43c1576c14ae66d542e41eecf7bf6e1df3e23d6f39b43641d129b2313",
+    "aerostore_core/benches/contention_crucible/fixture.rs": "69bc36b979a672574cd66b52365e3a915bad11ed46bed0fd53ee692304e0751b",
+    "aerostore_core/benches/contention_crucible/storage.rs": "1b891dc30fb772981d96e709b7401490f2e842d40ab7d0ca26a231bb33aaccde",
+    "aerostore_core/benches/contention_crucible/postgres.rs": "582f78c7f6e05e44b06ed331732f7b03ddc1a62f1f5005f9559a5678a0a3ace4",
+    "aerostore_core/benches/contention_crucible/workers.rs": "f4d961baa3f15095f07f6fbefc2f7689141af1f1803a5d60558d8585ae5be78a",
+    "aerostore_core/benches/contention_crucible/service.rs": "d81aecc28661fd38d2bbed18bb2f4dd46cd894ac9a21e456f7cef305a8adf5c7",
+    "aerostore_core/benches/contention_crucible/runner.rs": "b5a407079e4cfc1a8f9e67dfa240409c3f7790c51070e59af76a8551195827be",
+    "aerostore_core/benches/contention_crucible/remote.rs": "85b42d0122de5306b5b918cf95ed3631aec8658c90a4408cf2752f4f7a22fb6f",
+    "scripts/qualify_hyperfeed.py": "098b689854619189e1cd75caf8d3e17814bbebae6cd4478d0c9410214b54bf23",
+    "scripts/run_remote_contention.py": "8c49d75286ac71647ed16b3c7d5a6fefbee2a014d536dec7bd7c5d7ec5fc9252"
+  },
+  "blocking_findings": [],
+  "unresolved_material_findings": [],
+  "findings": [
+    {
+      "id": "cleanup-delta-scope",
+      "severity": "documentation",
+      "status": "resolved",
+      "path": "docs/hyperfeed_retry_diagnostics.md",
+      "original_issue": "Primary-attempt versus abort-cleanup separation could imply that model/adapter cleanup was isolated from the primary delta.",
+      "resolution": "Current text explicitly includes internal model/adapter cleanup in the primary delta and scopes the separate delta to the additional worker abort."
+    },
+    {
+      "id": "failure-snapshot-availability",
+      "severity": "documentation",
+      "status": "resolved",
+      "path": "docs/hyperfeed_retry_diagnostics.md",
+      "original_issue": "Unqualified on-failure wording implied every killed/crashed/disconnected worker produced complete final counters.",
+      "resolution": "Current text requires a received worker Error frame, permits absent startup metrics, and states killed workers or broken output streams may produce no final snapshot."
+    }
+  ],
+  "proof_boundary": {
+    "native_default_projection": [
+      {
+        "path": "aerostore_core/src/occ_partitioned.rs",
+        "added_observation_statements": 17,
+        "baseline_raw_sha256_matches_manifest": true,
+        "removing_only_exact_two_line_feature_observations_restores_baseline_bytes": true,
+        "current_sha256": "03719920d5553b5edc1f240a8e2490c96d67b5f0d0145d7be2285d3ffe97eb1a"
+      },
+      {
+        "path": "aerostore_core/src/wal_writer.rs",
+        "added_observation_statements": 1,
+        "baseline_raw_sha256_matches_manifest": true,
+        "removing_only_exact_two_line_feature_observations_restores_baseline_bytes": true,
+        "current_sha256": "41892dd78aebea459bb8303821974a60da4cd40f6e2862e5717e07cf17b35f63"
+      }
+    ],
+    "modified_tracked_verus_bodies": [],
+    "normalizer": "Finite exact guard/call/argument patterns only; unexpected observations reject. Full-source token/site manifest is pinned in the reviewed boundary; current core diff independently restores baseline bytes after only18 guarded observations are removed.",
+    "dependency_freshness": "Every declared refinement campaign includes the shared generator. Its normalizer hash pin is checked both during import and by the standalone receipt validator after validating the generator source hash.",
+    "scope": "Default-feature component proofs only. The new thread-local observer and feature-enabled timing/interleavings are supported by tests and review, not an implementation-refinement proof. Existing component premises and trusted source adapters remain.",
+    "limitations": "Lexical equivalence checks are not a Rust compiler equivalence theorem. Manifest/pin updates remain reviewed trust-boundary changes."
+  },
+  "runtime_review": {
+    "worker_protocol": "129 exhausted failed attempts are counted; only the newest32 samples retained when enabled; dropped count explicit. Disabled mode avoids per-attempt counter-map snapshots. A single Error frame captures aggregate evidence before adapter destruction; retry/backoff and termination behavior remain unchanged.",
+    "service_scope": "Freshness describes acknowledged cumulative counter coverage only. Transport failures retain stale values with complete=false; no extra error-path metrics RPC, replay authorization or indeterminate-commit resolution is added.",
+    "fixture_scope": "Partial expiry eligibility is contention-fixture-only, matches active position/outbox/dedup query predicates and PostgreSQL partial index. Both variants use identical marker shape and validate policy plus offsets; original Extended fixture unchanged.",
+    "gate_scope": "Exact policy/diagnostic companions, bounded trace structure, completed-worker retry reconciliation, and rejection of retained terminal failed attempts are enforced. Missing final failure evidence remains possible and is documented."
+  },
+  "performance_review": "Public guide claims no speedup, sustainable capacity, physical MMHF result, or 10x result. It distinguishes same-feature-binary runtime on/off cost from compile-time feature cost, demands fixed diagnostic mode for policy comparisons, and retains failed/censored trials. Controlled90-cell completion must not be confused with all90 workloads passing.",
+  "existing_evidence_referenced": {
+    "process-review.json": "68e37163ee9840c5d9ef5273cb83c99d94d68820ee1c106dded4f4dda67dfdc9",
+    "controlled-review.json": "0b26a0d78f30f907a0f2b1b4de1fd98451d27b4727abc4972f8d301b9b57c5ac",
+    "development-to-final.json": "71bc9792e836c5c9ada36cc949a112fba501d066fd41e278f778fc30971471ba",
+    "p0-check.json": "10ccaae3ba788acabcf468cf9175534aee0fa4c8e20ca010fa3f7b8c24fd068f"
+  },
+  "final_pilot_status_observed": {
+    "wrapper_completed": false,
+    "wrapper_passed": false,
+    "pilot_completed": false,
+    "pilot_passed": false,
+    "checks_recorded": 31,
+    "scope": "Status observed during review only; this audit does not assert final pilot completion or passage."
+  },
+  "release_note": "No implementation/proof-scope blocker found after the two documentation corrections. Final planned validation and archival checks remain separate prerequisites; this review does not waive them."
+}

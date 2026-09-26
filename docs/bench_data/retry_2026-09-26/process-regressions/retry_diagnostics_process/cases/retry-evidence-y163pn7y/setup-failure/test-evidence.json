@@ -1,0 +1,9 @@
+{
+  "command": [
+    "/home/zpconn/code/aerostore/target/retry-final-validation/benchmark-final",
+    "--internal-worker",
+    "/home/zpconn/code/aerostore/target/retry-final-validation/process-regressions/retry_diagnostics_process/cases/retry-evidence-y163pn7y/setup-failure/missing-config.json"
+  ],
+  "exit_code": 2,
+  "binary_sha256": "603e528a21620e6cf610d15b923182907ffd7ea2ba317210cefd4696492ce11e"
+}

@@ -1,5 +1,6 @@
 pub mod aerostore;
 pub mod calibrated;
+pub mod fixture;
 pub mod measurement;
 pub mod maintenance;
 pub mod model;

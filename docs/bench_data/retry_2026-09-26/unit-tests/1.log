@@ -1,0 +1,13 @@
+   Compiling aerostore_core v0.1.0 (/home/zpconn/code/aerostore/aerostore_core)
+    Finished `release` profile [optimized] target(s) in 5.06s
+     Running unittests src/lib.rs (target/release/deps/aerostore_core-8643618cabdd95d9)
+
+running 5 tests
+test retry_diagnostics::tests::changed_epoch_after_payload_preparation_rejects_before_wal_or_publication ... ok
+test retry_diagnostics::tests::default_or_disabled_observations_are_empty ... ok
+test retry_diagnostics::tests::exhausted_index_bucket_budget_reports_the_actual_index ... ok
+test retry_diagnostics::tests::exhausted_partition_lock_budget_reports_retry_without_publication ... ok
+test retry_diagnostics::tests::first_event_is_consumed_cleared_and_isolated_between_threads ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 207 filtered out; finished in 0.00s
+

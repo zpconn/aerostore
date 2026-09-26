@@ -59,6 +59,7 @@ DISPATCH_DEFAULTS = {"dispatch": "identity", "affinity_ttl_ms": 0, "signature_pa
 MAINTENANCE_DEFAULTS = {"maintenance_mode": "batch", "projection_batch_size": 4,
                         "housekeeping_batch_size": 32, "max_maintenance_batches": 4096}
 CALIBRATED_DEFAULTS = {**DISPATCH_DEFAULTS, **MAINTENANCE_DEFAULTS}
+EXPERIMENT_DEFAULTS = {"expiry_index_policy": "all-active", "retry_diagnostics": False}
 EFFECT_FIELDS = ("created_views", "updated_views", "outputs", "claimed_events", "cancelled_events", "rescheduled_events", "expired_records", "expired_families")
 OUTCOME_FIELDS = EFFECT_FIELDS + ("missing_family", "allocation_deferred", "ignored_stale", "duplicate_messages")
 
@@ -110,11 +111,11 @@ def counts_match(actual, expected: dict) -> bool:
 def match_fields(config: dict) -> tuple:
     # Preserve historical stress keys; irrelevant timer defaults do not change
     # the fixed lifecycle/fleet corpora or their existing assessments.
-    return MATCH_FIELDS + (CALIBRATED_FIELDS + tuple(CALIBRATED_DEFAULTS) if config.get("workload") == "calibrated" else ())
+    return MATCH_FIELDS + tuple(EXPERIMENT_DEFAULTS) + (CALIBRATED_FIELDS + tuple(CALIBRATED_DEFAULTS) if config.get("workload") == "calibrated" else ())
 
 
 def config_value(config: dict, field: str):
-    return config.get(field, CALIBRATED_DEFAULTS.get(field))
+    return config.get(field, {**CALIBRATED_DEFAULTS, **EXPERIMENT_DEFAULTS}.get(field))
 
 
 def key(config: dict) -> tuple:
@@ -636,6 +637,108 @@ def continuous_timing_errors(run: dict, completed: int) -> list[str]:
     return errors
 
 
+def retry_trace_errors(trace: object, enabled: bool) -> list[str]:
+    """Validate bounded evidence without calling an incomplete cache complete."""
+    def uint(value):
+        return type(value) is int and 0 <= value < 2**64
+    if not isinstance(trace, dict):
+        return ["missing worker retry diagnostics"]
+    if (trace.get("version") != 1 or type(trace.get("version")) is not int
+            or trace.get("enabled") is not enabled
+            or type(trace.get("sample_limit")) is not int or trace.get("sample_limit") != 32
+            or not uint(trace.get("failed_attempts")) or not uint(trace.get("dropped_attempts"))
+            or not isinstance(trace.get("samples"), list)):
+        return ["malformed retry diagnostic header"]
+    samples = trace["samples"]
+    if (len(samples) != (min(32, trace["failed_attempts"]) if enabled else 0)
+            or trace["dropped_attempts"] != trace["failed_attempts"] - len(samples)):
+        return ["retry diagnostic truncation or disabled scope is inconsistent"]
+    errors = []
+    previous = None
+    for item in samples:
+        if not isinstance(item, dict) or not all(uint(item.get(field)) for field in
+                ("message_id", "attempt_index", "started_ns", "finished_ns", "cleanup_finished_ns")):
+            errors.append("malformed failed-attempt identity/clock")
+            continue
+        if (item["attempt_index"] > 128
+                or not item["started_ns"] <= item["finished_ns"] <= item["cleanup_finished_ns"]):
+            errors.append("invalid failed-attempt ordinal or timing")
+        if previous is not None:
+            if item["started_ns"] < previous["cleanup_finished_ns"]:
+                errors.append("failed-attempt intervals overlap")
+            if item["message_id"] == previous["message_id"] and item["attempt_index"] != previous["attempt_index"] + 1:
+                errors.append("failed-attempt retry ordinals skip within a retained message")
+            if item["message_id"] != previous["message_id"] and item["attempt_index"] != 0:
+                errors.append("new retained message does not begin with its original attempt")
+        previous = item
+        if (item.get("error_kind") not in {"conflict", "fatal"}
+                or not isinstance(item.get("error"), str) or len(item["error"]) > 512
+                or type(item.get("cleanup_ok")) is not bool
+                or (item.get("cleanup_error") is not None and
+                    (not isinstance(item["cleanup_error"], str) or len(item["cleanup_error"]) > 512))
+                or item.get("cleanup_ok") != (item.get("cleanup_error") is None)
+                or type(item.get("counter_regression")) is not bool):
+            errors.append("malformed failed-attempt error/cleanup evidence")
+        if item.get("counter_regression") is True:
+            errors.append("retry diagnostic cumulative counters regressed")
+        for field in ("retry_causes_delta", "diagnostics_delta", "cleanup_retry_causes_delta", "cleanup_diagnostics_delta"):
+            counts = item.get(field)
+            if not isinstance(counts, dict) or any(not isinstance(key, str) or not uint(value) for key, value in counts.items()):
+                errors.append("malformed failed-attempt counter delta")
+        status = item.get("metrics_status")
+        if not isinstance(status, dict) or type(status.get("complete")) is not bool:
+            errors.append("missing failed-attempt counter freshness")
+        elif status.get("source") == "local_adapter":
+            if status["complete"] is not True:
+                errors.append("local adapter snapshot incorrectly scoped")
+        elif status.get("source") == "service_cache":
+            fields = ("last_attempted_sequence", "last_completed_sequence", "last_metrics_sequence")
+            if (any(status.get(field) is not None and not uint(status[field]) for field in fields)
+                    or type(status.get("transport_failed")) is not bool
+                    or type(status.get("connected")) is not bool):
+                errors.append("malformed service counter freshness")
+            else:
+                complete = (status.get("last_metrics_sequence") is not None
+                            and status["last_metrics_sequence"] == status["last_completed_sequence"] == status["last_attempted_sequence"]
+                            and not status["transport_failed"])
+                if status["complete"] != complete:
+                    errors.append("stale service counters reported complete")
+        else:
+            errors.append("unknown failed-attempt counter source")
+    return errors
+
+
+def experiment_report_errors(run: dict, config: dict) -> list[str]:
+    policy, enabled = (config_value(config, field) for field in EXPERIMENT_DEFAULTS)
+    if policy not in {"all-active", "housekeeping"} or type(enabled) is not bool:
+        return ["invalid expiry/diagnostic experiment configuration"]
+    errors = []
+    modern = "worker_retry_diagnostics" in run
+    if run.get("expiry_index_policy", "all-active") != policy:
+        errors.append("reported native expiry eligibility differs from configuration")
+    expected_policy = "housekeeping" if config.get("engine") == "postgres" else policy
+    if (modern or "effective_expiry_index_policy" in run) and run.get("effective_expiry_index_policy") != expected_policy:
+        errors.append("reported effective expiry eligibility differs from engine configuration")
+    if enabled and run.get("retry_diagnostics_compiled") is not True:
+        errors.append("diagnostic mode lacks a diagnostic-feature binary")
+    traces = run.get("worker_retry_diagnostics")
+    if not modern and not enabled and policy == "all-active":
+        return errors  # Legacy default reports do not contain the optional trace.
+    workers = run.get("completed_by_worker", [])
+    if not isinstance(traces, list) or not isinstance(workers, list) or len(traces) != len(workers):
+        return errors + ["missing per-worker retry diagnostic coverage"]
+    for trace in traces:
+        trace_errors = retry_trace_errors(trace, enabled)
+        errors.extend(trace_errors)
+        if not trace_errors and any(item["error_kind"] != "conflict" or not item["cleanup_ok"]
+                or not item["metrics_status"]["complete"] or item["attempt_index"] >= 128
+                for item in trace["samples"]):
+            errors.append("completed worker contains a terminal failed attempt")
+    if not errors and sum(trace["failed_attempts"] for trace in traces) != run.get("retries"):
+        errors.append("successful-run failed attempts differ from completed transaction retries")
+    return errors
+
+
 def assess_trial(trial: dict, policy: dict, companion_keys: set[tuple] = frozenset()) -> dict:
     """Fail closed on incomplete input coverage, timing, errors or bad histories.
 
@@ -665,6 +768,7 @@ def assess_trial(trial: dict, policy: dict, companion_keys: set[tuple] = frozens
         reasons.append("expected exactly one sustained run")
         return result
     run = runs[0]
+    reasons.extend(experiment_report_errors(run, config))
     if run.get("engine") != config.get("engine") or run.get("scenario") != "sustained-mixed":
         reasons.append("wrong engine or sustained scenario")
     if run.get("passed") is not True or run.get("execution_completed") is not True or run.get("error"):
@@ -1041,6 +1145,8 @@ def main(argv=None) -> int:
     parser.add_argument("--housekeeping-batch-size", type=int, default=32)
     parser.add_argument("--max-maintenance-batches", type=int, default=4096,
                         help="sweep transaction cap per job, including its required empty terminal transaction")
+    parser.add_argument("--expiry-index", dest="expiry_index_policy", choices=["all-active", "housekeeping"], default="all-active", help="native fixture eligibility; PostgreSQL already uses housekeeping-only eligibility")
+    parser.add_argument("--retry-diagnostics", choices=["off", "on"], default="off", help="bounded origin/failed-attempt evidence; on requires a diagnostic-feature binary")
     parser.add_argument("--rates", type=comma_ints, default=[32, 64])
     parser.add_argument("--workers", type=comma_ints, default=[1, 2])
     parser.add_argument("--seeds", type=comma_ints, default=[20260924, 20260925, 20260926])
@@ -1167,7 +1273,8 @@ def main(argv=None) -> int:
                           "pg_write_mode": args.pg_write_mode, "rpc_delay_us": args.rpc_delay_us,
                           "global_time_predicates": False, "shm_mib": args.shm_mib,
                           "max_backlog": args.max_backlog, "max_messages": args.max_messages,
-                          "message_interval_us": 0}
+                          "message_interval_us": 0, "expiry_index_policy": args.expiry_index_policy,
+                          "retry_diagnostics": args.retry_diagnostics == "on"}
                 if args.workload == "calibrated":
                     config.update(projection_interval_seconds=args.projection_interval_seconds,
                                   housekeeping_interval_seconds=args.housekeeping_interval_seconds,
@@ -1179,6 +1286,7 @@ def main(argv=None) -> int:
                 if args.workload == "calibrated":
                     for name in CALIBRATED_FIELDS + tuple(CALIBRATED_DEFAULTS):
                         command += ["--" + name.replace("_", "-"), str(config[name])]
+                command += ["--expiry-index", args.expiry_index_policy, "--retry-diagnostics", args.retry_diagnostics]
                 public_command = command.copy()
                 if engine == "postgres":
                     command += ["--pg-url", secret]

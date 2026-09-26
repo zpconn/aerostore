@@ -1,0 +1,16 @@
+checked 250/1393 archive artifacts
+checked 500/1393 archive artifacts
+checked 750/1393 archive artifacts
+checked 1000/1393 archive artifacts
+checked 1250/1393 archive artifacts
+Traceback (most recent call last):
+  File "/home/zpconn/code/aerostore/target/retry-final-validation/review_archive.py", line 176, in <module>
+    if __name__=='__main__':raise SystemExit(main())
+                                             ^^^^^^
+  File "/home/zpconn/code/aerostore/target/retry-final-validation/review_archive.py", line 104, in main
+    for name in ('initial.json','offered-schedule.json','history.jsonl'):entry_for(evidence/name)
+                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zpconn/code/aerostore/target/retry-final-validation/review_archive.py", line 40, in entry_for
+    if source not in bysource:raise ValueError('missing retained source '+source)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: missing retained source target/retry-final-validation/controlled-campaign/060-postgres-r2048-s20260924-all-active-diag-off-full/postgres-r2048-w4-s20260924-tntkfssg/contention-crucible-JGGB36/postgres-0/initial.json

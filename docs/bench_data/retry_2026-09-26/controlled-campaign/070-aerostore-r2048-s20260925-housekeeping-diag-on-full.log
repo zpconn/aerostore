@@ -1,0 +1,2 @@
+START aerostore rate=2048 workers=4 seed=20260925
+DONE aerostore valid=True capacity_pass=False

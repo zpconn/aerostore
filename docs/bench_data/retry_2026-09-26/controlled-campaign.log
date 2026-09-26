@@ -1,0 +1,181 @@
+START 000-postgres-r128-s20260924-all-active-diag-off-full
+DONE 000-postgres-r128-s20260924-all-active-diag-off-full valid= True
+START 001-aerostore-r128-s20260924-all-active-diag-off-full
+DONE 001-aerostore-r128-s20260924-all-active-diag-off-full valid= True
+START 002-aerostore-r128-s20260924-housekeeping-diag-off-full
+DONE 002-aerostore-r128-s20260924-housekeeping-diag-off-full valid= True
+START 003-aerostore-r128-s20260924-housekeeping-diag-on-full
+DONE 003-aerostore-r128-s20260924-housekeeping-diag-on-full valid= True
+START 004-aerostore-r128-s20260924-all-active-diag-on-full
+DONE 004-aerostore-r128-s20260924-all-active-diag-on-full valid= True
+START 005-aerostore-r128-s20260924-all-active-diag-on-metrics
+DONE 005-aerostore-r128-s20260924-all-active-diag-on-metrics valid= True
+START 006-aerostore-r128-s20260924-housekeeping-diag-on-metrics
+DONE 006-aerostore-r128-s20260924-housekeeping-diag-on-metrics valid= True
+START 007-aerostore-r128-s20260924-housekeeping-diag-off-metrics
+DONE 007-aerostore-r128-s20260924-housekeeping-diag-off-metrics valid= True
+START 008-aerostore-r128-s20260924-all-active-diag-off-metrics
+DONE 008-aerostore-r128-s20260924-all-active-diag-off-metrics valid= True
+START 009-postgres-r128-s20260924-all-active-diag-off-metrics
+DONE 009-postgres-r128-s20260924-all-active-diag-off-metrics valid= True
+START 010-aerostore-r128-s20260925-all-active-diag-off-full
+DONE 010-aerostore-r128-s20260925-all-active-diag-off-full valid= True
+START 011-aerostore-r128-s20260925-all-active-diag-on-full
+DONE 011-aerostore-r128-s20260925-all-active-diag-on-full valid= True
+START 012-aerostore-r128-s20260925-housekeeping-diag-on-full
+DONE 012-aerostore-r128-s20260925-housekeeping-diag-on-full valid= True
+START 013-aerostore-r128-s20260925-housekeeping-diag-off-full
+DONE 013-aerostore-r128-s20260925-housekeeping-diag-off-full valid= True
+START 014-postgres-r128-s20260925-all-active-diag-off-full
+DONE 014-postgres-r128-s20260925-all-active-diag-off-full valid= True
+START 015-postgres-r128-s20260925-all-active-diag-off-metrics
+DONE 015-postgres-r128-s20260925-all-active-diag-off-metrics valid= True
+START 016-aerostore-r128-s20260925-housekeeping-diag-off-metrics
+DONE 016-aerostore-r128-s20260925-housekeeping-diag-off-metrics valid= True
+START 017-aerostore-r128-s20260925-housekeeping-diag-on-metrics
+DONE 017-aerostore-r128-s20260925-housekeeping-diag-on-metrics valid= True
+START 018-aerostore-r128-s20260925-all-active-diag-on-metrics
+DONE 018-aerostore-r128-s20260925-all-active-diag-on-metrics valid= True
+START 019-aerostore-r128-s20260925-all-active-diag-off-metrics
+DONE 019-aerostore-r128-s20260925-all-active-diag-off-metrics valid= True
+START 020-postgres-r128-s20260926-all-active-diag-off-full
+DONE 020-postgres-r128-s20260926-all-active-diag-off-full valid= True
+START 021-aerostore-r128-s20260926-housekeeping-diag-on-full
+DONE 021-aerostore-r128-s20260926-housekeeping-diag-on-full valid= True
+START 022-aerostore-r128-s20260926-all-active-diag-on-full
+DONE 022-aerostore-r128-s20260926-all-active-diag-on-full valid= True
+START 023-aerostore-r128-s20260926-all-active-diag-off-full
+DONE 023-aerostore-r128-s20260926-all-active-diag-off-full valid= True
+START 024-aerostore-r128-s20260926-housekeeping-diag-off-full
+DONE 024-aerostore-r128-s20260926-housekeeping-diag-off-full valid= True
+START 025-aerostore-r128-s20260926-housekeeping-diag-off-metrics
+DONE 025-aerostore-r128-s20260926-housekeeping-diag-off-metrics valid= True
+START 026-aerostore-r128-s20260926-all-active-diag-off-metrics
+DONE 026-aerostore-r128-s20260926-all-active-diag-off-metrics valid= True
+START 027-aerostore-r128-s20260926-all-active-diag-on-metrics
+DONE 027-aerostore-r128-s20260926-all-active-diag-on-metrics valid= True
+START 028-aerostore-r128-s20260926-housekeeping-diag-on-metrics
+DONE 028-aerostore-r128-s20260926-housekeeping-diag-on-metrics valid= True
+START 029-postgres-r128-s20260926-all-active-diag-off-metrics
+DONE 029-postgres-r128-s20260926-all-active-diag-off-metrics valid= True
+START 030-aerostore-r512-s20260924-housekeeping-diag-on-full
+DONE 030-aerostore-r512-s20260924-housekeeping-diag-on-full valid= True
+START 031-aerostore-r512-s20260924-housekeeping-diag-off-full
+DONE 031-aerostore-r512-s20260924-housekeeping-diag-off-full valid= True
+START 032-aerostore-r512-s20260924-all-active-diag-off-full
+DONE 032-aerostore-r512-s20260924-all-active-diag-off-full valid= True
+START 033-aerostore-r512-s20260924-all-active-diag-on-full
+DONE 033-aerostore-r512-s20260924-all-active-diag-on-full valid= True
+START 034-postgres-r512-s20260924-all-active-diag-off-full
+DONE 034-postgres-r512-s20260924-all-active-diag-off-full valid= True
+START 035-postgres-r512-s20260924-all-active-diag-off-metrics
+DONE 035-postgres-r512-s20260924-all-active-diag-off-metrics valid= True
+START 036-aerostore-r512-s20260924-all-active-diag-on-metrics
+DONE 036-aerostore-r512-s20260924-all-active-diag-on-metrics valid= True
+START 037-aerostore-r512-s20260924-all-active-diag-off-metrics
+DONE 037-aerostore-r512-s20260924-all-active-diag-off-metrics valid= True
+START 038-aerostore-r512-s20260924-housekeeping-diag-off-metrics
+DONE 038-aerostore-r512-s20260924-housekeeping-diag-off-metrics valid= True
+START 039-aerostore-r512-s20260924-housekeeping-diag-on-metrics
+DONE 039-aerostore-r512-s20260924-housekeeping-diag-on-metrics valid= True
+START 040-postgres-r512-s20260925-all-active-diag-off-full
+DONE 040-postgres-r512-s20260925-all-active-diag-off-full valid= True
+START 041-aerostore-r512-s20260925-all-active-diag-off-full
+DONE 041-aerostore-r512-s20260925-all-active-diag-off-full valid= True
+START 042-aerostore-r512-s20260925-housekeeping-diag-off-full
+DONE 042-aerostore-r512-s20260925-housekeeping-diag-off-full valid= True
+START 043-aerostore-r512-s20260925-housekeeping-diag-on-full
+DONE 043-aerostore-r512-s20260925-housekeeping-diag-on-full valid= True
+START 044-aerostore-r512-s20260925-all-active-diag-on-full
+DONE 044-aerostore-r512-s20260925-all-active-diag-on-full valid= True
+START 045-aerostore-r512-s20260925-all-active-diag-on-metrics
+DONE 045-aerostore-r512-s20260925-all-active-diag-on-metrics valid= True
+START 046-aerostore-r512-s20260925-housekeeping-diag-on-metrics
+DONE 046-aerostore-r512-s20260925-housekeeping-diag-on-metrics valid= True
+START 047-aerostore-r512-s20260925-housekeeping-diag-off-metrics
+DONE 047-aerostore-r512-s20260925-housekeeping-diag-off-metrics valid= True
+START 048-aerostore-r512-s20260925-all-active-diag-off-metrics
+DONE 048-aerostore-r512-s20260925-all-active-diag-off-metrics valid= True
+START 049-postgres-r512-s20260925-all-active-diag-off-metrics
+DONE 049-postgres-r512-s20260925-all-active-diag-off-metrics valid= True
+START 050-aerostore-r512-s20260926-all-active-diag-off-full
+DONE 050-aerostore-r512-s20260926-all-active-diag-off-full valid= True
+START 051-aerostore-r512-s20260926-all-active-diag-on-full
+DONE 051-aerostore-r512-s20260926-all-active-diag-on-full valid= True
+START 052-aerostore-r512-s20260926-housekeeping-diag-on-full
+DONE 052-aerostore-r512-s20260926-housekeeping-diag-on-full valid= True
+START 053-aerostore-r512-s20260926-housekeeping-diag-off-full
+DONE 053-aerostore-r512-s20260926-housekeeping-diag-off-full valid= True
+START 054-postgres-r512-s20260926-all-active-diag-off-full
+DONE 054-postgres-r512-s20260926-all-active-diag-off-full valid= True
+START 055-postgres-r512-s20260926-all-active-diag-off-metrics
+DONE 055-postgres-r512-s20260926-all-active-diag-off-metrics valid= True
+START 056-aerostore-r512-s20260926-housekeeping-diag-off-metrics
+DONE 056-aerostore-r512-s20260926-housekeeping-diag-off-metrics valid= True
+START 057-aerostore-r512-s20260926-housekeeping-diag-on-metrics
+DONE 057-aerostore-r512-s20260926-housekeeping-diag-on-metrics valid= True
+START 058-aerostore-r512-s20260926-all-active-diag-on-metrics
+DONE 058-aerostore-r512-s20260926-all-active-diag-on-metrics valid= True
+START 059-aerostore-r512-s20260926-all-active-diag-off-metrics
+DONE 059-aerostore-r512-s20260926-all-active-diag-off-metrics valid= True
+START 060-postgres-r2048-s20260924-all-active-diag-off-full
+DONE 060-postgres-r2048-s20260924-all-active-diag-off-full valid= False
+START 061-aerostore-r2048-s20260924-housekeeping-diag-on-full
+DONE 061-aerostore-r2048-s20260924-housekeeping-diag-on-full valid= True
+START 062-aerostore-r2048-s20260924-all-active-diag-on-full
+DONE 062-aerostore-r2048-s20260924-all-active-diag-on-full valid= False
+START 063-aerostore-r2048-s20260924-all-active-diag-off-full
+DONE 063-aerostore-r2048-s20260924-all-active-diag-off-full valid= False
+START 064-aerostore-r2048-s20260924-housekeeping-diag-off-full
+DONE 064-aerostore-r2048-s20260924-housekeeping-diag-off-full valid= True
+START 065-aerostore-r2048-s20260924-housekeeping-diag-off-metrics
+DONE 065-aerostore-r2048-s20260924-housekeeping-diag-off-metrics valid= True
+START 066-aerostore-r2048-s20260924-all-active-diag-off-metrics
+DONE 066-aerostore-r2048-s20260924-all-active-diag-off-metrics valid= True
+START 067-aerostore-r2048-s20260924-all-active-diag-on-metrics
+DONE 067-aerostore-r2048-s20260924-all-active-diag-on-metrics valid= False
+START 068-aerostore-r2048-s20260924-housekeeping-diag-on-metrics
+DONE 068-aerostore-r2048-s20260924-housekeeping-diag-on-metrics valid= False
+START 069-postgres-r2048-s20260924-all-active-diag-off-metrics
+DONE 069-postgres-r2048-s20260924-all-active-diag-off-metrics valid= False
+START 070-aerostore-r2048-s20260925-housekeeping-diag-on-full
+DONE 070-aerostore-r2048-s20260925-housekeeping-diag-on-full valid= True
+START 071-aerostore-r2048-s20260925-housekeeping-diag-off-full
+DONE 071-aerostore-r2048-s20260925-housekeeping-diag-off-full valid= False
+START 072-aerostore-r2048-s20260925-all-active-diag-off-full
+DONE 072-aerostore-r2048-s20260925-all-active-diag-off-full valid= False
+START 073-aerostore-r2048-s20260925-all-active-diag-on-full
+DONE 073-aerostore-r2048-s20260925-all-active-diag-on-full valid= False
+START 074-postgres-r2048-s20260925-all-active-diag-off-full
+DONE 074-postgres-r2048-s20260925-all-active-diag-off-full valid= False
+START 075-postgres-r2048-s20260925-all-active-diag-off-metrics
+DONE 075-postgres-r2048-s20260925-all-active-diag-off-metrics valid= False
+START 076-aerostore-r2048-s20260925-all-active-diag-on-metrics
+DONE 076-aerostore-r2048-s20260925-all-active-diag-on-metrics valid= False
+START 077-aerostore-r2048-s20260925-all-active-diag-off-metrics
+DONE 077-aerostore-r2048-s20260925-all-active-diag-off-metrics valid= False
+START 078-aerostore-r2048-s20260925-housekeeping-diag-off-metrics
+DONE 078-aerostore-r2048-s20260925-housekeeping-diag-off-metrics valid= False
+START 079-aerostore-r2048-s20260925-housekeeping-diag-on-metrics
+DONE 079-aerostore-r2048-s20260925-housekeeping-diag-on-metrics valid= False
+START 080-postgres-r2048-s20260926-all-active-diag-off-full
+DONE 080-postgres-r2048-s20260926-all-active-diag-off-full valid= False
+START 081-aerostore-r2048-s20260926-all-active-diag-off-full
+DONE 081-aerostore-r2048-s20260926-all-active-diag-off-full valid= False
+START 082-aerostore-r2048-s20260926-housekeeping-diag-off-full
+DONE 082-aerostore-r2048-s20260926-housekeeping-diag-off-full valid= False
+START 083-aerostore-r2048-s20260926-housekeeping-diag-on-full
+DONE 083-aerostore-r2048-s20260926-housekeeping-diag-on-full valid= False
+START 084-aerostore-r2048-s20260926-all-active-diag-on-full
+DONE 084-aerostore-r2048-s20260926-all-active-diag-on-full valid= False
+START 085-aerostore-r2048-s20260926-all-active-diag-on-metrics
+DONE 085-aerostore-r2048-s20260926-all-active-diag-on-metrics valid= False
+START 086-aerostore-r2048-s20260926-housekeeping-diag-on-metrics
+DONE 086-aerostore-r2048-s20260926-housekeeping-diag-on-metrics valid= False
+START 087-aerostore-r2048-s20260926-housekeeping-diag-off-metrics
+DONE 087-aerostore-r2048-s20260926-housekeeping-diag-off-metrics valid= False
+START 088-aerostore-r2048-s20260926-all-active-diag-off-metrics
+DONE 088-aerostore-r2048-s20260926-all-active-diag-off-metrics valid= False
+START 089-postgres-r2048-s20260926-all-active-diag-off-metrics
+DONE 089-postgres-r2048-s20260926-all-active-diag-off-metrics valid= False
+{"completed": true, "passed": true, "all_trials_execution_valid": false, "elapsed_seconds": 556.227968688996, "source_stable": true}

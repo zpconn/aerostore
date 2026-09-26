@@ -1,0 +1,8 @@
+{
+  "engine": "postgres",
+  "error": "worker 2: calibrated offered backlog 1013 exceeds worker bound 1000 after 730 completions; all independently due jobs remain admitted",
+  "evidence_directory": "/home/zpconn/code/aerostore/target/retry-final-validation/controlled-campaign/089-postgres-r2048-s20260926-all-active-diag-off-metrics/postgres-r2048-w4-s20260926-sluehre0/contention-crucible-qg6MAe/postgres-0",
+  "execution_completed": false,
+  "passed": false,
+  "scenario": null
+}

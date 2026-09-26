@@ -7,9 +7,19 @@ It does not prove native implementations satisfy the abstract primitive trait.
 """
 from pathlib import Path
 import argparse
+import importlib.util
+import hashlib
 import re
 
 ROOT = Path(__file__).resolve().parents[2]
+# Existing component receipts bind this file. Pin its normalization dependency
+# explicitly so a changed imported module cannot reuse an earlier proof receipt.
+_DIAGNOSTIC_NORMALIZER_SHA256 = "c741c113689c7afe0ca94473cf9c029abfae647cefef656b4d3e40787ee7cb8c"
+if hashlib.sha256((ROOT / "verification/retry_diagnostics/normalize.py").read_bytes()).hexdigest() != _DIAGNOSTIC_NORMALIZER_SHA256:
+    raise ValueError("unreviewed retry-diagnostic proof normalization dependency")
+_diagnostic_spec = importlib.util.spec_from_file_location("default_retry_diagnostic_normalizer", ROOT / "verification/retry_diagnostics/normalize.py")
+_diagnostic_normalizer = importlib.util.module_from_spec(_diagnostic_spec)
+_diagnostic_spec.loader.exec_module(_diagnostic_normalizer)
 SOURCE = ROOT / "aerostore_core/src/occ_partitioned.rs"
 CONTRACTS = Path(__file__).with_name("contracts.rs")
 OUTPUT = Path(__file__).with_name("commit.verus.rs")
@@ -40,7 +50,7 @@ def tokenize(source: str) -> list[str]:
                     offset = end + 2
         elif not token.isspace() and not token.startswith("//"):
             result.append(token)
-    return result
+    return _diagnostic_normalizer.normalize(result)
 
 
 def balanced_end(tokens: list[str], start: int) -> int:

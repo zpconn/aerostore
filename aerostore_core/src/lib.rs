@@ -15,6 +15,7 @@ pub mod rbo_planner;
 pub mod recovery;
 pub mod recovery_delta;
 pub mod retry;
+pub mod retry_diagnostics;
 pub mod shm;
 pub mod shm_index;
 mod shm_lock;

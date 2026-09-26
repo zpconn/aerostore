@@ -15,6 +15,15 @@ import run_remote_contention as runner
 
 
 class RemoteHandshakeTests(unittest.TestCase):
+    def test_expiry_and_diagnostic_setup_defaults_cannot_hide_peer_mismatch(self):
+        runner.validate_dispatch_setup({}, runner.EXPERIMENT_DEFAULTS)
+        expected = {"expiry_index_policy":"housekeeping", "retry_diagnostics":True}
+        runner.validate_dispatch_setup(expected, expected)
+        for setup in ({}, {**expected,"expiry_index_policy":"all-active"},
+                      {**expected,"retry_diagnostics":False}, {**expected,"retry_diagnostics":1}):
+            with self.subTest(setup=setup), self.assertRaisesRegex(RuntimeError, "differs from the client"):
+                runner.validate_dispatch_setup(setup, expected)
+
     def test_maintenance_setup_defaults_and_every_option_must_match(self):
         runner.validate_dispatch_setup({}, runner.MAINTENANCE_DEFAULTS)
         expected = dict(maintenance_mode="sweep", projection_batch_size=8,
@@ -34,7 +43,8 @@ class RemoteHandshakeTests(unittest.TestCase):
             binary.write_bytes(b"fixture; never executed")
             output = Path(directory) / "evidence"
             options = {"--maintenance-mode": "sweep", "--projection-batch-size": "8",
-                       "--housekeeping-batch-size": "64", "--max-maintenance-batches": "100"}
+                       "--housekeeping-batch-size": "64", "--max-maintenance-batches": "100",
+                       "--expiry-index":"housekeeping", "--retry-diagnostics":"on"}
             argv = ["run_remote_contention.py", "--binary", str(binary), "--output-dir", str(output),
                     "--workload", "calibrated", "--families", "16", "--hot-percent", "0",
                     *[part for pair in options.items() for part in pair]]

@@ -1,0 +1,38 @@
+{
+  "passed": false,
+  "errors": [
+    "frozen boundary path set changed; review new/deleted engine or contract files",
+    "frozen boundary changed: aerostore_core/Cargo.toml",
+    "frozen boundary changed: aerostore_core/benches/contention_crucible/aerostore.rs",
+    "frozen boundary changed: aerostore_core/benches/contention_crucible/mod.rs",
+    "frozen boundary changed: aerostore_core/benches/contention_crucible/remote.rs",
+    "frozen boundary changed: aerostore_core/benches/contention_crucible/runner.rs",
+    "frozen boundary changed: aerostore_core/benches/contention_crucible/service.rs",
+    "frozen boundary changed: aerostore_core/benches/contention_crucible/workers.rs",
+    "frozen boundary changed: aerostore_core/src/lib.rs",
+    "frozen boundary changed: aerostore_core/src/occ_partitioned.rs",
+    "frozen boundary changed: aerostore_core/src/wal_writer.rs",
+    "frozen boundary changed: aerostore_core/tests/contention_diagnostics.rs",
+    "frozen boundary changed: scripts/check_formal_coverage.py",
+    "frozen boundary changed: scripts/qualify_hyperfeed.py",
+    "frozen boundary changed: scripts/run_remote_contention.py",
+    "frozen boundary changed: scripts/test_hyperfeed_qualification.py",
+    "frozen boundary changed: scripts/test_run_remote_contention.py",
+    "frozen boundary changed: verification/concurrent/generate.py",
+    "frozen boundary changed: verification/concurrent/test_generate.py",
+    "frozen boundary changed: verification/contracts/p0_audit.md",
+    "frozen boundary changed: verification/contracts/p0_inventory.json"
+  ],
+  "scope": "change detection only; not a whole-engine refinement proof",
+  "checked_files": 376,
+  "baseline_ref": null,
+  "anchoring": "local_bootstrap_only",
+  "open_claims": [
+    "TX-HISTORY-IMPLEMENTATION",
+    "MEMORY-OWNERSHIP",
+    "MEMORY-PROGRESS",
+    "WEAK-MEMORY-MMAP",
+    "DURABILITY-IMPLEMENTATION",
+    "QUERY-APPLICATION"
+  ]
+}

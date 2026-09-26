@@ -1,0 +1,30 @@
+{
+  "started_at": "2026-09-26T07:18:44.795468+00:00",
+  "scope": "Previously authorized disposable PostgreSQL fixture for controlled retry/index comparison; persistent data retained.",
+  "command": [
+    "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/install/bin/pg_ctl",
+    "-D",
+    "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/data",
+    "-l",
+    "/home/zpconn/code/aerostore/target/retry-final-validation/postgres.log",
+    "-w",
+    "-t",
+    "30",
+    "start"
+  ],
+  "returncode": 0,
+  "stdout": "waiting for server to start.... done\nserver started\n",
+  "stderr": "",
+  "pid_file": [
+    "27929",
+    "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/data",
+    "1790407124",
+    "55432",
+    "/tmp/aerostore-tuned-pg-20260925",
+    "",
+    "  6341268         4",
+    "ready   "
+  ],
+  "proc_start_ticks": "3775448",
+  "executable": "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/install/bin/postgres"
+}

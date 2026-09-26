@@ -1,7 +1,7 @@
 //! Disposable TCP service owner for one trusted benchmark client host.
 //! This is a harness, not an authenticated or recoverable production service.
 use super::supervision::write_json;
-use super::{aerostore, calibrated, maintenance, model, service};
+use super::{aerostore, calibrated, fixture, maintenance, model, service};
 use crate::extended_crucible::model::Record;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -35,6 +35,10 @@ pub struct FrameSetup {
     pub housekeeping_batch_size: usize,
     #[serde(default = "calibrated::default_max_maintenance_batches")]
     pub max_maintenance_batches: u64,
+    #[serde(default)]
+    pub expiry_index_policy: fixture::ExpiryIndexPolicy,
+    #[serde(default)]
+    pub retry_diagnostics: bool,
     pub global_time_predicates: bool,
     pub initial_rows: Vec<Record>,
     pub server_pid: u32,
@@ -223,7 +227,12 @@ pub fn serve(
     projection_batch_size: usize,
     housekeeping_batch_size: usize,
     max_maintenance_batches: u64,
+    expiry_index_policy: fixture::ExpiryIndexPolicy,
+    retry_diagnostics: bool,
 ) -> Result<(), String> {
+    if retry_diagnostics && !aerostore_core::retry_diagnostics::compiled() {
+        return Err("retry diagnostics require the retry-diagnostics build feature".into());
+    }
     if !["legacy", "lifecycle", "fleet", "calibrated"].contains(&workload)
         || !(1..=1024).contains(&families)
         || (workload == "fleet" && families < 16)
@@ -296,7 +305,12 @@ pub fn serve(
         model::sustained_initial_for(workload, families, seed)
     };
     let result = (|| {
-        let shared = aerostore::Shared::create(&arena, shm_mib << 20, &initial)?;
+        let shared = aerostore::Shared::create_with_policy(
+            &arena,
+            shm_mib << 20,
+            &initial,
+            expiry_index_policy,
+        )?;
         let mut children = Children::default();
         // All forks precede watchdog, vacuum and service executor threads.
         let writer = aerostore_core::spawn_wal_writer_daemon(shared.ring.clone(), &wal)
@@ -347,7 +361,11 @@ pub fn serve(
         let mut server =
             service::Server::start(service::Endpoint::Tcp(bind), limits, move |session| {
                 let mapping = aerostore::Shared::attach(&attachment)?;
-                let mut adapter = aerostore::Adapter::new(&mapping, global_time);
+                let mut adapter = aerostore::Adapter::new_with_diagnostics(
+                    &mapping,
+                    global_time,
+                    retry_diagnostics,
+                );
                 session.serve(&mut adapter, |adapter| service::BackendMetrics {
                     metrics: adapter.metrics.clone(),
                     retry_causes: adapter.retry_causes.clone(),
@@ -370,6 +388,8 @@ pub fn serve(
             projection_batch_size,
             housekeeping_batch_size,
             max_maintenance_batches,
+            expiry_index_policy,
+            retry_diagnostics,
             global_time_predicates: global_time,
             initial_rows: initial.clone(),
             server_pid: std::process::id(),

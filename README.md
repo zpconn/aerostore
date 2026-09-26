@@ -191,6 +191,8 @@ The [architecture qualification harness](docs/hyperfeed_qualification.md) adds a
 
 The separate [cadence and ordering profile](docs/hyperfeed_calibrated.md) adds per-flight foreground ordering and independent projection/housekeeping timers using the architect's 5–10-minute cadence. Its [validation checkpoint](docs/bench_data/calibrated_2026-09-25/README.md) includes full-history runs across two real five-minute maintenance intervals. Optional [complete maintenance sweeps](docs/hyperfeed_maintenance.md) now commit configurable batches until an empty query establishes completion, with latency and throughput counted per scheduled job. The fixed synthetic population and uncalibrated mix still make these diagnostic results rather than qualified capacity evidence. The optional [temporary signature dispatcher](docs/hyperfeed_affinity.md) now reproduces the affinity policy confirmed for both HyperFeed deployments, including alias changes and expiry that can send one flight to multiple workers. Its identity control uses the same input messages. The frequent-maintenance workload remains stress coverage. [Paired two-host commands](docs/hyperfeed_two_host.md) prepare a later AeroStore/PostgreSQL comparison on separate worker and database hosts.
 
+Optional [retry diagnostics and expiry-index controls](docs/hyperfeed_retry_diagnostics.md) now preserve failed-worker counters and identify native rejection branches. The [90-trial investigation](docs/bench_data/retry_2026-09-26/README.md) reproduced projection retry exhaustion and points to due-range contention as the next engine experiment. Filtering expiry records remains an experimental option; it did not resolve that failure. The 10× target remains unqualified.
+
 ## Project layout
 
 | Path | Contents |

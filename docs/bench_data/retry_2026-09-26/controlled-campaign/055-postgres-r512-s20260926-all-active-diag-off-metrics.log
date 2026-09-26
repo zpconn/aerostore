@@ -1,0 +1,2 @@
+START postgres rate=512 workers=4 seed=20260926
+DONE postgres valid=True capacity_pass=False

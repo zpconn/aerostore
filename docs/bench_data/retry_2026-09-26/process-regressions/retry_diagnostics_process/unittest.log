@@ -1,0 +1,9 @@
+test_complete_sweeps_preserve_cumulative_done_evidence_in_each_transport (test_retry_diagnostics_process.RetryDiagnosticProcessTests.test_complete_sweeps_preserve_cumulative_done_evidence_in_each_transport) ... ok
+test_default_binary_rejects_requested_branch_diagnostics (test_retry_diagnostics_process.RetryDiagnosticProcessTests.test_default_binary_rejects_requested_branch_diagnostics) ... ok
+test_failed_job_keeps_pre_drop_counters_in_both_trace_modes (test_retry_diagnostics_process.RetryDiagnosticProcessTests.test_failed_job_keeps_pre_drop_counters_in_both_trace_modes) ... ok
+test_setup_failure_emits_exactly_one_error_without_fabricated_metrics (test_retry_diagnostics_process.RetryDiagnosticProcessTests.test_setup_failure_emits_exactly_one_error_without_fabricated_metrics) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 17.598s
+
+OK

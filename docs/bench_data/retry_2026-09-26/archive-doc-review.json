@@ -1,0 +1,351 @@
+{
+  "passed": true,
+  "errors": [],
+  "created_at": "2026-09-26T07:53:20.018359+00:00",
+  "scope": "Lightweight document-only refresh after successful main content audit. Verifies frozen main-manifest identity and separately archived audit hashes; does not repeat decompression or proof checks. Archive README may add audit links and later the completed guardrail result; substantive source/data changes require a fresh content review.",
+  "main_artifact_manifest_sha256": "61948a06cf0122b4536657247d2a6d5e7f00c637bd226344a462bc987d085bcd",
+  "deep_audit_sha256": "6554f429a26ce2986dccf630292e4a0e5d2f6eb6582ed7feb2c956defa51de13",
+  "previous_audit_manifest_sha256": "44f8d57768fbe5f6df8da579ded83939eb1bbdc2c1b40c1308817adec022cf38",
+  "review_script_sha256": "07efa97b6a08eb14f370513e7ea0d22ac17d8122fc43d1412932eb84333d89cf",
+  "document_sha256": {
+    "README.md": "e67a1f878d5483b6cfe59e4937de0a172aefe41fc25447100e190b67d61c8c1e",
+    "docs/bench_data/retry_2026-09-26/README.md": "f21d25e38337093e5b2ef70fe63fc415d02b6141286b77b12533bf8a3a4905f6",
+    "docs/bench_data/retry_2026-09-26/controlled-findings.md": "0a24ff8bf7d2666fa2871dc0e770e11414d477b739e1f22e4d83fb50876475fd",
+    "docs/hyperfeed_retry_diagnostics.md": "a6dc903fe1983d419cc7ff855a9b422de554ec5342ad0aa4adc6f8475a6990b3"
+  },
+  "document_only_changes": [
+    {
+      "path": "docs/bench_data/retry_2026-09-26/README.md",
+      "previous_sha256": "88492be3a0f5d1b5a4bd6da95d0fd81206c6d2c6cc678e118a415a51b9c6aebe",
+      "current_sha256": "f21d25e38337093e5b2ef70fe63fc415d02b6141286b77b12533bf8a3a4905f6"
+    }
+  ],
+  "relative_links": [
+    {
+      "document": "README.md",
+      "link": "aerostore_tcl/test.tcl",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "aerostore_core/src/lib.rs",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/transactional_indexes.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "verification/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/sustained_churn_correctness.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "verification/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/formal_verification_plan.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "verification/contracts/p0_audit.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "verification/planned_commit/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/verification_data/planned_commit_2026-09-23/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/verification_data/commit_completion_2026-09-23/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/verification_data/indexed_lookup_2026-09-23/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/verification_data/row_retention_2026-09-23/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/bench_data/verification_pilot_2026-09-23/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/bench_data/verified_engine_2026-09-23/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/bench_data/performance_repair_2026-09-23/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/bench_data/transactional_indexes_2026-09-22/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/bench_data/crucible_fixed_2026-09-22/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/bench_data/verified_engine_2026-09-23/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/nightly_perf.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/transactional_indexes.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/bench_data/transactional_indexes_2026-09-22/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/extended_crucible.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/extended_crucible_research.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/contention_crucible.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/bench_data/contention_2026-09-24/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/worker_failure_contract.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/hyperfeed_qualification.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/bench_data/architecture_2026-09-25/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/hyperfeed_calibrated.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/bench_data/calibrated_2026-09-25/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/hyperfeed_maintenance.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/hyperfeed_affinity.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/hyperfeed_two_host.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/hyperfeed_retry_diagnostics.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/bench_data/retry_2026-09-26/README.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "aerostore_core/",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "aerostore_tcl/",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "aerostore_macros/",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "scripts/",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "verification/contracts/durability.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/transactional_indexes.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/nightly_perf.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "docs/archive/README-2026-09-22.md",
+      "exists": true
+    },
+    {
+      "document": "README.md",
+      "link": "LICENSE",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/README.md",
+      "link": "controlled-findings.md",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/README.md",
+      "link": "controlled-review.json.gz",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/README.md",
+      "link": "controlled-campaign/execution.json.gz",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/README.md",
+      "link": "../../hyperfeed_retry_diagnostics.md",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/README.md",
+      "link": "implementation-review.json",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/README.md",
+      "link": "process-review.json",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/README.md",
+      "link": "guardrails/README.md",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/README.md",
+      "link": "development-to-final.json",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/README.md",
+      "link": "source.tar.gz",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/README.md",
+      "link": "build-provenance.json.gz",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/README.md",
+      "link": "default-build-provenance.json.gz",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/README.md",
+      "link": "run_controlled_campaign.py",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/README.md",
+      "link": "review_controlled_campaign.py",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/README.md",
+      "link": "artifact-manifest.json",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/README.md",
+      "link": "archive-review.json",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/README.md",
+      "link": "audit-manifest.json",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/controlled-findings.md",
+      "link": "controlled-review.json.gz",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/controlled-findings.md",
+      "link": "review_controlled_campaign.py",
+      "exists": true
+    },
+    {
+      "document": "docs/bench_data/retry_2026-09-26/controlled-findings.md",
+      "link": "controlled-campaign/execution.json.gz",
+      "exists": true
+    }
+  ],
+  "deferred_guardrail_links": []
+}

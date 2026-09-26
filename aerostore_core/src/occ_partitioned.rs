@@ -557,6 +557,8 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             let stamp = index.transactional_stamp(*bucket)?;
             if !aerostore_verified::stamp_precedes_snapshot(stamp, tx.txid) {
                 tx.index_conflict = true;
+                #[cfg(feature = "retry-diagnostics")]
+                crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::LookupPostSnapshotStamp, Some(index.header_offset()), None);
                 return Err(Error::SerializationFailure);
             }
             if let Some(previous) = tx
@@ -566,6 +568,8 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             {
                 if previous.stamp != stamp {
                     tx.index_conflict = true;
+                    #[cfg(feature = "retry-diagnostics")]
+                    crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::LookupChangedCapturedStamp, Some(index.header_offset()), None);
                     return Err(Error::SerializationFailure);
                 }
             } else {
@@ -807,11 +811,15 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             }
             std::hint::spin_loop();
         }
+        #[cfg(feature = "retry-diagnostics")]
+        crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::IndexBucketBusy, Some(index.header_offset()), None);
         Err(Error::SerializationFailure)
     }
 
     fn index_read_conflict(&self, tx: &OccTransaction<T>) -> Result<bool, Error> {
         if tx.index_conflict {
+            #[cfg(feature = "retry-diagnostics")]
+            crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::StickyIndexConflict, None, None);
             return Ok(true);
         }
         for read in &tx.index_reads {
@@ -822,6 +830,8 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
                 .ok_or(Error::IndexBindingsIncomplete)?;
             let stamp = bound.index.transactional_stamp(read.bucket)?;
             if stamp != read.stamp || !aerostore_verified::stamp_precedes_snapshot(stamp, tx.txid) {
+                #[cfg(feature = "retry-diagnostics")]
+                crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::PredicateValidationStamp, Some(read.index_offset), None);
                 return Ok(true);
             }
         }
@@ -1084,6 +1094,8 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
 
         if self.row_locked_by_other_tx(row, tx.txid) {
             std::thread::yield_now();
+            #[cfg(feature = "retry-diagnostics")]
+            crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::LockForUpdateHeld, None, Some(row_id));
             return Err(Error::SerializationFailure);
         }
 
@@ -1100,6 +1112,8 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
                 false
             } else {
                 std::thread::yield_now();
+                #[cfg(feature = "retry-diagnostics")]
+                crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::LockForUpdateRace, None, Some(row_id));
                 return Err(Error::SerializationFailure);
             }
         };
@@ -1134,6 +1148,8 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             let row = self.resolve_row_ptr(&row_ptr)?;
             if self.row_locked_by_other_tx(row, tx.txid) {
                 std::thread::yield_now();
+                #[cfg(feature = "retry-diagnostics")]
+                crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::ReadRowLocked, None, Some(row_id));
                 return Err(Error::SerializationFailure);
             }
             let observed_xmin = row.xmin;
@@ -1167,6 +1183,8 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             let row = self.resolve_row_ptr(&visible_ptr)?;
             if self.row_locked_by_other_tx(row, tx.txid) {
                 std::thread::yield_now();
+                #[cfg(feature = "retry-diagnostics")]
+                crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::WriteRowLocked, None, Some(row_id));
                 return Err(Error::SerializationFailure);
             }
             visible_ptr
@@ -1217,6 +1235,8 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             let row = self.resolve_row_ptr(&visible_ptr)?;
             if self.row_locked_by_other_tx(row, tx.txid) {
                 std::thread::yield_now();
+                #[cfg(feature = "retry-diagnostics")]
+                crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::WriteDirtyRowLocked, None, Some(row_id));
                 return Err(Error::SerializationFailure);
             }
             visible_ptr
@@ -1327,6 +1347,8 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         let locks = match self.acquire_partition_locks(tx) {
             Ok(locks) => locks,
             Err(Error::SerializationFailure) => {
+                #[cfg(feature = "retry-diagnostics")]
+                crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::PartitionLockBusy, None, None);
                 drop(index_locks);
                 self.abort_for_serialization_failure(tx);
                 return Err(Error::SerializationFailure.into());
@@ -1661,12 +1683,16 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             let current_head = slot.head.load(Ordering::Acquire);
             let expected_head = write.base_ptr.load(Ordering::Acquire);
             if current_head != expected_head {
+                #[cfg(feature = "retry-diagnostics")]
+                crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::WriteBaseHeadChanged, None, Some(write.row_id));
                 return Ok(true);
             }
 
             if expected_head != EMPTY_PTR {
                 let base_row = self.resolve_row_ptr(&write.base_ptr)?;
                 if base_row.xmax.load(Ordering::Acquire) != 0 {
+                    #[cfg(feature = "retry-diagnostics")]
+                    crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::WriteBaseXmaxSet, None, Some(write.row_id));
                     return Ok(true);
                 }
             }
@@ -1690,6 +1716,8 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             };
             let visible = self.resolve_row_ptr(&visible_ptr)?;
             if self.row_locked_by_other_tx(visible, tx.txid) {
+                #[cfg(feature = "retry-diagnostics")]
+                crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::CommitRowLocked, None, Some(*row_id));
                 return Ok(true);
             }
         }
@@ -1701,6 +1729,8 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
         for read in &tx.read_set {
             let row = self.resolve_row_ptr(&read.row_ptr)?;
             if row.xmin != read.observed_xmin {
+                #[cfg(feature = "retry-diagnostics")]
+                crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::ReadVersionIdentityChanged, None, Some(read.row_id));
                 return Ok(true);
             }
 
@@ -1712,6 +1742,8 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             let committed_after_snapshot =
                 xmax >= tx.snapshot_xmax || tx.snapshot_active.contains(&xmax);
             if committed_after_snapshot {
+                #[cfg(feature = "retry-diagnostics")]
+                crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::ReadVersionDeletedAfterSnapshot, None, Some(read.row_id));
                 return Ok(true);
             }
         }
@@ -1774,6 +1806,8 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             steps = steps.wrapping_add(1);
             if steps > MAX_VISIBLE_CHAIN_STEPS {
                 std::thread::yield_now();
+                #[cfg(feature = "retry-diagnostics")]
+                crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::VisibleChainLimit, None, Some(row_id));
                 return Err(Error::SerializationFailure);
             }
             let row_ptr = RelPtr::from_offset(head_offset);

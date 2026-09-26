@@ -26,13 +26,14 @@ DISPATCH_DEFAULTS = {"dispatch": "identity", "affinity_ttl_ms": 0, "signature_pa
 MAINTENANCE_DEFAULTS = {"maintenance_mode": "batch", "projection_batch_size": 4,
                         "housekeeping_batch_size": 32, "max_maintenance_batches": 4096}
 CALIBRATED_DEFAULTS = {**DISPATCH_DEFAULTS, **MAINTENANCE_DEFAULTS}
+EXPERIMENT_DEFAULTS = {"expiry_index_policy": "all-active", "retry_diagnostics": False}
 
 
 def validate_dispatch_setup(setup: dict, expected: dict) -> None:
     """Missing fields identify the historic identity/both control only."""
     if any(type(setup.get(field, default)) is not type(expected.get(field, default))
            or setup.get(field, default) != expected.get(field, default)
-           for field, default in CALIBRATED_DEFAULTS.items()):
+           for field, default in {**CALIBRATED_DEFAULTS, **EXPERIMENT_DEFAULTS}.items()):
         raise RuntimeError("server setup dispatch/signature/maintenance configuration differs from the client")
 
 
@@ -220,6 +221,8 @@ def main() -> int:
     parser.add_argument("--affinity-ttl-ms", type=int, default=0,
                         help="explicit sliding TTL in 1..3600000 ms required for signature-affinity")
     parser.add_argument("--signature-pattern", choices=["both", "mixed"], default="both")
+    parser.add_argument("--expiry-index", dest="expiry_index_policy", choices=["all-active", "housekeeping"], default="all-active")
+    parser.add_argument("--retry-diagnostics", choices=["off", "on"], default="off")
     parser.add_argument("--maintenance-mode", choices=["batch", "sweep"], default="batch")
     parser.add_argument("--projection-batch-size", type=int, default=4)
     parser.add_argument("--housekeeping-batch-size", type=int, default=32)
@@ -285,7 +288,8 @@ def main() -> int:
               "--maintenance-mode", args.maintenance_mode,
               "--projection-batch-size", str(args.projection_batch_size),
               "--housekeeping-batch-size", str(args.housekeeping_batch_size),
-              "--max-maintenance-batches", str(args.max_maintenance_batches)]
+              "--max-maintenance-batches", str(args.max_maintenance_batches),
+              "--expiry-index", args.expiry_index_policy, "--retry-diagnostics", args.retry_diagnostics]
     server_args = [args.remote_binary if args.ssh_host else str(binary),
                    "--mode", "serve", "--engine", "service-tcp", "--seconds", str(timeout),
                    "--service-bind", bind, "--output", server_setup, *common]
@@ -324,7 +328,7 @@ def main() -> int:
                                       stderr=subprocess.STDOUT, start_new_session=True)
             setup = wait_until(lambda: ready_setup(read_setup(server_setup, args.ssh_host)),
                                min(deadline, time.monotonic()+60), [("server", server)])
-            validate_dispatch_setup(setup, vars(args))
+            validate_dispatch_setup(setup, {**vars(args), "retry_diagnostics": args.retry_diagnostics == "on"})
             manifest["run_id"] = setup["run_id"]
             if args.advertise_address:
                 endpoint = setup.get("endpoint", {}).get("Tcp")

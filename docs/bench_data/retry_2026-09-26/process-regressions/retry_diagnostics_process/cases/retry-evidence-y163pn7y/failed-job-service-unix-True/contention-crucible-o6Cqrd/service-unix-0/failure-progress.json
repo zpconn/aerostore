@@ -1,0 +1,341 @@
+{
+  "completed_by_worker": [
+    5,
+    4,
+    4,
+    4,
+    0,
+    0
+  ],
+  "completed_message_retries": 2,
+  "completed_messages": 17,
+  "completed_transactions": 18,
+  "completed_worker_metrics_snapshots": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "counter_coverage": "Failed worker snapshot and already completed workers only; running peers may have additional commits/retries not received by the coordinator. Do not sum repeated cumulative snapshots or equate failed-run commits with received history.",
+  "error": "maintenance job 4000000000 exhausted 1 committed batches without a terminal empty query; prior batch effects remain committed",
+  "execution_completed": false,
+  "failure_evidence": {
+    "diagnostics": {
+      "conflict_origin:commit:predicate_validation_stamp:due": 1,
+      "global_due_lookup:attempted_materializations": 56,
+      "global_due_lookup:calls": 2,
+      "global_due_lookup:candidate_rows": 56,
+      "global_due_lookup:completed_materializations": 56,
+      "global_due_lookup:returned_rows": 56,
+      "global_due_lookup:successful_attempt_ns": 4397567,
+      "global_due_lookup:successful_attempts": 2,
+      "global_due_lookup:successful_query_ns": 4396672,
+      "history_lookup:attempted_materializations": 640,
+      "history_lookup:calls": 8,
+      "history_lookup:candidate_rows": 640,
+      "history_lookup:completed_materializations": 640,
+      "history_lookup:returned_rows": 64,
+      "history_lookup:successful_attempt_ns": 214454,
+      "history_lookup:successful_attempts": 8,
+      "history_lookup:successful_query_ns": 210145
+    },
+    "metrics": {
+      "aborts": 1,
+      "begins": 2,
+      "commits": 1,
+      "index_mutations": 0,
+      "queries": 10,
+      "reads": 720,
+      "returned_rows": 120,
+      "savepoint_rollbacks": 0,
+      "savepoints": 0,
+      "writes": 16
+    },
+    "metrics_status": {
+      "complete": true,
+      "connected": true,
+      "last_attempted_sequence": 56,
+      "last_completed_sequence": 56,
+      "last_metrics_sequence": 56,
+      "scope": "Cumulative backend counters through the indicated acknowledged operation; does not resolve an indeterminate commit.",
+      "session": {
+        "epoch": [
+          174,
+          36,
+          191,
+          196,
+          52,
+          153,
+          46,
+          137,
+          35,
+          44,
+          65,
+          96,
+          40,
+          98,
+          126,
+          43
+        ],
+        "number": 5
+      },
+      "source": "service_cache",
+      "transport_failed": false
+    },
+    "retry_causes": {
+      "commit:serialization_failure": 1
+    },
+    "retry_diagnostics": {
+      "dropped_attempts": 0,
+      "enabled": true,
+      "failed_attempts": 1,
+      "sample_limit": 32,
+      "samples": [
+        {
+          "attempt_index": 0,
+          "cleanup_diagnostics_delta": {},
+          "cleanup_error": null,
+          "cleanup_finished_ns": 37801665263615,
+          "cleanup_ok": true,
+          "cleanup_retry_causes_delta": {},
+          "counter_regression": false,
+          "diagnostics_delta": {
+            "conflict_origin:commit:predicate_validation_stamp:due": 1,
+            "global_due_lookup:attempted_materializations": 28,
+            "global_due_lookup:calls": 1,
+            "global_due_lookup:candidate_rows": 28,
+            "global_due_lookup:completed_materializations": 28,
+            "global_due_lookup:returned_rows": 28,
+            "global_due_lookup:successful_attempt_ns": 2233414,
+            "global_due_lookup:successful_attempts": 1,
+            "global_due_lookup:successful_query_ns": 2232893,
+            "history_lookup:attempted_materializations": 320,
+            "history_lookup:calls": 4,
+            "history_lookup:candidate_rows": 320,
+            "history_lookup:completed_materializations": 320,
+            "history_lookup:returned_rows": 32,
+            "history_lookup:successful_attempt_ns": 120485,
+            "history_lookup:successful_attempts": 4,
+            "history_lookup:successful_query_ns": 118144
+          },
+          "error": "transaction conflict",
+          "error_kind": "conflict",
+          "finished_ns": 37801665232562,
+          "message_id": 8000000000,
+          "metrics_status": {
+            "complete": true,
+            "connected": true,
+            "last_attempted_sequence": 29,
+            "last_completed_sequence": 29,
+            "last_metrics_sequence": 29,
+            "scope": "Cumulative backend counters through the indicated acknowledged operation; does not resolve an indeterminate commit.",
+            "session": {
+              "epoch": [
+                174,
+                36,
+                191,
+                196,
+                52,
+                153,
+                46,
+                137,
+                35,
+                44,
+                65,
+                96,
+                40,
+                98,
+                126,
+                43
+              ],
+              "number": 5
+            },
+            "source": "service_cache",
+            "transport_failed": false
+          },
+          "retry_causes_delta": {
+            "commit:serialization_failure": 1
+          },
+          "started_ns": 37801660801244
+        }
+      ],
+      "version": 1
+    },
+    "version": 1
+  },
+  "note": "Offered schedule remains authoritative; failed message retry count is retained in worker error. Uncompleted offered events are not dropped or called successful.",
+  "offered_by_worker": [
+    8,
+    8,
+    8,
+    8,
+    1,
+    1
+  ],
+  "oldest_due_job_age_ns_by_worker": [
+    null,
+    null,
+    null,
+    null,
+    8284738,
+    8284738
+  ],
+  "passed": false,
+  "pending_maintenance": [
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    },
+    {
+      "batches": 1,
+      "finished_ns": 37801668613464,
+      "job_id": 4000000000,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        4,
+        0,
+        0,
+        4,
+        0,
+        4,
+        0,
+        0
+      ],
+      "positive_effect": true,
+      "processed_rows": 4,
+      "retries": 1,
+      "started_ns": 37801660800963
+    },
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    }
+  ],
+  "worker": 4,
+  "worker_retry_diagnostics": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ]
+}

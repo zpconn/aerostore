@@ -1,0 +1,115 @@
+{
+  "completed_by_worker": [
+    1
+  ],
+  "completed_message_retries": 0,
+  "completed_messages": 1,
+  "completed_transactions": 1,
+  "completed_worker_metrics_snapshots": [
+    null
+  ],
+  "counter_coverage": "Failed worker snapshot and already completed workers only; running peers may have additional commits/retries not received by the coordinator. Do not sum repeated cumulative snapshots or equate failed-run commits with received history.",
+  "error": "offered arrival backlog 23 exceeds worker bound 1 after 1 completions; arrivals were not throttled",
+  "execution_completed": false,
+  "failure_evidence": {
+    "diagnostics": {
+      "candidate_lookup:calls": 1,
+      "candidate_lookup:candidate_rows": 0,
+      "candidate_lookup:returned_rows": 0,
+      "candidate_lookup:successful_query_ns": 19181,
+      "family_lookup:calls": 2,
+      "family_lookup:candidate_rows": 1,
+      "family_lookup:returned_rows": 1,
+      "family_lookup:successful_query_ns": 52184
+    },
+    "metrics": {
+      "aborts": 0,
+      "begins": 1,
+      "commits": 1,
+      "index_mutations": 0,
+      "queries": 3,
+      "reads": 14,
+      "returned_rows": 1,
+      "savepoint_rollbacks": 0,
+      "savepoints": 0,
+      "writes": 5
+    },
+    "metrics_status": {
+      "complete": true,
+      "connected": true,
+      "last_attempted_sequence": 23,
+      "last_completed_sequence": 23,
+      "last_metrics_sequence": 23,
+      "scope": "Cumulative backend counters through the indicated acknowledged operation; does not resolve an indeterminate commit.",
+      "session": {
+        "epoch": [
+          250,
+          157,
+          124,
+          164,
+          157,
+          104,
+          33,
+          188,
+          79,
+          112,
+          2,
+          10,
+          215,
+          159,
+          47,
+          215
+        ],
+        "number": 1
+      },
+      "source": "service_cache",
+      "transport_failed": false
+    },
+    "retry_causes": {},
+    "retry_diagnostics": {
+      "dropped_attempts": 0,
+      "enabled": false,
+      "failed_attempts": 0,
+      "sample_limit": 32,
+      "samples": [],
+      "version": 1
+    },
+    "version": 1
+  },
+  "note": "Offered schedule remains authoritative; failed message retry count is retained in worker error. Uncompleted offered events are not dropped or called successful.",
+  "offered_by_worker": [
+    100
+  ],
+  "oldest_due_job_age_ns_by_worker": null,
+  "passed": false,
+  "pending_maintenance": [
+    {
+      "batches": 0,
+      "finished_ns": 0,
+      "job_id": 0,
+      "job_ordinal": 0,
+      "outcomes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "positive_effect": false,
+      "processed_rows": 0,
+      "retries": 0,
+      "started_ns": 0
+    }
+  ],
+  "worker": 0,
+  "worker_retry_diagnostics": [
+    null
+  ]
+}

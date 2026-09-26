@@ -1,0 +1,1 @@
+contention-crucible: --retry-diagnostics on requires --features retry-diagnostics

@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "source_before": "36d17a26ea29ec41bbd305e87091f0992af8904bdb986a2e515a49f211c17be9",
+  "source_after": "a93318d444bd779fcbb6034e11ec51493e59379fbbd9eb7f6481ddbcb147a841",
+  "changed_inputs": [
+    "scripts/check_refinement_evidence.py",
+    "scripts/test_formal_gate.py",
+    "verification/frozen_boundary.json"
+  ],
+  "identical_feature_binary": true,
+  "identical_default_binary": true,
+  "scope": "Pre-refresh native/unit/process evidence uses identical executable and test bytes. Only standalone proof-evidence checker, its negative tests, and reviewed boundary lock changed afterward. Final pilot reruns proof checks."
+}
