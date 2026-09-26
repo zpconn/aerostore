@@ -1,0 +1,35 @@
+{
+  "passed": true,
+  "created_at": "2026-09-26T02:36:22.997991+00:00",
+  "source_sha256": "1307af5f3239bdcbd652ef79df57ac3a91614d10c55004d9845db18b0ad3c8cd",
+  "binary_sha256": "c2f155c7a6f3cc9ad53730eceaa2797dd29873e6a23cdee2285f2273459afc28",
+  "pilot_checks": 71,
+  "unit_checks": 121,
+  "real_process_checks": 19,
+  "short_functional_trials": 42,
+  "real_cadence_trials": 2,
+  "higher_load_trials": 12,
+  "higher_load_valid": 4,
+  "higher_load_progress_failures": 8,
+  "tcp_loopback_passed": true,
+  "local_document_links_checked": 170,
+  "bash_blocks_syntax_checked": 19,
+  "documentation_sha256": {
+    "README.md": "9753cfc480cfc31c77bea0ae2e2ee42702b00ea7dec3a10698ef2e256e772484",
+    "docs/hyperfeed_maintenance.md": "cf0628aebc9bde0fd59e76505d236d6cf9816f03820be8b6ca7cf915e84fce9a",
+    "docs/hyperfeed_calibrated.md": "1fde62cade883566d4bb30ca579f699481b1cc36ed812bb43bd40f5fd4b0aecd",
+    "docs/hyperfeed_affinity.md": "b3256598cf63274b496b9982644953778e435b8b30efd7656325add07c47fd68",
+    "docs/hyperfeed_workload_calibration.md": "1bc85dbaed42130c03606227ada6b2da8b4f243fbbbd706c0739d8f3f429fe22",
+    "docs/hyperfeed_qualification.md": "958a7a7756e13f1787e988b2e50b26b2b3c6b79823831a2b5319754f28eecdc5",
+    "docs/hyperfeed_two_host.md": "9d1839d25190d7a0d326cb21b0fed7c10b29f9975c50fda865949aa45ea9d268",
+    "docs/formal_verification_plan.md": "9c8e009cc63266e0f72eb0db69ea5ae0a84f9a96e91d11bbbe32926890288d8d",
+    "docs/bench_data/maintenance_2026-09-25/README.md": "a16dc4ba63536b2e1ba663709a98b957bc8126b22372fae747f397cbb83fbee0",
+    "docs/bench_data/maintenance_2026-09-25/guardrails/README.md": "89a0486556e868ace54352ccb0245bcfd6982a3aabf0c890ff36f27a532927ae"
+  },
+  "raw_log_whitespace_exception": {
+    "path": "docs/bench_data/maintenance_2026-09-25/unit-tests/rust-model-measurement.log",
+    "sha256": "32e376d06e1d3809789994f549ccf3d065a1bbff6f2cb6d7de9f4ec74b89626b",
+    "reason": "Preserved authentic Rust test output ends with a blank line. Original and archived bytes independently verified; code/document whitespace check excludes this exact raw log."
+  },
+  "scope": "Complete-job benchmark milestone with preserved component guardrails. No production engine change, comparative speed, capacity, physical MMHF or survivor-availability qualification."
+}

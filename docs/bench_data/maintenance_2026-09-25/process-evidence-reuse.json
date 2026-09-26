@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "development_source_sha256": "c7ce01d396edbc3d93a7987cb284afa7ba1b834d78c439c7d55539ef8ebf4e44",
+  "final_source_sha256": "1307af5f3239bdcbd652ef79df57ac3a91614d10c55004d9845db18b0ad3c8cd",
+  "changed_paths": [
+    "verification/frozen_boundary.json"
+  ],
+  "identical_binary_sha256": "c2f155c7a6f3cc9ad53730eceaa2797dd29873e6a23cdee2285f2273459afc28",
+  "scope": "All19 process regressions ran before final boundary-lock refresh. Runtime/build/test sources and executable bytes identical. Final121unit checks and full pilot run on final frozen inputs. No semantic proof is inferred from hashes.",
+  "process_receipts": {
+    "target/maintenance-development/maintenance-tests-execution.json": "831156f3d6f606536072e9ef6d36cff039d55d8074f9fcadd4cb9f20b5ce1206",
+    "target/maintenance-development/preserved-tests/execution.json": "2fd25b9e98e576f366bc08426503479a9e6972a0d23f868db0dbc9892d854da6"
+  }
+}

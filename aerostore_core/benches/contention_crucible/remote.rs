@@ -1,7 +1,7 @@
 //! Disposable TCP service owner for one trusted benchmark client host.
 //! This is a harness, not an authenticated or recoverable production service.
 use super::supervision::write_json;
-use super::{aerostore, calibrated, model, service};
+use super::{aerostore, calibrated, maintenance, model, service};
 use crate::extended_crucible::model::Record;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -27,6 +27,14 @@ pub struct FrameSetup {
     pub affinity_ttl_ms: u64,
     #[serde(default)]
     pub signature_pattern: calibrated::SignaturePattern,
+    #[serde(default)]
+    pub maintenance_mode: maintenance::Mode,
+    #[serde(default = "calibrated::default_projection_batch_size")]
+    pub projection_batch_size: usize,
+    #[serde(default = "calibrated::default_housekeeping_batch_size")]
+    pub housekeeping_batch_size: usize,
+    #[serde(default = "calibrated::default_max_maintenance_batches")]
+    pub max_maintenance_batches: u64,
     pub global_time_predicates: bool,
     pub initial_rows: Vec<Record>,
     pub server_pid: u32,
@@ -211,6 +219,10 @@ pub fn serve(
     dispatch: calibrated::Dispatch,
     affinity_ttl_ms: u64,
     signature_pattern: calibrated::SignaturePattern,
+    maintenance_mode: maintenance::Mode,
+    projection_batch_size: usize,
+    housekeeping_batch_size: usize,
+    max_maintenance_batches: u64,
 ) -> Result<(), String> {
     if !["legacy", "lifecycle", "fleet", "calibrated"].contains(&workload)
         || !(1..=1024).contains(&families)
@@ -226,7 +238,14 @@ pub fn serve(
         || (workload != "calibrated"
             && (dispatch != calibrated::Dispatch::Identity
                 || affinity_ttl_ms != 0
-                || signature_pattern != calibrated::SignaturePattern::Both))
+                || signature_pattern != calibrated::SignaturePattern::Both
+                || maintenance_mode != maintenance::Mode::Batch
+                || projection_batch_size != 4
+                || housekeeping_batch_size != 32
+                || max_maintenance_batches != 4096))
+        || !(1..=16).contains(&projection_batch_size)
+        || !(1..=64).contains(&housekeeping_batch_size)
+        || !(1..=4096).contains(&max_maintenance_batches)
     {
         return Err("invalid bounded remote-server fixture configuration".into());
     }
@@ -257,7 +276,22 @@ pub fn serve(
     let arena = directory.join("arena.mmap");
     let wal = directory.join("wal");
     let initial = if workload == "calibrated" {
-        calibrated::initial_records(families, seed)?
+        calibrated::initial_records_for(&calibrated::Config {
+            duration_ns: 1_000_000_000,
+            foreground_rate: 1,
+            foreground_workers: 1,
+            families,
+            seed,
+            projection_interval_seconds,
+            housekeeping_interval_seconds,
+            dispatch,
+            affinity_ttl_ms,
+            signature_pattern,
+            maintenance_mode,
+            projection_batch_size,
+            housekeeping_batch_size,
+            max_maintenance_batches,
+        })?
     } else {
         model::sustained_initial_for(workload, families, seed)
     };
@@ -332,6 +366,10 @@ pub fn serve(
             dispatch,
             affinity_ttl_ms,
             signature_pattern,
+            maintenance_mode,
+            projection_batch_size,
+            housekeeping_batch_size,
+            max_maintenance_batches,
             global_time_predicates: global_time,
             initial_rows: initial.clone(),
             server_pid: std::process::id(),

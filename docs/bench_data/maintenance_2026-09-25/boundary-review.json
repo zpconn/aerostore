@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "previous_files": 374,
+  "reviewed_files": 376,
+  "changed": [
+    "aerostore_core/benches/contention_crucible/calibrated.rs",
+    "aerostore_core/benches/contention_crucible/mod.rs",
+    "aerostore_core/benches/contention_crucible/remote.rs",
+    "aerostore_core/benches/contention_crucible/runner.rs",
+    "aerostore_core/benches/contention_crucible/workers.rs",
+    "aerostore_core/tests/calibrated_contention_model.rs",
+    "scripts/qualify_hyperfeed.py",
+    "scripts/run_remote_contention.py",
+    "scripts/test_hyperfeed_qualification.py",
+    "scripts/test_run_remote_contention.py"
+  ],
+  "added": [
+    "aerostore_core/benches/contention_crucible/maintenance.rs",
+    "scripts/test_maintenance_sweeps.py"
+  ],
+  "removed": [],
+  "scope": "Optional complete maintenance sweeps in calibrated benchmark, explicit logical job/transaction accounting, full-history completion checks, Python qualification and process regressions. Production core, formal contracts/proofs, and original Extended Crucible unchanged. Existing component formal scope unchanged.",
+  "development_evidence": "Four complete-sweep real-process tests passed against c2f155c7a6f3cc9ad53730eceaa2797dd29873e6a23cdee2285f2273459afc28; 51 model and 63 Python tests passed. Independent model/runner/worker integration review found no blocker. Local explicit baseline refresh is change control, not semantic proof."
+}

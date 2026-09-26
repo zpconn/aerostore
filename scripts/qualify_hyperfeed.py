@@ -14,8 +14,8 @@ housekeeping timers. Optional signature affinity can reorder one flight across
 workers; the history oracle checks that order, while discarded stale updates
 remain excluded from complete useful-work evidence. Short/accelerated checks can validate execution, but cannot
 demonstrate the operator's five-to-ten-minute maintenance cadence. Its fixed
-population and bounded maintenance batches remain capacity-unqualified even
-when a longer run covers repeated jobs at representative intervals.
+population remains capacity-unqualified even when --maintenance-mode sweep
+covers complete batched sweeps at representative intervals.
 
 First use --evidence full to produce a correctness companion. A metrics campaign
 may name that campaign's campaign.json via --correctness-report. Companions must
@@ -56,7 +56,11 @@ CORPUS_FIELDS = ("workload", "families", "hot_percent", "seed", "arrival_rate", 
 MATCH_FIELDS = CORPUS_FIELDS + ("engine", "workers", "pg_write_mode", "rpc_delay_us", "global_time_predicates", "shm_mib", "max_backlog", "max_messages", "message_interval_us")
 CALIBRATED_FIELDS = ("projection_interval_seconds", "housekeeping_interval_seconds")
 DISPATCH_DEFAULTS = {"dispatch": "identity", "affinity_ttl_ms": 0, "signature_pattern": "both"}
+MAINTENANCE_DEFAULTS = {"maintenance_mode": "batch", "projection_batch_size": 4,
+                        "housekeeping_batch_size": 32, "max_maintenance_batches": 4096}
+CALIBRATED_DEFAULTS = {**DISPATCH_DEFAULTS, **MAINTENANCE_DEFAULTS}
 EFFECT_FIELDS = ("created_views", "updated_views", "outputs", "claimed_events", "cancelled_events", "rescheduled_events", "expired_records", "expired_families")
+OUTCOME_FIELDS = EFFECT_FIELDS + ("missing_family", "allocation_deferred", "ignored_stale", "duplicate_messages")
 
 
 def sha256(path: Path) -> str:
@@ -99,14 +103,18 @@ def finite_number(value) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
+def counts_match(actual, expected: dict) -> bool:
+    return isinstance(actual, dict) and actual == expected and all(type(value) is int for value in actual.values())
+
+
 def match_fields(config: dict) -> tuple:
     # Preserve historical stress keys; irrelevant timer defaults do not change
     # the fixed lifecycle/fleet corpora or their existing assessments.
-    return MATCH_FIELDS + (CALIBRATED_FIELDS + tuple(DISPATCH_DEFAULTS) if config.get("workload") == "calibrated" else ())
+    return MATCH_FIELDS + (CALIBRATED_FIELDS + tuple(CALIBRATED_DEFAULTS) if config.get("workload") == "calibrated" else ())
 
 
 def config_value(config: dict, field: str):
-    return config.get(field, DISPATCH_DEFAULTS.get(field))
+    return config.get(field, CALIBRATED_DEFAULTS.get(field))
 
 
 def key(config: dict) -> tuple:
@@ -120,6 +128,15 @@ def dispatch_config(config: dict) -> tuple[str, int, str]:
             or (dispatch == "signature-affinity") != (ttl > 0)):
         raise ValueError("signature-affinity requires an explicit TTL in 1..3600000 ms; identity requires TTL 0")
     return dispatch, ttl, pattern
+
+
+def maintenance_config(config: dict) -> tuple[str, int, int, int]:
+    mode, projection, housekeeping, cap = (config_value(config, field) for field in MAINTENANCE_DEFAULTS)
+    if (mode not in {"batch", "sweep"} or type(projection) is not int or not 1 <= projection <= 16
+            or type(housekeeping) is not int or not 1 <= housekeeping <= 64
+            or type(cap) is not int or not 1 <= cap <= 4096):
+        raise ValueError("maintenance needs batch|sweep, projection batch 1..16, housekeeping batch 1..64 and batch cap 1..4096 including terminal")
+    return mode, projection, housekeeping, cap
 
 
 @lru_cache(maxsize=64)
@@ -199,6 +216,7 @@ def calibrated_corpus(config: dict) -> dict:
     quiet = max(1, families // 4)
     active = families - quiet
     dispatch, _, _ = dispatch_config(config)
+    maintenance_config(config)
     projection, housekeeping = calibrated_timer_counts(config)
     foreground = rate * config["seconds"]
     rounds, remainder = divmod(foreground, active)
@@ -217,6 +235,126 @@ def calibrated_corpus(config: dict) -> dict:
             "kinds": {name: count for name, count in kinds.items() if count}}
 
 
+def maintenance_report_errors(run: dict, config: dict) -> list[str]:
+    """Reconcile job evidence without pretending to recheck its SQL history.
+
+    The Rust oracle validates complete terminal queries in full evidence mode.
+    These independent checks bind jobs to admission, batch bounds and reported
+    effects, and stop transaction throughput from masquerading as message work.
+    """
+    mode, projection_limit, housekeeping_limit, cap = maintenance_config(config)
+    corpus = calibrated_corpus(config)
+    kinds = corpus["kinds"]
+    per_kind = run.get("per_kind")
+    if not isinstance(per_kind, dict) or any(not isinstance(value, dict) or not isinstance(value.get("outcomes"), dict)
+                                           for value in per_kind.values()):
+        return ["maintenance transaction accounting requires per-kind objects"]
+    if mode == "batch":
+        expected = corpus["total"]
+        if (type(run.get("completed_transactions", expected)) is not int or run.get("completed_transactions", expected) != expected
+                or not counts_match(run.get("transaction_kinds", kinds), kinds)
+                or any(type(value.get("transactions", value.get("completed"))) is not int
+                       or value.get("transactions", value.get("completed")) != value.get("completed")
+                       for value in per_kind.values())):
+            return ["batch control transaction counts differ from its one-transaction jobs"]
+        return []
+    jobs = run.get("maintenance_jobs")
+    expected_jobs = corpus["projection"] + corpus["housekeeping"]
+    if not isinstance(jobs, list) or len(jobs) != expected_jobs:
+        return ["maintenance sweep jobs are missing, duplicated or inflated"]
+    admission, workload_end = run.get("admission_started_ns"), run.get("workload_completed_ns")
+    if any(type(value) is not int or not 0 <= value < 2**64 for value in (admission, workload_end)):
+        return ["maintenance sweep requires valid continuous admission/completion timestamps"]
+    totals = dict(committed_batches=0, nonempty_batches=0, terminal_batches=0, processed_rows=0)
+    class_jobs = {"projection": [], "housekeeping": []}
+    seen = set()
+    errors = []
+    for job in jobs:
+        if not isinstance(job, dict):
+            errors.append("maintenance sweep job is not an object")
+            continue
+        integer_fields = ("worker", "job_id", "job_ordinal", "scheduled_ns", "started_ns", "finished_ns", "received_ns",
+                          "batches", "nonempty_batches", "terminal_batches", "processed_rows", "retries",
+                          "first_transaction_id", "terminal_transaction_id")
+        if any(type(job.get(field)) is not int or not 0 <= job[field] < 2**64 for field in integer_fields):
+            errors.append("maintenance sweep job has missing or invalid integer metadata")
+            continue
+        name, ordinal = job.get("class"), job["job_ordinal"]
+        if name not in class_jobs:
+            errors.append("maintenance sweep has an unexpected class")
+            continue
+        bit = int(name == "housekeeping")
+        identity = (name, ordinal)
+        expected_id = 4000000000 + ordinal * 2 + bit
+        first_id = 8000000000 + (expected_id - 4000000000) * 4096
+        if (identity in seen or ordinal >= corpus[name] or job["worker"] != config["workers"] + bit
+                or job["job_id"] != expected_id
+                or job["scheduled_ns"] != admission + (ordinal + 1) * config[name + "_interval_seconds"] * 1000000000
+                or job["first_transaction_id"] != first_id
+                or job["terminal_transaction_id"] != first_id + job["batches"] - 1):
+            errors.append("maintenance sweep job identity, admission or transaction IDs differ from offered work")
+        seen.add(identity)
+        if not job["scheduled_ns"] <= job["started_ns"] < job["finished_ns"] <= job["received_ns"] <= workload_end:
+            errors.append("maintenance sweep job timestamps are not a complete ordered interval")
+        limit = housekeeping_limit if bit else projection_limit
+        if (not 1 <= job["batches"] <= cap or job["terminal_batches"] != 1
+                or job.get("terminal_empty") is not True or job["batches"] != job["nonempty_batches"] + 1
+                or not job["nonempty_batches"] <= job["processed_rows"] <= job["nonempty_batches"] * limit):
+            errors.append("maintenance sweep omitted its empty terminal, exceeded a cap, or misstated processed batches")
+        outcomes = job.get("outcomes")
+        if (not isinstance(outcomes, dict) or any(type(outcomes.get(field)) is not int or outcomes[field] < 0 for field in OUTCOME_FIELDS)
+                or outcomes.get("expired_records" if bit else "claimed_events") != job["processed_rows"]
+                or (job["processed_rows"] == 0 and any(outcomes.get(field) for field in OUTCOME_FIELDS))):
+            errors.append("maintenance sweep effects differ from processed rows or invent empty-job effects")
+        class_jobs[name].append(job)
+        for field, source in (("committed_batches", "batches"), ("nonempty_batches", "nonempty_batches"),
+                              ("terminal_batches", "terminal_batches"), ("processed_rows", "processed_rows")):
+            totals[field] += job[source]
+    if errors:
+        return errors
+    audit = run.get("maintenance_job_audit", {})
+    required = {"checked": True, "passed": True, "completed_jobs": expected_jobs, **totals,
+                "scope": "complete_sweep_batched_transactions"}
+    if not isinstance(audit, dict) or any(type(audit.get(field)) is not type(value) or audit[field] != value for field, value in required.items()):
+        errors.append("maintenance sweep summary differs from individual completed jobs")
+    transaction_kinds = {kind: count for kind, count in kinds.items() if kind in {"plan", "position"}}
+    for name, selected in class_jobs.items():
+        selected.sort(key=lambda job: job["job_ordinal"])
+        if any(left["finished_ns"] > right["started_ns"] for left, right in zip(selected, selected[1:])):
+            errors.append("one maintenance worker overlapped or reordered its sweep jobs")
+        kind = "global_" + name
+        if selected:
+            transaction_kinds[kind] = sum(job["batches"] for job in selected)
+            outcomes = run.get("per_kind", {}).get(kind, {}).get("outcomes", {})
+            if any(outcomes.get(field) != sum(job["outcomes"][field] for job in selected) for field in OUTCOME_FIELDS):
+                errors.append("maintenance sweep effects do not reconcile with per-kind outcomes")
+        worker = config["workers"] + int(name == "housekeeping")
+        activity = run.get("worker_activity", [])
+        if (len(activity) <= worker or activity[worker].get("retries") != sum(job["retries"] for job in selected)
+                or activity[worker].get("busy_ns") != sum(job["finished_ns"] - job["started_ns"] for job in selected)):
+            errors.append("maintenance sweep worker retries or occupied duration differ from whole jobs")
+    for name in ("projection", "housekeeping", "maintenance"):
+        selected = jobs if name == "maintenance" else class_jobs[name]
+        statistics = run.get("workload_classes", {}).get(name, {})
+        if (statistics.get("retries") != sum(job["retries"] for job in selected)
+                or statistics.get("positive_effect_jobs") != sum(job["processed_rows"] > 0 for job in selected)):
+            errors.append("maintenance sweep class retries or useful job counts differ from completed jobs")
+        for field, end, start in (("p99_us_including_retries", "received_ns", "scheduled_ns"),
+                                  ("service_latency_p99_us_including_retries", "finished_ns", "started_ns"),
+                                  ("arrival_queue_delay_p99_us", "started_ns", "scheduled_ns")):
+            durations = sorted(job[end] - job[start] for job in selected)
+            expected = durations[(len(durations) * 99 + 99) // 100 - 1] / 1000 if durations else None
+            value = statistics.get(field)
+            if (expected is None and value is not None) or (expected is not None and (not finite_number(value) or not math.isclose(value, expected, rel_tol=1e-9, abs_tol=1e-9))):
+                errors.append("maintenance sweep latency differs from complete job timestamps")
+    completed_transactions = corpus["foreground"] + totals["committed_batches"]
+    if (type(run.get("completed_transactions")) is not int or run["completed_transactions"] != completed_transactions
+            or not counts_match(run.get("transaction_kinds"), transaction_kinds)
+            or not counts_match({kind: value.get("transactions") for kind, value in per_kind.items()}, transaction_kinds)):
+        errors.append("maintenance sweep committed transaction counts do not reconcile with foreground and batch receipts")
+    return errors
+
+
 def calibrated_report_errors(run: dict, config: dict, expected_counts: list[int]) -> list[str]:
     """Check calibrated scheduling evidence independently of cadence realism."""
     errors = []
@@ -228,8 +366,11 @@ def calibrated_report_errors(run: dict, config: dict, expected_counts: list[int]
     if run.get("total_process_workers") != foreground_workers + 2 or run.get("offered_rate_scope") != "foreground_only":
         errors.append("calibrated worker count or foreground offered-rate scope differs")
     schedule = run.get("calibrated_schedule", {})
+    if not isinstance(schedule, dict):
+        return errors + ["calibrated schedule is missing or malformed"]
     corpus = calibrated_corpus(config)
     dispatch, ttl, pattern = dispatch_config(config)
+    maintenance_mode, projection_limit, housekeeping_limit, _ = maintenance_config(config)
     intervals = [config[name] for name in CALIBRATED_FIELDS]
     cadence = ("accelerated" if min(intervals) < 300 else
                "representative_interval_config" if max(intervals) <= 600 else "custom_outside_calibration")
@@ -240,10 +381,16 @@ def calibrated_report_errors(run: dict, config: dict, expected_counts: list[int]
                 "first_timer_tick": "after_one_interval", "timer_admission": "strictly_before_end",
                 "clock": "wall_clock", "cadence": cadence,
                 "per_flight_ordering": "stable_foreground_worker_fifo" if dispatch == "identity" else "signature_affinity_worker_fifo",
-                "projection_batch_limit": 4, "housekeeping_batch_limit": 32,
-                "maintenance_scope": "bounded_batch_not_full_sweep",
-                "population_turnover_tested": False, "global_maintenance_sweep_complete": False}
-    if not isinstance(schedule, dict) or any(schedule.get(name) != value for name, value in required.items()):
+                "projection_batch_limit": projection_limit, "housekeeping_batch_limit": housekeeping_limit,
+                "maintenance_scope": "complete_sweep_batched_transactions" if maintenance_mode == "sweep" else "bounded_batch_not_full_sweep",
+                "population_turnover_tested": False,
+                "global_maintenance_sweep_complete": maintenance_mode == "sweep" and projection + housekeeping > 0}
+    # Historical reports predate configurable batches; only the exact default
+    # control may omit the mode and cap fields.
+    for name, default in (("maintenance_mode", "batch"), ("max_maintenance_batches", 4096)):
+        if type(schedule.get(name, default)) is not type(config_value(config, name)) or schedule.get(name, default) != config_value(config, name):
+            errors.append("calibrated maintenance mode or batch cap differs from configuration")
+    if any(type(schedule.get(name)) is not type(value) or schedule[name] != value for name, value in required.items()):
         errors.append("calibrated timer/order/batch schedule differs from the declared profile")
     ordering = run.get("per_flight_order", {})
     if (not isinstance(ordering, dict) or ordering.get("checked") is not True
@@ -316,14 +463,16 @@ def calibrated_report_errors(run: dict, config: dict, expected_counts: list[int]
             errors.append("calibrated worker utilization differs from service time / continuous duration")
     if not errors and sum(worker["retries"] for worker in activity) != run.get("retries"):
         errors.append("calibrated worker retry counts differ from the total")
+    if not errors:
+        errors.extend(maintenance_report_errors(run, config))
     return errors
 
 
 def assess_calibrated_scope(result: dict, run: dict, config: dict, policy: dict) -> dict:
     """Keep steady-state diagnostic budgets separate from capacity claims.
 
-    This profile covers timer cadence and foreground ordering, but deliberately
-    omits population turnover and complete maintenance sweeps. Even a long run
+    This profile covers timer cadence, foreground ordering and optional batched
+    sweeps, but deliberately omits population turnover. Even a long run
     at representative intervals therefore cannot supply a capacity bound yet.
     """
     classes = run["workload_classes"]
@@ -349,6 +498,7 @@ def assess_calibrated_scope(result: dict, run: dict, config: dict, policy: dict)
     rate = foreground_rate is not None and foreground_rate >= config["arrival_rate"] * policy["minimum_drain_fraction"]
     view_updates = foreground_outcomes.get("updated_views", 0) + foreground_outcomes.get("ignored_stale", 0)
     dispatch, _, _ = dispatch_config(config)
+    sweep = config_value(config, "maintenance_mode") == "sweep"
     result.update(
         no_op_fraction=missing / foreground, useful_work_passed=useful,
         foreground_outcomes=foreground_outcomes,
@@ -366,12 +516,13 @@ def assess_calibrated_scope(result: dict, run: dict, config: dict, policy: dict)
         foreground_ordering_required=dispatch == "identity",
         foreground_ordering_passed=run["per_flight_order"]["passed"],
         diagnostic_performance_passed=result["continuous_timing_passed"] and useful and slo and rate,
-        population_turnover_tested=False, global_maintenance_sweep_complete=False,
+        population_turnover_tested=False,
+        global_maintenance_sweep_complete=sweep and classes["maintenance"]["completed"] > 0,
         calibrated_capacity_qualification_complete=False,
         performance_passed=False, qualified_capacity_trial=False, capacity_failure=False,
         qualification_limitations=["steady-state population omits lifecycle turnover",
-                                   "maintenance jobs are bounded batches, not complete global sweeps",
-                                   "other background cadences and production workload distributions remain uncalibrated"],
+                                   "other background cadences and production workload distributions remain uncalibrated"]
+                                 + ([] if sweep else ["maintenance jobs are bounded batches, not complete global sweeps"]),
     )
     if not useful:
         result["reasons"].append("calibrated foreground has missing/deferred/stale/duplicate or effectless inputs, lacks updates, or changes its seeded population")
@@ -505,7 +656,7 @@ def assess_trial(trial: dict, policy: dict, companion_keys: set[tuple] = frozens
     if report.get("completed") is not True or report.get("passed") is not True:
         reasons.append("benchmark did not complete successfully")
     actual = report.get("config", {})
-    if actual.get("mode") != "sustained" or any(config_value(actual, field) != config_value(config, field) for field in match_fields(config) + ("evidence",)):
+    if actual.get("mode") != "sustained" or any(type(config_value(actual, field)) is not type(config_value(config, field)) or config_value(actual, field) != config_value(config, field) for field in match_fields(config) + ("evidence",)):
         reasons.append("reported configuration differs from offered corpus/configuration")
     if config.get("workload") not in {"lifecycle", "fleet", "calibrated"} or not finite_number(config.get("arrival_rate")) or config.get("arrival_rate", 0) <= 0:
         reasons.append("assessment requires a supported fixed corpus with positive offered arrivals")
@@ -547,8 +698,9 @@ def assess_trial(trial: dict, policy: dict, companion_keys: set[tuple] = frozens
         reasons.append("a worker did not drain the fixed corpus")
     if run.get("invariants", {}).get("passed") is not True:
         reasons.append("final structural invariants failed or missing")
-    if run.get("store_metrics", {}).get("commits") != expected:
-        reasons.append("commit count differs from complete offered corpus")
+    expected_commits = run.get("completed_transactions") if calibrated and config_value(config, "maintenance_mode") == "sweep" else expected
+    if type(expected_commits) is not int or type(run.get("store_metrics", {}).get("commits")) is not int or run.get("store_metrics", {}).get("commits") != expected_commits:
+        reasons.append("commit count differs from complete committed transaction receipts")
     full = (config.get("evidence") == "full" and run.get("history_checked") is True
             and run.get("correctness_history_verified") is True and run.get("oracle_status") == "Valid")
     if config.get("evidence") == "full" and not full:
@@ -574,6 +726,7 @@ def assess_trial(trial: dict, policy: dict, companion_keys: set[tuple] = frozens
     if not finite_number(latency) or latency < 0 or not finite_number(throughput) or throughput <= 0:
         reasons.append("missing or invalid end-to-end latency/drained throughput")
     result.update(outcomes=outcomes, completed_messages=run.get("completed_messages"),
+                  completed_transactions=run.get("completed_transactions", run.get("completed_messages")),
                   p99_ms=latency / 1000 if finite_number(latency) else None,
                   throughput_with_drain=throughput, per_kind=run.get("per_kind", {}),
                   configured_identities=config.get("families"),
@@ -882,6 +1035,12 @@ def main(argv=None) -> int:
                         help="required positive sliding TTL for signature-affinity; identity requires 0")
     parser.add_argument("--signature-pattern", choices=["both", "mixed"], default="both",
                         help="calibrated only: mixed repeats two both, two callsign-only and two tail-only inputs per flight")
+    parser.add_argument("--maintenance-mode", choices=["batch", "sweep"], default="batch",
+                        help="calibrated only: one bounded batch or successive transactions through an empty query")
+    parser.add_argument("--projection-batch-size", type=int, default=4)
+    parser.add_argument("--housekeeping-batch-size", type=int, default=32)
+    parser.add_argument("--max-maintenance-batches", type=int, default=4096,
+                        help="sweep transaction cap per job, including its required empty terminal transaction")
     parser.add_argument("--rates", type=comma_ints, default=[32, 64])
     parser.add_argument("--workers", type=comma_ints, default=[1, 2])
     parser.add_argument("--seeds", type=comma_ints, default=[20260924, 20260925, 20260926])
@@ -905,10 +1064,11 @@ def main(argv=None) -> int:
     args = parser.parse_args(arguments)
     try:
         dispatch_config(vars(args))
+        maintenance_config(vars(args))
     except ValueError as error:
         parser.error(str(error))
-    if args.workload != "calibrated" and any(getattr(args, field) != value for field, value in DISPATCH_DEFAULTS.items()):
-        parser.error("dispatch/signature overrides apply only to --workload calibrated")
+    if args.workload != "calibrated" and any(getattr(args, field) != value for field, value in CALIBRATED_DEFAULTS.items()):
+        parser.error("dispatch/signature/maintenance overrides apply only to --workload calibrated")
     engines = args.engines.split(",")
     if (not engines or len(set(engines)) != len(engines) or any(e not in ENGINES for e in engines)
             or not 1 <= min(args.rates) <= max(args.rates) <= 1000000
@@ -937,7 +1097,7 @@ def main(argv=None) -> int:
                       "families": args.families, "hot_percent": args.hot_percent,
                       "projection_interval_seconds": args.projection_interval_seconds,
                       "housekeeping_interval_seconds": args.housekeeping_interval_seconds,
-                      **{field: getattr(args, field) for field in DISPATCH_DEFAULTS}}
+                      **{field: getattr(args, field) for field in CALIBRATED_DEFAULTS}}
             if max(calibrated_corpus(config)["worker_counts"]) > args.max_messages:
                 parser.error("calibrated dispatch or timer corpus exceeds a per-process message cap")
     output = args.output.resolve()
@@ -976,7 +1136,7 @@ def main(argv=None) -> int:
                                                note="maximum_workers denotes foreground workers; calibrated trials add two maintenance processes; budgets are declared, not enforced, and do not establish equal engine resource use")
             campaign["calibrated_scope"] = {
                 "foreground_ordering": "stable_foreground_worker_fifo" if args.dispatch == "identity" else "signature_affinity_worker_fifo",
-                **{field: getattr(args, field) for field in DISPATCH_DEFAULTS},
+                **{field: getattr(args, field) for field in CALIBRATED_DEFAULTS},
                 "projection_interval_seconds": args.projection_interval_seconds,
                 "housekeeping_interval_seconds": args.housekeeping_interval_seconds,
                 "population_turnover_tested": False, "global_maintenance_sweep_complete": False,
@@ -1011,13 +1171,13 @@ def main(argv=None) -> int:
                 if args.workload == "calibrated":
                     config.update(projection_interval_seconds=args.projection_interval_seconds,
                                   housekeeping_interval_seconds=args.housekeeping_interval_seconds,
-                                  **{field: getattr(args, field) for field in DISPATCH_DEFAULTS})
+                                  **{field: getattr(args, field) for field in CALIBRATED_DEFAULTS})
                 command = [str(binary), "--mode", "sustained", "--output", str(directory / "report.json")]
                 for field in ("engine", "workload", "evidence", "families", "hot_percent", "seed", "arrival_rate", "seconds", "workers", "pg_write_mode", "rpc_delay_us"):
                     command += ["--" + field.replace("_", "-"), str(config[field])]
                 command += ["--max-backlog", str(args.max_backlog), "--max-messages", str(args.max_messages), "--shm-mib", str(args.shm_mib)]
                 if args.workload == "calibrated":
-                    for name in CALIBRATED_FIELDS + tuple(DISPATCH_DEFAULTS):
+                    for name in CALIBRATED_FIELDS + tuple(CALIBRATED_DEFAULTS):
                         command += ["--" + name.replace("_", "-"), str(config[name])]
                 public_command = command.copy()
                 if engine == "postgres":

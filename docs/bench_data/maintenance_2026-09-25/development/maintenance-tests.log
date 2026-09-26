@@ -1,0 +1,9 @@
+test_batch_cap_retains_committed_work_without_claiming_sweep_completion (test_maintenance_sweeps.MaintenanceSweepTests.test_batch_cap_retains_committed_work_without_claiming_sweep_completion) ... ok
+test_complete_sweeps_reconcile_jobs_transactions_and_reject_tampered_audits (test_maintenance_sweeps.MaintenanceSweepTests.test_complete_sweeps_reconcile_jobs_transactions_and_reject_tampered_audits) ... ok
+test_metrics_companion_never_claims_its_own_history_was_verified (test_maintenance_sweeps.MaintenanceSweepTests.test_metrics_companion_never_claims_its_own_history_was_verified) ... ok
+test_paused_maintenance_keeps_each_deadline_and_drains_complete_jobs (test_maintenance_sweeps.MaintenanceSweepTests.test_paused_maintenance_keeps_each_deadline_and_drains_complete_jobs) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 17.633s
+
+OK

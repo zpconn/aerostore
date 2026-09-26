@@ -1,0 +1,30 @@
+{
+  "started_at": "2026-09-26T02:13:34.390718+00:00",
+  "scope": "Previously authorized owned disposable fixture restarted for complete maintenance sweep validation; data retained.",
+  "command": [
+    "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/install/bin/pg_ctl",
+    "-D",
+    "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/data",
+    "-l",
+    "/home/zpconn/code/aerostore/target/maintenance-final-validation/postgres.log",
+    "-w",
+    "-t",
+    "30",
+    "start"
+  ],
+  "returncode": 0,
+  "stdout": "waiting for server to start.... done\nserver started\n",
+  "stderr": "",
+  "pid_file": [
+    "83497",
+    "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/data",
+    "1790388814",
+    "55432",
+    "/tmp/aerostore-tuned-pg-20260925",
+    "",
+    "  6341268         3",
+    "ready   "
+  ],
+  "proc_start_ticks": "1951587",
+  "executable": "/home/zpconn/code/aerostore/target/contention-tuned-validation/native-postgres/install/bin/postgres"
+}

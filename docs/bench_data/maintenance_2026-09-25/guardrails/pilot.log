@@ -1,0 +1,144 @@
+[coverage] /usr/bin/python3 scripts/check_formal_coverage.py
+[coverage] PASS (0.1s); target/maintenance-final-validation/guardrails/coverage.log
+[gate-tests] /usr/bin/python3 scripts/test_formal_gate.py
+[gate-tests] PASS (2.0s); target/maintenance-final-validation/guardrails/gate-tests.log
+[p0-contract-tests] /usr/bin/python3 scripts/test_p0_contracts.py
+[p0-contract-tests] PASS (15.8s); target/maintenance-final-validation/guardrails/p0-contract-tests.log
+[p0-contracts] /usr/bin/python3 scripts/check_p0_contracts.py
+[p0-contracts] PASS (0.9s); target/maintenance-final-validation/guardrails/p0-contracts.log
+[adapter-tests] /usr/bin/python3 verification/verus/test_generate.py
+[adapter-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/adapter-tests.log
+[verus] /usr/bin/python3 verification/verus/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/verus
+[verus] PASS (5.9s); target/maintenance-final-validation/guardrails/verus.log
+[concurrent-adapter-tests] /usr/bin/python3 verification/concurrent/test_generate.py
+[concurrent-adapter-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/concurrent-adapter-tests.log
+[concurrent] /usr/bin/python3 verification/concurrent/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/concurrent
+[concurrent] PASS (120.3s); target/maintenance-final-validation/guardrails/concurrent.log
+[predicate-adapter-tests] /usr/bin/python3 verification/predicate/test_generate.py
+[predicate-adapter-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/predicate-adapter-tests.log
+[predicate] /usr/bin/python3 verification/predicate/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/predicate
+[predicate] PASS (14.2s); target/maintenance-final-validation/guardrails/predicate.log
+[predicate-capture-adapter-tests] /usr/bin/python3 verification/predicate_capture/test_generate.py
+[predicate-capture-adapter-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/predicate-capture-adapter-tests.log
+[predicate-capture] /usr/bin/python3 verification/predicate_capture/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/predicate-capture
+[predicate-capture] PASS (5.4s); target/maintenance-final-validation/guardrails/predicate-capture.log
+[predicate-composition-adapter-tests] /usr/bin/python3 verification/predicate_composition/test_generate.py
+[predicate-composition-adapter-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/predicate-composition-adapter-tests.log
+[predicate-composition] /usr/bin/python3 verification/predicate_composition/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/predicate-composition
+[predicate-composition] PASS (7.2s); target/maintenance-final-validation/guardrails/predicate-composition.log
+[skiplist-detach-adapter-tests] /usr/bin/python3 verification/skiplist_detach/test_generate.py
+[skiplist-detach-adapter-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/skiplist-detach-adapter-tests.log
+[skiplist-detach] /usr/bin/python3 verification/skiplist_detach/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/skiplist-detach
+[skiplist-detach] PASS (3.7s); target/maintenance-final-validation/guardrails/skiplist-detach.log
+[postings-adapter-tests] /usr/bin/python3 verification/postings/test_generate.py
+[postings-adapter-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/postings-adapter-tests.log
+[postings] /usr/bin/python3 verification/postings/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/postings
+[postings] PASS (14.0s); target/maintenance-final-validation/guardrails/postings.log
+[guards-adapter-tests] /usr/bin/python3 verification/guards/test_generate.py
+[guards-adapter-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/guards-adapter-tests.log
+[guards] /usr/bin/python3 verification/guards/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/guards
+[guards] PASS (5.1s); target/maintenance-final-validation/guardrails/guards.log
+[lifecycle-adapter-tests] /usr/bin/python3 verification/lifecycle/test_generate.py
+[lifecycle-adapter-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/lifecycle-adapter-tests.log
+[lifecycle] /usr/bin/python3 verification/lifecycle/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/lifecycle
+[lifecycle] PASS (23.2s); target/maintenance-final-validation/guardrails/lifecycle.log
+[publication-slice-adapter-tests] /usr/bin/python3 verification/publication_slice/test_generate.py
+[publication-slice-adapter-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/publication-slice-adapter-tests.log
+[publication-slice] /usr/bin/python3 verification/publication_slice/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/publication-slice
+[publication-slice] PASS (10.2s); target/maintenance-final-validation/guardrails/publication-slice.log
+[lifecycle-scenario-adapter-tests] /usr/bin/python3 verification/lifecycle_scenario/test_generate.py
+[lifecycle-scenario-adapter-tests] PASS (0.2s); target/maintenance-final-validation/guardrails/lifecycle-scenario-adapter-tests.log
+[lifecycle-scenario] /usr/bin/python3 verification/lifecycle_scenario/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/lifecycle-scenario
+[lifecycle-scenario] PASS (22.1s); target/maintenance-final-validation/guardrails/lifecycle-scenario.log
+[lifecycle-interference-adapter-tests] /usr/bin/python3 verification/lifecycle_interference/test_generate.py
+[lifecycle-interference-adapter-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/lifecycle-interference-adapter-tests.log
+[lifecycle-interference] /usr/bin/python3 verification/lifecycle_interference/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/lifecycle-interference
+[lifecycle-interference] PASS (24.6s); target/maintenance-final-validation/guardrails/lifecycle-interference.log
+[guard-ownership-adapter-tests] /usr/bin/python3 verification/guard_ownership/test_generate.py
+[guard-ownership-adapter-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/guard-ownership-adapter-tests.log
+[guard-ownership] /usr/bin/python3 verification/guard_ownership/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/guard-ownership
+[guard-ownership] PASS (40.7s); target/maintenance-final-validation/guardrails/guard-ownership.log
+[lookup-adapter-tests] /usr/bin/python3 verification/lookup/test_generate.py
+[lookup-adapter-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/lookup-adapter-tests.log
+[lookup] /usr/bin/python3 verification/lookup/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/lookup
+[lookup] PASS (33.5s); target/maintenance-final-validation/guardrails/lookup.log
+[indexed-slice-adapter-tests] /usr/bin/python3 verification/indexed_slice/test_generate.py
+[indexed-slice-adapter-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/indexed-slice-adapter-tests.log
+[indexed-slice] /usr/bin/python3 verification/indexed_slice/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/indexed-slice
+[indexed-slice] PASS (18.5s); target/maintenance-final-validation/guardrails/indexed-slice.log
+[row-publication-adapter-tests] /usr/bin/python3 verification/row_publication/test_generate.py
+[row-publication-adapter-tests] PASS (0.2s); target/maintenance-final-validation/guardrails/row-publication-adapter-tests.log
+[row-publication] /usr/bin/python3 verification/row_publication/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/row-publication
+[row-publication] PASS (15.0s); target/maintenance-final-validation/guardrails/row-publication.log
+[row-retention-adapter-tests] /usr/bin/python3 verification/row_retention/test_generate.py
+[row-retention-adapter-tests] PASS (0.2s); target/maintenance-final-validation/guardrails/row-retention-adapter-tests.log
+[row-retention] /usr/bin/python3 verification/row_retention/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/row-retention
+[row-retention] PASS (45.6s); target/maintenance-final-validation/guardrails/row-retention.log
+[row-initialization-adapter-tests] /usr/bin/python3 verification/row_initialization/test_generate.py
+[row-initialization-adapter-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/row-initialization-adapter-tests.log
+[storage-slice-adapter-tests] /usr/bin/python3 verification/storage_slice/test_generate.py
+[storage-slice-adapter-tests] PASS (0.2s); target/maintenance-final-validation/guardrails/storage-slice-adapter-tests.log
+[storage-slice] /usr/bin/python3 verification/storage_slice/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/storage-slice
+[storage-slice] PASS (45.8s); target/maintenance-final-validation/guardrails/storage-slice.log
+[commit-data-adapter-tests] /usr/bin/python3 verification/commit_data/test_generate.py
+[commit-data-adapter-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/commit-data-adapter-tests.log
+[commit-data] /usr/bin/python3 verification/commit_data/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/commit-data
+[commit-data] PASS (32.6s); target/maintenance-final-validation/guardrails/commit-data.log
+[commit-completion-adapter-tests] /usr/bin/python3 verification/commit_completion/test_generate.py
+[commit-completion-adapter-tests] PASS (0.2s); target/maintenance-final-validation/guardrails/commit-completion-adapter-tests.log
+[commit-completion] /usr/bin/python3 verification/commit_completion/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/commit-completion
+[commit-completion] PASS (27.9s); target/maintenance-final-validation/guardrails/commit-completion.log
+[write-plan-adapter-tests] /usr/bin/python3 verification/write_plan/test_generate.py
+[write-plan-adapter-tests] PASS (0.2s); target/maintenance-final-validation/guardrails/write-plan-adapter-tests.log
+[write-plan] /usr/bin/python3 verification/write_plan/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/write-plan
+[write-plan] PASS (20.3s); target/maintenance-final-validation/guardrails/write-plan.log
+[write-admission-adapter-tests] /usr/bin/python3 verification/write_admission/test_generate.py
+[write-admission-adapter-tests] PASS (0.2s); target/maintenance-final-validation/guardrails/write-admission-adapter-tests.log
+[write-admission] /usr/bin/python3 verification/write_admission/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/write-admission
+[write-admission] PASS (15.5s); target/maintenance-final-validation/guardrails/write-admission.log
+[planned-commit-adapter-tests] /usr/bin/python3 verification/planned_commit/test_generate.py
+[planned-commit-adapter-tests] PASS (0.4s); target/maintenance-final-validation/guardrails/planned-commit-adapter-tests.log
+[planned-commit] /usr/bin/python3 verification/planned_commit/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/planned-commit
+[planned-commit] PASS (29.0s); target/maintenance-final-validation/guardrails/planned-commit.log
+[lean] /usr/bin/python3 scripts/check_lean.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/lean.json
+[lean] PASS (184.8s); target/maintenance-final-validation/guardrails/lean.log
+[kernel-tests] cargo test --offline -p aerostore_verified
+[kernel-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/kernel-tests.log
+[tla-runner-tests] /usr/bin/python3 scripts/test_tla_runner.py
+[tla-runner-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/tla-runner-tests.log
+[tla] /usr/bin/python3 scripts/check_tla.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/tla
+[tla] PASS (44.6s); target/maintenance-final-validation/guardrails/tla.log
+[p1-native-runner-tests] /usr/bin/python3 -m unittest discover -s verification/p1_native -p test_*.py
+[p1-native-runner-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/p1-native-runner-tests.log
+[p1-native] /usr/bin/python3 verification/p1_native/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/p1-native
+[p1-native] PASS (77.1s); target/maintenance-final-validation/guardrails/p1-native.log
+[planning-native-runner-tests] /usr/bin/python3 -m unittest discover -s verification/planning_native -p test_*.py
+[planning-native-runner-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/planning-native-runner-tests.log
+[planning-native] /usr/bin/python3 verification/planning_native/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/planning-native
+[planning-native] PASS (98.7s); target/maintenance-final-validation/guardrails/planning-native.log
+[retention-native-runner-tests] /usr/bin/python3 -m unittest discover -s verification/retention_native -p test_*.py
+[retention-native-runner-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/retention-native-runner-tests.log
+[production-equivalence-checker-tests] /usr/bin/python3 verification/lookup_native/test_production_equivalence.py
+[production-equivalence-checker-tests] PASS (1.3s); target/maintenance-final-validation/guardrails/production-equivalence-checker-tests.log
+[retention-native] /usr/bin/python3 verification/retention_native/run.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/retention-native
+[retention-native] PASS (94.4s); target/maintenance-final-validation/guardrails/retention-native.log
+[lock-models] /usr/bin/python3 scripts/check_lock_models.py --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/lock-models
+[lock-models] PASS (24.2s); target/maintenance-final-validation/guardrails/lock-models.log
+[performance-gate-tests] /usr/bin/python3 scripts/test_compare_engine_performance.py
+[performance-gate-tests] PASS (0.1s); target/maintenance-final-validation/guardrails/performance-gate-tests.log
+[core-regressions] cargo test --offline --locked -p aerostore_core --release --lib --test wal_protocol_regressions --test wal_delta_recovery_pk_map --test wal_writer_lifecycle --test wal_crash_recovery --test shm_shared_memory --test crucible_latency_histogram --test crucible_seed -- --test-threads=1
+[core-regressions] PASS (33.8s); target/maintenance-final-validation/guardrails/core-regressions.log
+[integration-default] cargo test --offline -p aerostore_core --release --test occ_transactional_index --test transactional_query_execution --test occ_write_skew -- --test-threads=1
+[integration-default] PASS (0.3s); target/maintenance-final-validation/guardrails/integration-default.log
+[crucible-default] cargo bench --offline -p aerostore_core --bench hyperfeed_extended_crucible -- --engine aerostore --mode all --families 8 --cycles 1 --workers 4 --shm-mib 128 --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/crucible-default.json
+[crucible-default] PASS (0.4s); target/maintenance-final-validation/guardrails/crucible-default.log
+[integration-verified-buckets-sort] cargo test --offline -p aerostore_core --release --features verified-buckets-sort --test occ_transactional_index --test transactional_query_execution --test occ_write_skew -- --test-threads=1
+[integration-verified-buckets-sort] PASS (0.3s); target/maintenance-final-validation/guardrails/integration-verified-buckets-sort.log
+[crucible-verified-buckets-sort] cargo bench --offline -p aerostore_core --features verified-buckets-sort --bench hyperfeed_extended_crucible -- --engine aerostore --mode all --families 8 --cycles 1 --workers 4 --shm-mib 128 --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/crucible-verified-buckets-sort.json
+[crucible-verified-buckets-sort] PASS (0.3s); target/maintenance-final-validation/guardrails/crucible-verified-buckets-sort.log
+[integration-verified-buckets-bitmap] cargo test --offline -p aerostore_core --release --features verified-buckets-bitmap --test occ_transactional_index --test transactional_query_execution --test occ_write_skew -- --test-threads=1
+[integration-verified-buckets-bitmap] PASS (0.3s); target/maintenance-final-validation/guardrails/integration-verified-buckets-bitmap.log
+[crucible-verified-buckets-bitmap] cargo bench --offline -p aerostore_core --features verified-buckets-bitmap --bench hyperfeed_extended_crucible -- --engine aerostore --mode all --families 8 --cycles 1 --workers 4 --shm-mib 128 --output /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/crucible-verified-buckets-bitmap.json
+[crucible-verified-buckets-bitmap] PASS (0.3s); target/maintenance-final-validation/guardrails/crucible-verified-buckets-bitmap.log
+Report: /home/zpconn/code/aerostore/target/maintenance-final-validation/guardrails/report.json
+Profile pilot: PASS; whole engine: UNPROVED

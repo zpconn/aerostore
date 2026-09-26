@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "errors": [],
+  "scope": "Main841 artifact inventory and byte/decompression audit only. Formal archive still pending and not validated by this partial receipt. Final comprehensive audit remains required.",
+  "helper_sha256": "6e7246f156cae428bd2a9c164758ff5d77c3fef986ace913f83a0ad7756b1d57",
+  "executed_prefix_sha256": "64c61dc6f4d255f95ba45a6af4f09f69a5b947813897ff35de43b532b431adfd",
+  "archive_files_checked": 841,
+  "gzip_wrapped_files_checked": 430,
+  "trials_checked": 56,
+  "retained_failed_trials": 8,
+  "checks": [
+    "Every main manifest entry independently hashed, decompressed and counted; compressed trailers checked to EOF.",
+    "Final and development source archives contain exactly484 inputs; only reviewed boundary lock differs and build receipts identify identical executable bytes.",
+    "All56 matrix/cadence trials and TCP retained, including all8diagnostic failures;18metrics histories remain unverified. Complete job/transaction scope and real300/600s positive sweeps checked.",
+    "Final121 unit checks and reused19 process regressions have matching archived receipts/logs; deliberate cap failure and pause evidence retained."
+  ]
+}

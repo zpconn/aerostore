@@ -168,7 +168,203 @@ def routed_trial(dispatch="signature-affinity", ttl=1000, pattern="mixed", **opt
     return item
 
 
+def sweep_trial(evidence="full", seconds=5, projection_batch_size=4, housekeeping_batch_size=32,
+                max_maintenance_batches=4096, empty=False):
+    item = calibrated_trial(seconds=seconds, rate=6, workers=2, families=4,
+                            projection=1, housekeeping=2, evidence=evidence)
+    config = item["config"]
+    config.update(maintenance_mode="sweep", projection_batch_size=projection_batch_size,
+                  housekeeping_batch_size=housekeeping_batch_size, max_maintenance_batches=max_maintenance_batches)
+    item["report"]["config"].update(config)
+    run = item["report"]["runs"][0]
+    run["calibrated_schedule"].update(maintenance_mode="sweep", max_maintenance_batches=max_maintenance_batches,
+                                    projection_batch_limit=projection_batch_size, housekeeping_batch_limit=housekeeping_batch_size,
+                                    maintenance_scope="complete_sweep_batched_transactions",
+                                    global_maintenance_sweep_complete=seconds > 1)
+    jobs = []
+    for name, worker, interval, limit, bit in (("projection", 2, 1, projection_batch_size, 0),
+                                             ("housekeeping", 3, 2, housekeeping_batch_size, 1)):
+        kind = "global_" + name
+        selected = []
+        for ordinal, tick in enumerate(range(interval, seconds, interval)):
+            rows = 0 if empty else limit + 1
+            batches = 1 if empty else 3
+            outcomes = {field: 0 for field in gate.OUTCOME_FIELDS}
+            if name == "projection":
+                outcomes.update(claimed_events=rows, rescheduled_events=rows, outputs=rows)
+            else:
+                outcomes["expired_records"] = rows
+            scheduled = run["admission_started_ns"] + tick * 1000000000
+            first_id = 8000000000 + (ordinal * 2 + bit) * 4096
+            selected.append(dict(worker=worker, job_id=4000000000 + ordinal * 2 + bit,
+                                 job_ordinal=ordinal, **{"class": name}, scheduled_ns=scheduled,
+                                 started_ns=scheduled + 100000, finished_ns=scheduled + 100000 + batches * 1000000,
+                                 received_ns=scheduled + 200000 + batches * 1000000,
+                                 batches=batches, nonempty_batches=batches - 1, terminal_batches=1,
+                                 processed_rows=rows, retries=int(name == "projection" and ordinal == 0), terminal_empty=True,
+                                 first_transaction_id=first_id, terminal_transaction_id=first_id + batches - 1,
+                                 outcomes=outcomes))
+        if selected:
+            run["per_kind"][kind]["outcomes"] = {field: sum(job["outcomes"][field] for job in selected) for field in gate.OUTCOME_FIELDS}
+        run["worker_activity"][worker].update(retries=sum(job["retries"] for job in selected),
+                                              busy_ns=sum(job["finished_ns"] - job["started_ns"] for job in selected))
+        run["worker_activity"][worker]["utilization"] = run["worker_activity"][worker]["busy_ns"] / (run["elapsed_seconds_including_drain"] * 1e9)
+        jobs.extend(selected)
+    # Fixture sizes are below 100, so nearest-rank p99 is the largest duration.
+    for name in ("projection", "housekeeping", "maintenance"):
+        selected = [job for job in jobs if name == "maintenance" or job["class"] == name]
+        statistics = run["workload_classes"][name]
+        statistics.update(retries=sum(job["retries"] for job in selected),
+                          positive_effect_jobs=sum(job["processed_rows"] > 0 for job in selected))
+        for field, end, start in (("p99_us_including_retries", "received_ns", "scheduled_ns"),
+                                  ("service_latency_p99_us_including_retries", "finished_ns", "started_ns"),
+                                  ("arrival_queue_delay_p99_us", "started_ns", "scheduled_ns")):
+            statistics[field] = max((job[end] - job[start] for job in selected), default=0) / 1000 if selected else None
+    run["maintenance_jobs"] = jobs
+    run["maintenance_job_audit"] = dict(checked=True, passed=True, completed_jobs=len(jobs),
+        committed_batches=sum(job["batches"] for job in jobs), nonempty_batches=sum(job["nonempty_batches"] for job in jobs),
+        terminal_batches=len(jobs), processed_rows=sum(job["processed_rows"] for job in jobs),
+        scope="complete_sweep_batched_transactions")
+    run["transaction_kinds"] = dict(run["message_kinds"])
+    for name in ("projection", "housekeeping"):
+        selected = [job for job in jobs if job["class"] == name]
+        if selected:
+            run["transaction_kinds"]["global_" + name] = sum(job["batches"] for job in selected)
+    for kind, count in run["transaction_kinds"].items():
+        run["per_kind"][kind]["transactions"] = count
+    run["completed_transactions"] = sum(run["transaction_kinds"].values())
+    run["store_metrics"]["commits"] = run["completed_transactions"]
+    run["retries"] = sum(job["retries"] for job in jobs)
+    return item
+
+
 class QualificationTests(unittest.TestCase):
+    def test_invalid_maintenance_bounds_and_noncalibrated_overrides_fail_before_execution(self):
+        for flags in (["--projection-batch-size", "0"], ["--projection-batch-size", "17"],
+                      ["--housekeeping-batch-size", "0"], ["--housekeeping-batch-size", "65"],
+                      ["--max-maintenance-batches", "0"], ["--max-maintenance-batches", "4097"],
+                      ["--workload", "fleet", "--maintenance-mode", "sweep"],
+                      ["--workload", "lifecycle", "--projection-batch-size", "8"]):
+            with self.subTest(flags=flags), tempfile.TemporaryDirectory() as directory:
+                with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:
+                    gate.main(["--binary", "/nonexistent/benchmark", "--output", directory,
+                               "--workload", "calibrated", "--families", "16", "--hot-percent", "0",
+                               "--slo-ms", "100", *flags])
+                self.assertEqual(error.exception.code, 2)
+                self.assertEqual(json.loads((Path(directory) / "campaign.json").read_text())["stage"], "configuration")
+
+    def test_configurable_batch_control_retains_one_transaction_per_job(self):
+        item = calibrated_trial()
+        item["config"].update(maintenance_mode="batch", projection_batch_size=8, housekeeping_batch_size=64, max_maintenance_batches=1)
+        item["report"]["config"].update(item["config"])
+        run = item["report"]["runs"][0]
+        run["calibrated_schedule"].update(maintenance_mode="batch", projection_batch_limit=8,
+                                           housekeeping_batch_limit=64, max_maintenance_batches=1)
+        run["completed_transactions"] = run["completed_messages"]
+        run["transaction_kinds"] = dict(run["message_kinds"])
+        for statistics in run["per_kind"].values():
+            statistics["transactions"] = statistics["completed"]
+        self.assertTrue(gate.assess_trial(item, POLICY)["execution_valid"])
+        run["completed_transactions"] += 1
+        self.assertFalse(gate.assess_trial(item, POLICY)["execution_valid"])
+
+    def test_complete_sweeps_count_jobs_separately_from_committed_transactions(self):
+        item = sweep_trial()
+        verdict = gate.assess_trial(item, POLICY)
+        self.assertTrue(verdict["execution_valid"], verdict)
+        self.assertTrue(verdict["history_verified"])
+        self.assertTrue(verdict["global_maintenance_sweep_complete"])
+        self.assertFalse(verdict["qualified_capacity_trial"])
+        self.assertFalse(verdict["performance_passed"])
+        run = item["report"]["runs"][0]
+        self.assertEqual(run["completed_messages"], 36)
+        self.assertEqual(run["completed_transactions"], 48)
+        self.assertEqual(run["workload_classes"]["maintenance"]["completed"], 6)
+        self.assertFalse(any("bounded batches" in reason for reason in verdict["qualification_limitations"]))
+
+    def test_sweep_rejects_missing_terminal_forged_commits_job_inflation_and_caps(self):
+        mutations = [lambda run: run["maintenance_jobs"].pop(),
+                     lambda run: run["maintenance_jobs"].append(copy.deepcopy(run["maintenance_jobs"][0])),
+                     lambda run: run["maintenance_jobs"][0].update(terminal_empty=False),
+                     lambda run: run["maintenance_jobs"][0].update(terminal_batches=0),
+                     lambda run: run["maintenance_jobs"][0].update(batches=2),
+                     lambda run: run["maintenance_jobs"][0].update(batches=4097, nonempty_batches=4096),
+                     lambda run: run["maintenance_jobs"][0].update(processed_rows=9),
+                     lambda run: run["maintenance_jobs"][0].update(batches=True),
+                     lambda run: run["maintenance_job_audit"].update(committed_batches=17),
+                     lambda run: run["store_metrics"].update(commits=run["completed_messages"]),
+                     lambda run: run.update(completed_transactions=run["completed_messages"]),
+                     lambda run: run.update(completed_messages=run["completed_transactions"]),
+                     lambda run: run["transaction_kinds"].update(global_projection=4),
+                     lambda run: run["per_kind"]["global_projection"].update(transactions=4),
+                     lambda run: run["message_kinds"].update(global_projection=12),
+                     lambda run: run["per_kind"]["global_projection"].update(completed=12)]
+        for index, mutate in enumerate(mutations):
+            with self.subTest(index=index):
+                item = sweep_trial()
+                mutate(item["report"]["runs"][0])
+                self.assertFalse(gate.assess_trial(item, POLICY)["execution_valid"])
+        item = sweep_trial(max_maintenance_batches=2)
+        self.assertFalse(gate.assess_trial(item, POLICY)["execution_valid"])
+
+    def test_sweep_admission_effects_and_whole_job_latencies_are_independently_audited(self):
+        mutations = [lambda run: run["maintenance_jobs"][0].update(worker=0),
+                     lambda run: run["maintenance_jobs"][0].update(job_ordinal=1),
+                     lambda run: run["maintenance_jobs"][0].update(job_id=4000000001),
+                     lambda run: run["maintenance_jobs"][0].update(scheduled_ns=2000000001),
+                     lambda run: run["maintenance_jobs"][0].update(started_ns=1999999999),
+                     lambda run: run["maintenance_jobs"][0].update(received_ns=9000000000),
+                     lambda run: run["maintenance_jobs"][0].update(first_transaction_id=8000000001),
+                     lambda run: run["maintenance_jobs"][0].update(terminal_transaction_id=8000000001),
+                     lambda run: run["maintenance_jobs"][0]["outcomes"].update(claimed_events=4),
+                     lambda run: run["per_kind"]["global_projection"]["outcomes"].update(outputs=1),
+                     lambda run: run["workload_classes"]["projection"].update(p99_us_including_retries=1000),
+                     lambda run: run["workload_classes"]["maintenance"].update(service_latency_p99_us_including_retries=1000),
+                     lambda run: run["workload_classes"]["housekeeping"].update(arrival_queue_delay_p99_us=1),
+                     lambda run: run["worker_activity"][2].update(busy_ns=1),
+                     lambda run: run["maintenance_jobs"][0].update(retries=2)]
+        for index, mutate in enumerate(mutations):
+            with self.subTest(index=index):
+                item = sweep_trial()
+                mutate(item["report"]["runs"][0])
+                self.assertFalse(gate.assess_trial(item, POLICY)["execution_valid"])
+
+    def test_empty_sweep_and_no_scheduled_jobs_do_not_invent_positive_work(self):
+        empty = gate.assess_trial(sweep_trial(empty=True, max_maintenance_batches=1), POLICY)
+        self.assertTrue(empty["execution_valid"], empty)
+        self.assertTrue(empty["global_maintenance_sweep_complete"])
+        self.assertEqual(empty["maintenance_jobs"]["projection"]["positive_effect_jobs"], 0)
+        short = gate.assess_trial(sweep_trial(seconds=1), POLICY)
+        self.assertTrue(short["execution_valid"], short)
+        self.assertFalse(short["global_maintenance_sweep_complete"])
+        for mutate in (lambda run: run["maintenance_jobs"][0]["outcomes"].update(outputs=1),
+                       lambda run: run["maintenance_jobs"].__setitem__(0, None),
+                       lambda run: run["per_kind"].__setitem__("global_projection", None),
+                       lambda run: run["per_kind"]["global_projection"].update(outcomes=None),
+                       lambda run: run["maintenance_job_audit"].update(terminal_batches=True)):
+            item = sweep_trial(empty=True)
+            mutate(item["report"]["runs"][0])
+            self.assertFalse(gate.assess_trial(item, POLICY)["execution_valid"])
+
+    def test_maintenance_companions_require_identical_options_with_legacy_default_normalization(self):
+        legacy = calibrated_trial()
+        explicit = copy.deepcopy(legacy)
+        explicit["config"].update(gate.MAINTENANCE_DEFAULTS)
+        explicit["report"]["config"].update(gate.MAINTENANCE_DEFAULTS)
+        self.assertEqual(gate.key(legacy["config"]), gate.key(explicit["config"]))
+        self.assertTrue(gate.assess_trial(explicit, POLICY)["execution_valid"])
+        item = sweep_trial(evidence="metrics")
+        own = {gate.key(item["config"])}
+        verdict = gate.assess_trial(item, POLICY, own)
+        self.assertTrue(verdict["correctness_companion_verified"])
+        self.assertFalse(verdict["history_verified"])
+        for field, value in (("maintenance_mode", "batch"), ("projection_batch_size", 8),
+                             ("housekeeping_batch_size", 64), ("max_maintenance_batches", 4095)):
+            with self.subTest(field=field):
+                other = {**item["config"], field: value}
+                self.assertNotEqual(gate.key(item["config"]), gate.key(other))
+                self.assertFalse(gate.assess_trial(item, POLICY, {gate.key(other)})["correctness_companion_verified"])
+
     def test_signature_affinity_sliding_ttl_and_expiry_equality_have_golden_routes(self):
         config = calibrated_trial(seconds=1, rate=10, families=4, workers=2)["config"]
         config.update(dispatch="signature-affinity", affinity_ttl_ms=300, signature_pattern="both")

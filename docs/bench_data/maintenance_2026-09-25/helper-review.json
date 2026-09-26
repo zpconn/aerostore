@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "reviewed_at": "2026-09-26T02:21:43.127427+00:00",
+  "scope": "Review improvements to evidence-only target helper before completion of long-running validation; no runtime, model, gate or proof source changed.",
+  "path": "target/maintenance-final-validation/review_cadence.py",
+  "previous_sha256": "0c03c698b01bd51ee9ac388284484238612c28e92f6a8939173eddee8c4b8961",
+  "updated_sha256": "6c86d447c820f2c339805b4b6eb07371743a361c4a808301167f78f2c3e9ee8a",
+  "runtime_source_sha256": "1307af5f3239bdcbd652ef79df57ac3a91614d10c55004d9845db18b0ad3c8cd",
+  "changes": [
+    "Require completed successful one-trial campaign, completed successful full-history run and exact trial source/binary bindings.",
+    "Bind identity/both/zero-TTL routing, full evidence and default maintenance size/cap parameters used by this planned pair.",
+    "Derive immutable projection and housekeeping cutoffs independently from ordinal and epoch and require the matching complete-query predicate.",
+    "Require exact unique maintenance summary job-ID set to match raw transaction groups.",
+    "Use integer nearest-rank p99 indexing.",
+    "Hash every audited history/snapshot/witness/schedule artifact and campaign before and after review to detect changes during inspection.",
+    "Bind final cadence-review.json to the review-helper SHA256."
+  ],
+  "corrected_runtime_issues": [],
+  "data_completion_status_at_review": "Long-run campaigns still in progress; no final result asserted by helper review."
+}

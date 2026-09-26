@@ -1,0 +1,969 @@
+{
+  "claim_evidence": [
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "P0-CONTRACT-COVERAGE",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "p0-contract-tests",
+        "p0-contracts"
+      ],
+      "scope": "Reviewed public-core API success/error contracts, declared lock relationships and exact-source coverage; checker success is distinct from its explicit P0 completion result and is not semantic verification or inferred deadlock freedom",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "P1-NATIVE-TRANSACTION-SCENARIOS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "integration-default",
+        "integration-verified-buckets-bitmap",
+        "integration-verified-buckets-sort",
+        "p1-native",
+        "p1-native-runner-tests"
+      ],
+      "scope": "Deterministic complete native creation/key-move transactions and fresh retries, combined with existing capture/guard/allocation/rollback/poison/stamping schedules; nine cases and seven intended assertion failures are bounded native evidence, not complete-slice refinement or exhaustive concurrency verification",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "in_progress",
+      "id": "KERNEL-BUCKETS-VERUS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "adapter-tests",
+        "kernel-tests",
+        "verus"
+      ],
+      "scope": "Both actual Rust bucket function bodies proved with Verus; allocation success assumed",
+      "verus_roots": [
+        "canonical_buckets_sort",
+        "canonical_buckets_bitmap"
+      ]
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "in_progress",
+      "id": "KERNEL-STAMP",
+      "lean_roots": [
+        "AerostoreProofs.rust_stamp_refinement"
+      ],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "kernel-tests",
+        "lean",
+        "verus"
+      ],
+      "scope": "Scalar stamp comparison; callers and atomic ordering excluded",
+      "verus_roots": [
+        "stamp_precedes_snapshot"
+      ]
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "in_progress",
+      "id": "TX-PUBLICATION-MODEL",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "tla"
+      ],
+      "scope": "Finite abstract protocol exploration; no automatic Rust refinement",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [
+        "commit_with_record_impl",
+        "CommitPrimitives::prepare_before_publish",
+        "CommitPrimitives::abort_preparation",
+        "CommitPrimitives::invoke_before_publish",
+        "CommitPrimitives::rollback_prepared_commit",
+        "callback_contract_has_witnesses"
+      ],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "TX-CONTROL-FLOW-VERUS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "concurrent",
+        "concurrent-adapter-tests"
+      ],
+      "scope": "Actual commit driver, guarded health admission, pre-lock preparation cleanup and guarded acceptance cleanup, source-bound conditional event-order proof; native primitive semantics, histories, and weak memory remain open",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "TX-PREDICATE-DATA-VERUS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "predicate": [
+          "index_lock_keys",
+          "index_read_conflict",
+          "publish_index_stamps",
+          "validate_after_late_publication"
+        ]
+      },
+      "required_checks": [
+        "predicate",
+        "predicate-adapter-tests"
+      ],
+      "scope": "Actual lock-key union, dependency validation and stamp-publication loops under operation-local registry/collection/hash/guard/atomic contracts; source-bound data proofs and late-publication validation harness, not native concurrent history refinement",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "TX-PREDICATE-CAPTURE-VERUS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "predicate-capture": [
+          "capture_dependencies",
+          "find_read"
+        ]
+      },
+      "required_checks": [
+        "predicate-capture",
+        "predicate-capture-adapter-tests"
+      ],
+      "scope": "Actual index_lookup dependency loop: complete capture even for empty candidates, repeat checks, prefix/provenance/uniqueness and bounded dependency growth under guarded stamp-read and allocation contracts; raw candidates and native MVCC remain open",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "TX-PREDICATE-COMPOSITION-VERUS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "predicate-composition": [
+          "capture_then_validate",
+          "capture_preserves_guard_coverage",
+          "publication_supplies_late_bucket"
+        ]
+      },
+      "required_checks": [
+        "predicate",
+        "predicate-capture",
+        "predicate-composition",
+        "predicate-composition-adapter-tests"
+      ],
+      "scope": "Checked composition invoking exact source-bound capture and validation modules: guarded dependency provenance and field translation; successful validation excludes overlapping late publication stamps. Two represented states, not native concurrent history refinement",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "TX-PREDICATE-HISTORY-LEAN",
+      "lean_roots": [
+        "AerostoreProofs.predicate_history_monotone",
+        "AerostoreProofs.predicate_history_covers_events",
+        "AerostoreProofs.accepted_read_excludes_later_publication",
+        "AerostoreProofs.own_write_predicate_complete",
+        "AerostoreProofs.dependency_rejects_changed",
+        "AerostoreProofs.dependency_rejects_recent"
+      ],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "lean"
+      ],
+      "scope": "Unbounded finite fresh-publication histories preserve stamp coverage; accepted dependencies exclude later overlapping publications; exact own-write predicate overlay under candidate-completeness premise. Abstract mathematics, not Rust extraction or native history refinement",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "TX-LIFECYCLE-NATIVE-VERUS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "lifecycle": [
+          "begin_transaction",
+          "end_transaction",
+          "snapshot_locked",
+          "create_transaction_snapshot",
+          "oldest_snapshot_xmin",
+          "reservation_after_reader",
+          "deregister_then_reserve"
+        ]
+      },
+      "required_checks": [
+        "core-regressions",
+        "lifecycle",
+        "lifecycle-adapter-tests"
+      ],
+      "scope": "Source-bound registration, snapshot scans, horizon publication, deregistration and shared-clock reservation under operation-local acquired-input projections. Active coverage and freshness derived from clock history; blocking-acquisition interference, native atomics/RAII and exhaustion handling remain open",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "TX-GUARD-IDENTITY-VERUS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "guards": [
+          "transactional_try_lock_bucket",
+          "acquire_index_bucket",
+          "acquire_index_locks",
+          "acquired_guards_cover_keys"
+        ]
+      },
+      "required_checks": [
+        "concurrent",
+        "guards",
+        "guards-adapter-tests"
+      ],
+      "scope": "Actual bucket selection, bounded retry and acquisition collection preserve physical arena/index/bucket identity and exact requested coverage. Mutex exclusion, native ownership/Drop and subsequent lifetime remain primitive obligations",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "TX-LIFECYCLE-PREDICATE-JOIN",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "publication-slice": [
+          "acquire_required_guards",
+          "registry_agreement_is_injective",
+          "lifecycle_publication_invalidates_read",
+          "validate_after_lifecycle_publication"
+        ]
+      },
+      "required_checks": [
+        "guards",
+        "lifecycle",
+        "predicate",
+        "publication-slice",
+        "publication-slice-adapter-tests"
+      ],
+      "scope": "Actual key generation followed by guard acquisition establishes coverage under explicit inverse registry/common-arena correspondence. Shared reservation-history freshness and actual publication relation feed native validator rejection without a numeric stamp premise. Native guard lifetime and concurrent-history correspondence remain open",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "TX-LIFECYCLE-SHARED-CLOCK-SCENARIO",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "lifecycle-scenario": [
+          "registered_reader_then_writer_publication"
+        ]
+      },
+      "required_checks": [
+        "core-regressions",
+        "lifecycle",
+        "lifecycle-scenario",
+        "lifecycle-scenario-adapter-tests",
+        "predicate",
+        "predicate-capture"
+      ],
+      "scope": "Controlled scenario calls source-bound reader registration, snapshot and dependency capture, writer deregistration, publication and validation through one checked clock adapter; derives reader identity and fresh publication label from those calls. Acquired-input framing excludes unmodeled metadata transitions while waiting; raw candidates, MVCC and cross-actor guard ownership remain outside this result",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "TX-LIFECYCLE-HISTORY-LEAN",
+      "lean_roots": [
+        "AerostoreProofs.lifecycle_step_preserves",
+        "AerostoreProofs.lifecycle_late_publication",
+        "AerostoreProofs.lifecycle_publication_chronology",
+        "AerostoreProofs.lifecycle_machine_reservation",
+        "AerostoreProofs.lifecycle_observed_publication_rejected",
+        "AerostoreProofs.lifecycle_older_writer_witness"
+      ],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "lean",
+        "tla"
+      ],
+      "scope": "Inductive finite abstract histories derive later publication-label freshness and read rejection; explicit machine no-wrap condition and old-writer witness. Reservation order differs from physical store order; no extraction or arbitrary native-history refinement is claimed",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "TX-LIFECYCLE-INTERFERENCE-VERUS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "lifecycle-interference": [
+          "begin_after_wait",
+          "snapshot_after_wait",
+          "end_after_wait",
+          "history_reader_survives_wait"
+        ]
+      },
+      "required_checks": [
+        "core-regressions",
+        "lifecycle-interference",
+        "lifecycle-interference-adapter-tests"
+      ],
+      "scope": "Native acquired-state suffixes composed with arbitrary finite legal metadata interference while waiting; borrowed owner token preserves only its registration, snapshot observes acquisition-time state. Native copyable-registration ownership, coherent metadata projection, mutex correspondence and no-wrap enforcement remain assumptions",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "TX-GUARD-OWNERSHIP-VERUS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "guard-ownership": [
+          "try_acquire",
+          "drop_lease",
+          "read_permission",
+          "release_all"
+        ]
+      },
+      "required_checks": [
+        "guard-ownership",
+        "guard-ownership-adapter-tests",
+        "lock-models"
+      ],
+      "scope": "Source-bound successful CAS mints opaque affine lease, borrowed reads require live authority, and native Release drop consumes lease. Legal competing acquisitions/releases can interleave with retry and release; physical authority, atomics, frontend Drop and mmap correspondence remain native boundaries",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "TX-LOOKUP-MATERIALIZATION-VERUS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "lookup": [
+          "find_visible_row_ptr",
+          "read",
+          "record_read",
+          "has_serialization_conflict",
+          "materialize_after_checked_history",
+          "invisible_head_append_preserves_snapshot"
+        ]
+      },
+      "required_checks": [
+        "core-regressions",
+        "lookup",
+        "lookup-adapter-tests"
+      ],
+      "scope": "Actual MVCC selection, private-write overlay, read provenance, row validation and lookup filtering; finite coherent publication histories derive complete snapshot candidates and complete-or-error results. Raw retained-image/history and current-posting correspondence remain explicit storage assumptions",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "TX-INDEXED-READ-VALIDATION-SLICE",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "indexed-slice": [
+          "indexed_read_then_validate",
+          "empty_history_has_success_witness"
+        ]
+      },
+      "required_checks": [
+        "core-regressions",
+        "guard-ownership",
+        "indexed-slice",
+        "indexed-slice-adapter-tests",
+        "lookup",
+        "predicate",
+        "predicate-capture"
+      ],
+      "scope": "One-bucket native indexed-read and later validation composition: acquire opaque lease, capture dependency and current candidates under that lease, consume guards before native materialization, reacquire and invoke native predicate and row validators. Complete results or rejection conditional on stated storage/history/authority projections; not full writer commit or arbitrary heap execution refinement",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "TX-QUERY-COMPLETENESS-LEAN",
+      "lean_roots": [
+        "AerostoreProofs.guarded_stamp_history_covers",
+        "AerostoreProofs.lifecycle_publication_follows_writer",
+        "AerostoreProofs.query_subreader_publication_visible",
+        "AerostoreProofs.query_posting_replay_exact",
+        "AerostoreProofs.query_success_complete",
+        "AerostoreProofs.query_missing_candidate_retries",
+        "AerostoreProofs.query_two_version_selection",
+        "AerostoreProofs.query_contract_has_live_witnesses"
+      ],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "lean",
+        "tla"
+      ],
+      "scope": "Unbounded finite coherent histories derive exact posting replay and accepted snapshot candidate completeness with private-write overlay, allowing disjoint publication-store reordering; abstract two-version visibility and live witnesses. TLC separately explores finite schedules; no unchecked theorem import or full native refinement",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "DURABILITY-REGRESSIONS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "core-regressions"
+      ],
+      "scope": "Deterministic real-engine reproductions and regressions for WAL publication, checkpoint cut, stream identity and framing; tests do not establish universal crash refinement",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "PK-INSERT-MODEL-REGRESSIONS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "core-regressions",
+        "tla"
+      ],
+      "scope": "Searched-head CAS insertion: finite uniqueness/return-value model plus deterministic same-key and colliding-key production regressions; native weak-memory and allocation refinement remain open",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "LOCK-BOUNDED-MODELS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "gate-tests",
+        "lock-models"
+      ],
+      "scope": "Seven bounded Loom cases importing the production lock, plus a rejected weakened-acquire mutant; abstract index ownership, no native mmap refinement or unbounded progress proof",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": false,
+      "declared_status": "open",
+      "id": "TX-HISTORY-IMPLEMENTATION",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [],
+      "scope": "Actual concurrent implementation refines strictly serializable histories",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "POSTING-PUBLICATION-VERUS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "postings": [
+          "prepare_index_destinations",
+          "rollback_index_destinations",
+          "remove_index_sources"
+        ]
+      },
+      "required_checks": [
+        "core-regressions",
+        "postings",
+        "postings-adapter-tests"
+      ],
+      "scope": "Actual destination preparation, reverse rollback and source removal against posting-set and poison contracts; exact owned additions/removals and clean failure or poison. Destination ownership, individual pointer operations and native concurrent composition remain caller/primitive obligations",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "SKIPLIST-DETACHMENT-VERUS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "skiplist-detach": [
+          "cached_detach",
+          "refreshed_detach",
+          "detach_before_retire",
+          "primitive_contracts_have_success_and_retry_witnesses"
+        ]
+      },
+      "required_checks": [
+        "core-regressions",
+        "skiplist-detach",
+        "skiplist-detach-adapter-tests"
+      ],
+      "scope": "Actual cached/fallback unlink loops require all-lane detachment before retirement and preserve pinned contents under guarded lane/search/retire contracts; native pointer ownership, epoch refinement and retry termination remain open",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": false,
+      "declared_status": "open",
+      "id": "MEMORY-OWNERSHIP",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [],
+      "scope": "Typed arena validity, unique ownership, safe reclamation, guard lifetime",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": false,
+      "declared_status": "open",
+      "id": "MEMORY-PROGRESS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [],
+      "scope": "Concrete resource accounting, collector admission, conditional memory bound",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": false,
+      "declared_status": "open",
+      "id": "WEAK-MEMORY-MMAP",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [],
+      "scope": "Acquire/release/relaxed semantics and one ownership authority across processes",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "in_progress",
+      "id": "DURABILITY-MODEL",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "tla"
+      ],
+      "scope": "Modeled crash cuts and log dependencies; implementation proof remains open",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": false,
+      "declared_status": "open",
+      "id": "DURABILITY-IMPLEMENTATION",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [],
+      "scope": "Actual durable acknowledgement, checkpoint cut, codecs and recovery",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": false,
+      "declared_status": "open",
+      "id": "QUERY-APPLICATION",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [],
+      "scope": "Query route equivalence and covered application call contracts",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "KERNEL-BITMAP-LEAN",
+      "lean_roots": [
+        "AerostoreProofs.rust_bitmap_step_preserves_membership",
+        "AerostoreProofs.rust_bitmap_refinement",
+        "AerostoreProofs.rust_bitmap_rejects_first_invalid",
+        "AerostoreProofs.rust_bitmap_total",
+        "AerostoreProofs.rust_bitmap_production"
+      ],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "lean"
+      ],
+      "scope": "Complete extracted bitmap semantics including first-invalid errors; fixed-4096 production corollary under the explicit allocation/model boundary",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "KERNEL-SORT-LEAN",
+      "lean_roots": [
+        "AerostoreProofs.rust_sort_refinement",
+        "AerostoreProofs.rust_sort_rejects_first_invalid",
+        "AerostoreProofs.rust_sort_total",
+        "AerostoreProofs.rust_sort_production"
+      ],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "lean"
+      ],
+      "scope": "Complete extracted insertion-sort semantics including first-invalid errors; fixed-4096 output bound under the allocation/model boundary",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "ABSTRACT-LEAN-LEMMAS",
+      "lean_roots": [
+        "AerostoreProofs.bitmap_specification_correct",
+        "AerostoreProofs.canonical_unique",
+        "AerostoreProofs.rejection_persists"
+      ],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "lean"
+      ],
+      "scope": "Canonical set specification and monotonic rejection mathematics; not a transaction history theorem",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "KERNEL-EQUIVALENCE",
+      "lean_roots": [
+        "AerostoreProofs.rust_bucket_implementations_equivalent"
+      ],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "lean",
+        "verus"
+      ],
+      "scope": "Exact equality of complete extracted sort/bitmap results, including first-invalid errors; independent Verus result-uniqueness contract",
+      "verus_roots": [
+        "canonical_sequence_unique",
+        "first_invalid_unique",
+        "canonical_result_unique"
+      ]
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "MEMORY-RESOURCE-MODELS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "tla"
+      ],
+      "scope": "Finite cyclic resource abstractions, conditional on explicit weak fairness; no Rust refinement or quantitative arena bound",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "ROW-PUBLICATION-VERUS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "row-publication": [
+          "publish_prepared_write_set",
+          "publication_prefix_valid",
+          "publication_preserves_old_snapshot",
+          "successful_publication_connects_lookup",
+          "publication_has_live_witness",
+          "native_publication_has_executable_witness"
+        ]
+      },
+      "required_checks": [
+        "core-regressions",
+        "row-publication",
+        "row-publication-adapter-tests"
+      ],
+      "scope": "Actual prepared publication loop specialized to one validated write derives exact deletion/link/head states from individual field operations, preserves valid retained Image and old-snapshot selection through every intermediate prefix, and characterizes fallible prefixes. Guard/fresh-allocation ownership and physical atomic correspondence remain primitive obligations; arbitrary multirow refinement remains open, while the nonprepared single-write path has separate commit-data evidence",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "ROW-RETENTION-VERUS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "row-retention": [
+          "splice_valid",
+          "splice_reachable",
+          "eligible_is_invisible",
+          "splice_first_visible",
+          "prefix_edges",
+          "vacuum_row_acquired",
+          "retained_anchor_and_later_reclaim_witness",
+          "locked_version_survives_witness",
+          "min_horizon",
+          "compute_global_xmin",
+          "public_vacuum_reclaim_once",
+          "run_vacuum_pass"
+        ]
+      },
+      "required_checks": [
+        "core-regressions",
+        "retention-native",
+        "row-retention",
+        "row-retention-adapter-tests"
+      ],
+      "scope": "Actual public vacuum caller clamps arbitrary requests to same-arena retained horizons, and the normal collector forwards its single scan directly to a crate-private kernel. The acquired-row loop proves strict eligibility, unlink-before-recycle, exact successful pruning/report payloads, snapshot selection and conditional cursor-prefix retention. Raw recycler ownership, row-guard acquisition interference, complete registration/horizon histories and arbitrary storage histories remain open",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "NATIVE-STORAGE-SLICE",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "storage-slice": [
+          "native_horizon_covers_reader",
+          "publication_derives_snapshot_history",
+          "publication_derives_completed_history",
+          "native_publication_derives_history",
+          "publication_derives_retained_prefix",
+          "native_vacuum_derives_history",
+          "pruned_tail_reuse_preserves_history",
+          "native_initialize_preserves_reader",
+          "native_read_after_reuse",
+          "native_validation_rejects_invisible_writer",
+          "old_snapshot_cases_have_witnesses",
+          "native_vacuum_releases_anchor"
+        ]
+      },
+      "required_checks": [
+        "core-regressions",
+        "retention-native",
+        "row-initialization-adapter-tests",
+        "row-publication",
+        "row-retention",
+        "storage-slice",
+        "storage-slice-adapter-tests"
+      ],
+      "scope": "Selected symbolic three-version native publication, acquired-row vacuum, initializer, read and validation cutpoints derive snapshot/history correspondence and retained-prefix framing; exact successful pruning and later release are conditional on primitive ownership/observations. Arbitrary histories, concurrent load-to-image mapping, full indexed composition and full P1 remain open",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "ROW-INITIALIZATION-VERUS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "storage-slice": [
+          "native_constructor_clears_metadata",
+          "native_initialize_preserves_reader"
+        ]
+      },
+      "required_checks": [
+        "retention-native",
+        "row-initialization-adapter-tests",
+        "storage-slice"
+      ],
+      "scope": "All seven native constructor fields and exact initialize_row pointer-write sequence refine their field projection under exclusive allocation permission, preserving protected cells; raw pointer resolution and allocator-pop ownership remain primitive contracts",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "COMMIT-DATA-SLICE",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "commit-data": [
+          "planned_derives_destination_ownership",
+          "complete_postings_match_published_row",
+          "prepare_destinations",
+          "rollback_destinations",
+          "remove_sources",
+          "publish_rows_ordinary",
+          "native_ordinary_data_segment",
+          "create_move_delete_have_witnesses"
+        ]
+      },
+      "required_checks": [
+        "commit-data",
+        "commit-data-adapter-tests",
+        "postings",
+        "row-publication"
+      ],
+      "scope": "Actual single-write ordinary publication and the checked native prepare/remove/publish segment join posting and row effects; initial row/posting coherence derives destination absence and successful final consistency. Validated plan, held authority and field primitive correspondence remain premises; this is not complete API-entry commit, arbitrary histories or WAL refinement",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "COMMIT-PUBLICATION-COMPLETION",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "commit-completion": [
+          "finish_transaction",
+          "publication_changes",
+          "publish_then_complete",
+          "owned_registration_finishes",
+          "completion_entry_has_live_witness",
+          "completed_write_invalidates_capture"
+        ]
+      },
+      "required_checks": [
+        "commit-completion",
+        "commit-completion-adapter-tests",
+        "commit-data",
+        "concurrent",
+        "lifecycle",
+        "p1-native",
+        "predicate"
+      ],
+      "scope": "One-write data publication joined to actual finish_transaction, shared-clock deregistration and predicate stamps, with returned write provenance and poisoning on late completion failures. Earlier clean data errors may leave the registration open for caller abort. Begins at a validated-plan cutpoint under enumerated lifecycle/storage/guard and cleanup contracts; full reader/writer concurrent-slice refinement, arbitrary native histories and full P1 remain open",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "NATIVE-FINAL-WRITE-PLANNING",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "write-plan": [
+          "planning::prefix_insert",
+          "planning::map_yields_selection",
+          "planning::final_write_indices",
+          "planning::selected_one_row",
+          "planning::index_changes",
+          "planning::repeated_write_selection_is_live",
+          "planning::key_change_has_live_execution"
+        ]
+      },
+      "required_checks": [
+        "write-plan",
+        "write-plan-adapter-tests"
+      ],
+      "scope": "Actual final_write_indices selects the last retained write per row in row order under explicit finite-map contracts; selected single-row index_changes derives exact before/after key extraction, unchanged-key omission and successful key prevalidation. The full selection loop supports symbolic write histories, while extracted changes remain one selected write and one binding. Private allocation, immutable value resolution, key callbacks, map implementation and guard acquisition remain primitive or caller obligations",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "NATIVE-WRITE-BASE-ADMISSION",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "write-admission": [
+          "admission::has_write_base_conflict",
+          "admission::validated_base_prepares_publication",
+          "admission::validation_establishes_plan",
+          "admission::validator_has_live_witness"
+        ]
+      },
+      "required_checks": [
+        "commit-data",
+        "write-admission",
+        "write-admission-adapter-tests"
+      ],
+      "scope": "Actual has_write_base_conflict derives selected current-head identity and zero nonempty-base xmax from guarded field loads, preserves fallible errors and characterizes conflicts; allocation facts and exact extracted changes then establish the existing publication plan precondition. Native partition ownership, stable acquired projection, pointer validity and API-entry acquisition remain explicit boundaries",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "NATIVE-PLANNED-COMMIT-COMPOSITION",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {
+        "planned-commit": [
+          "planned_commit",
+          "selected_record_write",
+          "extraction_survives_head_interference",
+          "stale_base_cannot_enter_publication",
+          "repeated_input_has_live_witness"
+        ]
+      },
+      "required_checks": [
+        "commit-completion",
+        "planned-commit",
+        "planned-commit-adapter-tests",
+        "planning-native",
+        "write-admission",
+        "write-plan"
+      ],
+      "scope": "Selected ordinary single-row single-changed-key replacement with a nonempty base derives final-write selection, key extraction and successful guarded base validation before invoking existing publication/deregistration/stamp proofs. It returns exact final-write provenance and coherent postings, or unchanged data or poison. A separate field-frame lemma preserves extracted keys across head interference. Physical guard acquisition, predicate/read/owner validation, arbitrary histories, no-change branches, complete early-error cleanup and postpublication non-final private-version recycling remain open; this is not complete API-entry P1 refinement",
+      "verus_roots": []
+    },
+    {
+      "concurrent_roots": [],
+      "declared_scope_evidence_passed": true,
+      "declared_status": "partial",
+      "id": "NATIVE-PLANNING-SCENARIOS",
+      "lean_roots": [],
+      "missing_roots": [],
+      "refinement_roots": {},
+      "required_checks": [
+        "integration-default",
+        "integration-verified-buckets-bitmap",
+        "integration-verified-buckets-sort",
+        "planning-native",
+        "planning-native-runner-tests"
+      ],
+      "scope": "Finite public-API scenarios cover interleaved final writes, savepoint rollback, exact commit records, unchanged-key postings, stale-base rejection before any row publication and successful fresh retries. Intended native assertion failures exercise selection, key derivation, validation and report fidelity; these executions are not arbitrary-history or formal refinement evidence",
+      "verus_roots": []
+    }
+  ],
+  "passed": true,
+  "scope": "Current full live receipts validated before binary/cache omission; existing component proof scope only."
+}

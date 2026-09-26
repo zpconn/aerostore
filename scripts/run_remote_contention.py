@@ -23,14 +23,17 @@ import uuid
 
 
 DISPATCH_DEFAULTS = {"dispatch": "identity", "affinity_ttl_ms": 0, "signature_pattern": "both"}
+MAINTENANCE_DEFAULTS = {"maintenance_mode": "batch", "projection_batch_size": 4,
+                        "housekeeping_batch_size": 32, "max_maintenance_batches": 4096}
+CALIBRATED_DEFAULTS = {**DISPATCH_DEFAULTS, **MAINTENANCE_DEFAULTS}
 
 
 def validate_dispatch_setup(setup: dict, expected: dict) -> None:
     """Missing fields identify the historic identity/both control only."""
     if any(type(setup.get(field, default)) is not type(expected.get(field, default))
            or setup.get(field, default) != expected.get(field, default)
-           for field, default in DISPATCH_DEFAULTS.items()):
-        raise RuntimeError("server setup dispatch/signature configuration differs from the client")
+           for field, default in CALIBRATED_DEFAULTS.items()):
+        raise RuntimeError("server setup dispatch/signature/maintenance configuration differs from the client")
 
 
 # A remote owner can die while cooperative GC shutdown is blocked. This
@@ -217,6 +220,10 @@ def main() -> int:
     parser.add_argument("--affinity-ttl-ms", type=int, default=0,
                         help="explicit sliding TTL in 1..3600000 ms required for signature-affinity")
     parser.add_argument("--signature-pattern", choices=["both", "mixed"], default="both")
+    parser.add_argument("--maintenance-mode", choices=["batch", "sweep"], default="batch")
+    parser.add_argument("--projection-batch-size", type=int, default=4)
+    parser.add_argument("--housekeeping-batch-size", type=int, default=32)
+    parser.add_argument("--max-maintenance-batches", type=int, default=4096)
     parser.add_argument("--evidence", choices=["full", "metrics"], default="metrics")
     parser.add_argument("--arrival-rate", type=int, default=100)
     parser.add_argument("--max-backlog", type=int, default=1000)
@@ -227,8 +234,10 @@ def main() -> int:
     args = parser.parse_args()
     if not 0 <= args.affinity_ttl_ms <= 3600000 or (args.dispatch == "signature-affinity") != (args.affinity_ttl_ms > 0):
         parser.error("signature-affinity requires an explicit TTL in 1..3600000 ms; identity requires TTL 0")
-    if args.workload != "calibrated" and any(getattr(args, field) != value for field, value in DISPATCH_DEFAULTS.items()):
-        parser.error("dispatch/signature overrides apply only to --workload calibrated")
+    if not 1 <= args.projection_batch_size <= 16 or not 1 <= args.housekeeping_batch_size <= 64 or not 1 <= args.max_maintenance_batches <= 4096:
+        parser.error("maintenance batch bounds are projection 1..16, housekeeping 1..64, cap 1..4096 including terminal")
+    if args.workload != "calibrated" and any(getattr(args, field) != value for field, value in CALIBRATED_DEFAULTS.items()):
+        parser.error("dispatch/signature/maintenance overrides apply only to --workload calibrated")
     timeout = args.timeout if args.timeout is not None else args.seconds + 240
     if args.workload == "fleet" and (args.families < 16 or args.hot_percent != 0):
         parser.error("fleet requires at least 16 families and --hot-percent 0")
@@ -272,7 +281,11 @@ def main() -> int:
               "--projection-interval-seconds", str(args.projection_interval_seconds),
               "--housekeeping-interval-seconds", str(args.housekeeping_interval_seconds),
               "--dispatch", args.dispatch, "--affinity-ttl-ms", str(args.affinity_ttl_ms),
-              "--signature-pattern", args.signature_pattern]
+              "--signature-pattern", args.signature_pattern,
+              "--maintenance-mode", args.maintenance_mode,
+              "--projection-batch-size", str(args.projection_batch_size),
+              "--housekeeping-batch-size", str(args.housekeeping_batch_size),
+              "--max-maintenance-batches", str(args.max_maintenance_batches)]
     server_args = [args.remote_binary if args.ssh_host else str(binary),
                    "--mode", "serve", "--engine", "service-tcp", "--seconds", str(timeout),
                    "--service-bind", bind, "--output", server_setup, *common]

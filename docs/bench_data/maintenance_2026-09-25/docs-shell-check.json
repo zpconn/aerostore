@@ -1,0 +1,95 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "file": "README.md",
+      "block": 0,
+      "passed": true
+    },
+    {
+      "file": "README.md",
+      "block": 1,
+      "passed": true
+    },
+    {
+      "file": "README.md",
+      "block": 2,
+      "passed": true
+    },
+    {
+      "file": "README.md",
+      "block": 3,
+      "passed": true
+    },
+    {
+      "file": "README.md",
+      "block": 4,
+      "passed": true
+    },
+    {
+      "file": "README.md",
+      "block": 5,
+      "passed": true
+    },
+    {
+      "file": "README.md",
+      "block": 6,
+      "passed": true
+    },
+    {
+      "file": "README.md",
+      "block": 7,
+      "passed": true
+    },
+    {
+      "file": "README.md",
+      "block": 8,
+      "passed": true
+    },
+    {
+      "file": "README.md",
+      "block": 9,
+      "passed": true
+    },
+    {
+      "file": "docs/hyperfeed_maintenance.md",
+      "block": 0,
+      "passed": true
+    },
+    {
+      "file": "docs/hyperfeed_calibrated.md",
+      "block": 0,
+      "passed": true
+    },
+    {
+      "file": "docs/hyperfeed_affinity.md",
+      "block": 0,
+      "passed": true
+    },
+    {
+      "file": "docs/hyperfeed_qualification.md",
+      "block": 0,
+      "passed": true
+    },
+    {
+      "file": "docs/hyperfeed_qualification.md",
+      "block": 1,
+      "passed": true
+    },
+    {
+      "file": "docs/hyperfeed_two_host.md",
+      "block": 0,
+      "passed": true
+    },
+    {
+      "file": "docs/hyperfeed_two_host.md",
+      "block": 1,
+      "passed": true
+    },
+    {
+      "file": "docs/hyperfeed_two_host.md",
+      "block": 2,
+      "passed": true
+    }
+  ]
+}

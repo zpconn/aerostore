@@ -1,0 +1,8 @@
+{
+  "engine": "aerostore",
+  "error": "worker 1: calibrated offered backlog 2 exceeds worker bound 1 after 0 completions; all independently due jobs remain admitted",
+  "evidence_directory": "/home/zpconn/code/aerostore/target/maintenance-development/preserved-tests/pause/pause-regression-dz2w_ffn/backlog-rejected/contention-crucible-k3sWQi/aerostore-0",
+  "execution_completed": false,
+  "passed": false,
+  "scenario": null
+}

@@ -1,0 +1,25 @@
+{
+  "admission_finished_ns": 19472836205696,
+  "admission_started_ns": 19469836205696,
+  "config": {
+    "duration_ns": 3000000000,
+    "families": 16,
+    "foreground_rate": 16,
+    "foreground_workers": 4,
+    "housekeeping_interval_seconds": 1,
+    "maintenance_mode": "sweep",
+    "projection_interval_seconds": 1,
+    "seed": 20260925
+  },
+  "format": "calibrated-fixed-timeline-v1",
+  "offered_by_worker": [
+    12,
+    12,
+    12,
+    12,
+    2,
+    2
+  ],
+  "offered_messages": 52,
+  "scope": "Compact deterministic schedule includes every admitted foreground message and maintenance tick, independent of completions; failed runs retain uncompleted offered work."
+}

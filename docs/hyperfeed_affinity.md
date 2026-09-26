@@ -92,9 +92,11 @@ parameters. Five-second admission with accelerated maintenance cannot establish
 production cadence, sustained capacity or a speedup. The remote helper forwards
 all three dispatcher options to both peers and checks their agreement.
 
-This step preserves the seven-view fixture, bounded maintenance batches,
-fixed population and existing worker limits. Full sweeps, lifecycle/population
-calibration and reviewed support for 100–300 workers remain necessary. See the
+The affinity checkpoint preserved the seven-view fixture, single-batch maintenance,
+fixed population and existing worker limits. Optional [complete maintenance
+jobs](hyperfeed_maintenance.md) now compose bounded transactions into a sweep.
+Lifecycle/population calibration and reviewed support for 100–300 workers remain
+necessary. See the
 [calibration ledger](hyperfeed_workload_calibration.md) for the operating targets
 and known registration/session limits.
 
@@ -107,13 +109,16 @@ sensitivity retains six valid histories and six retry/backlog progress failures,
 including partial traces with actual same-flight reordering. These runs are
 instrumented diagnostics, not a speed ranking.
 
-Next complete scheduled maintenance jobs with explicit transaction boundaries,
-job-versus-batch accounting and terminal completion witnesses. The architect's
-subsequent recollection supports batches of updates committed together; use
-multiple batch transactions as the working sweep contract, with configurable
-sizes rather than an assumed historical value. The [calibration ledger](hyperfeed_workload_calibration.md)
+Complete maintenance jobs are available as `--maintenance-mode sweep`,
+with explicit transaction boundaries, job-versus-transaction accounting and terminal
+empty-query witnesses. Its [guide](hyperfeed_maintenance.md) explains fixed cutoffs,
+partial failure and finite expiry cohorts. The architect's subsequent recollection
+supports batches of updates committed together; sizes remain configurable
+experimental parameters rather than assumed historical values. The [calibration ledger](hyperfeed_workload_calibration.md)
 records this guidance and the existing PostgreSQL prepared-statement reuse.
-Use those results and precise retry attribution to guide performance changes. The archive's
+The [complete-sweep checkpoint](bench_data/maintenance_2026-09-25/README.md)
+retains the resulting functional checks and higher-load failures. Use those results
+and precise retry attribution to guide performance changes. The earlier archive's
 [next-milestone review](bench_data/affinity_2026-09-25/next-milestone-review.md)
 also lists the registration, admission, session, WAL and query-size constraints
 to resolve before 100/200/300-worker experiments.

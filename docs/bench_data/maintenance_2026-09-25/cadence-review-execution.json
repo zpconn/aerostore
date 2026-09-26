@@ -1,0 +1,18 @@
+{
+  "started_at": "2026-09-26T02:25:43.704632+00:00",
+  "command": [
+    "/usr/bin/python3",
+    "target/maintenance-final-validation/review_cadence.py"
+  ],
+  "source_before_sha256": "1307af5f3239bdcbd652ef79df57ac3a91614d10c55004d9845db18b0ad3c8cd",
+  "binary_before_sha256": "c2f155c7a6f3cc9ad53730eceaa2797dd29873e6a23cdee2285f2273459afc28",
+  "helper_before_sha256": "6c86d447c820f2c339805b4b6eb07371743a361c4a808301167f78f2c3e9ee8a",
+  "log": "target/maintenance-final-validation/cadence-review.log",
+  "finished_at": "2026-09-26T02:25:52.880343+00:00",
+  "exit_code": 0,
+  "source_after_sha256": "1307af5f3239bdcbd652ef79df57ac3a91614d10c55004d9845db18b0ad3c8cd",
+  "binary_after_sha256": "c2f155c7a6f3cc9ad53730eceaa2797dd29873e6a23cdee2285f2273459afc28",
+  "helper_after_sha256": "6c86d447c820f2c339805b4b6eb07371743a361c4a808301167f78f2c3e9ee8a",
+  "log_sha256": "d4622194b54aa1cecb94f9a561397a7833960b366d79c9fa8f13063903527710",
+  "passed": true
+}

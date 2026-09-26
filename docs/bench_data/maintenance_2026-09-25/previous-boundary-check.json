@@ -1,0 +1,28 @@
+{
+  "passed": false,
+  "errors": [
+    "frozen boundary path set changed; review new/deleted engine or contract files",
+    "frozen boundary changed: aerostore_core/benches/contention_crucible/calibrated.rs",
+    "frozen boundary changed: aerostore_core/benches/contention_crucible/mod.rs",
+    "frozen boundary changed: aerostore_core/benches/contention_crucible/remote.rs",
+    "frozen boundary changed: aerostore_core/benches/contention_crucible/runner.rs",
+    "frozen boundary changed: aerostore_core/benches/contention_crucible/workers.rs",
+    "frozen boundary changed: aerostore_core/tests/calibrated_contention_model.rs",
+    "frozen boundary changed: scripts/qualify_hyperfeed.py",
+    "frozen boundary changed: scripts/run_remote_contention.py",
+    "frozen boundary changed: scripts/test_hyperfeed_qualification.py",
+    "frozen boundary changed: scripts/test_run_remote_contention.py"
+  ],
+  "scope": "change detection only; not a whole-engine refinement proof",
+  "checked_files": 374,
+  "baseline_ref": null,
+  "anchoring": "local_bootstrap_only",
+  "open_claims": [
+    "TX-HISTORY-IMPLEMENTATION",
+    "MEMORY-OWNERSHIP",
+    "MEMORY-PROGRESS",
+    "WEAK-MEMORY-MMAP",
+    "DURABILITY-IMPLEMENTATION",
+    "QUERY-APPLICATION"
+  ]
+}

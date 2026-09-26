@@ -1,0 +1,8 @@
+{
+  "engine": "aerostore",
+  "error": "worker 5: maintenance job 4000000001 exhausted 1 committed batches without a terminal empty query; prior batch effects remain committed",
+  "evidence_directory": "/home/zpconn/code/aerostore/target/maintenance-development/integration/sweep-regression-ndiht45y/batch-cap-after-commit/contention-crucible-rksCLP/aerostore-0",
+  "execution_completed": false,
+  "passed": false,
+  "scenario": null
+}

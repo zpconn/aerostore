@@ -1,0 +1,7 @@
+test_paused_timer_exceeding_backlog_fails_with_uncompleted_offers_retained (scripts.test_calibrated_worker_pause.CalibratedWorkerPauseTests.test_paused_timer_exceeding_backlog_fails_with_uncompleted_offers_retained) ... ok
+test_paused_timer_retains_every_tick_and_drains_after_admission (scripts.test_calibrated_worker_pause.CalibratedWorkerPauseTests.test_paused_timer_retains_every_tick_and_drains_after_admission) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 6.754s
+
+OK

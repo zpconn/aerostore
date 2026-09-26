@@ -1,0 +1,8 @@
+{
+  "completed": false,
+  "operational_error": "invalid configuration; use --help (bounded workers/families/duration/history capacity)",
+  "passed": false,
+  "runs": [],
+  "schema": 1,
+  "stage": "configuration"
+}
