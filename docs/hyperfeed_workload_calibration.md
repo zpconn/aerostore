@@ -16,6 +16,8 @@ production trace or a measurement of today's FlightAware systems.
 | Forks | Roughly 3–8 forks per physical flight | Vary provenance views and their eligibility. The number of existing forks does not imply that every message updates all of them. |
 | Position handling | Each fork eligible for an incoming position receives a distinct update | Check each eligible fork's state, position history and output separately; exclude ineligible forks. |
 | Maintenance | Projection and housekeeping each normally run every 5–10 minutes | Complete scheduled jobs while foreground input continues. |
+| Maintenance transactions | Recollection: batches of updates committed together, not necessarily an entire sweep in one transaction | Use multiple batch transactions per sweep as the working contract; exact batch sizes, grouping and differences between jobs remain unconfirmed. |
+| PostgreSQL statement reuse | Heavy use of "stored statements," likely prepared statements; exact API not recalled | Reuse prepared workload statements across transactions and retries, and examine their actual query plans when tuning the PostgreSQL baseline. |
 | Ordering | Messages for one flight normally arrive in order | Preserve ordinary ordering without assuming that every message resolving to that flight executes on one worker. |
 
 The reported PostgreSQL bottleneck is useful operating evidence. It does not
@@ -36,7 +38,26 @@ without implying independent commits for each fork. [Paper](https://www.tcl-lang
 In a follow-up on 2026-09-25, Zach confirmed that MMHF retained temporary signature
 affinity. This is now operator-confirmed dispatch behavior for both deployments.
 The affinity lifetime and precise refresh/expiry behavior still need calibration;
-the transaction-boundary description above remains based on the paper.
+the input-message transaction boundary above remains based on the paper.
+
+Zach subsequently recalled that maintenance committed batches of updates together,
+not necessarily an entire sweep atomically. Treat this as approximate operator
+guidance supporting a sweep composed of batch transactions, not a measured batch
+size or confirmation that projection and housekeeping used identical grouping.
+Keep batch sizes configurable and label chosen values as experimental. This
+maintenance guidance does not change the foreground message transaction boundary.
+
+He also recalled extensive use of "stored statements." Prepared statements are
+the likely interpretation; the exact API remains unconfirmed. The current
+[PostgreSQL adapter](../aerostore_core/benches/contention_crucible/postgres.rs)
+already prepares its workload reads, predicate queries, row locks and writes once
+when connecting, retaining the statement handles across transactions and retries.
+Its buffered mode commits discovered row changes with a prepared set-based update.
+This groups row writes within one transaction; it does not yet make a timer tick
+complete an entire maintenance job through several transactions. Existing plan
+reports use literal/custom examples and do not inspect the plans actually selected
+for repeatedly executed prepared statements. Include that inspection in future
+PostgreSQL tuning before drawing a capacity comparison.
 
 ## Current implementation and gaps
 
@@ -91,9 +112,12 @@ bounds or a blindly increased constant.
    distinct fork update and output. Preserve message-level commit/retry behavior.
    Confirm whether the approximate 3–8 count includes the all-provenance parent;
    do not equate a range of observed counts with a uniform random distribution.
-3. Complete each maintenance sweep through bounded transactions, then add flight
-   creation, growth, terminal transitions and retirement. Treat daily flight
-   volume, concurrently updating flights and retained families as separate inputs.
+3. Complete each maintenance sweep through configurable batch transactions, using
+   the operator's recollection as the working contract. Measure batch-size
+   sensitivity; the current four-event/32-record limits are synthetic. Then add
+   flight creation, growth, terminal transitions and retirement. Treat daily
+   flight volume, concurrently updating flights and retained families as separate
+   inputs.
 4. Expand the reviewed harness/resource limits to support 100/200/300-worker
    experiments. Measure load imbalance, useful input completions, eligible fork
    updates, retries, queueing-inclusive p99 and retention during maintenance.
@@ -103,7 +127,8 @@ bounds or a blindly increased constant.
 
 Still unknown: concurrent active and retained populations, input message rate and
 bursts, fork-count/eligibility distributions, affinity lifetime/refresh behavior
-and maintenance transaction granularity. Until those are calibrated,
+and maintenance batch sizes/grouping. Exact PostgreSQL statement APIs and plan
+behavior are also unconfirmed. Until those are calibrated,
 parameter sweeps are sensitivity experiments with declared assumptions. Daily
 flight counts alone cannot supply these missing quantities.
 
