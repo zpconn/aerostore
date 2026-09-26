@@ -3,7 +3,7 @@
 use super::measurement::ArrivalPlan;
 use super::storage::{Query, Store};
 use super::supervision::pacing_wake_ns;
-use super::{aerostore, calibrated, model, oracle, postgres, service};
+use super::{aerostore, calibrated, maintenance, model, oracle, postgres, service};
 use crate::extended_crucible::metrics::StoreMetrics;
 use crate::extended_crucible::model::{DbError, Record};
 use serde::{Deserialize, Serialize};
@@ -336,7 +336,8 @@ fn execute(
     retry_limit: u64,
     record_history: bool,
     scheduled_ns: Option<u64>,
-) -> Result<u64, String> {
+    sweep_batch: bool,
+) -> Result<(u64, bool), String> {
     let first_started = monotonic_ns();
     let mut retries = 0;
     loop {
@@ -354,6 +355,7 @@ fn execute(
                 if finished <= started {
                     return Err("non-increasing successful attempt clock".into());
                 }
+                let terminal = sweep_batch && maintenance::processed(&message, &body.outcome)? == 0;
                 return reply(
                     output,
                     &Reply::Observation {
@@ -369,7 +371,7 @@ fn execute(
                         retries,
                     },
                 )
-                .map(|()| first_started);
+                .map(|()| (first_started, terminal));
             }
             Err(DbError::Conflict) if retries < retry_limit => {
                 store
@@ -418,6 +420,7 @@ fn worker_loop(config: &Config, store: &mut impl MeasuredStore) -> Result<(), St
                         config.retry_limit,
                         true,
                         None,
+                        false,
                     )?;
                 }
             }
@@ -514,8 +517,9 @@ fn worker_loop(config: &Config, store: &mut impl MeasuredStore) -> Result<(), St
                         config.retry_limit,
                         config.record_history,
                         scheduled_ns,
+                        false,
                     )?;
-                    previous_sustained_start = Some(message_started);
+                    previous_sustained_start = Some(message_started.0);
                     local_sequence = local_sequence
                         .checked_add(1)
                         .ok_or("worker sequence overflow")?;
@@ -599,16 +603,52 @@ fn worker_loop(config: &Config, store: &mut impl MeasuredStore) -> Result<(), St
                     if backlog > config.max_backlog {
                         return Err(format!("calibrated offered backlog {backlog} exceeds worker bound {} after {ordinal} completions; all independently due jobs remain admitted",config.max_backlog));
                     }
-                    execute(
-                        store,
-                        &input,
-                        &mut output,
-                        event.message,
-                        false,
-                        config.retry_limit,
-                        config.record_history,
-                        Some(scheduled_ns),
-                    )?;
+                    let sweep = plan.config.maintenance_mode == maintenance::Mode::Sweep
+                        && event.class != calibrated::EventClass::Foreground;
+                    if sweep {
+                        let mut terminal = false;
+                        for batch in 0..plan.config.max_maintenance_batches {
+                            if !wait_until(&input, monotonic_ns())? {
+                                return Err(format!("maintenance job {} interrupted before terminal query after {batch} committed batches", event.message.id));
+                            }
+                            let backlog =
+                                plan.backlog(ordinal, monotonic_ns().saturating_sub(start_ns));
+                            maximum_backlog = maximum_backlog.max(backlog);
+                            if backlog > config.max_backlog {
+                                return Err(format!("maintenance job {} offered backlog {backlog} exceeds worker bound {} after {batch} committed batches", event.message.id, config.max_backlog));
+                            }
+                            let (_, empty) = execute(
+                                store,
+                                &input,
+                                &mut output,
+                                maintenance::batch_message(&event.message, batch)?,
+                                false,
+                                config.retry_limit,
+                                config.record_history,
+                                Some(scheduled_ns),
+                                true,
+                            )?;
+                            if empty {
+                                terminal = true;
+                                break;
+                            }
+                        }
+                        if !terminal {
+                            return Err(format!("maintenance job {} exhausted {} committed batches without a terminal empty query; prior batch effects remain committed", event.message.id, plan.config.max_maintenance_batches));
+                        }
+                    } else {
+                        execute(
+                            store,
+                            &input,
+                            &mut output,
+                            event.message,
+                            false,
+                            config.retry_limit,
+                            config.record_history,
+                            Some(scheduled_ns),
+                            false,
+                        )?;
+                    }
                     maximum_backlog = maximum_backlog
                         .max(plan.backlog(ordinal + 1, monotonic_ns().saturating_sub(start_ns)));
                 }

@@ -1,6 +1,7 @@
 pub mod aerostore;
 pub mod calibrated;
 pub mod measurement;
+pub mod maintenance;
 pub mod model;
 pub mod oracle;
 pub mod postgres;

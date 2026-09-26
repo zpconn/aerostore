@@ -7,7 +7,9 @@ use super::supervision::{
     unique_evidence_directory, with_cleanup_result, write_json, PrivateCaseFiles, ProcessGroup,
     DEFAULT_OUTPUT,
 };
-use super::{aerostore, calibrated, model, oracle, postgres, remote, service, workers};
+use super::{
+    aerostore, calibrated, maintenance, model, oracle, postgres, remote, service, workers,
+};
 use crate::extended_crucible::{metrics::StoreMetrics, model::Record};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -34,6 +36,14 @@ struct Config {
     affinity_ttl_ms: u64,
     #[serde(default)]
     signature_pattern: calibrated::SignaturePattern,
+    #[serde(default)]
+    maintenance_mode: maintenance::Mode,
+    #[serde(default = "calibrated::default_projection_batch_size")]
+    projection_batch_size: usize,
+    #[serde(default = "calibrated::default_housekeeping_batch_size")]
+    housekeeping_batch_size: usize,
+    #[serde(default = "calibrated::default_max_maintenance_batches")]
+    max_maintenance_batches: u64,
     max_backlog: u64,
     pg_write_mode: postgres::WriteMode,
     rpc_delay_us: u64,
@@ -66,6 +76,10 @@ impl Default for Config {
             dispatch: calibrated::Dispatch::Identity,
             affinity_ttl_ms: 0,
             signature_pattern: calibrated::SignaturePattern::Both,
+            maintenance_mode: maintenance::Mode::Batch,
+            projection_batch_size: 4,
+            housekeeping_batch_size: 32,
+            max_maintenance_batches: 4096,
             max_backlog: 1000,
             pg_write_mode: postgres::WriteMode::Buffered,
             rpc_delay_us: 0,
@@ -100,6 +114,10 @@ fn calibrated_config(config: &Config) -> calibrated::Config {
         dispatch: config.dispatch,
         affinity_ttl_ms: config.affinity_ttl_ms,
         signature_pattern: config.signature_pattern,
+        maintenance_mode: config.maintenance_mode,
+        projection_batch_size: config.projection_batch_size,
+        housekeeping_batch_size: config.housekeeping_batch_size,
+        max_maintenance_batches: config.max_maintenance_batches,
     }
 }
 
@@ -177,6 +195,51 @@ impl Drop for Worker {
     }
 }
 
+fn outcome_totals(outcome: &model::Outcome) -> [usize; 12] {
+    [
+        outcome.updated_views,
+        outcome.created_views,
+        outcome.ignored_stale,
+        outcome.expired_records,
+        outcome.outputs.len(),
+        usize::from(outcome.missing_family),
+        usize::from(outcome.allocation_deferred),
+        outcome.claimed_events,
+        outcome.cancelled_events,
+        outcome.rescheduled_events,
+        outcome.expired_families,
+        usize::from(outcome.duplicate),
+    ]
+}
+fn outcome_json(outcome: &[usize; 12]) -> Value {
+    json!({"updated_views":outcome[0],"created_views":outcome[1],"ignored_stale":outcome[2],
+        "expired_records":outcome[3],"outputs":outcome[4],"missing_family":outcome[5],
+        "allocation_deferred":outcome[6],"claimed_events":outcome[7],"cancelled_events":outcome[8],
+        "rescheduled_events":outcome[9],"expired_families":outcome[10],"duplicate_messages":outcome[11]})
+}
+fn positive_effect(outcome: &model::Outcome) -> bool {
+    outcome.updated_views > 0
+        || outcome.created_views > 0
+        || outcome.expired_records > 0
+        || outcome.claimed_events > 0
+        || outcome.cancelled_events > 0
+        || outcome.rescheduled_events > 0
+        || outcome.expired_families > 0
+        || !outcome.outputs.is_empty()
+}
+#[derive(Clone, Default, Serialize)]
+struct PendingMaintenance {
+    job_id: u64,
+    job_ordinal: u64,
+    batches: u64,
+    started_ns: u64,
+    finished_ns: u64,
+    retries: u64,
+    processed_rows: u64,
+    positive_effect: bool,
+    outcomes: [usize; 12],
+}
+
 struct Completed {
     receipts: Vec<oracle::Receipt>,
     latencies: Vec<u64>,
@@ -196,12 +259,31 @@ struct Completed {
     drain_confirmed_ns: u64,
     completed_by_worker: Vec<usize>,
     calibrated_samples: Vec<ExecutionSample>,
+    job_kinds: Vec<String>,
+    maintenance_jobs: Vec<Value>,
+    pending_maintenance: Vec<PendingMaintenance>,
+    transaction_finished_by_worker: Vec<u64>,
     flight_order: FlightOrderAudit,
     foreground_executions: Vec<ForegroundExecution>,
     dispatch_audit: Value,
     active_families: usize,
     quiet_families: usize,
     offered_by_worker: Vec<u64>,
+}
+
+fn oldest_due_ages(
+    plan: Option<&calibrated::Schedule>,
+    completed: &[usize],
+    elapsed_ns: u64,
+) -> Value {
+    plan.map_or(Value::Null, |plan| {
+        json!((0..completed.len())
+            .map(|worker| {
+                plan.event(worker, completed[worker] as u64)
+                    .and_then(|event| elapsed_ns.checked_sub(event.offset_ns))
+            })
+            .collect::<Vec<_>>())
+    })
 }
 
 fn exercise(
@@ -365,6 +447,10 @@ fn exercise(
         drain_confirmed_ns: 0,
         completed_by_worker: vec![0; count],
         calibrated_samples: Vec::new(),
+        job_kinds: Vec::new(),
+        maintenance_jobs: Vec::new(),
+        pending_maintenance: vec![PendingMaintenance::default(); count],
+        transaction_finished_by_worker: vec![0; count],
         flight_order: FlightOrderAudit::default(),
         foreground_executions: Vec::new(),
         dispatch_audit: calibrated
@@ -413,6 +499,13 @@ fn exercise(
                         retries,
                     } => {
                         let received_ns = workers::monotonic_ns();
+                        if message_started_ns < result.transaction_finished_by_worker[id] {
+                            return Err(
+                                "worker transaction intervals overlap or arrive out of order"
+                                    .into(),
+                            );
+                        }
+                        result.transaction_finished_by_worker[id] = receipt.finished;
                         if message_started_ns > receipt.started
                             || receipt.finished > received_ns
                             || receipt.finished < message_started_ns
@@ -446,6 +539,13 @@ fn exercise(
                         }
                         let end_to_end_ns =
                             received_ns - scheduled_ns.unwrap_or(message_started_ns);
+                        let mut job_completed = true;
+                        let mut batch_index = None;
+                        let mut maintenance_terminal = None;
+                        let job_ordinal = result.completed_by_worker[id] as u64;
+                        let job_id = calibrated_event
+                            .as_ref()
+                            .map_or(receipt.message.id, |event| event.message.id);
                         if messages.is_some_and(|m| receipt.message != m[id]) {
                             return Err("worker returned wrong scenario message".into());
                         }
@@ -454,8 +554,20 @@ fn exercise(
                                 return Err("duplicate scenario completion".into());
                             }
                         } else if let Some(expected) = &calibrated_event {
-                            if receipt.message != expected.message {
-                                return Err("calibrated event differs from independently reconstructed offered schedule".into());
+                            let sweep = cfg.maintenance_mode == maintenance::Mode::Sweep
+                                && expected.class != calibrated::EventClass::Foreground;
+                            let expected_message = if sweep {
+                                let index = result.pending_maintenance[id].batches;
+                                if index >= cfg.max_maintenance_batches {
+                                    return Err("maintenance worker exceeded its batch cap".into());
+                                }
+                                batch_index = Some(index);
+                                maintenance::batch_message(&expected.message, index)?
+                            } else {
+                                expected.message.clone()
+                            };
+                            if receipt.message != expected_message {
+                                return Err("calibrated event differs from independently reconstructed offered schedule or batch".into());
                             }
                             match (expected.class, expected.logical_identity, expected.foreground_ordinal) {
                                 (calibrated::EventClass::Foreground, Some(identity), Some(ordinal)) => {
@@ -470,25 +582,73 @@ fn exercise(
                                 (calibrated::EventClass::Projection | calibrated::EventClass::Housekeeping, None, None) => (),
                                 _ => return Err("calibrated event has inconsistent foreground ordering metadata".into()),
                             }
-                            let effect = &receipt.body.outcome;
-                            result.calibrated_samples.push(ExecutionSample {
-                                worker: id,
-                                class: expected.class.name(),
-                                scheduled_ns: scheduled_ns
-                                    .ok_or("calibrated event lacks scheduled time")?,
-                                started_ns: message_started_ns,
-                                finished_ns: receipt.finished,
-                                received_ns,
-                                retries,
-                                positive_effect: effect.updated_views > 0
-                                    || effect.created_views > 0
-                                    || effect.expired_records > 0
-                                    || effect.claimed_events > 0
-                                    || effect.cancelled_events > 0
-                                    || effect.rescheduled_events > 0
-                                    || effect.expired_families > 0
-                                    || !effect.outputs.is_empty(),
-                            });
+                            let mut sample_started = message_started_ns;
+                            let mut sample_retries = retries;
+                            let mut sample_positive = positive_effect(&receipt.body.outcome);
+                            if sweep {
+                                let processed = maintenance::processed(
+                                    &receipt.message,
+                                    &receipt.body.outcome,
+                                )?;
+                                let terminal = processed == 0;
+                                maintenance_terminal = Some(terminal);
+                                if terminal && cfg.evidence == "full" {
+                                    maintenance::validate_terminal(
+                                        &receipt.message,
+                                        &receipt.body,
+                                    )?;
+                                }
+                                let pending = &mut result.pending_maintenance[id];
+                                if pending.batches == 0 {
+                                    pending.job_id = job_id;
+                                    pending.job_ordinal = job_ordinal;
+                                    pending.started_ns = message_started_ns;
+                                }
+                                pending.batches += 1;
+                                pending.finished_ns = receipt.finished;
+                                pending.retries += retries;
+                                pending.processed_rows += processed as u64;
+                                pending.positive_effect |= sample_positive;
+                                for (total, amount) in pending
+                                    .outcomes
+                                    .iter_mut()
+                                    .zip(outcome_totals(&receipt.body.outcome))
+                                {
+                                    *total += amount;
+                                }
+                                job_completed = terminal;
+                                if terminal {
+                                    sample_started = pending.started_ns;
+                                    sample_retries = pending.retries;
+                                    sample_positive = pending.positive_effect;
+                                    result.maintenance_jobs.push(json!({
+                                        "worker":id,"job_id":job_id,"job_ordinal":job_ordinal,
+                                        "class":expected.class.name(),"scheduled_ns":scheduled_ns,
+                                        "started_ns":pending.started_ns,"finished_ns":receipt.finished,
+                                        "received_ns":received_ns,"batches":pending.batches,
+                                        "nonempty_batches":pending.batches-1,"terminal_batches":1,
+                                        "processed_rows":pending.processed_rows,"retries":pending.retries,
+                                        "terminal_empty":true,"outcomes":outcome_json(&pending.outcomes),
+                                        "first_transaction_id":maintenance::batch_message(&expected.message,0)?.id,
+                                        "terminal_transaction_id":receipt.message.id
+                                    }));
+                                    *pending = PendingMaintenance::default();
+                                }
+                            }
+                            if job_completed {
+                                result.calibrated_samples.push(ExecutionSample {
+                                    worker: id,
+                                    class: expected.class.name(),
+                                    scheduled_ns: scheduled_ns
+                                        .ok_or("calibrated event lacks scheduled time")?,
+                                    started_ns: sample_started,
+                                    finished_ns: receipt.finished,
+                                    received_ns,
+                                    retries: sample_retries,
+                                    positive_effect: sample_positive,
+                                });
+                                result.job_kinds.push(expected.message.kind.name().into());
+                            }
                         } else {
                             let sequence =
                                 result.completed_by_worker[id] as u64 * count as u64 + id as u64;
@@ -511,7 +671,9 @@ fn exercise(
                         serde_json::to_writer(&mut history, &json!({"worker":id,"service_latency_ns":latency_ns,"end_to_end_latency_ns":end_to_end_ns,"message_started_ns":message_started_ns,"scheduled_ns":scheduled_ns,"received_ns":received_ns,"retries":retries,"receipt":receipt,
                             "workload_class":calibrated_event.as_ref().map(|e|e.class.name()),
                             "logical_identity":calibrated_event.as_ref().and_then(|e|e.logical_identity),
-                            "foreground_ordinal":calibrated_event.as_ref().and_then(|e|e.foreground_ordinal)}))
+                            "foreground_ordinal":calibrated_event.as_ref().and_then(|e|e.foreground_ordinal),
+                            "job_id":job_id,"job_ordinal":job_ordinal,"batch_index":batch_index,
+                            "job_completed":job_completed,"maintenance_terminal":maintenance_terminal}))
                             .map_err(|e| e.to_string())?;
                         writeln!(history).map_err(|e| e.to_string())?;
                         result.receipts.push(receipt);
@@ -522,7 +684,9 @@ fn exercise(
                             .push(scheduled_ns.map_or(0, |at| message_started_ns - at));
                         result.retries += retries;
                         result.message_retries.push(retries);
-                        result.completed_by_worker[id] += 1;
+                        if job_completed {
+                            result.completed_by_worker[id] += 1;
+                        }
                     }
                     workers::Reply::Done {
                         metrics,
@@ -558,7 +722,8 @@ fn exercise(
                             && (stop_reason != "arrival_corpus_drained"
                                 || finished_ns < deadline_ns
                                 || result.completed_by_worker[id] as u64
-                                    != result.offered_by_worker[id])
+                                    != result.offered_by_worker[id]
+                                || result.pending_maintenance[id].batches != 0)
                         {
                             return Err("calibrated worker did not drain every independently admitted event".into());
                         }
@@ -578,7 +743,8 @@ fn exercise(
                             &json!({
                             "passed":false,"execution_completed":false,"worker":id,"error":message,
                             "completed_by_worker":result.completed_by_worker,"offered_by_worker":result.offered_by_worker,
-                            "completed_messages":result.receipts.len(),"completed_message_retries":result.retries,
+                            "completed_messages":result.completed_by_worker.iter().sum::<usize>(),"completed_transactions":result.receipts.len(),"completed_message_retries":result.retries,"pending_maintenance":result.pending_maintenance,
+                            "oldest_due_job_age_ns_by_worker":oldest_due_ages(calibrated.as_ref(), &result.completed_by_worker, workers::monotonic_ns().saturating_sub(admission_start_ns)),
                             "note":"Offered schedule remains authoritative; failed message retry count is retained in worker error. Uncompleted offered events are not dropped or called successful."}),
                         )?;
                         return Err(format!("worker {id}: {message}"));
@@ -601,10 +767,10 @@ fn exercise(
                 .samples
                 .push(json!({"elapsed_seconds":started.elapsed().as_secs_f64(),
                 "sample_started_ns":sample_start,"sample_finished_ns":sample_end,
-                "completed_messages":result.receipts.len(),"storage":storage}));
+                "completed_messages":result.completed_by_worker.iter().sum::<usize>(),"completed_transactions":result.receipts.len(),"storage":storage}));
             write_json(
                 &case.directory.join("progress.json"),
-                &json!({"passed":false,"execution_completed":false,"completed_messages":result.receipts.len(),"completed_by_worker":result.completed_by_worker,"offered_by_worker":result.offered_by_worker,"retries":result.retries,"retention_samples":result.samples,
+                &json!({"passed":false,"execution_completed":false,"completed_messages":result.completed_by_worker.iter().sum::<usize>(),"completed_transactions":result.receipts.len(),"pending_maintenance":result.pending_maintenance,"oldest_due_job_age_ns_by_worker":oldest_due_ages(calibrated.as_ref(), &result.completed_by_worker, workers::monotonic_ns().saturating_sub(admission_start_ns)),"completed_by_worker":result.completed_by_worker,"offered_by_worker":result.offered_by_worker,"retries":result.retries,"retention_samples":result.samples,
                     "due_uncompleted_by_worker":calibrated.as_ref().map(|plan|(0..count).map(|worker|plan.backlog(worker,result.completed_by_worker[worker] as u64,workers::monotonic_ns().saturating_sub(admission_start_ns))).collect::<Vec<_>>())}),
             )?;
             last_sample = Instant::now();
@@ -679,10 +845,38 @@ fn summarize(
         outcome[10] += receipt.body.outcome.expired_families;
         outcome[11] += usize::from(receipt.body.outcome.duplicate);
     }
+    let calibrated_run = case.scenario.is_none() && case.config.workload == "calibrated";
+    let mut transaction_kinds = BTreeMap::<String, usize>::new();
     let per_kind: BTreeMap<_,_> = per_kind.into_iter().map(|(name,(mut latencies,retries,outcome))| {
+        let transactions = latencies.len();
+        transaction_kinds.insert(name.clone(), transactions);
+        if calibrated_run {
+            latencies = completed.calibrated_samples.iter().zip(&completed.job_kinds)
+                .filter(|(_, kind)| **kind == name)
+                .map(|(sample, _)| sample.received_ns - sample.scheduled_ns).collect();
+        }
         latencies.sort_unstable();
-        (name,json!({"completed":latencies.len(),"retries":retries,"p99_us_including_retries":latencies[(latencies.len()*99).div_ceil(100)-1] as f64 / 1000.0,"outcomes":{"updated_views":outcome[0],"created_views":outcome[1],"ignored_stale":outcome[2],"expired_records":outcome[3],"outputs":outcome[4],"missing_family":outcome[5],"allocation_deferred":outcome[6],"claimed_events":outcome[7],"cancelled_events":outcome[8],"rescheduled_events":outcome[9],"expired_families":outcome[10],"duplicate_messages":outcome[11]}}))
+        (name,json!({"completed":latencies.len(),"transactions":transactions,"retries":retries,
+            "p99_us_including_retries":latencies[(latencies.len()*99).div_ceil(100)-1] as f64 / 1000.0,
+            "outcomes":outcome_json(&outcome)}))
     }).collect();
+    if calibrated_run {
+        completed.latencies = completed
+            .calibrated_samples
+            .iter()
+            .map(|s| s.received_ns - s.scheduled_ns)
+            .collect();
+        completed.service_latencies = completed
+            .calibrated_samples
+            .iter()
+            .map(|s| s.finished_ns - s.started_ns)
+            .collect();
+        completed.queue_delays = completed
+            .calibrated_samples
+            .iter()
+            .map(|s| s.started_ns - s.scheduled_ns)
+            .collect();
+    }
     completed.latencies.sort_unstable();
     let quantile = |percent: usize| {
         completed.latencies[(completed.latencies.len() * percent).div_ceil(100) - 1] as f64 / 1000.
@@ -708,17 +902,26 @@ fn summarize(
     service_latencies.sort_unstable();
     completed.queue_delays.sort_unstable();
     let p99 = |values: &[u64]| values[(values.len() * 99).div_ceil(100) - 1] as f64 / 1000.0;
-    let count = completed.receipts.len();
+    let transaction_count = completed.receipts.len();
+    let count = if calibrated_run {
+        completed.calibrated_samples.len()
+    } else {
+        transaction_count
+    };
     let mut kinds = BTreeMap::<String, usize>::new();
-    for receipt in &completed.receipts {
-        let name = receipt.message.kind.name();
-        *kinds.entry(name.into()).or_default() += 1;
+    if calibrated_run {
+        for name in &completed.job_kinds {
+            *kinds.entry(name.clone()).or_default() += 1;
+        }
+    } else {
+        kinds = transaction_kinds.clone();
     }
     let mut report = json!({"engine":case.engine,"scenario":case.scenario.map_or("sustained-mixed".to_owned(), |i| model::scenarios(case.config.seed)[i].name.clone()),
         "passed":passed,"execution_completed":true,"oracle_status":witness["status"],"oracle_explored":witness["explored"],
         "history_checked":history_checked,"correctness_history_verified":history_checked && witness["status"] == "Valid",
         "oracle_detail":witness["detail"],"oracle_seconds":checking.elapsed().as_secs_f64(),
         "completed_messages":count,"completed_by_worker":completed.completed_by_worker,"message_kinds":kinds,
+        "completed_transactions":transaction_count,"transaction_kinds":transaction_kinds,
         "total_process_workers":completed.completed_by_worker.len(),
         "initial_fleet":fleet_population(initial),"final_fleet":fleet_population(final_rows),
         "per_kind":per_kind,"invariants":invariants,"worker_stops":completed.worker_stops,
@@ -765,6 +968,26 @@ fn summarize(
         report["arrival_mode"] = json!("calibrated_fixed_timeline");
         report["offered_messages"] = json!(completed.offered_by_worker.iter().sum::<u64>());
         report["offered_rate_scope"] = json!("foreground_only");
+        let sweep_mode = case.config.maintenance_mode == maintenance::Mode::Sweep;
+        let sweep_complete = sweep_mode && !completed.maintenance_jobs.is_empty();
+        let maintenance_scope = if sweep_mode {
+            maintenance::SWEEP_SCOPE
+        } else {
+            calibrated::MAINTENANCE_SCOPE
+        };
+        let sum_jobs = |field: &str| {
+            completed
+                .maintenance_jobs
+                .iter()
+                .map(|job| job[field].as_u64().unwrap())
+                .sum::<u64>()
+        };
+        report["maintenance_job_audit"] = json!({"checked":true,"passed":true,
+            "scope":maintenance_scope,"completed_jobs":completed.maintenance_jobs.len(),
+            "committed_batches":sum_jobs("batches"),"nonempty_batches":sum_jobs("nonempty_batches"),
+            "terminal_batches":sum_jobs("terminal_batches"),"processed_rows":sum_jobs("processed_rows")});
+        report["maintenance_jobs"] = json!(completed.maintenance_jobs);
+        report["completed_count_scope"] = json!("Foreground messages plus completed scheduled maintenance jobs; batch transactions are reported separately and do not inflate useful-message throughput.");
         report["calibrated_schedule"] = json!({
             "foreground_workers":case.config.workers,"maintenance_workers":2,
             "active_families":completed.active_families,"quiet_families":completed.quiet_families,
@@ -774,15 +997,22 @@ fn summarize(
             "per_flight_ordering":if case.config.dispatch == calibrated::Dispatch::Identity {"stable_foreground_worker_fifo"} else {"signature_affinity_worker_fifo"},"clock":"wall_clock",
             "dispatch":case.config.dispatch,"affinity_ttl_ms":case.config.affinity_ttl_ms,"signature_pattern":case.config.signature_pattern,
             "cadence":if case.config.projection_interval_seconds<300 || case.config.housekeeping_interval_seconds<300 {"accelerated"} else if (300..=600).contains(&case.config.projection_interval_seconds) && (300..=600).contains(&case.config.housekeeping_interval_seconds) {"representative_interval_config"} else {"custom_outside_calibration"},
-            "projection_batch_limit":4,"housekeeping_batch_limit":32,
-            "maintenance_scope":"bounded_batch_not_full_sweep",
-            "population_turnover_tested":false,"global_maintenance_sweep_complete":false,
-            "scope":"Partial calibration of foreground dispatch and wall-clock maintenance cadence; fixed populated cohorts, no flight lifecycle/turnover, bounded maintenance batches, no proprietary HyperFeed compatibility claim.",
+            "projection_batch_limit":case.config.projection_batch_size,"housekeeping_batch_limit":case.config.housekeeping_batch_size,
+            "maintenance_mode":case.config.maintenance_mode,"max_maintenance_batches":case.config.max_maintenance_batches,
+            "maintenance_scope":maintenance_scope,
+            "housekeeping_seed_cohorts":calibrated::housekeeping_seed_cohorts(&calibrated_config(&case.config)),
+            "population_turnover_tested":false,"global_maintenance_sweep_complete":sweep_complete,
+            "scope":"Partial calibration of foreground dispatch and wall-clock maintenance cadence; fixed population and finite synthetic expiry cohorts, no flight lifecycle/turnover or proprietary HyperFeed compatibility claim.",
             "ordering_assumption":if case.config.dispatch == calibrated::Dispatch::Identity {"Permanent identity routing is a FIFO comparison control."} else {"Only each worker's queue is FIFO; aliases or affinity expiry can overlap or reorder the same flight. TTL uses scheduled arrival time, with sliding refresh on hits; aliases and TTL are explicit synthetic parameters."}});
         report["calibrated_schedule"]["timer_event_time"] = json!("Scheduled tick time; delayed jobs retain their admitted timestamp and every tick is drained, without coalescing.");
         report["calibrated_schedule"]["backlog_measurement"] = json!("Maximum sampled due-but-unfinished jobs at worker scheduling boundaries; not a continuous queue maximum.");
         report["population_turnover_tested"] = json!(false);
-        report["global_maintenance_sweep_complete"] = json!(false);
+        report["global_maintenance_sweep_complete"] = json!(sweep_complete);
+        report["calibrated_schedule"]["maintenance_completion"] = json!(if sweep_mode {
+            "Each job commits bounded batches at its original cutoff, ending only with a committed complete empty query. This is a serial observation at that transaction, not an atomic snapshot of the sweep; later eligible writes belong to a later job."
+        } else {
+            "Each timer tick commits one bounded batch; no complete sweep is claimed."
+        });
     }
     Ok(report)
 }
@@ -806,7 +1036,7 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
         .scenario
         .map(|i| model::scenarios(case.config.seed).remove(i));
     let initial = if scenario.is_none() && case.config.workload == "calibrated" {
-        calibrated::initial_records(case.config.families, case.config.seed)?
+        calibrated::initial_records_for(&calibrated_config(&case.config))?
     } else {
         scenario.as_ref().map_or_else(
             || {
@@ -845,6 +1075,10 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
             || setup.dispatch != case.config.dispatch
             || setup.affinity_ttl_ms != case.config.affinity_ttl_ms
             || setup.signature_pattern != case.config.signature_pattern
+            || setup.maintenance_mode != case.config.maintenance_mode
+            || setup.projection_batch_size != case.config.projection_batch_size
+            || setup.housekeeping_batch_size != case.config.housekeeping_batch_size
+            || setup.max_maintenance_batches != case.config.max_maintenance_batches
             || setup.global_time_predicates != case.config.global_time_predicates
             || setup.initial_rows != initial
             || setup.max_seconds <= case.config.seconds
@@ -1111,7 +1345,7 @@ fn parse() -> Result<Option<Config>, String> {
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         if arg == "--help" {
-            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--pg-write-mode buffered|immediate --rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
+            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--maintenance-mode batch|sweep --projection-batch-size 4 --housekeeping-batch-size 32 --max-maintenance-batches 4096 (calibrated only; terminal empty transaction counts toward cap)\n--pg-write-mode buffered|immediate --rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
             return Ok(None);
         }
         if arg == "--bench" || arg == "--noplot" {
@@ -1141,6 +1375,26 @@ fn parse() -> Result<Option<Config>, String> {
                     "mixed" => calibrated::SignaturePattern::Mixed,
                     _ => return Err("invalid signature pattern".into()),
                 }
+            }
+            "--maintenance-mode" => {
+                config.maintenance_mode = match value.as_str() {
+                    "batch" => maintenance::Mode::Batch,
+                    "sweep" => maintenance::Mode::Sweep,
+                    _ => return Err("invalid maintenance mode".into()),
+                };
+            }
+            "--projection-batch-size" => {
+                config.projection_batch_size =
+                    value.parse().map_err(|_| "invalid projection batch size")?
+            }
+            "--housekeeping-batch-size" => {
+                config.housekeeping_batch_size = value
+                    .parse()
+                    .map_err(|_| "invalid housekeeping batch size")?
+            }
+            "--max-maintenance-batches" => {
+                config.max_maintenance_batches =
+                    value.parse().map_err(|_| "invalid maintenance batch cap")?
             }
             "--arrival-rate" => {
                 config.arrival_rate = value.parse().map_err(|_| "invalid arrival rate")?
@@ -1229,7 +1483,14 @@ fn parse() -> Result<Option<Config>, String> {
                 || config.housekeeping_interval_seconds != 600
                 || config.dispatch != calibrated::Dispatch::Identity
                 || config.affinity_ttl_ms != 0
-                || config.signature_pattern != calibrated::SignaturePattern::Both))
+                || config.signature_pattern != calibrated::SignaturePattern::Both
+                || config.maintenance_mode != maintenance::Mode::Batch
+                || config.projection_batch_size != 4
+                || config.housekeeping_batch_size != 32
+                || config.max_maintenance_batches != 4096))
+        || !(1..=16).contains(&config.projection_batch_size)
+        || !(1..=64).contains(&config.housekeeping_batch_size)
+        || !(1..=4096).contains(&config.max_maintenance_batches)
         || (config.dispatch == calibrated::Dispatch::SignatureAffinity
             && !(1..=3_600_000).contains(&config.affinity_ttl_ms))
         || (config.dispatch == calibrated::Dispatch::Identity && config.affinity_ttl_ms != 0)
@@ -1381,6 +1642,10 @@ pub fn run() -> Result<(), String> {
             config.dispatch,
             config.affinity_ttl_ms,
             config.signature_pattern,
+            config.maintenance_mode,
+            config.projection_batch_size,
+            config.housekeeping_batch_size,
+            config.max_maintenance_batches,
         );
     }
     if config.engine == "service-remote" {

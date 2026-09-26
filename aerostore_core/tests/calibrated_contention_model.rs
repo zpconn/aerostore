@@ -1,6 +1,6 @@
 //! Independent schedule, population and clock checks for the partially
 //! calibrated fixed-population profile. These are functional model tests,
-//! not evidence of waiting five minutes or running complete maintenance jobs.
+//! not evidence of waiting five minutes or production-scale throughput.
 #![allow(dead_code)]
 #[path = "../benches/extended_crucible/model.rs"]
 pub mod shared_model;
@@ -9,6 +9,8 @@ mod extended_crucible {
 }
 #[path = "../benches/contention_crucible/calibrated.rs"]
 mod calibrated;
+#[path = "../benches/contention_crucible/maintenance.rs"]
+mod maintenance;
 #[path = "../benches/contention_crucible/model.rs"]
 mod model;
 #[path = "../benches/contention_crucible/oracle.rs"]
@@ -33,6 +35,10 @@ fn config() -> Config {
         dispatch: calibrated::Dispatch::Identity,
         affinity_ttl_ms: 0,
         signature_pattern: calibrated::SignaturePattern::Both,
+        maintenance_mode: maintenance::Mode::Batch,
+        projection_batch_size: calibrated::PROJECTION_BATCH_LIMIT,
+        housekeeping_batch_size: calibrated::HOUSEKEEPING_BATCH_LIMIT,
+        max_maintenance_batches: calibrated::MAX_MAINTENANCE_BATCHES,
     }
 }
 fn events(schedule: &Schedule) -> Vec<ScheduledEvent> {
@@ -1007,4 +1013,484 @@ fn worker_plans_store_each_affinity_input_once_and_do_not_depend_on_consumption(
     let control = Schedule::new(config()).unwrap();
     assert!((0..control.worker_count())
         .all(|w| control.worker_schedule(w).foreground_sequences.is_empty()));
+}
+
+fn sweep_config() -> Config {
+    Config {
+        maintenance_mode: maintenance::Mode::Sweep,
+        projection_batch_size: 3,
+        housekeeping_batch_size: 5,
+        ..config()
+    }
+}
+
+fn serial_sweep(
+    rows: &mut BTreeMap<usize, Record>,
+    job: &model::Message,
+    cap: u64,
+) -> (Vec<oracle::Receipt>, bool) {
+    let mut receipts = Vec::new();
+    for index in 0..cap {
+        let message = maintenance::batch_message(job, index).unwrap();
+        let body = model::serial_apply(rows, &message).unwrap();
+        let terminal = maintenance::processed(&message, &body.outcome).unwrap() == 0;
+        if terminal {
+            maintenance::validate_terminal(&message, &body).unwrap();
+        }
+        receipts.push(oracle::Receipt {
+            message,
+            body,
+            started: index * 2 + 1,
+            finished: index * 2 + 2,
+        });
+        if terminal {
+            return (receipts, true);
+        }
+    }
+    (receipts, false)
+}
+
+#[test]
+fn legacy_maintenance_defaults_preserve_config_wire_bytes_and_seed_population() {
+    let legacy = config();
+    let value = serde_json::to_value(&legacy).unwrap();
+    for name in [
+        "maintenance_mode",
+        "projection_batch_size",
+        "housekeeping_batch_size",
+        "max_maintenance_batches",
+    ] {
+        assert!(value.get(name).is_none());
+    }
+    assert_eq!(serde_json::from_value::<Config>(value).unwrap(), legacy);
+    assert_eq!(
+        calibrated::initial_records_for(&legacy).unwrap(),
+        calibrated::initial_records(legacy.families, legacy.seed).unwrap()
+    );
+    assert_eq!(
+        Schedule::new(legacy).unwrap().maintenance_scope(),
+        calibrated::MAINTENANCE_SCOPE
+    );
+    assert_eq!(
+        Schedule::new(sweep_config()).unwrap().maintenance_scope(),
+        maintenance::SWEEP_SCOPE
+    );
+}
+
+#[test]
+fn maintenance_limits_reject_zero_and_out_of_wal_bound_batches() {
+    for bad in [
+        Config {
+            projection_batch_size: 0,
+            ..sweep_config()
+        },
+        Config {
+            projection_batch_size: 17,
+            ..sweep_config()
+        },
+        Config {
+            housekeeping_batch_size: 0,
+            ..sweep_config()
+        },
+        Config {
+            housekeeping_batch_size: 65,
+            ..sweep_config()
+        },
+        Config {
+            max_maintenance_batches: 0,
+            ..sweep_config()
+        },
+        Config {
+            max_maintenance_batches: 4097,
+            ..sweep_config()
+        },
+    ] {
+        assert!(Schedule::new(bad).is_err());
+    }
+    for (projection_batch_size, housekeeping_batch_size, max_maintenance_batches) in
+        [(1, 1, 1), (16, 64, 4096)]
+    {
+        assert!(Schedule::new(Config {
+            projection_batch_size,
+            housekeeping_batch_size,
+            max_maintenance_batches,
+            ..sweep_config()
+        })
+        .is_ok());
+    }
+}
+
+#[test]
+fn maintenance_batch_ids_are_disjoint_retry_stable_and_preserve_job_cutoffs() {
+    let schedule = Schedule::new(sweep_config()).unwrap();
+    let mut seen = BTreeSet::new();
+    for event in events(&schedule) {
+        if event.class == EventClass::Foreground {
+            assert!(seen.insert(event.message.id));
+            continue;
+        }
+        for index in [0, 1, 4095] {
+            let batch = maintenance::batch_message(&event.message, index).unwrap();
+            assert!(batch.id >= maintenance::BATCH_ID_START);
+            assert!(seen.insert(batch.id));
+            assert_eq!(
+                batch,
+                maintenance::batch_message(&event.message, index).unwrap()
+            );
+            let restored = model::Message {
+                id: event.message.id,
+                ..batch
+            };
+            assert_eq!(restored, event.message);
+        }
+        assert!(maintenance::batch_message(&event.message, 4096).is_err());
+        let mut invalid = event.message;
+        invalid.id = maintenance::JOB_ID_START - 1;
+        assert!(maintenance::batch_message(&invalid, 0).is_err());
+        invalid.id = maintenance::BATCH_ID_START;
+        assert!(maintenance::batch_message(&invalid, 0).is_err());
+    }
+    let foreground = schedule.event(0, 0).unwrap().message;
+    assert!(maintenance::batch_message(&foreground, 0).is_err());
+}
+
+#[test]
+fn complete_projection_and_expiry_sweeps_use_multiple_transactions_and_terminal_query() {
+    let schedule = Schedule::new(sweep_config()).unwrap();
+    let initial = schedule.initial_records().unwrap();
+    assert_eq!(
+        initial,
+        calibrated::initial_records_for(&schedule.config).unwrap()
+    );
+    for worker in [4, 5] {
+        let mut rows = as_map(&initial);
+        let job = schedule.event(worker, 0).unwrap().message;
+        let predicate = maintenance::query(&job).unwrap();
+        let eligible: Vec<_> = rows.values().filter(|row| predicate.matches(row)).collect();
+        let families: BTreeSet<_> = eligible.iter().map(|row| row.family).collect();
+        assert!(families.len() > 1);
+        let eligible_count = eligible.len();
+        let (receipts, complete) = serial_sweep(&mut rows, &job, 4096);
+        assert!(complete);
+        assert!(receipts.len() > 2);
+        let total: usize = receipts
+            .iter()
+            .map(|r| maintenance::processed(&r.message, &r.body.outcome).unwrap())
+            .sum();
+        assert_eq!(total, eligible_count);
+        assert!(rows.values().all(|row| !predicate.matches(row)));
+        let last = receipts.last().unwrap();
+        maintenance::validate_terminal(&last.message, &last.body).unwrap();
+        assert!(receipts[..receipts.len() - 1]
+            .iter()
+            .all(|r| maintenance::processed(&r.message, &r.body.outcome).unwrap() > 0));
+        assert_eq!(
+            oracle::check(
+                &initial,
+                &receipts,
+                &rows.into_values().collect::<Vec<_>>(),
+                1000
+            )
+            .status,
+            oracle::Status::Valid
+        );
+    }
+}
+
+#[test]
+fn expiry_cohorts_supply_new_work_to_each_scheduled_tick_before_finite_history_is_exhausted() {
+    let schedule = Schedule::new(sweep_config()).unwrap();
+    let initial = schedule.initial_records().unwrap();
+    let mut rows = as_map(&initial);
+    let initial_active = initial.iter().filter(|r| r.active).count();
+    let mut total = 0;
+    for ordinal in 0..schedule.worker_offered(5) {
+        let job = schedule.event(5, ordinal).unwrap().message;
+        let query = maintenance::query(&job).unwrap();
+        let newly_eligible = rows.values().filter(|row| query.matches(row)).count();
+        assert!(newly_eligible > 0);
+        let (receipts, complete) = serial_sweep(&mut rows, &job, 4096);
+        assert!(complete);
+        let expired: usize = receipts
+            .iter()
+            .map(|r| r.body.outcome.expired_records)
+            .sum();
+        assert_eq!(expired, newly_eligible);
+        total += expired;
+        assert_eq!(receipts.last().unwrap().body.outcome.expired_records, 0);
+    }
+    assert_eq!(total, schedule.quiet_families() * 49);
+    assert_eq!(
+        rows.values().filter(|r| r.active).count(),
+        initial_active - total
+    );
+    assert_eq!(
+        live_families(&rows.values().copied().collect::<Vec<_>>()),
+        live_families(&initial)
+    );
+}
+
+#[test]
+fn partial_and_exact_limit_batches_both_require_an_additional_empty_transaction() {
+    let schedule = Schedule::new(sweep_config()).unwrap();
+    for limit in [3, 4] {
+        let mut rows = as_map(&schedule.initial_records().unwrap());
+        let mut job = schedule.event(4, 0).unwrap().message;
+        if let MessageKind::GlobalProject {
+            limit: batch_limit, ..
+        } = &mut job.kind
+        {
+            *batch_limit = limit;
+        }
+        let (receipts, complete) = serial_sweep(&mut rows, &job, 4096);
+        assert!(complete);
+        assert_eq!(receipts.len(), 28_usize.div_ceil(limit) + 1);
+        assert_eq!(
+            receipts[receipts.len() - 2].body.outcome.claimed_events,
+            if limit == 3 { 1 } else { 4 }
+        );
+        assert!(maintenance::validate_terminal(
+            &receipts[receipts.len() - 2].message,
+            &receipts[receipts.len() - 2].body
+        )
+        .is_err());
+        assert_eq!(receipts.last().unwrap().body.outcome.claimed_events, 0);
+    }
+}
+
+#[test]
+fn batch_cap_exhaustion_keeps_committed_effects_and_cannot_claim_complete_job() {
+    let schedule = Schedule::new(Config {
+        max_maintenance_batches: 1,
+        ..sweep_config()
+    })
+    .unwrap();
+    let initial = schedule.initial_records().unwrap();
+    let mut rows = as_map(&initial);
+    let job = schedule.event(5, 0).unwrap().message;
+    let query = maintenance::query(&job).unwrap();
+    let count_before = rows.values().filter(|row| query.matches(row)).count();
+    let (receipts, complete) =
+        serial_sweep(&mut rows, &job, schedule.config.max_maintenance_batches);
+    assert!(!complete);
+    assert_eq!(receipts.len(), 1);
+    assert_eq!(receipts[0].body.outcome.expired_records, 5);
+    assert!(maintenance::validate_terminal(&receipts[0].message, &receipts[0].body).is_err());
+    assert_eq!(
+        rows.values().filter(|row| query.matches(row)).count(),
+        count_before - 5
+    );
+    assert_ne!(rows.values().copied().collect::<Vec<_>>(), initial);
+    assert_eq!(
+        oracle::check(
+            &initial,
+            &receipts,
+            &rows.into_values().collect::<Vec<_>>(),
+            100
+        )
+        .status,
+        oracle::Status::Valid
+    );
+}
+
+#[test]
+fn terminal_empty_query_is_required_and_malformed_terminal_evidence_is_rejected() {
+    let schedule = Schedule::new(sweep_config()).unwrap();
+    let mut rows = as_map(&schedule.initial_records().unwrap());
+    let job = schedule.event(4, 0).unwrap().message;
+    let (receipts, _) = serial_sweep(&mut rows, &job, 4096);
+    let terminal = receipts.last().unwrap();
+    let mut missing = terminal.body.clone();
+    missing.operations.clear();
+    assert!(maintenance::validate_terminal(&terminal.message, &missing).is_err());
+    let mut wrong = terminal.body.clone();
+    wrong.operations[0] = Operation::Query {
+        query: storage::Query::All,
+        rows: vec![],
+    };
+    assert!(maintenance::validate_terminal(&terminal.message, &wrong).is_err());
+    let mut populated = terminal.body.clone();
+    if let Operation::Query { rows: result, .. } = &mut populated.operations[0] {
+        result.push(*rows.values().next().unwrap());
+    }
+    assert!(maintenance::validate_terminal(&terminal.message, &populated).is_err());
+    let mut effects = terminal.body.clone();
+    effects.outcome.ignored_stale = 1;
+    assert!(maintenance::validate_terminal(&terminal.message, &effects).is_err());
+    let mut zero_limit = terminal.message.clone();
+    if let MessageKind::GlobalProject { limit, .. } = &mut zero_limit.kind {
+        *limit = 0;
+    }
+    assert!(maintenance::processed(&zero_limit, &terminal.body.outcome).is_err());
+}
+
+#[test]
+fn serial_oracle_rejects_missing_batch_changed_cutoff_and_falsely_empty_query() {
+    let schedule = Schedule::new(sweep_config()).unwrap();
+    let initial = schedule.initial_records().unwrap();
+    let mut rows = as_map(&initial);
+    let job = schedule.event(4, 0).unwrap().message;
+    let (receipts, _) = serial_sweep(&mut rows, &job, 4096);
+    let final_rows = rows.into_values().collect::<Vec<_>>();
+    let mut omitted = receipts.clone();
+    omitted.remove(1);
+    assert_eq!(
+        oracle::check(&initial, &omitted, &final_rows, 1000).status,
+        oracle::Status::Invalid
+    );
+    let mut cutoff = receipts.clone();
+    if let MessageKind::GlobalProject { at, .. } = &mut cutoff[1].message.kind {
+        *at += 1;
+    }
+    assert_eq!(
+        oracle::check(&initial, &cutoff, &final_rows, 1000).status,
+        oracle::Status::Invalid
+    );
+    let forged = vec![receipts.last().unwrap().clone()];
+    assert_eq!(
+        oracle::check(&initial, &forged, &initial, 1000).status,
+        oracle::Status::Invalid
+    );
+}
+
+#[test]
+fn late_foreground_after_empty_observation_creates_work_for_later_sweep() {
+    let schedule = Schedule::new(sweep_config()).unwrap();
+    let mut rows = as_map(&schedule.initial_records().unwrap());
+    let job = schedule.event(4, 0).unwrap().message;
+    let (_, complete) = serial_sweep(&mut rows, &job, 4096);
+    assert!(complete);
+    let query = maintenance::query(&job).unwrap();
+    assert!(!rows.values().any(|row| query.matches(row)));
+    // A late but newer observation on a quiet flight can arrive after the
+    // terminal query. It does not retroactively invalidate that observation.
+    let quiet = schedule.active_families();
+    let mut late = schedule.event(0, 1).unwrap().message;
+    late.id += 10_000_000;
+    late.allocation_family = quiet * 2;
+    late.callsign = 100 + (quiet / 4) as i64;
+    late.tail = 10_000 + quiet as i64;
+    late.origin = 20 + (quiet / 4) as i64;
+    late.destination = 1000 + quiet as i64;
+    late.event_time = EVENT_EPOCH_NS - 30 * NANOS_PER_SECOND as i64;
+    late.kind = MessageKind::Position {
+        latitude: 30_000_100,
+        longitude: -97_000_100,
+        altitude: 25_000,
+        ground_speed: 300,
+    };
+    let body = model::serial_apply(&mut rows, &late).unwrap();
+    assert!(body.outcome.updated_views > 0);
+    assert!(rows.values().any(|row| query.matches(row)));
+    let next_job = schedule.event(4, 1).unwrap().message;
+    let (next, complete) = serial_sweep(&mut rows, &next_job, 4096);
+    assert!(complete);
+    assert!(next[0].body.outcome.claimed_events > 0);
+}
+
+#[test]
+fn sweep_population_is_duration_rate_worker_and_dispatch_independent() {
+    let cfg = sweep_config();
+    let initial = calibrated::initial_records_for(&cfg).unwrap();
+    for changed in [
+        Config {
+            duration_ns: NANOS_PER_SECOND,
+            ..cfg.clone()
+        },
+        Config {
+            duration_ns: 3600 * NANOS_PER_SECOND,
+            ..cfg.clone()
+        },
+        Config {
+            foreground_rate: 1000,
+            ..cfg.clone()
+        },
+        Config {
+            foreground_workers: 32,
+            ..cfg.clone()
+        },
+        Config {
+            dispatch: calibrated::Dispatch::SignatureAffinity,
+            affinity_ttl_ms: 600,
+            signature_pattern: calibrated::SignaturePattern::Mixed,
+            ..cfg.clone()
+        },
+    ] {
+        assert_eq!(calibrated::initial_records_for(&changed).unwrap(), initial);
+    }
+    for (interval, expected) in [(1, 3), (300, 3), (600, 3), (1200, 2), (1800, 1), (3600, 1)] {
+        let changed = Config {
+            housekeeping_interval_seconds: interval,
+            ..cfg.clone()
+        };
+        assert_eq!(calibrated::housekeeping_seed_cohorts(&changed), expected);
+        let seeded = calibrated::initial_records_for(&changed).unwrap();
+        assert!(seeded
+            .iter()
+            .filter(|r| r.active && r.kind == POSITION)
+            .all(|r| r.event_time < EVENT_EPOCH_NS));
+        model::validate_snapshot(&seeded).unwrap();
+    }
+}
+
+#[test]
+fn failed_empty_terminal_attempt_is_aborted_and_retried_before_completion_evidence_exists() {
+    struct FailFirstCommit<'a> {
+        inner: model::ReferenceStore<'a>,
+        commits: usize,
+        aborts: usize,
+    }
+    impl storage::Store for FailFirstCommit<'_> {
+        fn begin(&mut self, slots: &[usize]) -> Result<(), storage::DbError> {
+            self.inner.begin(slots)
+        }
+        fn read(&mut self, id: usize) -> Result<Record, storage::DbError> {
+            self.inner.read(id)
+        }
+        fn query(&mut self, query: &storage::Query) -> Result<Vec<Record>, storage::DbError> {
+            self.inner.query(query)
+        }
+        fn write(&mut self, row: Record) -> Result<(), storage::DbError> {
+            self.inner.write(row)
+        }
+        fn savepoint(&mut self) -> Result<usize, storage::DbError> {
+            self.inner.savepoint()
+        }
+        fn rollback_to(&mut self, id: usize) -> Result<(), storage::DbError> {
+            self.inner.rollback_to(id)
+        }
+        fn commit(&mut self) -> Result<(), storage::DbError> {
+            self.commits += 1;
+            if self.commits == 1 {
+                Err(storage::DbError::Conflict)
+            } else {
+                self.inner.commit()
+            }
+        }
+        fn abort(&mut self) -> Result<(), storage::DbError> {
+            self.aborts += 1;
+            self.inner.abort()
+        }
+    }
+    let schedule = Schedule::new(sweep_config()).unwrap();
+    let mut rows = as_map(&schedule.initial_records().unwrap());
+    let job = schedule.event(4, 0).unwrap().message;
+    let (completed, _) = serial_sweep(&mut rows, &job, 4096);
+    let message = completed.last().unwrap().message.clone();
+    let mut store = FailFirstCommit {
+        inner: model::ReferenceStore::new(&rows),
+        commits: 0,
+        aborts: 0,
+    };
+    assert_eq!(
+        model::execute_attempt(&mut store, &message),
+        Err(storage::DbError::Conflict)
+    );
+    assert!(store.inner.writes.is_empty());
+    assert_eq!(store.aborts, 1);
+    let receipt = model::execute_attempt(&mut store, &message).unwrap();
+    maintenance::validate_terminal(&message, &receipt).unwrap();
+    assert_eq!(store.commits, 2);
+    assert_eq!(store.aborts, 1);
+    assert!(store.inner.writes.is_empty());
 }

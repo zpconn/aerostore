@@ -1,8 +1,9 @@
 //! Partially calibrated, fixed-population workload with independent real-wall
 //! maintenance timers. Dispatch selects permanent per-flight FIFO or temporary
 //! input-signature affinity. TTL, alias mix, quiet quarter, source mix, retained
-//! history and fixed lifetime are explicit synthetic assumptions. Each timer
-//! performs one bounded batch, never an asserted complete sweep.
+//! history and fixed lifetime are explicit synthetic assumptions. A timer
+//! selects either one bounded batch or a job of successive batch transactions.
+use super::maintenance;
 use super::model::{self, CreationPolicy, Message, MessageKind};
 use super::storage::Record;
 use crate::extended_crucible::model::{
@@ -16,6 +17,8 @@ pub const EVENT_EPOCH_NS: i64 = 1_700_000_000_000_000_000;
 pub const RECORD_RETENTION_SECONDS: i64 = 3600;
 pub const PROJECTION_BATCH_LIMIT: usize = 4;
 pub const HOUSEKEEPING_BATCH_LIMIT: usize = 32;
+pub const MAX_MAINTENANCE_BATCHES: u64 = 4096;
+pub const MAX_HOUSEKEEPING_SEED_COHORTS: u64 = 3;
 pub const MAINTENANCE_SCOPE: &str = "bounded_batch_not_full_sweep";
 pub const DISPATCH_POLICY_VERSION: &str = "calibrated-dispatch-v1";
 pub const ASSIGNMENT_FINGERPRINT_FORMAT: &str = "fnv1a64-q-u64le-owner-u64le";
@@ -62,7 +65,39 @@ fn is_zero(value: &u64) -> bool {
 }
 
 const FOREGROUND_ID_START: u64 = 1_000_000;
-const MAINTENANCE_ID_START: u64 = 4_000_000_000;
+const MAINTENANCE_ID_START: u64 = maintenance::JOB_ID_START;
+
+pub fn default_projection_batch_size() -> usize {
+    PROJECTION_BATCH_LIMIT
+}
+pub fn default_housekeeping_batch_size() -> usize {
+    HOUSEKEEPING_BATCH_LIMIT
+}
+pub fn default_max_maintenance_batches() -> u64 {
+    MAX_MAINTENANCE_BATCHES
+}
+fn is_default_projection_batch_size(value: &usize) -> bool {
+    *value == PROJECTION_BATCH_LIMIT
+}
+fn is_default_housekeeping_batch_size(value: &usize) -> bool {
+    *value == HOUSEKEEPING_BATCH_LIMIT
+}
+fn is_default_max_maintenance_batches(value: &u64) -> bool {
+    *value == MAX_MAINTENANCE_BATCHES
+}
+
+/// Fixed, finite retained-history cohorts are independent of admission duration,
+/// rate, dispatch and worker count. Every timestamp remains before the epoch.
+/// Zero labels the legacy control, which retains its exact original population.
+pub fn housekeeping_seed_cohorts(config: &Config) -> u64 {
+    if config.maintenance_mode == maintenance::Mode::Batch {
+        0
+    } else {
+        MAX_HOUSEKEEPING_SEED_COHORTS.min(
+            ((RECORD_RETENTION_SECONDS as u64 - 1) / config.housekeeping_interval_seconds).max(1),
+        )
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Config {
@@ -79,6 +114,23 @@ pub struct Config {
     pub affinity_ttl_ms: u64,
     #[serde(default, skip_serializing_if = "SignaturePattern::is_both")]
     pub signature_pattern: SignaturePattern,
+    #[serde(default, skip_serializing_if = "maintenance::Mode::is_batch")]
+    pub maintenance_mode: maintenance::Mode,
+    #[serde(
+        default = "default_projection_batch_size",
+        skip_serializing_if = "is_default_projection_batch_size"
+    )]
+    pub projection_batch_size: usize,
+    #[serde(
+        default = "default_housekeeping_batch_size",
+        skip_serializing_if = "is_default_housekeeping_batch_size"
+    )]
+    pub housekeeping_batch_size: usize,
+    #[serde(
+        default = "default_max_maintenance_batches",
+        skip_serializing_if = "is_default_max_maintenance_batches"
+    )]
+    pub max_maintenance_batches: u64,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -189,6 +241,9 @@ pub fn validate_config(config: &Config) -> Result<(), String> {
         || !(1..=32).contains(&config.foreground_workers)
         || !(1..=3600).contains(&config.projection_interval_seconds)
         || !(1..=3600).contains(&config.housekeeping_interval_seconds)
+        || !(1..=16).contains(&config.projection_batch_size)
+        || !(1..=64).contains(&config.housekeeping_batch_size)
+        || !(1..=MAX_MAINTENANCE_BATCHES).contains(&config.max_maintenance_batches)
         || match config.dispatch {
             Dispatch::Identity => config.affinity_ttl_ms != 0,
             Dispatch::SignatureAffinity => !(1..=3_600_000).contains(&config.affinity_ttl_ms),
@@ -312,7 +367,7 @@ fn event_for(
                 EventClass::Projection,
                 MessageKind::GlobalProject {
                     at,
-                    limit: PROJECTION_BATCH_LIMIT,
+                    limit: config.projection_batch_size,
                 },
             )
         } else {
@@ -320,7 +375,7 @@ fn event_for(
                 EventClass::Housekeeping,
                 MessageKind::GlobalHousekeeping {
                     before: at - RECORD_RETENTION_SECONDS * NANOS_PER_SECOND as i64,
-                    limit: HOUSEKEEPING_BATCH_LIMIT,
+                    limit: config.housekeeping_batch_size,
                 },
             )
         };
@@ -486,7 +541,10 @@ impl Schedule {
         foreground_offered(&self.config)
     }
     pub fn maintenance_scope(&self) -> &'static str {
-        MAINTENANCE_SCOPE
+        match self.config.maintenance_mode {
+            maintenance::Mode::Batch => MAINTENANCE_SCOPE,
+            maintenance::Mode::Sweep => maintenance::SWEEP_SCOPE,
+        }
     }
     pub fn cadence_in_operator_range(&self) -> bool {
         (300..=600).contains(&self.config.projection_interval_seconds)
@@ -580,12 +638,31 @@ impl Schedule {
                         } else {
                             7200 + history as i64 * 60
                         };
+                        let event_time = if self.config.maintenance_mode == maintenance::Mode::Sweep
+                            && history < 7
+                        {
+                            // Spread finite retained history over at most three
+                            // expiry ticks, independent of admission duration.
+                            // Later jobs may be empty; this is not turnover.
+                            let cohorts = housekeeping_seed_cohorts(&self.config);
+                            let retained_index = (identity - self.active_families()) * 49
+                                + (pedigree - 1) * 7
+                                + history;
+                            let tick = retained_index as u64 % cohorts + 1;
+                            EVENT_EPOCH_NS - RECORD_RETENTION_SECONDS * NANOS_PER_SECOND as i64
+                                + (tick
+                                    * self.config.housekeeping_interval_seconds
+                                    * NANOS_PER_SECOND) as i64
+                                - 1
+                        } else {
+                            EVENT_EPOCH_NS - age * NANOS_PER_SECOND as i64
+                        };
                         rows.insert(
                             id,
                             Record {
                                 id,
                                 kind: POSITION,
-                                event_time: EVENT_EPOCH_NS - age * NANOS_PER_SECOND as i64,
+                                event_time,
                                 sequence: (20_000 + identity * 100 + pedigree * 8 + history) as i64,
                                 revision: rows[&id].revision + 1,
                                 ..flight
@@ -615,7 +692,24 @@ pub fn initial_records(families: usize, seed: u64) -> Result<Vec<Record>, String
         dispatch: Dispatch::Identity,
         affinity_ttl_ms: 0,
         signature_pattern: SignaturePattern::Both,
+        maintenance_mode: maintenance::Mode::Batch,
+        projection_batch_size: PROJECTION_BATCH_LIMIT,
+        housekeeping_batch_size: HOUSEKEEPING_BATCH_LIMIT,
+        max_maintenance_batches: MAX_MAINTENANCE_BATCHES,
     })?
+    .initial_records()
+}
+
+/// Sweep initialization also depends on housekeeping cadence because retained
+/// expiry records form explicit synthetic cohorts at its first deadlines.
+pub fn initial_records_for(config: &Config) -> Result<Vec<Record>, String> {
+    validate_config(config)?;
+    // Initialization must not materialize the potentially large input router.
+    Schedule {
+        config: config.clone(),
+        assignments: None,
+        audit: DispatchAudit::default(),
+    }
     .initial_records()
 }
 

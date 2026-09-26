@@ -15,6 +15,37 @@ import run_remote_contention as runner
 
 
 class RemoteHandshakeTests(unittest.TestCase):
+    def test_maintenance_setup_defaults_and_every_option_must_match(self):
+        runner.validate_dispatch_setup({}, runner.MAINTENANCE_DEFAULTS)
+        expected = dict(maintenance_mode="sweep", projection_batch_size=8,
+                        housekeeping_batch_size=64, max_maintenance_batches=100)
+        runner.validate_dispatch_setup(expected, expected)
+        for field, value in (("maintenance_mode", "batch"), ("projection_batch_size", 4),
+                             ("housekeeping_batch_size", 32), ("max_maintenance_batches", 4096),
+                             ("projection_batch_size", True)):
+            with self.subTest(field=field), self.assertRaisesRegex(RuntimeError, "differs from the client"):
+                runner.validate_dispatch_setup({**expected, field: value}, expected)
+        with self.assertRaisesRegex(RuntimeError, "differs from the client"):
+            runner.validate_dispatch_setup({}, expected)
+
+    def test_sweep_parameters_reach_both_peer_commands(self):
+        with tempfile.TemporaryDirectory() as directory:
+            binary = Path(directory) / "fixture-binary"
+            binary.write_bytes(b"fixture; never executed")
+            output = Path(directory) / "evidence"
+            options = {"--maintenance-mode": "sweep", "--projection-batch-size": "8",
+                       "--housekeeping-batch-size": "64", "--max-maintenance-batches": "100"}
+            argv = ["run_remote_contention.py", "--binary", str(binary), "--output-dir", str(output),
+                    "--workload", "calibrated", "--families", "16", "--hot-percent", "0",
+                    *[part for pair in options.items() for part in pair]]
+            with patch.object(sys, "argv", argv), patch.object(runner.subprocess, "Popen", side_effect=RuntimeError("stop before execution")):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(runner.main(), 1)
+            manifest = json.loads((output / "orchestration.json").read_text())
+            for command in (manifest["server_command"], manifest["client_command"]):
+                for flag, value in options.items():
+                    self.assertEqual(command[command.index(flag) + 1], value)
+
     def test_dispatch_setup_defaults_and_mismatched_alias_policy(self):
         runner.validate_dispatch_setup({}, {"dispatch": "identity", "affinity_ttl_ms": 0, "signature_pattern": "both"})
         expected = {"dispatch": "signature-affinity", "affinity_ttl_ms": 1000, "signature_pattern": "mixed"}
@@ -50,6 +81,11 @@ class RemoteHandshakeTests(unittest.TestCase):
                         ["--dispatch", "signature-affinity"],
                         ["--dispatch", "signature-affinity", "--affinity-ttl-ms", "3600001"],
                         ["--affinity-ttl-ms", "1"],
+                        ["--projection-batch-size", "0"], ["--projection-batch-size", "17"],
+                        ["--housekeeping-batch-size", "0"], ["--housekeeping-batch-size", "65"],
+                        ["--max-maintenance-batches", "0"], ["--max-maintenance-batches", "4097"],
+                        ["--workload", "lifecycle", "--maintenance-mode", "sweep"],
+                        ["--workload", "fleet", "--projection-batch-size", "8"],
                         ["--workload", "fleet", "--signature-pattern", "mixed"]):
             with self.subTest(options=options), tempfile.TemporaryDirectory() as directory:
                 output = Path(directory) / "must-not-be-created"

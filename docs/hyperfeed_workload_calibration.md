@@ -53,8 +53,9 @@ the likely interpretation; the exact API remains unconfirmed. The current
 already prepares its workload reads, predicate queries, row locks and writes once
 when connecting, retaining the statement handles across transactions and retries.
 Its buffered mode commits discovered row changes with a prepared set-based update.
-This groups row writes within one transaction; it does not yet make a timer tick
-complete an entire maintenance job through several transactions. Existing plan
+This groups row writes within one transaction. The optional [maintenance sweep
+mode](hyperfeed_maintenance.md) now repeats whole batch transactions, retaining
+prepared statement reuse, until a committed complete query is empty. Existing plan
 reports use literal/custom examples and do not inspect the plans actually selected
 for repeatedly executed prepared statements. Include that inspection in future
 PostgreSQL tuning before drawing a capacity comparison.
@@ -82,6 +83,14 @@ records: four records per eligible view plus one message deduplication record.
 That count excludes index and WAL work. The fixed 128-slot family layout reserves
 space for seven views and their associated histories; adding an eighth view
 requires changing the layout and its checks, not just a loop bound.
+
+The optional [complete maintenance mode](hyperfeed_maintenance.md) keeps each
+timer job's original cutoff across bounded transactions and requires a committed
+empty query to finish. The default batch control is retained. Sweep seeds use at
+most three finite expiry cohorts, while the batch control preserves its older
+population; this difference prevents treating mode comparisons as an isolated
+transaction-loop benchmark. Full jobs are not atomic snapshots, and finite cohorts
+do not supply sustained lifecycle turnover.
 
 The harness currently accepts at most 32 foreground workers and 1,024 logical
 families. The archived calibration runs used four foreground workers and 16
@@ -112,10 +121,12 @@ bounds or a blindly increased constant.
    distinct fork update and output. Preserve message-level commit/retry behavior.
    Confirm whether the approximate 3–8 count includes the all-provenance parent;
    do not equate a range of observed counts with a uniform random distribution.
-3. Complete each maintenance sweep through configurable batch transactions, using
-   the operator's recollection as the working contract. Measure batch-size
-   sensitivity; the current four-event/32-record limits are synthetic. Then add
-   flight creation, growth, terminal transitions and retirement. Treat daily
+3. Validate the implemented complete sweeps under sustained concurrent input,
+   using the operator's recollection as the working transaction contract. Measure
+   batch-size sensitivity, retries and whole-job completion; the default
+   four-event/32-record sizes are synthetic. Keep timer cadence and seed cohorts
+   fixed when comparing sizes. Then add flight creation, growth, terminal
+   transitions and retirement. Treat daily
    flight volume, concurrently updating flights and retained families as separate
    inputs.
 4. Expand the reviewed harness/resource limits to support 100/200/300-worker
