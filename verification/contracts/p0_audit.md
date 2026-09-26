@@ -32,6 +32,16 @@ as primitive boundaries and do not inherit the transactional query guarantee.
 No entry implies multitable transactions, remote MMHF, arbitrary Tcl/C behavior
 or PostgreSQL compatibility.
 
+The optional `retry_diagnostics` module is an observation boundary. Its five
+public APIs have a defined thread-local contract and grant no transaction or
+memory ownership authority. Native observation calls are compiled out of the
+default feature configuration. The current transaction source adapters erase
+only reviewed, exactly guarded statements, with full default token equality
+pinned to `4da551b` and exact site checks. The feature-enabled implementation is
+covered by focused native tests and review, not by those default-feature
+refinement claims. See the [diagnostic boundary](../retry_diagnostics/README.md)
+for labels, synchronous caller obligations, and negative controls.
+
 | P0 deliverable | Source of the contract or evidence |
 | --- | --- |
 | Scope and claim ledger | [transactions.md](transactions.md), [claims.toml](../claims.toml) |
@@ -41,7 +51,7 @@ or PostgreSQL compatibility.
 | Durability modes | [durability.md](durability.md), including stream binding, acknowledgements, checkpoint/replay and indeterminate outcomes |
 | Assumed platform and primitive boundaries | [assumptions.toml](../assumptions.toml) and contract preconditions |
 | Regressions and performance baseline retained | [Initial transactional-index archive](../../docs/bench_data/transactional_indexes_2026-09-22/README.md), [accepted engine experiment](../../docs/bench_data/verified_engine_2026-09-23/README.md), subsequent verification archives under `docs/verification_data` |
-| Defined success/error contract for every covered public path | 425 explicit public function/trait declarations across all 32 core source modules, each assigned a reviewed contract or an explicit exclusion; public data and implicit traits addressed separately |
+| Defined success/error contract for every covered public path | 430 explicit public function/trait declarations across all 33 core source modules, each assigned a reviewed contract or an explicit exclusion; public data and implicit traits addressed separately |
 
 The P0 exit is a contract/coverage audit. An arbitrary-history theorem, native
 pointer ownership proof, or complete crash-recovery refinement is not a P0 exit
@@ -51,7 +61,7 @@ requirement. Those remain later claims even after this audit is accepted.
 
 Each `apis` entry identifies a declaration by module, receiver type and method
 name. It contains the exact normalized signature, body digest, defining source,
-classification and contract ID. Each of the 83 contract families specifies
+classification and contract ID. Each of the 84 contract families specifies
 preconditions, successful effect, failure behavior, limitations and references.
 Shared families are used only where the entry points implement the same kind of
 operation; overloads and distinct snapshot modes are named explicitly.

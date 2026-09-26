@@ -38,6 +38,17 @@ def validate_receipt(path: Path, name: str, root: Path = ROOT) -> dict:
         require(receipt.get("final_input_sha256") == inputs, "source changed during proof")
         for filename, sha in inputs.items():
             require(digest(root / filename) == sha, "stale proof source: " + filename)
+        # The already-bound shared generator pins the only permitted source
+        # normalizer. Recheck that dependency here as well as at generator
+        # import, so an old receipt cannot mask a changed current dependency.
+        generator = "verification/concurrent/generate.py"
+        if generator in inputs:
+            pins = re.findall(r'^_DIAGNOSTIC_NORMALIZER_SHA256 = "([0-9a-f]{64})"$',
+                              (root / generator).read_text(), re.MULTILINE)
+            require(len(pins) == 1, "missing or ambiguous source-normalization dependency pin")
+            dependency = root / "verification/retry_diagnostics/normalize.py"
+            require(dependency.is_file(), "missing source-normalization dependency")
+            require(digest(dependency) == pins[0], "stale source-normalization dependency")
         pin = json.loads((root / "verification/verus/toolchain.json").read_text())
         require(receipt.get("toolchain") == pin, "unreviewed verifier pin")
         for filename, sha in pin["artifact_sha256"].items():

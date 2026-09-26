@@ -8,6 +8,8 @@ edition = "2021"
 # path until a verified candidate earns promotion through the performance gate.
 verified-buckets-sort = []
 verified-buckets-bitmap = []
+# Failure-path observations only; disabled builds contain no native markers.
+retry-diagnostics = []
 
 [dependencies]
 aerostore_verified = { path = "../aerostore_verified" }

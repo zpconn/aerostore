@@ -540,6 +540,8 @@ impl<const SLOTS: usize, const SLOT_BYTES: usize> OccCommitter<SLOTS, SLOT_BYTES
                             // is safe after the driver aborts this transaction.
                             // This check does not synchronize destructive ring
                             // reset; reset still requires exclusive shutdown.
+                            #[cfg(feature = "retry-diagnostics")]
+                            crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::WalWriterEpochChanged, None, None);
                             return Err(WalWriterError::Occ(OccError::SerializationFailure));
                         }
                         ring.push_bytes_blocking(payload.as_slice())?;

@@ -933,6 +933,10 @@ pub struct Client {
     pub metrics: StoreMetrics,
     pub retry_causes: BTreeMap<String, u64>,
     pub diagnostics: BTreeMap<String, u64>,
+    last_attempted_sequence: Option<u64>,
+    last_completed_sequence: Option<u64>,
+    last_metrics_sequence: Option<u64>,
+    transport_failed: bool,
 }
 impl Client {
     pub fn connect(endpoint: &Endpoint, timeout: Duration) -> Result<Self, String> {
@@ -964,6 +968,10 @@ impl Client {
             metrics: StoreMetrics::default(),
             retry_causes: BTreeMap::new(),
             diagnostics: BTreeMap::new(),
+            last_attempted_sequence: None,
+            last_completed_sequence: None,
+            last_metrics_sequence: None,
+            transport_failed: false,
         })
     }
     pub fn session_id(&self) -> SessionId {
@@ -995,6 +1003,24 @@ impl Client {
     pub fn refresh_metrics(&mut self) -> Result<(), DbError> {
         self.unit(Operation::Metrics)
     }
+    /// Describes cached cumulative counters without issuing a network request.
+    /// A disconnected or unacknowledged operation may have done more work than
+    /// this snapshot records; absence of a fresh reply is not a zero counter.
+    pub fn metrics_status(&self) -> serde_json::Value {
+        serde_json::json!({
+            "source":"service_cache",
+            "complete": self.last_metrics_sequence.is_some()
+                && self.last_metrics_sequence == self.last_completed_sequence
+                && self.last_completed_sequence == self.last_attempted_sequence
+                && !self.transport_failed,
+            "session":self.session,
+            "last_attempted_sequence":self.last_attempted_sequence,
+            "last_completed_sequence":self.last_completed_sequence,
+            "last_metrics_sequence":self.last_metrics_sequence,
+            "transport_failed":self.transport_failed,
+            "connected":self.socket.is_some(),
+            "scope":"Cumulative backend counters through the indicated acknowledged operation; does not resolve an indeterminate commit."})
+    }
     pub fn close(&mut self) -> Result<(), DbError> {
         let result = self.unit(Operation::Close);
         self.disconnect();
@@ -1019,6 +1045,7 @@ impl Client {
         }
         let sequence = self.sequence;
         self.sequence += 1;
+        self.last_attempted_sequence = Some(sequence);
         let token = CommitToken {
             session: self.session,
             sequence,
@@ -1045,14 +1072,17 @@ impl Client {
         let reply = match transport {
             Ok(reply) => reply,
             Err(error) => {
+                self.transport_failed = true;
                 self.disconnect();
                 return Err(DbError::Fatal(format!("service transport: {error}; unresolved commit {:?}; do not replay without a known aborted outcome", self.pending)));
             }
         };
+        self.last_completed_sequence = Some(sequence);
         if let Some(metrics) = reply.metrics {
             self.metrics = metrics.metrics;
             self.retry_causes = metrics.retry_causes;
             self.diagnostics = metrics.diagnostics;
+            self.last_metrics_sequence = Some(sequence);
         }
         if committing {
             if !matches!(reply.result, Err(WireError::Fatal(_))) {
@@ -1524,5 +1554,141 @@ mod protocol_tests {
         until(|| server.stats().active_sessions == 0);
         assert_eq!(active.load(Ordering::Acquire), 0);
         server.stop(Duration::from_secs(1)).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod retry_metric_tests {
+    use super::*;
+
+    struct ConflictingBackend {
+        metrics: StoreMetrics,
+        queries: u64,
+        failed_aborts: u64,
+        fail_abort_once: bool,
+    }
+    impl Store for ConflictingBackend {
+        fn begin(&mut self, _: &[usize]) -> Result<(), DbError> {
+            self.metrics.begins += 1;
+            Ok(())
+        }
+        fn read(&mut self, _: usize) -> Result<Record, DbError> {
+            unreachable!()
+        }
+        fn query(&mut self, _: &Query) -> Result<Vec<Record>, DbError> {
+            self.queries += 1;
+            Err(DbError::Conflict)
+        }
+        fn write(&mut self, _: Record) -> Result<(), DbError> {
+            unreachable!()
+        }
+        fn savepoint(&mut self) -> Result<usize, DbError> {
+            unreachable!()
+        }
+        fn rollback_to(&mut self, _: usize) -> Result<(), DbError> {
+            unreachable!()
+        }
+        fn commit(&mut self) -> Result<(), DbError> {
+            unreachable!()
+        }
+        fn abort(&mut self) -> Result<(), DbError> {
+            self.metrics.aborts += 1;
+            if std::mem::take(&mut self.fail_abort_once) {
+                self.failed_aborts += 1;
+                Err(DbError::Fatal("injected cleanup failure".into()))
+            } else {
+                Ok(())
+            }
+        }
+    }
+    fn start(fail_abort_once: bool) -> Server {
+        Server::start(
+            Endpoint::Tcp("127.0.0.1:0".parse().unwrap()),
+            Limits::default(),
+            move |session| {
+                let mut store = ConflictingBackend {
+                    metrics: StoreMetrics::default(),
+                    queries: 0,
+                    failed_aborts: 0,
+                    fail_abort_once,
+                };
+                session.serve(&mut store, |store| BackendMetrics {
+                    metrics: store.metrics.clone(),
+                    retry_causes: BTreeMap::from([
+                        ("query:synthetic_conflict".into(), store.queries),
+                        ("abort:synthetic_failure".into(), store.failed_aborts),
+                    ]),
+                    diagnostics: BTreeMap::from([("query:calls".into(), store.queries)]),
+                })
+            },
+        )
+        .unwrap()
+    }
+    #[test]
+    fn abort_reply_refreshes_conflict_counters_without_an_extra_metrics_request() {
+        let mut server = start(false);
+        let mut client = Client::connect(&server.endpoint(), Duration::from_secs(2)).unwrap();
+        assert_eq!(client.metrics_status()["complete"], false);
+        for expected in 1..=2 {
+            client.begin(&[]).unwrap();
+            assert!(matches!(
+                client.query(&Query::GlobalDue { at: 1 }),
+                Err(DbError::Conflict)
+            ));
+            assert_eq!(client.metrics_status()["complete"], false);
+            client.abort().unwrap();
+            let status = client.metrics_status();
+            assert_eq!(status["complete"], true);
+            assert_eq!(status["last_attempted_sequence"], expected * 3);
+            assert_eq!(status["last_metrics_sequence"], expected * 3);
+            assert_eq!(client.retry_causes["query:synthetic_conflict"], expected);
+            assert_eq!(client.diagnostics["query:calls"], expected);
+        }
+        client.close().unwrap();
+        server.stop(Duration::from_secs(2)).unwrap();
+    }
+    #[test]
+    fn failed_abort_returns_fresh_counters_but_does_not_claim_successful_cleanup() {
+        let mut server = start(true);
+        let mut client = Client::connect(&server.endpoint(), Duration::from_secs(2)).unwrap();
+        client.begin(&[]).unwrap();
+        assert!(matches!(
+            client.query(&Query::GlobalDue { at: 1 }),
+            Err(DbError::Conflict)
+        ));
+        assert!(
+            matches!(client.abort(),Err(DbError::Fatal(message)) if message=="injected cleanup failure")
+        );
+        assert_eq!(client.metrics_status()["complete"], true);
+        assert_eq!(client.retry_causes["query:synthetic_conflict"], 1);
+        assert_eq!(client.retry_causes["abort:synthetic_failure"], 1);
+        // A fresh metrics snapshot describes work performed; its freshness is
+        // deliberately distinct from the abort result delivered to the caller.
+        client.close().unwrap();
+        server.stop(Duration::from_secs(2)).unwrap();
+    }
+    #[test]
+    fn broken_connection_preserves_cached_values_with_explicit_incomplete_status() {
+        let mut server = start(false);
+        let mut client = Client::connect(&server.endpoint(), Duration::from_secs(2)).unwrap();
+        client.begin(&[]).unwrap();
+        assert!(matches!(
+            client.query(&Query::GlobalDue { at: 1 }),
+            Err(DbError::Conflict)
+        ));
+        client.abort().unwrap();
+        let last = client.metrics_status()["last_metrics_sequence"].clone();
+        client.begin(&[]).unwrap();
+        server.stop(Duration::from_secs(2)).unwrap();
+        assert!(matches!(
+            client.query(&Query::GlobalDue { at: 1 }),
+            Err(DbError::Fatal(_))
+        ));
+        let status = client.metrics_status();
+        assert_eq!(status["complete"], false);
+        assert_eq!(status["transport_failed"], true);
+        assert_eq!(status["connected"], false);
+        assert_eq!(status["last_metrics_sequence"], last);
+        assert_eq!(client.retry_causes["query:synthetic_conflict"], 1);
     }
 }

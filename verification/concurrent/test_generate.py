@@ -9,6 +9,13 @@ class AdapterTests(unittest.TestCase):
     def setUpClass(cls):
         cls.source = generate.SOURCE.read_text()
 
+    def test_retry_diagnostic_origins_preserve_pinned_default_native_source(self):
+        spec = generate.importlib.util.spec_from_file_location(
+            "retry_default_source_check", generate.ROOT / "verification/retry_diagnostics/check_default.py")
+        checker = generate.importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(checker)
+        self.assertTrue(checker.check()["passed"])
+
     def test_current_source_renders(self):
         result = generate.render(self.source)
         self.assertIn("pub fn commit_with_record_impl", result)
