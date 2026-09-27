@@ -1055,9 +1055,47 @@ class RetryDiagnosticGateTests(unittest.TestCase):
         legacy = trial(evidence="metrics")
         explicit = {**legacy["config"], **gate.EXPERIMENT_DEFAULTS}
         self.assertEqual(gate.key(legacy["config"]), gate.key(explicit))
-        for changed in ({"expiry_index_policy":"housekeeping"}, {"retry_diagnostics":True}):
+        for changed in ({"expiry_index_policy":"housekeeping"}, {"retry_diagnostics":True},
+                        {"due_index_policy":"ordered"}, {"due_index_origin":-100},
+                        {"due_index_width":7}):
             self.assertNotEqual(gate.key(explicit), gate.key({**explicit, **changed}))
             self.assertFalse(gate.assess_trial(legacy, POLICY, {gate.key({**explicit, **changed})})["correctness_companion_verified"])
+
+    def test_due_publication_report_requires_exact_requested_and_effective_parameters(self):
+        self.assertEqual(gate.experiment_report_errors({}, {"engine":"aerostore"}), [])
+        # A modern explicitly configured hashed control cannot erase all its
+        # publication metadata and masquerade as a historical default report.
+        self.assertTrue(gate.experiment_report_errors({}, {"engine":"aerostore", **gate.DUE_INDEX_DEFAULTS}))
+        for engine in ("aerostore", "postgres"):
+            config = {"engine":engine, "due_index_policy":"ordered", "due_index_origin":-100,
+                      "due_index_width":7}
+            run = {**config, "effective_due_index_policy":"postgres" if engine=="postgres" else "ordered",
+                   "effective_due_index_origin":None if engine=="postgres" else -100,
+                   "effective_due_index_width":None if engine=="postgres" else 7}
+            self.assertEqual(gate.experiment_report_errors(run, config), [])
+            for field, value in (("due_index_policy","hashed"), ("due_index_origin",-99),
+                                 ("due_index_width",8), ("effective_due_index_policy","hashed"),
+                                 ("effective_due_index_origin",101), ("effective_due_index_width",1)):
+                with self.subTest(engine=engine, field=field):
+                    self.assertTrue(gate.experiment_report_errors({**run, field:value}, config))
+                    missing = copy.deepcopy(run); missing.pop(field)
+                    # None is a deliberate inactive-parameter representation;
+                    # missing active ordered parameters cannot select defaults.
+                    if not (engine=="postgres" and field in ("effective_due_index_origin", "effective_due_index_width")):
+                        self.assertTrue(gate.experiment_report_errors(missing, config))
+        for field, value in (("due_index_policy","unknown"), ("due_index_width",0),
+                             ("due_index_width",2**64), ("due_index_width",True),
+                             ("due_index_origin",2**63), ("due_index_origin",-(2**63)-1)):
+            self.assertTrue(gate.experiment_report_errors({}, {field:value}))
+
+    def test_invalid_due_index_parameters_fail_before_binary_resolution(self):
+        for flags in (["--due-index-width","0"], ["--due-index-width",str(2**64)],
+                      ["--due-index-origin",str(2**63)], ["--due-index-origin",str(-(2**63)-1)]):
+            with self.subTest(flags=flags), tempfile.TemporaryDirectory() as directory:
+                with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:
+                    gate.main(["--binary","/missing/benchmark","--output",directory,
+                               "--engines","aerostore","--slo-ms","100",*flags])
+                self.assertEqual(error.exception.code, 2)
 
     def test_successful_report_reconciles_failures_and_feature_support(self):
         item = trial(); item["config"].update(expiry_index_policy="housekeeping", retry_diagnostics=True)

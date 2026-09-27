@@ -110,6 +110,33 @@ class RetryDiagnosticProcessTests(unittest.TestCase):
                     self.assertEqual(progress["completed_by_worker"][progress["worker"]], 0)
                     self.assertTrue(all(not item["job_completed"] for item in own))
 
+    def test_ordered_due_policy_survives_native_and_service_worker_attachment(self):
+        origin, width = 1_699_999_999_000_000_000, 250_000_000
+        for engine in ("aerostore", "service-unix"):
+            with self.subTest(engine=engine):
+                receipt, report = self.run_case(
+                    f"ordered-due-{engine}", engine, True,
+                    "--due-index", "ordered", "--due-index-origin", str(origin),
+                    "--due-index-width", str(width),
+                    "--mode", "sustained", "--workload", "calibrated", "--evidence", "full",
+                    "--maintenance-mode", "sweep", "--seconds", "3", "--arrival-rate", "32",
+                    "--projection-interval-seconds", "1", "--housekeeping-interval-seconds", "1",
+                    "--max-messages", "1000", "--max-backlog", "1000")
+                self.assertEqual(receipt["exit_code"], 0, report)
+                self.assertTrue(report["passed"])
+                self.assertEqual(report["config"]["due_index_policy"], "ordered")
+                self.assertEqual(report["config"]["due_index_origin"], origin)
+                self.assertEqual(report["config"]["due_index_width"], width)
+                run = report["runs"][0]
+                self.assertEqual(gate.experiment_report_errors(run, report["config"]), [])
+                self.assertTrue(run["correctness_history_verified"])
+                self.assertTrue(run["global_maintenance_sweep_complete"])
+                self.assertEqual(run["completed_messages"], 100)
+                self.assertEqual(run["store_metrics"]["commits"], run["completed_transactions"])
+                self.assertEqual(run["effective_due_index_policy"], "ordered")
+                self.assertEqual(run["effective_due_index_origin"], origin)
+                self.assertEqual(run["effective_due_index_width"], width)
+
     @unittest.skipUnless(os.environ.get("AEROSTORE_CONTENTION_DEFAULT_BINARY"),
                          "select a default-feature binary to check diagnostic rejection")
     def test_default_binary_rejects_requested_branch_diagnostics(self):

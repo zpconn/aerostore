@@ -237,6 +237,7 @@ def main() -> int:
             commands += [("gate-tests", [sys.executable, "scripts/test_formal_gate.py"]),
                          ("p0-contract-tests", [sys.executable, "scripts/test_p0_contracts.py"]),
                          ("p0-contracts", [sys.executable, "scripts/check_p0_contracts.py"]),
+                         ("ordered-range-native", [sys.executable, "verification/ordered_range/run.py", "--output", str(directory / "ordered-range")]),
                          ("adapter-tests", [sys.executable, "verification/verus/test_generate.py"]),
                          ("verus", [sys.executable, "verification/verus/run.py", "--output", str(directory / "verus")]),
                          ("concurrent-adapter-tests", [sys.executable, "verification/concurrent/test_generate.py"]),

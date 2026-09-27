@@ -59,7 +59,9 @@ DISPATCH_DEFAULTS = {"dispatch": "identity", "affinity_ttl_ms": 0, "signature_pa
 MAINTENANCE_DEFAULTS = {"maintenance_mode": "batch", "projection_batch_size": 4,
                         "housekeeping_batch_size": 32, "max_maintenance_batches": 4096}
 CALIBRATED_DEFAULTS = {**DISPATCH_DEFAULTS, **MAINTENANCE_DEFAULTS}
-EXPERIMENT_DEFAULTS = {"expiry_index_policy": "all-active", "retry_diagnostics": False}
+DUE_INDEX_DEFAULTS = {"due_index_policy": "hashed", "due_index_origin": 1_700_000_000_000_000_000,
+                      "due_index_width": 1_000_000_000}
+EXPERIMENT_DEFAULTS = {"expiry_index_policy": "all-active", "retry_diagnostics": False, **DUE_INDEX_DEFAULTS}
 EFFECT_FIELDS = ("created_views", "updated_views", "outputs", "claimed_events", "cancelled_events", "rescheduled_events", "expired_records", "expired_families")
 OUTCOME_FIELDS = EFFECT_FIELDS + ("missing_family", "allocation_deferred", "ignored_stale", "duplicate_messages")
 
@@ -709,11 +711,27 @@ def retry_trace_errors(trace: object, enabled: bool) -> list[str]:
 
 
 def experiment_report_errors(run: dict, config: dict) -> list[str]:
-    policy, enabled = (config_value(config, field) for field in EXPERIMENT_DEFAULTS)
+    policy, enabled = config_value(config, "expiry_index_policy"), config_value(config, "retry_diagnostics")
+    due = {field: config_value(config, field) for field in DUE_INDEX_DEFAULTS}
+    if (type(due["due_index_policy"]) is not str or due["due_index_policy"] not in {"hashed", "ordered"}
+            or type(due["due_index_origin"]) is not int or not -(2**63) <= due["due_index_origin"] < 2**63
+            or type(due["due_index_width"]) is not int or not 1 <= due["due_index_width"] < 2**64):
+        return ["invalid due-index publication configuration"]
     if policy not in {"all-active", "housekeeping"} or type(enabled) is not bool:
         return ["invalid expiry/diagnostic experiment configuration"]
     errors = []
     modern = "worker_retry_diagnostics" in run
+    due_reported = any(field in run or field in config for field in DUE_INDEX_DEFAULTS)
+    if due_reported or due != DUE_INDEX_DEFAULTS:
+        if any(type(run.get(field)) is not type(value) or run.get(field) != value for field, value in due.items()):
+            errors.append("reported due-index publication parameters differ from configuration")
+        expected_due = "postgres" if config.get("engine") == "postgres" else due["due_index_policy"]
+        ordered = expected_due == "ordered"
+        effective = {"effective_due_index_policy": expected_due,
+                     "effective_due_index_origin": due["due_index_origin"] if ordered else None,
+                     "effective_due_index_width": due["due_index_width"] if ordered else None}
+        if any(type(run.get(field)) is not type(value) or run.get(field) != value for field, value in effective.items()):
+            errors.append("reported effective due-index publication differs from engine configuration")
     if run.get("expiry_index_policy", "all-active") != policy:
         errors.append("reported native expiry eligibility differs from configuration")
     expected_policy = "housekeeping" if config.get("engine") == "postgres" else policy
@@ -1146,6 +1164,9 @@ def main(argv=None) -> int:
     parser.add_argument("--max-maintenance-batches", type=int, default=4096,
                         help="sweep transaction cap per job, including its required empty terminal transaction")
     parser.add_argument("--expiry-index", dest="expiry_index_policy", choices=["all-active", "housekeeping"], default="all-active", help="native fixture eligibility; PostgreSQL already uses housekeeping-only eligibility")
+    parser.add_argument("--due-index", dest="due_index_policy", choices=["hashed", "ordered"], default="hashed", help="native due-index publication policy; PostgreSQL is unchanged")
+    parser.add_argument("--due-index-origin", type=int, default=DUE_INDEX_DEFAULTS["due_index_origin"], help="signed event-time origin; default calibrated nanosecond epoch")
+    parser.add_argument("--due-index-width", type=int, default=DUE_INDEX_DEFAULTS["due_index_width"], help="positive bucket width in event-time units; default one calibrated second")
     parser.add_argument("--retry-diagnostics", choices=["off", "on"], default="off", help="bounded origin/failed-attempt evidence; on requires a diagnostic-feature binary")
     parser.add_argument("--rates", type=comma_ints, default=[32, 64])
     parser.add_argument("--workers", type=comma_ints, default=[1, 2])
@@ -1168,6 +1189,8 @@ def main(argv=None) -> int:
     parser.add_argument("--minimum-drain-fraction", type=float, default=0.95)
     parser.add_argument("--outcome-tolerance", type=float, default=0.10)
     args = parser.parse_args(arguments)
+    if not -(2**63) <= args.due_index_origin < 2**63 or not 1 <= args.due_index_width < 2**64:
+        parser.error("due index origin must fit i64 and width must be a positive u64")
     try:
         dispatch_config(vars(args))
         maintenance_config(vars(args))
@@ -1274,7 +1297,8 @@ def main(argv=None) -> int:
                           "global_time_predicates": False, "shm_mib": args.shm_mib,
                           "max_backlog": args.max_backlog, "max_messages": args.max_messages,
                           "message_interval_us": 0, "expiry_index_policy": args.expiry_index_policy,
-                          "retry_diagnostics": args.retry_diagnostics == "on"}
+                          "retry_diagnostics": args.retry_diagnostics == "on",
+                          **{field: getattr(args, field) for field in DUE_INDEX_DEFAULTS}}
                 if args.workload == "calibrated":
                     config.update(projection_interval_seconds=args.projection_interval_seconds,
                                   housekeeping_interval_seconds=args.housekeeping_interval_seconds,
@@ -1286,7 +1310,9 @@ def main(argv=None) -> int:
                 if args.workload == "calibrated":
                     for name in CALIBRATED_FIELDS + tuple(CALIBRATED_DEFAULTS):
                         command += ["--" + name.replace("_", "-"), str(config[name])]
-                command += ["--expiry-index", args.expiry_index_policy, "--retry-diagnostics", args.retry_diagnostics]
+                command += ["--expiry-index", args.expiry_index_policy, "--retry-diagnostics", args.retry_diagnostics,
+                            "--due-index", args.due_index_policy, "--due-index-origin", str(args.due_index_origin),
+                            "--due-index-width", str(args.due_index_width)]
                 public_command = command.copy()
                 if engine == "postgres":
                     command += ["--pg-url", secret]

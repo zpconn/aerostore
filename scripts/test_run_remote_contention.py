@@ -24,6 +24,18 @@ class RemoteHandshakeTests(unittest.TestCase):
             with self.subTest(setup=setup), self.assertRaisesRegex(RuntimeError, "differs from the client"):
                 runner.validate_dispatch_setup(setup, expected)
 
+    def test_due_publication_setup_matches_policy_origin_and_width(self):
+        runner.validate_dispatch_setup({}, runner.DUE_INDEX_DEFAULTS)
+        expected = dict(due_index_policy="ordered", due_index_origin=-100, due_index_width=7)
+        runner.validate_dispatch_setup(expected, expected)
+        for field, value in (("due_index_policy","hashed"), ("due_index_origin",-99),
+                             ("due_index_width",8), ("due_index_origin",True),
+                             ("due_index_width",True)):
+            with self.subTest(field=field), self.assertRaisesRegex(RuntimeError,"differs from the client"):
+                runner.validate_dispatch_setup({**expected, field:value}, expected)
+        with self.assertRaisesRegex(RuntimeError,"differs from the client"):
+            runner.validate_dispatch_setup({}, expected)
+
     def test_maintenance_setup_defaults_and_every_option_must_match(self):
         runner.validate_dispatch_setup({}, runner.MAINTENANCE_DEFAULTS)
         expected = dict(maintenance_mode="sweep", projection_batch_size=8,
@@ -44,7 +56,8 @@ class RemoteHandshakeTests(unittest.TestCase):
             output = Path(directory) / "evidence"
             options = {"--maintenance-mode": "sweep", "--projection-batch-size": "8",
                        "--housekeeping-batch-size": "64", "--max-maintenance-batches": "100",
-                       "--expiry-index":"housekeeping", "--retry-diagnostics":"on"}
+                       "--expiry-index":"housekeeping", "--retry-diagnostics":"on",
+                       "--due-index":"ordered", "--due-index-origin":"-100", "--due-index-width":"7"}
             argv = ["run_remote_contention.py", "--binary", str(binary), "--output-dir", str(output),
                     "--workload", "calibrated", "--families", "16", "--hot-percent", "0",
                     *[part for pair in options.items() for part in pair]]
@@ -94,6 +107,8 @@ class RemoteHandshakeTests(unittest.TestCase):
                         ["--projection-batch-size", "0"], ["--projection-batch-size", "17"],
                         ["--housekeeping-batch-size", "0"], ["--housekeeping-batch-size", "65"],
                         ["--max-maintenance-batches", "0"], ["--max-maintenance-batches", "4097"],
+                        ["--due-index-width", "0"], ["--due-index-width", str(2**64)],
+                        ["--due-index-origin", str(2**63)], ["--due-index-origin", str(-(2**63)-1)],
                         ["--workload", "lifecycle", "--maintenance-mode", "sweep"],
                         ["--workload", "fleet", "--projection-batch-size", "8"],
                         ["--workload", "fleet", "--signature-pattern", "mixed"]):

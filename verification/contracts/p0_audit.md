@@ -42,6 +42,15 @@ covered by focused native tests and review, not by those default-feature
 refinement claims. See the [diagnostic boundary](../retry_diagnostics/README.md)
 for labels, synchronous caller obligations, and negative controls.
 
+The opt-in `IndexPublicationPolicy::OrderedI64` is a separate primitive boundary.
+Its immutable version-3 index header records origin and positive width; older
+version-1/version-2 mappings require quiescent rebuild and are rejected on
+attachment. The default policy remains hashed. The narrowed range dependency
+mapping has source-bound finite native coverage checks, while universal native
+mapping coverage and metadata refinement remain open. Existing conditional
+transaction proofs continue to assume that every matching key's bucket is
+covered. See the [ordered-range boundary](../ordered_range/README.md).
+
 | P0 deliverable | Source of the contract or evidence |
 | --- | --- |
 | Scope and claim ledger | [transactions.md](transactions.md), [claims.toml](../claims.toml) |
@@ -51,7 +60,7 @@ for labels, synchronous caller obligations, and negative controls.
 | Durability modes | [durability.md](durability.md), including stream binding, acknowledgements, checkpoint/replay and indeterminate outcomes |
 | Assumed platform and primitive boundaries | [assumptions.toml](../assumptions.toml) and contract preconditions |
 | Regressions and performance baseline retained | [Initial transactional-index archive](../../docs/bench_data/transactional_indexes_2026-09-22/README.md), [accepted engine experiment](../../docs/bench_data/verified_engine_2026-09-23/README.md), subsequent verification archives under `docs/verification_data` |
-| Defined success/error contract for every covered public path | 430 explicit public function/trait declarations across all 33 core source modules, each assigned a reviewed contract or an explicit exclusion; public data and implicit traits addressed separately |
+| Defined success/error contract for every covered public path | 432 explicit public function/trait declarations across all 33 core source modules, each assigned a reviewed contract or an explicit exclusion; public data and implicit traits addressed separately |
 
 The P0 exit is a contract/coverage audit. An arbitrary-history theorem, native
 pointer ownership proof, or complete crash-recovery refinement is not a P0 exit
@@ -61,7 +70,7 @@ requirement. Those remain later claims even after this audit is accepted.
 
 Each `apis` entry identifies a declaration by module, receiver type and method
 name. It contains the exact normalized signature, body digest, defining source,
-classification and contract ID. Each of the 84 contract families specifies
+classification and contract ID. Each of the 85 contract families specifies
 preconditions, successful effect, failure behavior, limitations and references.
 Shared families are used only where the entry points implement the same kind of
 operation; overloads and distinct snapshot modes are named explicitly.

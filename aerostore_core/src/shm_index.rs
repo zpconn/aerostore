@@ -41,13 +41,50 @@ const KEY_TAG_U64: u8 = 2;
 const KEY_TAG_STRING: u8 = 3;
 const KEY_TAG_SENTINEL: u8 = 255;
 
-/// Equality predicates protect a stable hash bucket. Range predicates protect
-/// every bucket, conservatively covering insertions into currently empty gaps.
+/// Default equality predicates protect a stable hash bucket; default ranges
+/// protect every bucket. An opt-in ordered policy narrows integer ranges.
 pub(crate) const INDEX_TX_BUCKETS: usize = 4096;
 const INDEX_HEADER_MAGIC: u64 = 0x4145_524F_494E_4458;
-// Version 1 used 256 publication buckets in the initial development build.
-// Reject those headers before interpreting the expanded bucket array.
-const INDEX_HEADER_VERSION: u32 = 2;
+// Version 3 adds immutable publication policy metadata. Prior layouts must be
+// rebuilt while quiescent; an attachment never guesses or converts a policy.
+const INDEX_HEADER_VERSION: u32 = 3;
+
+/// Experimental publication dependencies; this does not change index results.
+///
+/// OrderedI64 divides signed keys into fixed intervals. Bucket 0 contains keys
+/// below `origin`, buckets 1..=4093 cover intervals of `width`, and bucket 4094
+/// contains the remaining signed keys. Other value types share bucket 4095.
+/// The tails saturate, never wrap or rotate: correctness survives keys leaving
+/// the configured window, but conflict precision may degrade. Changing policy
+/// requires rebuilding the index, with no concurrent readers or writers.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum IndexPublicationPolicy {
+    #[default]
+    Hashed,
+    OrderedI64 {
+        origin: i64,
+        width: u64,
+    },
+}
+
+impl IndexPublicationPolicy {
+    fn validate(self) -> Result<(), ShmIndexError> {
+        if matches!(self, Self::OrderedI64 { width: 0, .. }) {
+            return Err(ShmIndexError::InvalidPublicationPolicy);
+        }
+        Ok(())
+    }
+}
+
+// Called only with a validated positive width. Widen BEFORE subtraction so
+// even MIN..MAX keys remain ordered, independent of machine overflow settings.
+fn ordered_i64_bucket(value: i64, origin: i64, width: u64) -> usize {
+    if value < origin {
+        return 0;
+    }
+    let distance = (i128::from(value) - i128::from(origin)) as u128;
+    1 + (distance / u128::from(width)).min((INDEX_TX_BUCKETS - 3) as u128) as usize
+}
 
 #[repr(C)]
 struct IndexPublicationBucket {
@@ -55,11 +92,23 @@ struct IndexPublicationBucket {
     stamp: AtomicU64,
 }
 
+// Inspect this all-bit-pattern-valid prefix before interpreting versioned
+// bool/lock fields. An old layout can contain invalid bool bytes at v3 offsets.
+#[repr(C)]
+struct SecondaryIndexHeaderPrefix {
+    magic: u64,
+    version: u32,
+    skiplist_offset: u32,
+}
+
 #[repr(C, align(64))]
 struct SecondaryIndexHeader {
     magic: u64,
     version: u32,
     skiplist_offset: u32,
+    publication_policy: u32,
+    publication_origin: i64,
+    publication_width: u64,
     // Binding and unbound raw writes share this lock, so an in-progress raw
     // mutation cannot slip past publication of the managed owner.
     management_lock: ShmMutex,
@@ -69,11 +118,35 @@ struct SecondaryIndexHeader {
 }
 
 impl SecondaryIndexHeader {
+    fn checked(arena: &ShmArena, offset: u32) -> Result<&Self, ShmIndexError> {
+        let prefix = RelPtr::<SecondaryIndexHeaderPrefix>::from_offset(offset);
+        prefix
+            .as_ref(arena.mmap_base())
+            .filter(|prefix| {
+                prefix.magic == INDEX_HEADER_MAGIC && prefix.version == INDEX_HEADER_VERSION
+            })
+            .ok_or(ShmIndexError::InvalidHeader(offset))?;
+        RelPtr::<Self>::from_offset(offset)
+            .as_ref(arena.mmap_base())
+            .ok_or(ShmIndexError::InvalidHeader(offset))
+    }
+
     fn new(skiplist_offset: u32) -> Self {
+        Self::with_policy(skiplist_offset, IndexPublicationPolicy::Hashed)
+    }
+
+    fn with_policy(skiplist_offset: u32, policy: IndexPublicationPolicy) -> Self {
+        let (publication_policy, publication_origin, publication_width) = match policy {
+            IndexPublicationPolicy::Hashed => (0, 0, 0),
+            IndexPublicationPolicy::OrderedI64 { origin, width } => (1, origin, width),
+        };
         Self {
             magic: INDEX_HEADER_MAGIC,
             version: INDEX_HEADER_VERSION,
             skiplist_offset,
+            publication_policy,
+            publication_origin,
+            publication_width,
             management_lock: ShmMutex::new(),
             owner_table_header: AtomicU32::new(0),
             poisoned: AtomicBool::new(false),
@@ -81,6 +154,20 @@ impl SecondaryIndexHeader {
                 lock: ShmMutex::new(),
                 stamp: AtomicU64::new(0),
             }),
+        }
+    }
+
+    fn policy(&self) -> Result<IndexPublicationPolicy, ShmIndexError> {
+        match (
+            self.publication_policy,
+            self.publication_origin,
+            self.publication_width,
+        ) {
+            (0, 0, 0) => Ok(IndexPublicationPolicy::Hashed),
+            (1, origin, width) if width != 0 => {
+                Ok(IndexPublicationPolicy::OrderedI64 { origin, width })
+            }
+            _ => Err(ShmIndexError::InvalidPublicationPolicy),
         }
     }
 }
@@ -182,6 +269,7 @@ pub enum ShmIndexError {
     ManagedMutation { owner_table_header: u32 },
     OwnerMismatch { expected: u32, actual: u32 },
     InvalidBucket(usize),
+    InvalidPublicationPolicy,
     Poisoned,
     Alloc(crate::shm::ShmAllocError),
     Epoch(ProcArrayError),
@@ -226,6 +314,12 @@ impl fmt::Display for ShmIndexError {
             ),
             ShmIndexError::InvalidBucket(bucket) => {
                 write!(f, "invalid transactional index bucket {}", bucket)
+            }
+            ShmIndexError::InvalidPublicationPolicy => {
+                write!(
+                    f,
+                    "invalid index publication policy (ordered width must be positive)"
+                )
             }
             ShmIndexError::Poisoned => write!(f, "transactional index requires recovery"),
             ShmIndexError::Alloc(err) => write!(f, "shared index allocation failed: {}", err),
@@ -432,6 +526,8 @@ where
     field: &'static str,
     header: RelPtr<SecondaryIndexHeader>,
     skiplist: ShmSkipList<EncodedKey>,
+    // Immutable copy decoded from the shared header, never chosen on attach.
+    publication_policy: IndexPublicationPolicy,
     _marker: PhantomData<RowId>,
 }
 
@@ -448,18 +544,33 @@ where
     }
 
     pub fn new_in_shared(field: &'static str, shm: Arc<ShmArena>) -> Self {
+        Self::new_in_shared_with_publication_policy(field, shm, IndexPublicationPolicy::Hashed)
+            .expect("failed to allocate shared-memory secondary index")
+    }
+
+    pub fn new_in_shared_with_publication_policy(
+        field: &'static str,
+        shm: Arc<ShmArena>,
+        publication_policy: IndexPublicationPolicy,
+    ) -> Result<Self, ShmIndexError> {
+        publication_policy.validate()?;
         let skiplist = ShmSkipList::<EncodedKey>::new_in_shared(Arc::clone(&shm))
-            .expect("failed to allocate shared-memory skiplist index");
+            .map_err(ShmIndexError::from)?;
+        let metadata = match publication_policy {
+            IndexPublicationPolicy::Hashed => SecondaryIndexHeader::new(skiplist.header_offset()),
+            _ => SecondaryIndexHeader::with_policy(skiplist.header_offset(), publication_policy),
+        };
         let header = shm
             .chunked_arena()
-            .alloc(SecondaryIndexHeader::new(skiplist.header_offset()))
-            .expect("failed to allocate shared-memory index publication metadata");
-        Self {
+            .alloc(metadata)
+            .map_err(ShmIndexError::Alloc)?;
+        Ok(Self {
             field,
             header,
             skiplist,
+            publication_policy,
             _marker: PhantomData,
-        }
+        })
     }
 
     pub fn from_existing(
@@ -468,18 +579,15 @@ where
         header_offset: u32,
     ) -> Result<Self, ShmIndexError> {
         let header = RelPtr::<SecondaryIndexHeader>::from_offset(header_offset);
-        let metadata = header
-            .as_ref(shm.mmap_base())
-            .filter(|header| {
-                header.magic == INDEX_HEADER_MAGIC && header.version == INDEX_HEADER_VERSION
-            })
-            .ok_or(ShmIndexError::InvalidHeader(header_offset))?;
+        let metadata = SecondaryIndexHeader::checked(&shm, header_offset)?;
+        let publication_policy = metadata.policy()?;
         let skiplist =
             ShmSkipList::<EncodedKey>::from_existing(Arc::clone(&shm), metadata.skiplist_offset)?;
         Ok(Self {
             field,
             header,
             skiplist,
+            publication_policy,
             _marker: PhantomData,
         })
     }
@@ -499,13 +607,12 @@ where
         self.skiplist.shared_arena()
     }
 
+    pub fn publication_policy(&self) -> Result<IndexPublicationPolicy, ShmIndexError> {
+        self.publication_header()?.policy()
+    }
+
     fn publication_header(&self) -> Result<&SecondaryIndexHeader, ShmIndexError> {
-        self.header
-            .as_ref(self.shared_arena().mmap_base())
-            .filter(|header| {
-                header.magic == INDEX_HEADER_MAGIC && header.version == INDEX_HEADER_VERSION
-            })
-            .ok_or(ShmIndexError::InvalidHeader(self.header_offset()))
+        SecondaryIndexHeader::checked(self.shared_arena(), self.header_offset())
     }
 
     fn raw_mutation_guard(&self) -> Result<ShmMutexGuard<'_>, ShmIndexError> {
@@ -565,6 +672,12 @@ where
         value: &IndexValue,
     ) -> Result<usize, ShmIndexError> {
         let key = EncodedKey::from_index_value(value)?;
+        if let IndexPublicationPolicy::OrderedI64 { origin, width } = self.publication_policy {
+            return Ok(match value {
+                IndexValue::I64(value) => ordered_i64_bucket(*value, origin, width),
+                _ => INDEX_TX_BUCKETS - 1,
+            });
+        }
         let mut hash = 0xcbf2_9ce4_8422_2325_u64;
         for byte in std::iter::once(key.tag).chain(key.data[..key.len as usize].iter().copied()) {
             hash = (hash ^ u64::from(byte)).wrapping_mul(0x100_0000_01b3);
@@ -587,7 +700,22 @@ where
             | IndexCompare::Lt(value)
             | IndexCompare::Lte(value) => {
                 EncodedKey::from_index_value(value)?;
-                (0..INDEX_TX_BUCKETS).collect()
+                match (self.publication_policy, value) {
+                    (
+                        IndexPublicationPolicy::OrderedI64 { origin, width },
+                        IndexValue::I64(value),
+                    ) => {
+                        let boundary = ordered_i64_bucket(*value, origin, width);
+                        // Include the entire boundary bucket for both strict
+                        // and inclusive predicates. Matching absent/removed
+                        // keys therefore retain a dependency too.
+                        match predicate {
+                            IndexCompare::Lt(_) | IndexCompare::Lte(_) => (0..=boundary).collect(),
+                            _ => (boundary..INDEX_TX_BUCKETS).collect(),
+                        }
+                    }
+                    _ => (0..INDEX_TX_BUCKETS).collect(),
+                }
             }
         };
         #[cfg(feature = "verified-buckets-sort")]
@@ -1537,6 +1665,171 @@ mod tests {
             .is_empty());
     }
 
+    fn ordered_index(origin: i64, width: u64) -> SecondaryIndex<usize> {
+        SecondaryIndex::new_in_shared_with_publication_policy(
+            "key",
+            Arc::new(ShmArena::new(4 << 20).unwrap()),
+            super::IndexPublicationPolicy::OrderedI64 { origin, width },
+        )
+        .unwrap()
+    }
+
+    fn assert_range_coverage(
+        index: &SecondaryIndex<usize>,
+        bound: &IndexValue,
+        keys: &[IndexValue],
+    ) {
+        let predicates = [
+            IndexCompare::Lt(bound.clone()),
+            IndexCompare::Lte(bound.clone()),
+            IndexCompare::Gt(bound.clone()),
+            IndexCompare::Gte(bound.clone()),
+            IndexCompare::Eq(bound.clone()),
+            IndexCompare::In(vec![
+                bound.clone(),
+                IndexValue::I64(i64::MIN),
+                bound.clone(),
+            ]),
+        ];
+        for predicate in predicates {
+            let buckets = index.transactional_bucket_ids(&predicate).unwrap();
+            assert!(buckets
+                .iter()
+                .all(|bucket| *bucket < super::INDEX_TX_BUCKETS));
+            assert!(buckets.windows(2).all(|pair| pair[0] < pair[1]));
+            for key in keys {
+                let matches = match &predicate {
+                    IndexCompare::Lt(bound) => key < bound,
+                    IndexCompare::Lte(bound) => key <= bound,
+                    IndexCompare::Gt(bound) => key > bound,
+                    IndexCompare::Gte(bound) => key >= bound,
+                    IndexCompare::Eq(bound) => key == bound,
+                    IndexCompare::In(values) => values.contains(key),
+                };
+                if matches {
+                    assert!(
+                        buckets
+                            .binary_search(&index.transactional_key_bucket(key).unwrap())
+                            .is_ok(),
+                        "missing dependency for {key:?} matching {predicate:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    // Tests the actual native mapping and selection, not a duplicated model.
+    // This finite test is evidence for the coverage premise of the existing
+    // protocol proofs; it is not a universal integer-domain proof.
+    #[test]
+    fn ordered_publication_dependency_coverage() {
+        let mut keys: Vec<_> = (-20..=20).map(IndexValue::I64).collect();
+        keys.extend([
+            IndexValue::I64(i64::MIN),
+            IndexValue::I64(i64::MAX),
+            IndexValue::U64(0),
+            IndexValue::U64(u64::MAX),
+            IndexValue::String(String::new()),
+            IndexValue::String("z".into()),
+        ]);
+        for origin in [i64::MIN, -7, 0, 7, i64::MAX] {
+            for width in [1, 3, u64::MAX] {
+                let index = ordered_index(origin, width);
+                for bound in &keys {
+                    assert_range_coverage(&index, bound, &keys);
+                }
+                // Widen before forming every boundary, including the overflow
+                // tail; skip only values unrepresentable in the key domain.
+                for bucket in 0..=4093 {
+                    let edge = i128::from(origin) + bucket as i128 * i128::from(width);
+                    if let Ok(edge) = i64::try_from(edge) {
+                        let nearby = [edge.saturating_sub(1), edge, edge.saturating_add(1)]
+                            .map(IndexValue::I64);
+                        for pair in nearby.windows(2) {
+                            assert!(
+                                index.transactional_key_bucket(&pair[0]).unwrap()
+                                    <= index.transactional_key_bucket(&pair[1]).unwrap()
+                            );
+                        }
+                        assert_range_coverage(&index, &IndexValue::I64(edge), &nearby);
+                    }
+                }
+            }
+        }
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn ordered_publication_randomized_coverage(origin in proptest::prelude::any::<i64>(),
+            width in 1..=u64::MAX, bound in proptest::prelude::any::<i64>(),
+            key in proptest::prelude::any::<i64>()) {
+            let index = ordered_index(origin, width);
+            assert_range_coverage(&index, &IndexValue::I64(bound), &[
+                IndexValue::I64(key), IndexValue::I64(bound), IndexValue::I64(i64::MIN),
+                IndexValue::I64(i64::MAX), IndexValue::U64(0), IndexValue::String("a".into())
+            ]);
+        }
+    }
+
+    #[test]
+    fn ordered_publication_rejects_invalid_metadata_and_keys() {
+        use super::{IndexPublicationPolicy, SecondaryIndexHeader};
+        let arena = Arc::new(ShmArena::new(4 << 20).unwrap());
+        assert!(matches!(
+            SecondaryIndex::<usize>::new_in_shared_with_publication_policy(
+                "key",
+                Arc::clone(&arena),
+                IndexPublicationPolicy::OrderedI64 {
+                    origin: 0,
+                    width: 0
+                }
+            ),
+            Err(ShmIndexError::InvalidPublicationPolicy)
+        ));
+        let index = SecondaryIndex::<usize>::new_in_shared("key", Arc::clone(&arena));
+        for (policy, origin, width) in [(9, 0, 1), (1, 0, 0), (0, 1, 0), (0, 0, 1)] {
+            let mut invalid = SecondaryIndexHeader::new(index.skiplist.header_offset());
+            invalid.publication_policy = policy;
+            invalid.publication_origin = origin;
+            invalid.publication_width = width;
+            let header = arena.chunked_arena().alloc(invalid).unwrap();
+            assert!(matches!(
+                SecondaryIndex::<usize>::from_existing(
+                    "key",
+                    Arc::clone(&arena),
+                    header.load(super::AtomicOrdering::Acquire)
+                ),
+                Err(ShmIndexError::InvalidPublicationPolicy)
+            ));
+        }
+        for version in [1, 2] {
+            let mut invalid = SecondaryIndexHeader::new(index.skiplist.header_offset());
+            invalid.version = version;
+            let header = arena.chunked_arena().alloc(invalid).unwrap();
+            assert!(matches!(
+                SecondaryIndex::<usize>::from_existing(
+                    "key",
+                    Arc::clone(&arena),
+                    header.load(super::AtomicOrdering::Acquire)
+                ),
+                Err(ShmIndexError::InvalidHeader(_))
+            ));
+        }
+        let ordered = ordered_index(10, 3);
+        let invalid = IndexValue::String("x".repeat(super::KEY_INLINE_BYTES + 1));
+        for predicate in [
+            IndexCompare::Eq(invalid.clone()),
+            IndexCompare::Lt(invalid.clone()),
+            IndexCompare::Gt(invalid.clone()),
+            IndexCompare::In(vec![IndexValue::I64(1), invalid]),
+        ] {
+            assert!(matches!(
+                ordered.transactional_bucket_ids(&predicate),
+                Err(ShmIndexError::KeyTooLong { .. })
+            ));
+        }
+    }
+
     #[test]
     fn attachment_rejects_skiplist_header_used_as_transactional_header() {
         let shm = Arc::new(ShmArena::new(4 << 20).unwrap());
@@ -1562,6 +1855,40 @@ mod tests {
             ),
             Err(ShmIndexError::InvalidHeader(_))
         ));
+    }
+
+    #[test]
+    fn attachment_rejects_old_header_before_interpreting_versioned_bytes() {
+        let arena = Arc::new(ShmArena::new(4 << 20).unwrap());
+        for version in [1, 2] {
+            let bytes = std::mem::size_of::<super::SecondaryIndexHeader>();
+            let offset = arena
+                .chunked_arena()
+                .alloc_raw(bytes, std::mem::align_of::<super::SecondaryIndexHeader>())
+                .unwrap();
+            // SAFETY: this exclusively allocated byte range has enough space
+            // and alignment for the all-valid integer prefix. The remainder
+            // deliberately cannot be interpreted as the v3 typed header.
+            unsafe {
+                let address = arena.mmap_base().as_ptr().add(offset as usize);
+                std::ptr::write_bytes(address, 0xff, bytes);
+                address.cast::<super::SecondaryIndexHeaderPrefix>().write(
+                    super::SecondaryIndexHeaderPrefix {
+                        magic: super::INDEX_HEADER_MAGIC,
+                        version,
+                        skiplist_offset: 0,
+                    },
+                );
+            }
+            assert!(matches!(
+                SecondaryIndex::<usize>::from_existing("key", Arc::clone(&arena), offset),
+                Err(ShmIndexError::InvalidHeader(_))
+            ));
+            assert!(matches!(
+                super::SecondaryIndexHeader::checked(&arena, offset),
+                Err(ShmIndexError::InvalidHeader(_))
+            ));
+        }
     }
 
     #[test]

@@ -1,13 +1,14 @@
-//! Contention-owned fixture for a controlled expiry-index experiment.
-//! The original Extended Crucible and production engine are unchanged. Default
-//! row/index construction preserves the original five extractors. Every mapping
+//! Contention-owned fixture for explicit expiry and due-index experiments.
+//! The original Extended Crucible retains its own fixture. Default row/index
+//! construction preserves the original five extractors. Every mapping
 //! carries an immutable fixture identity so attachments cannot silently choose a
 //! different extractor from the owner. This is benchmark metadata, not recovery.
 use crate::extended_crucible::model::{Record, DEDUP, FLIGHT, OUTBOX, POSITION, SCHEDULED};
 use aerostore_core::occ_partitioned::{OccCommitRecord, OccCommittedWrite};
 use aerostore_core::{
-    map_tmpfs_shared, serialize_commit_record, wal_commit_from_occ_record_with_policy, IndexValue,
-    OccTable, RelPtr, SecondaryIndex, ShmArena, TmpfsAttachMode, WalEncodingPolicy,
+    map_tmpfs_shared, serialize_commit_record, wal_commit_from_occ_record_with_policy,
+    IndexPublicationPolicy, IndexValue, OccTable, RelPtr, SecondaryIndex, ShmArena,
+    TmpfsAttachMode, WalEncodingPolicy,
 };
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
@@ -63,6 +64,50 @@ impl ExpiryIndexPolicy {
     }
 }
 
+pub fn default_due_index_origin() -> i64 {
+    // Calibrated messages express this epoch in nanoseconds. Other workloads
+    // may explicitly select parameters in their own event-time units.
+    1_700_000_000_000_000_000
+}
+
+pub fn default_due_index_width() -> u64 {
+    1_000_000_000
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum DueIndexPolicy {
+    #[default]
+    Hashed,
+    Ordered,
+}
+
+impl DueIndexPolicy {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Hashed => "hashed",
+            Self::Ordered => "ordered",
+        }
+    }
+
+    fn code(self) -> u32 {
+        match self {
+            Self::Hashed => 1,
+            Self::Ordered => 2,
+        }
+    }
+
+    fn publication_policy(self, origin: i64, width: u64) -> Result<IndexPublicationPolicy, String> {
+        if width == 0 {
+            return Err("due index width must be positive".into());
+        }
+        Ok(match self {
+            Self::Hashed => IndexPublicationPolicy::Hashed,
+            Self::Ordered => IndexPublicationPolicy::OrderedI64 { origin, width },
+        })
+    }
+}
+
 /// All fields have valid arbitrary bit patterns. RelPtr validates bounds and
 /// alignment before this immutable bootstrap record is inspected. Index names
 /// are local labels, so they cannot identify an owner's shared extractor policy.
@@ -70,8 +115,11 @@ impl ExpiryIndexPolicy {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct FixtureIdentity {
     magic: u64,
+    due_index_origin: i64,
+    due_index_width: u64,
     version: u32,
     expiry_policy: u32,
+    due_policy: u32,
     table_header: u32,
     indexes: [u32; 5],
     ring: u32,
@@ -82,8 +130,11 @@ impl FixtureIdentity {
     fn expected(attachment: &Attachment, table_slots_offset: u32) -> Result<Self, String> {
         Ok(Self {
             magic: 0x4846_4558_5049_5831, // HFEXPIX1
-            version: 1,
+            due_index_origin: attachment.due_index_origin,
+            due_index_width: attachment.due_index_width,
+            version: 2,
             expiry_policy: attachment.expiry_index_policy.code(),
+            due_policy: attachment.due_index_policy.code(),
             table_header: attachment.table_header,
             indexes: attachment
                 .indexes
@@ -111,6 +162,12 @@ pub struct Attachment {
     pub ring: u32,
     #[serde(default)]
     pub expiry_index_policy: ExpiryIndexPolicy,
+    #[serde(default)]
+    pub due_index_policy: DueIndexPolicy,
+    #[serde(default = "default_due_index_origin")]
+    pub due_index_origin: i64,
+    #[serde(default = "default_due_index_width")]
+    pub due_index_width: u64,
 }
 
 pub struct Shared {
@@ -119,6 +176,9 @@ pub struct Shared {
     pub indexes: Vec<SecondaryIndex<usize>>,
     pub ring: Ring,
     pub expiry_index_policy: ExpiryIndexPolicy,
+    pub due_index_policy: DueIndexPolicy,
+    pub due_index_origin: i64,
+    pub due_index_width: u64,
 }
 
 fn keys(row: &Record) -> [Option<i64>; 5] {
@@ -228,6 +288,28 @@ impl Shared {
         records: &[Record],
         expiry_index_policy: ExpiryIndexPolicy,
     ) -> Result<Self, String> {
+        Self::create_with_policies(
+            path,
+            bytes,
+            records,
+            expiry_index_policy,
+            DueIndexPolicy::Hashed,
+            default_due_index_origin(),
+            default_due_index_width(),
+        )
+    }
+
+    pub fn create_with_policies(
+        path: &Path,
+        bytes: usize,
+        records: &[Record],
+        expiry_index_policy: ExpiryIndexPolicy,
+        due_index_policy: DueIndexPolicy,
+        due_index_origin: i64,
+        due_index_width: u64,
+    ) -> Result<Self, String> {
+        let due_publication =
+            due_index_policy.publication_policy(due_index_origin, due_index_width)?;
         // Reject oversized fixture transactions before any rows can commit.
         let maximum = maximum_wal_record_bytes()?;
         if maximum > WAL_SLOT_BYTES {
@@ -245,8 +327,20 @@ impl Shared {
             OccTable::new(Arc::clone(&arena), records.len()).map_err(|e| e.to_string())?;
         let indexes = INDEX_NAMES
             .iter()
-            .map(|name| SecondaryIndex::new_in_shared(name, Arc::clone(&arena)))
-            .collect::<Vec<_>>();
+            .enumerate()
+            .map(|(number, name)| {
+                SecondaryIndex::new_in_shared_with_publication_policy(
+                    name,
+                    Arc::clone(&arena),
+                    if number == 3 {
+                        due_publication
+                    } else {
+                        IndexPublicationPolicy::Hashed
+                    },
+                )
+                .map_err(|e| e.to_string())
+            })
+            .collect::<Result<Vec<_>, _>>()?;
         for row in records {
             table.seed_row(row.id, *row).map_err(|e| e.to_string())?;
             for (index, key) in indexes.iter().zip(expiry_index_policy.keys(row)) {
@@ -270,6 +364,9 @@ impl Shared {
             indexes,
             ring,
             expiry_index_policy,
+            due_index_policy,
+            due_index_origin,
+            due_index_width,
         };
         let attachment = shared.attachment(path);
         let slot_bytes = attachment
@@ -324,10 +421,16 @@ impl Shared {
                 .collect(),
             ring: self.ring.ring_ptr().load(Ordering::Acquire),
             expiry_index_policy: self.expiry_index_policy,
+            due_index_policy: self.due_index_policy,
+            due_index_origin: self.due_index_origin,
+            due_index_width: self.due_index_width,
         }
     }
 
     pub fn attach(a: &Attachment) -> Result<Self, String> {
+        let due_publication = a
+            .due_index_policy
+            .publication_policy(a.due_index_origin, a.due_index_width)?;
         if a.indexes.len() != INDEX_NAMES.len() {
             return Err("invalid contention index attachment".into());
         }
@@ -363,6 +466,18 @@ impl Shared {
                     .map_err(|e| e.to_string())
             })
             .collect::<Result<Vec<_>, _>>()?;
+        for (number, index) in indexes.iter().enumerate() {
+            let expected = if number == 3 {
+                due_publication
+            } else {
+                IndexPublicationPolicy::Hashed
+            };
+            if index.publication_policy().map_err(|e| e.to_string())? != expected {
+                return Err(
+                    "persisted index publication policy differs from contention fixture".into(),
+                );
+            }
+        }
         for (index, key) in indexes.iter().zip(a.expiry_index_policy.extractors()) {
             table
                 .bind_index(index.clone(), key)
@@ -376,6 +491,9 @@ impl Shared {
             indexes,
             ring,
             expiry_index_policy: a.expiry_index_policy,
+            due_index_policy: a.due_index_policy,
+            due_index_origin: a.due_index_origin,
+            due_index_width: a.due_index_width,
         })
     }
 
@@ -396,6 +514,15 @@ impl Shared {
         let rows = self.snapshot()?;
         let mut audits = Vec::new();
         for (number, index) in self.indexes.iter().enumerate() {
+            let expected_policy = if number == 3 {
+                self.due_index_policy
+                    .publication_policy(self.due_index_origin, self.due_index_width)?
+            } else {
+                IndexPublicationPolicy::Hashed
+            };
+            if index.publication_policy().map_err(|e| e.to_string())? != expected_policy {
+                return Err("persisted publication policy changed during fixture execution".into());
+            }
             let mut expected = rows
                 .iter()
                 .filter_map(|r| {
@@ -432,7 +559,7 @@ impl Shared {
             audits.push(serde_json::json!({"index":INDEX_NAMES[number],"postings":actual.len(),"ownership":format!("{audit:?}"),"retired_postings":telemetry.retired_postings}));
         }
         Ok(
-            serde_json::json!({"indexes":audits,"arena_high_water_bytes":self.arena.chunked_arena().head_offset(),"expiry_index_policy":self.expiry_index_policy}),
+            serde_json::json!({"indexes":audits,"arena_high_water_bytes":self.arena.chunked_arena().head_offset(),"expiry_index_policy":self.expiry_index_policy,"due_index_policy":self.due_index_policy,"due_index_origin":self.due_index_origin,"due_index_width":self.due_index_width}),
         )
     }
 }

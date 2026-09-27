@@ -429,3 +429,142 @@ fn default_fixture_preserves_original_rows_postings_and_attachment_file_guards()
     assert!(Shared::attach(&attachment).is_err());
     assert_eq!(std::fs::read(&attachment.path).unwrap(), bytes);
 }
+
+#[test]
+fn ordered_due_fixture_preserves_rows_postings_and_persists_only_due_policy() {
+    use aerostore_core::IndexPublicationPolicy;
+    use fixture::DueIndexPolicy;
+    let initial = rows();
+    let directory = tempfile::tempdir().unwrap();
+    let baseline = Shared::create(&directory.path().join("hashed"), 16 << 20, &initial).unwrap();
+    let path = directory.path().join("ordered");
+    let ordered = Shared::create_with_policies(
+        &path,
+        16 << 20,
+        &initial,
+        ExpiryIndexPolicy::AllActive,
+        DueIndexPolicy::Ordered,
+        -100,
+        7,
+    )
+    .unwrap();
+    let attachment =
+        serde_json::from_value(serde_json::to_value(ordered.attachment(&path)).unwrap()).unwrap();
+    let attached = Shared::attach(&attachment).unwrap();
+    assert_eq!(baseline.snapshot().unwrap(), attached.snapshot().unwrap());
+    for (number, ((old, new), reopened)) in baseline
+        .indexes
+        .iter()
+        .zip(&ordered.indexes)
+        .zip(&attached.indexes)
+        .enumerate()
+    {
+        assert_eq!(
+            old.publication_policy().unwrap(),
+            IndexPublicationPolicy::Hashed
+        );
+        let expected = if number == 3 {
+            IndexPublicationPolicy::OrderedI64 {
+                origin: -100,
+                width: 7,
+            }
+        } else {
+            IndexPublicationPolicy::Hashed
+        };
+        assert_eq!(new.publication_policy().unwrap(), expected);
+        assert_eq!(reopened.publication_policy().unwrap(), expected);
+        let mut old_entries = old.try_entries().unwrap();
+        let mut new_entries = reopened.try_entries().unwrap();
+        old_entries.sort();
+        new_entries.sort();
+        assert_eq!(old_entries, new_entries);
+    }
+    let audit = attached.audit().unwrap();
+    assert_eq!(audit["due_index_policy"], "ordered");
+    assert_eq!(audit["due_index_origin"], -100);
+    assert_eq!(audit["due_index_width"], 7);
+    for query in [
+        Query::GlobalDue { at: 6 },
+        Query::GlobalDue { at: 7 },
+        Query::GlobalDue { at: 8 },
+    ] {
+        let mut adapter = native::Adapter::new(&attached, true);
+        adapter.begin(&[]).unwrap();
+        assert_eq!(adapter.query(&query).unwrap(), matching(&initial, &query));
+        adapter.abort().unwrap();
+    }
+}
+
+#[test]
+fn due_attachment_parameters_cannot_select_a_different_persisted_policy() {
+    use fixture::DueIndexPolicy;
+    let initial = rows();
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("ordered");
+    let shared = Shared::create_with_policies(
+        &path,
+        16 << 20,
+        &initial,
+        ExpiryIndexPolicy::Housekeeping,
+        DueIndexPolicy::Ordered,
+        -100,
+        7,
+    )
+    .unwrap();
+    let before = shared.snapshot().unwrap();
+    let before_marker = shared.arena.boot_layout_offset();
+    let before_indexes = shared
+        .indexes
+        .iter()
+        .map(|index| {
+            let mut entries = index.try_entries().unwrap();
+            entries.sort();
+            (index.publication_policy().unwrap(), entries)
+        })
+        .collect::<Vec<_>>();
+    let original = shared.attachment(&path);
+    let mut different = original.clone();
+    different.due_index_policy = DueIndexPolicy::Hashed;
+    assert!(Shared::attach(&different).is_err());
+    different = original.clone();
+    different.due_index_origin += 1;
+    assert!(Shared::attach(&different).is_err());
+    different = original.clone();
+    different.due_index_width += 1;
+    assert!(Shared::attach(&different).is_err());
+    different.due_index_width = 0;
+    assert!(Shared::attach(&different).is_err());
+    for missing in ["due_index_policy", "due_index_origin", "due_index_width"] {
+        let mut encoded = serde_json::to_value(&original).unwrap();
+        encoded.as_object_mut().unwrap().remove(missing);
+        let missing = serde_json::from_value(encoded).unwrap();
+        assert!(Shared::attach(&missing).is_err());
+    }
+    // Warm ShmArena destruction updates its existing clean_shutdown flag.
+    // Rejected fixture attachment promises no policy/row/posting rebinding,
+    // not byte-for-byte immutability or production recovery guarantees.
+    assert_eq!(shared.snapshot().unwrap(), before);
+    assert_eq!(shared.arena.boot_layout_offset(), before_marker);
+    assert_eq!(std::fs::metadata(&path).unwrap().len(), 16 << 20);
+    for (index, (policy, expected_entries)) in shared.indexes.iter().zip(before_indexes) {
+        assert_eq!(index.publication_policy().unwrap(), policy);
+        let mut entries = index.try_entries().unwrap();
+        entries.sort();
+        assert_eq!(entries, expected_entries);
+    }
+    let invalid_path = directory.path().join("invalid");
+    assert!(Shared::create_with_policies(
+        &invalid_path,
+        16 << 20,
+        &initial,
+        ExpiryIndexPolicy::AllActive,
+        DueIndexPolicy::Ordered,
+        0,
+        0
+    )
+    .is_err());
+    assert!(
+        !invalid_path.exists(),
+        "validate policy before allocating a mapping"
+    );
+}

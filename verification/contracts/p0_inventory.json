@@ -34,7 +34,7 @@
       "reason": "Alternate in-process/MVCC/logical-database or service family; not the partitioned single-OccTable target."
     },
     "aerostore_core/src/lib.rs": {
-      "sha256": "22e46a4818bf4fdc540ac7e30a81f9d6deb80e6997380d93fd03fc58646f1c19",
+      "sha256": "a78d26d1ee8c66a13c14dfed5ab3208ad83bf949aefd6f082f77ef6f4c1c8865",
       "classification": "reexport",
       "reason": "Exports/aliases only; target identity follows the defining module, including occ alias to occ_partitioned."
     },
@@ -104,7 +104,7 @@
       "reason": "Public storage/encoding/registration primitive; contract requires explicit caller ownership or representation, not unrestricted transactional use."
     },
     "aerostore_core/src/shm_index.rs": {
-      "sha256": "3ee2c2b8bb1f29e50e1f7177b238c794a12558b03fb8f948ac26c8ed6714c151",
+      "sha256": "b82fef490838bd7d26060c45bed6c2b786309adb7a7dbdc45fdeef7fc8347367",
       "classification": "boundary",
       "reason": "Public storage/encoding/registration primitive; contract requires explicit caller ownership or representation, not unrestricted transactional use."
     },
@@ -661,13 +661,14 @@
       ]
     },
     "index-create": {
-      "preconditions": "Valid shared arena and pure stable key representation; exclusive first creation or valid existing offsets.",
-      "success": "Creates/attaches index header and shared skiplist.",
-      "failure": "Fallible attachment returns pointer/format errors; new/new_in_shared panic on construction failure because they use expect.",
-      "limitations": "Current-posting raw index is not a snapshot database query.",
+      "preconditions": "Valid shared arena and pure stable key representation; exclusive first creation or valid existing offsets. Optional ordered-I64 policy has a positive width in indexed-key units; policy/origin/width are immutable shared metadata after creation.",
+      "success": "Creates/attaches an index header and shared skiplist. The default policy remains hashed; the fallible policy constructor validates parameters and persists the chosen mapping. Attachment decodes the existing version-3 policy; it cannot choose a conflicting local mapping.",
+      "failure": "Fallible policy construction returns invalid-policy or allocation/storage errors; construction may have allocated earlier arena objects before a later failure. Attachment returns pointer, format or invalid-policy errors and rejects version-1/version-2 headers. new/new_in_shared panic on construction failure through expect. Version checks inspect an integer-only shared prefix before interpreting version-3 bool/lock fields.",
+      "limitations": "Current-posting raw index is not a snapshot database query. Older shared layouts require exclusive quiescent rebuild; no in-place migration is implemented. Ordered range bucket coverage is a new native boundary checked by finite tests, not established by the existing conditional transaction proofs.",
       "references": [
         "verification/contracts/transactions.md",
-        "verification/assumptions.toml"
+        "verification/assumptions.toml",
+        "verification/ordered_range/README.md"
       ]
     },
     "index-mutate": {
@@ -998,6 +999,16 @@
         "verification/retry_diagnostics/README.md",
         "verification/retry_diagnostics/default_sources.json",
         "aerostore_core/tests/contention_diagnostics.rs"
+      ]
+    },
+    "index-publication-policy": {
+      "preconditions": "Valid immutable version-3 index metadata. A returned policy is descriptive and does not grant mutation or reconfiguration authority.",
+      "success": "Returns the publication policy decoded from shared metadata. OrderedI64 has positive width and fixed origin; underflow and overflow tails saturate rather than wrap. Existing handles cache the immutable decoded policy for key and query mapping.",
+      "failure": "Rejects invalid header, unknown policy tags, zero ordered width, or noncanonical hashed-policy metadata. No policy changes or data migration are performed.",
+      "limitations": "Policies narrow dependency coverage only; they do not change index ordering or create historical postings. The existing proofs assume query coverage and do not prove the new native mapping/decoder. Arbitrary live mutation of this private shared metadata violates the immutable-layout premise.",
+      "references": [
+        "verification/ordered_range/README.md",
+        "verification/contracts/transactions.md"
       ]
     }
   },
@@ -3138,7 +3149,7 @@
     {
       "id": "shm_index::SecondaryIndex::new_in_shared",
       "signature": "pub fn new_in_shared(field: &'static str, shm: Arc<ShmArena>) -> Self",
-      "body_sha256": "8a9e779a7f76291f45e8fb102bab536917154e1da31203afff4a80b22ec229ad",
+      "body_sha256": "ca9906ca465daa8c8c561e3e1a7a26083ea3525215802c1ec959b316542bea2e",
       "source": "aerostore_core/src/shm_index.rs",
       "contract": "index-create",
       "classification": "boundary",
@@ -3147,7 +3158,7 @@
     {
       "id": "shm_index::SecondaryIndex::from_existing",
       "signature": "pub fn from_existing( field: &'static str, shm: Arc<ShmArena>, header_offset: u32, ) -> Result<Self, ShmIndexError>",
-      "body_sha256": "3b3dc8958acc735c0f0e0ebff62efd307bcc45366b67aae40599840212ce1e38",
+      "body_sha256": "7efd55a72db457af7fa7ca40db4abfd76ba91185ab5c275cdcce155790d78e7c",
       "source": "aerostore_core/src/shm_index.rs",
       "contract": "index-create",
       "classification": "boundary",
@@ -4871,6 +4882,24 @@
       "contract": "retry-observation",
       "classification": "boundary",
       "semantics": "defined"
+    },
+    {
+      "id": "shm_index::SecondaryIndex::new_in_shared_with_publication_policy",
+      "signature": "pub fn new_in_shared_with_publication_policy( field: &'static str, shm: Arc<ShmArena>, publication_policy: IndexPublicationPolicy, ) -> Result<Self, ShmIndexError>",
+      "body_sha256": "59342d2c6bff4cd61ed405e51fd7dc0bb9c88b23b3a2f3a923d9950583da1492",
+      "source": "aerostore_core/src/shm_index.rs",
+      "contract": "index-create",
+      "classification": "boundary",
+      "semantics": "defined"
+    },
+    {
+      "id": "shm_index::SecondaryIndex::publication_policy",
+      "signature": "pub fn publication_policy(&self) -> Result<IndexPublicationPolicy, ShmIndexError>",
+      "body_sha256": "10a74a56370ca463289e62404750fd4eb2b28edc1faf52766f0e911c5d661e28",
+      "source": "aerostore_core/src/shm_index.rs",
+      "contract": "index-publication-policy",
+      "classification": "boundary",
+      "semantics": "defined"
     }
   ],
   "lock_nodes": {
@@ -5352,7 +5381,7 @@
     }
   ],
   "nonfunction_surface": {
-    "public_data": "Public configuration/result structs and fields carry the same family contract as the operations consuming/producing them. Fabricating offsets, registrations, snapshots, OccRow values, WAL records or schema metadata does not create ownership, pinning or a valid history. Public atomics returned through shared_arena/proc_array/global_txid may not be mutated outside explicit lifecycle authority. Retry diagnostic Event/Cause values are observations only: fabricating or copying them grants no transaction, index, row, or lock authority.",
+    "public_data": "Public configuration/result structs and fields carry the same family contract as the operations consuming/producing them. Fabricating offsets, registrations, snapshots, OccRow values, WAL records or schema metadata does not create ownership, pinning or a valid history. Public atomics returned through shared_arena/proc_array/global_txid may not be mutated outside explicit lifecycle authority. Retry diagnostic Event/Cause values are observations only: fabricating or copying them grants no transaction, index, row, or lock authority. IndexPublicationPolicy parameters are validated by construction/attachment; copying a policy is descriptive and cannot reconfigure a live index. Version-3 publication metadata stays immutable.",
     "implicit_traits": "Derived Clone/Copy/Default/From/Display and generated scalar WalDeltaCodec implementations are covered by exact module hashes and reviewed containing-type/codec contracts, not individually enumerated as source pub fn declarations. Copying a registration or RelPtr never duplicates ownership; ShmArena/guard/daemon Drop follow resource lifetime/cleanup rules.",
     "macros_and_reexports": "occ reexports occ_partitioned; index reexports shared SecondaryIndex. lib.rs reexports both target and excluded families; no reexport expands the target. No arbitrary external macro expansion, feature set or compiler semantics are claimed by this lexical inventory."
   },

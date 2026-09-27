@@ -38,6 +38,12 @@ pub struct FrameSetup {
     #[serde(default)]
     pub expiry_index_policy: fixture::ExpiryIndexPolicy,
     #[serde(default)]
+    pub due_index_policy: fixture::DueIndexPolicy,
+    #[serde(default = "fixture::default_due_index_origin")]
+    pub due_index_origin: i64,
+    #[serde(default = "fixture::default_due_index_width")]
+    pub due_index_width: u64,
+    #[serde(default)]
     pub retry_diagnostics: bool,
     pub global_time_predicates: bool,
     pub initial_rows: Vec<Record>,
@@ -228,8 +234,14 @@ pub fn serve(
     housekeeping_batch_size: usize,
     max_maintenance_batches: u64,
     expiry_index_policy: fixture::ExpiryIndexPolicy,
+    due_index_policy: fixture::DueIndexPolicy,
+    due_index_origin: i64,
+    due_index_width: u64,
     retry_diagnostics: bool,
 ) -> Result<(), String> {
+    if due_index_width == 0 {
+        return Err("due index width must be positive".into());
+    }
     if retry_diagnostics && !aerostore_core::retry_diagnostics::compiled() {
         return Err("retry diagnostics require the retry-diagnostics build feature".into());
     }
@@ -305,11 +317,14 @@ pub fn serve(
         model::sustained_initial_for(workload, families, seed)
     };
     let result = (|| {
-        let shared = aerostore::Shared::create_with_policy(
+        let shared = aerostore::Shared::create_with_policies(
             &arena,
             shm_mib << 20,
             &initial,
             expiry_index_policy,
+            due_index_policy,
+            due_index_origin,
+            due_index_width,
         )?;
         let mut children = Children::default();
         // All forks precede watchdog, vacuum and service executor threads.
@@ -389,6 +404,9 @@ pub fn serve(
             housekeeping_batch_size,
             max_maintenance_batches,
             expiry_index_policy,
+            due_index_policy,
+            due_index_origin,
+            due_index_width,
             retry_diagnostics,
             global_time_predicates: global_time,
             initial_rows: initial.clone(),

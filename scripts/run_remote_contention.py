@@ -26,7 +26,9 @@ DISPATCH_DEFAULTS = {"dispatch": "identity", "affinity_ttl_ms": 0, "signature_pa
 MAINTENANCE_DEFAULTS = {"maintenance_mode": "batch", "projection_batch_size": 4,
                         "housekeeping_batch_size": 32, "max_maintenance_batches": 4096}
 CALIBRATED_DEFAULTS = {**DISPATCH_DEFAULTS, **MAINTENANCE_DEFAULTS}
-EXPERIMENT_DEFAULTS = {"expiry_index_policy": "all-active", "retry_diagnostics": False}
+DUE_INDEX_DEFAULTS = {"due_index_policy": "hashed", "due_index_origin": 1_700_000_000_000_000_000,
+                      "due_index_width": 1_000_000_000}
+EXPERIMENT_DEFAULTS = {"expiry_index_policy": "all-active", "retry_diagnostics": False, **DUE_INDEX_DEFAULTS}
 
 
 def validate_dispatch_setup(setup: dict, expected: dict) -> None:
@@ -222,6 +224,9 @@ def main() -> int:
                         help="explicit sliding TTL in 1..3600000 ms required for signature-affinity")
     parser.add_argument("--signature-pattern", choices=["both", "mixed"], default="both")
     parser.add_argument("--expiry-index", dest="expiry_index_policy", choices=["all-active", "housekeeping"], default="all-active")
+    parser.add_argument("--due-index", dest="due_index_policy", choices=["hashed", "ordered"], default="hashed", help="native due-index publication policy; PostgreSQL is unchanged")
+    parser.add_argument("--due-index-origin", type=int, default=DUE_INDEX_DEFAULTS["due_index_origin"], help="signed event-time origin; default calibrated nanosecond epoch")
+    parser.add_argument("--due-index-width", type=int, default=DUE_INDEX_DEFAULTS["due_index_width"], help="positive bucket width in event-time units; default one calibrated second")
     parser.add_argument("--retry-diagnostics", choices=["off", "on"], default="off")
     parser.add_argument("--maintenance-mode", choices=["batch", "sweep"], default="batch")
     parser.add_argument("--projection-batch-size", type=int, default=4)
@@ -235,6 +240,8 @@ def main() -> int:
     parser.add_argument("--hot-percent", type=int, default=80)
     parser.add_argument("--query-plan", choices=["family", "global-time"], default="family")
     args = parser.parse_args()
+    if not -(2**63) <= args.due_index_origin < 2**63 or not 1 <= args.due_index_width < 2**64:
+        parser.error("due index origin must fit i64 and width must be a positive u64")
     if not 0 <= args.affinity_ttl_ms <= 3600000 or (args.dispatch == "signature-affinity") != (args.affinity_ttl_ms > 0):
         parser.error("signature-affinity requires an explicit TTL in 1..3600000 ms; identity requires TTL 0")
     if not 1 <= args.projection_batch_size <= 16 or not 1 <= args.housekeeping_batch_size <= 64 or not 1 <= args.max_maintenance_batches <= 4096:
@@ -289,7 +296,9 @@ def main() -> int:
               "--projection-batch-size", str(args.projection_batch_size),
               "--housekeeping-batch-size", str(args.housekeeping_batch_size),
               "--max-maintenance-batches", str(args.max_maintenance_batches),
-              "--expiry-index", args.expiry_index_policy, "--retry-diagnostics", args.retry_diagnostics]
+              "--expiry-index", args.expiry_index_policy, "--retry-diagnostics", args.retry_diagnostics,
+              "--due-index", args.due_index_policy, "--due-index-origin", str(args.due_index_origin),
+              "--due-index-width", str(args.due_index_width)]
     server_args = [args.remote_binary if args.ssh_host else str(binary),
                    "--mode", "serve", "--engine", "service-tcp", "--seconds", str(timeout),
                    "--service-bind", bind, "--output", server_setup, *common]

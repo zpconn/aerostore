@@ -20,6 +20,31 @@ HERE = Path(__file__).resolve().parent
 SPEC = importlib.util.spec_from_file_location("coverage", HERE / "check_formal_coverage.py")
 coverage = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(coverage)
+ORDERED_SPEC = importlib.util.spec_from_file_location("ordered_range_native", HERE.parent / "verification/ordered_range/run.py")
+ordered_range = importlib.util.module_from_spec(ORDERED_SPEC)
+ORDERED_SPEC.loader.exec_module(ordered_range)
+
+
+class OrderedRangeCoverageTests(unittest.TestCase):
+    def log(self, passed=1, ignored=0, test=ordered_range.TEST):
+        return (f"test {test} ... ok\n"
+                f"test result: ok. {passed} passed; 0 failed; {ignored} ignored; 0 measured; 250 filtered out; finished in 0.01s\n")
+
+    def test_exact_native_test_is_required(self):
+        self.assertTrue(ordered_range.output_passes(0, self.log()))
+        for output in ("", self.log(passed=0), self.log(passed=2), self.log(ignored=1),
+                       self.log(test="different_test"), self.log() + self.log()):
+            with self.subTest(output=output):
+                self.assertFalse(ordered_range.output_passes(0, output))
+        self.assertFalse(ordered_range.output_passes(1, self.log()))
+
+    def test_selected_native_test_body_is_bound(self):
+        source = "fn ordered_publication_dependency_coverage() { assert!(true); }"
+        self.assertNotEqual(ordered_range.test_digest(source),
+                            ordered_range.test_digest(source.replace("true", "false")))
+        for invalid in ("", source + source, source.replace("coverage", "different")):
+            with self.assertRaisesRegex(RuntimeError, "missing or ambiguous"):
+                ordered_range.test_digest(invalid)
 
 
 class FrozenBoundaryTests(unittest.TestCase):
@@ -804,7 +829,7 @@ class RunnerTests(unittest.TestCase):
         code, report, calls = self.run_fixture("pilot")
         self.assertEqual(code, 0)
         commands = dict(calls)
-        for name in ("p1-native", "p1-native-runner-tests", "planning-native", "planning-native-runner-tests", "p0-contracts", "p0-contract-tests"):
+        for name in ("p1-native", "p1-native-runner-tests", "planning-native", "planning-native-runner-tests", "p0-contracts", "p0-contract-tests", "ordered-range-native"):
             self.assertIn(name, commands)
         self.assertFalse(report["p0_complete"])
         self.assertFalse(report["full_P1_complete"])
