@@ -12,6 +12,8 @@ and not a proof of every transaction history.
 3. Call native `capture_dependencies` for one requested index bucket, through a
    borrowed view of the same index object later used for publication and validation.
    Translate its actual captured fields into the validator's record type.
+   The one-element requested list is proved unique before the call; uniqueness
+   is not an additional assumption about the index primitive.
 4. Call native `end_transaction` for the writer.
 5. Call native `publish_index_stamps`. Its `Primitives` bridge calls the extracted
    native `reserve_publication_clock` on the **same lifecycle driver** used in steps

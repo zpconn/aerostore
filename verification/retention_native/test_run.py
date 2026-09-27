@@ -1,8 +1,40 @@
 import unittest
+from pathlib import Path
+import io
+import tarfile
+import tempfile
 import run
 
 
 class RetentionNativeCampaignTests(unittest.TestCase):
+    def test_nested_native_module_is_overlaid_and_bound_in_each_source_receipt(self):
+        archive = io.BytesIO()
+        with tarfile.open(fileobj=archive, mode='w') as tar:
+            data = b'old committed parent module'
+            info = tarfile.TarInfo(run.OCC)
+            info.size = len(data)
+            tar.addfile(info, io.BytesIO(data))
+        native = {path: ('current ' + path).encode() for path in run.NATIVE_SOURCES}
+        self.assertIn(run.CAPTURE_TESTS, native)
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary) / 'current'
+            run.source_tree(directory, archive.getvalue(), native)
+            expected = {path: run.digest_bytes(data) for path, data in native.items()}
+            self.assertEqual(run.native_hashes(directory), expected)
+            self.assertEqual((directory / run.CAPTURE_TESTS).read_bytes(), native[run.CAPTURE_TESTS])
+            mutation = Path(temporary) / 'mutation'
+            run.source_tree(mutation, archive.getvalue(), native, (run.OCC, 'mutated OCC'))
+            expected[run.OCC] = run.digest_bytes(b'mutated OCC')
+            self.assertEqual(run.native_hashes(mutation), expected)
+            (mutation / run.CAPTURE_TESTS).write_bytes(b'stale child module')
+            self.assertNotEqual(run.native_hashes(mutation)[run.CAPTURE_TESTS], expected[run.CAPTURE_TESTS])
+
+    def test_missing_nested_module_overlay_is_rejected(self):
+        native = {path: b'current' for path in run.NATIVE_SOURCES if path != run.CAPTURE_TESTS}
+        with tempfile.TemporaryDirectory() as temporary:
+            with self.assertRaisesRegex(RuntimeError, 'required input set'):
+                run.source_tree(Path(temporary) / 'current', b'', native)
+
     def test_all_mutants_change_only_their_selected_source(self):
         occ=(run.ROOT/run.OCC).read_text()
         proc=(run.ROOT/run.PROC).read_text()

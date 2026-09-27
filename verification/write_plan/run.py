@@ -43,6 +43,8 @@ def inputs():
         files.extend(sorted(p for p in (ROOT/'verification'/name).iterdir() if p.suffix in ('.py','.rs') or p.name=='README.md'))
     files.extend(ROOT/p for p in ('aerostore_core/src/occ_partitioned.rs','aerostore_core/src/shm_index.rs',
         'aerostore_core/src/shm_lock.rs','aerostore_verified/src/lib.rs'))
+    files += [ROOT / 'verification/verus/generate.py', ROOT / 'verification/verus/spec.rs']
+    files += [ROOT / 'verification/lookup_native/check_production_equivalence.py']
     return list(dict.fromkeys(files))
 
 

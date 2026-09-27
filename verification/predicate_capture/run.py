@@ -15,8 +15,15 @@ import generate
 ROOT = generate.ROOT
 HERE = Path(__file__).resolve().parent
 PIN = ROOT / "verification/verus/toolchain.json"
-ROOTS = ["find_read", "appended_read_preserves_unique", "capture_dependencies", "stamp_precedes_snapshot"]
+ROOTS = ["find_read_prefix", "prior_prefix_covers_current_bucket",
+         "canonical_sort_for_capture", "canonical_bitmap_for_capture",
+         "duplicate_bucket_requires_canonicalization", "appended_read_preserves_unique",
+         "capture_dependencies", "stamp_precedes_snapshot"]
 MUTATIONS = [
+    ("empty_prior_prefix", "let prior_read_len = tx.index_reads.len();", "let prior_read_len = 0;"),
+    ("omit_last_prior_read", "let prior_read_len = tx.index_reads.len();",
+     "let prior_read_len = if tx.index_reads.len() == 0 { 0 } else { tx.index_reads.len() - 1 };"),
+    ("search_appended_suffix", "if tx.index_reads.len() == prior_read_len {", "if true {"),
     ("skip_snapshot_check", "!aerostore_verified::stamp_precedes_snapshot(stamp, tx.txid)", "false"),
     ("skip_repeat_check", "previous.stamp != stamp", "false"),
     ("forget_conflict_flag", "tx.index_conflict = true;", ""),
@@ -29,6 +36,10 @@ MUTATIONS = [
                     stamp,
                 });""", ""),
 ]
+CONTRACT_MUTATIONS = [
+    ("omit_bucket_uniqueness", "requires unique(old(tx).index_reads@), unique_buckets(buckets@),",
+     "requires unique(old(tx).index_reads@),"),
+]
 
 
 def digest(path: Path) -> str:
@@ -37,6 +48,8 @@ def digest(path: Path) -> str:
 
 def inputs():
     return [generate.SOURCE, generate.HELPER, generate.CONTRACTS, generate.OUTPUT,
+            generate.SELECTOR, Path(generate.kernels.__file__), generate.kernels.SPECS,
+            Path(generate.selector_lexer.__file__),
             Path(generate.__file__), Path(__file__), HERE / "test_generate.py",
             ROOT / "verification/concurrent/generate.py", PIN]
 
@@ -51,7 +64,7 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     receipt = {"schema": 1, "passed": False, "status": "running", "checks": [],
         "scope": "conditional_native_predicate_dependency_capture",
-        "required_roots": ROOTS, "required_mutations": [m[0] for m in MUTATIONS],
+        "required_roots": ROOTS, "required_mutations": [m[0] for m in MUTATIONS + CONTRACT_MUTATIONS],
         "whole_lookup_refinement_proved": False, "transaction_history_refinement_proved": False}
     path = output / "receipt.json"
 
@@ -102,7 +115,7 @@ def main():
             save()
             if negative:
                 if (process.returncode == 0 or not summary or int(summary[2]) == 0
-                    or not re.search(r"(?:precondition|postcondition|invariant) not satisfied", log)):
+                    or not re.search(r"(?:precondition|postcondition|invariant|assertion) not satisfied|assertion failed", log)):
                     raise RuntimeError("negative control failed for wrong reason: " + name)
             elif process.returncode != 0 or not summary or int(summary[2]) != 0 or int(summary[1]) < (1 if root else len(ROOTS)):
                 raise RuntimeError("capture proof failed: " + name)
@@ -110,8 +123,7 @@ def main():
         invoke("native_capture", generate.OUTPUT)
         for root in ROOTS:
             invoke("root_" + root, generate.OUTPUT, root)
-        begin = source.index("        for bucket in &buckets {", source.index("    pub fn index_lookup("))
-        begin = source.index("        for bucket in &buckets {", begin + 1)
+        begin = source.index("        let prior_read_len =", source.index("    pub fn index_lookup("))
         end = source.index("        let candidates = index.transactional_raw_lookup", begin)
         selected = source[begin:end]
         for name, old, new in MUTATIONS:
@@ -121,6 +133,13 @@ def main():
             mutant = source[:begin] + selected.replace(old, new) + source[end:]
             artifact = output / (name + ".rs")
             artifact.write_text(generate.render(mutant))
+            invoke(name, artifact, "capture_dependencies", True)
+        for name, old, new in CONTRACT_MUTATIONS:
+            generated = generate.OUTPUT.read_text()
+            if generated.count(old) != 1:
+                raise RuntimeError("contract mutation anchor absent or ambiguous: " + name)
+            artifact = output / (name + ".rs")
+            artifact.write_text(generated.replace(old, new, 1))
             invoke(name, artifact, "capture_dependencies", True)
         receipt["final_input_sha256"] = {str(p.relative_to(ROOT)): digest(p) for p in inputs()}
         if receipt["final_input_sha256"] != fingerprints:

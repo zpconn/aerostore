@@ -193,6 +193,8 @@ The separate [cadence and ordering profile](docs/hyperfeed_calibrated.md) adds p
 
 Optional [retry diagnostics and expiry-index controls](docs/hyperfeed_retry_diagnostics.md) preserve failed-worker counters and identify native rejection branches. Following the [90-trial investigation](docs/bench_data/retry_2026-09-26/README.md), an [ordered due-range experiment](docs/hyperfeed_ordered_range.md) reduced paired foreground p99 in short synthetic runs, while exposing expiry contention at overload. The [66-trial results](docs/bench_data/ordered_range_2026-09-27/README.md) retain failures and stale-work exclusions. Hashed publication buckets remain the default; the ordered policy has a fixed time window and is not promoted. Shared index header v3 requires rebuilding older mappings. The 10× target remains unqualified.
 
+A subsequent [query dependency capture optimization](docs/hyperfeed_capture_prefix.md) removes quadratic work within fresh broad queries while preserving prior-query dependencies and conflict checks. In the [90-cell comparison](docs/bench_data/capture_prefix_2026-09-27/README.md), all 36 candidate runs completed usefully; in metrics runs, default hashed-index foreground p99 fell about 81% at 512 messages/second versus the previous engine. The source-bound proof adapters and native regressions were updated with the change. These are short synthetic latency and overload results; realistic sustained capacity and worker-death availability remain open.
+
 ## Project layout
 
 | Path | Contents |

@@ -78,6 +78,8 @@ def inputs():
     for name in generate.COMPONENTS:
         module = generate.component(name)
         files += [module.CONTRACTS, module.OUTPUT, Path(module.__file__)]
+    files += [ROOT / 'aerostore_core/src/shm_index.rs', ROOT / 'verification/verus/generate.py', ROOT / 'verification/verus/spec.rs']
+    files += [ROOT / 'verification/lookup_native/check_production_equivalence.py']
     return files
 
 

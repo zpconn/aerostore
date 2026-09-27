@@ -14,6 +14,8 @@ and predicate validator modules. The composition:
    reads; a numeric bucket pair alone cannot grant permission.
 2. Calls the actual dependency-capture loop. Successful capture records the
    exact offset, bucket and stamp, with the stamp below the transaction ID.
+   The wrapper proves that its one-element requested list satisfies capture's
+   explicit unique-bucket premise.
 3. Enumerates current postings while that lease is borrowed. The coherent
    publication-event replay, global reservation chronology and monotone guarded
    stamp history derive historical candidate coverage from accepted stamps.

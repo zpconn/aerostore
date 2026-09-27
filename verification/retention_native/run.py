@@ -24,6 +24,8 @@ VACUUM = "aerostore_core/src/vacuum.rs"
 CRATES = ["aerostore_core", "aerostore_verified", "aerostore_macros", "aerostore_tcl"]
 PINNED_RUST = "01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf"
 INTEGRATION = "aerostore_core/tests/occ_transactional_index.rs"
+CAPTURE_TESTS = "aerostore_core/src/occ_partitioned/capture_prefix_tests.rs"
+NATIVE_SOURCES = (OCC, PROC, VACUUM, INTEGRATION, CAPTURE_TESTS)
 PARTIAL = "retention_native_partial_publication_retains_snapshot_until_reuse"
 CURSOR = "retention_native_loaded_cursor_survives_pruned_tail_reuse"
 LOCKED = "row_guard_outliving_commit_pins_its_version_without_unlocking_a_later_owner"
@@ -42,6 +44,25 @@ def digest_bytes(data):
 
 def digest(path):
     return digest_bytes(path.read_bytes())
+
+
+def native_hashes(directory):
+    return {path: digest(directory / path) for path in NATIVE_SOURCES}
+
+
+def source_tree(directory, archive, native, changed=None):
+    if set(native) != set(NATIVE_SOURCES):
+        raise RuntimeError("native source overlay differs from the required input set")
+    directory.mkdir(parents=True)
+    with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
+        tar.extractall(directory, filter="data")
+    for path, content in native.items():
+        destination = directory / path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(content)
+    if changed:
+        (directory / changed[0]).write_text(changed[1])
+    return directory
 
 
 def scoped(source, start, end, old, new):
@@ -101,10 +122,10 @@ def main():
 
     save()
     try:
-        paths = [ROOT / OCC, ROOT / PROC, ROOT / VACUUM, ROOT / INTEGRATION, Path(__file__), Path(__file__).with_name("test_run.py")]
-        initial_hashes = {str(p.relative_to(ROOT)): digest(p) for p in paths}
+        runner_paths = [Path(__file__), Path(__file__).with_name("test_run.py")]
+        initial_hashes = native_hashes(ROOT) | {str(p.relative_to(ROOT)): digest(p) for p in runner_paths}
         receipt["input_sha256"] = initial_hashes
-        native = {path: (ROOT / path).read_bytes() for path in (OCC, PROC, VACUUM, INTEGRATION)}
+        native = {path: (ROOT / path).read_bytes() for path in NATIVE_SOURCES}
         receipt["parent_commit"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
         archive = subprocess.check_output(["git", "archive", receipt["parent_commit"], "Cargo.toml", "Cargo.lock", *CRATES], cwd=ROOT)
         (output / "parent-crates.tar").write_bytes(archive)
@@ -126,17 +147,6 @@ def main():
             } or (key.startswith("CARGO_TARGET_") and key.endswith("_RUSTFLAGS")):
                 env.pop(key)
         env.update(RUSTC=str(rustc), RUSTUP_TOOLCHAIN=selected_toolchain, CARGO_ENCODED_RUSTFLAGS="")
-
-        def source_tree(name, changed=None):
-            directory = output / name / "source"
-            directory.mkdir(parents=True)
-            with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
-                tar.extractall(directory, filter="data")
-            for path, content in native.items():
-                (directory / path).write_bytes(content)
-            if changed:
-                (directory / changed[0]).write_text(changed[1])
-            return directory
 
         def invoke(name, source, selection, expected_failure=False, required_assertion=None):
             command = [str(cargo), "test", "--offline", "--locked", "--target-dir", str(source.parent / "cargo-target"),
@@ -161,20 +171,20 @@ def main():
             check = {"name": name, "command": command, "cwd": str(source), "exit_code": process.returncode,
                 "elapsed_seconds": time.monotonic() - started, "expected_assertion_failure": expected_failure,
                 "required_assertion": required_assertion, "passed": bool(passed), "log": str(log_path.relative_to(ROOT)),
-                "log_sha256": digest(log_path), "source_sha256": {p: digest(source / p) for p in native}}
+                "log_sha256": digest(log_path), "source_sha256": native_hashes(source)}
             receipt["checks"].append(check)
             save()
             print(json.dumps({"check": name, "passed": bool(passed), "exit_code": process.returncode}), flush=True)
             if not passed:
                 raise RuntimeError("native schedule or negative-control assertion failed: " + name)
 
-        baseline = source_tree("current")
+        baseline = source_tree(output / "current" / "source", archive, native)
         for name, selection in TESTS:
             invoke(name, baseline, selection)
         for name, path, changed, test, assertion in variants(native[OCC].decode(), native[PROC].decode()):
-            source = source_tree(name, (path, changed))
+            source = source_tree(output / name / "source", archive, native, (path, changed))
             invoke(name, source, test, True, assertion)
-        receipt["final_input_sha256"] = {str(p.relative_to(ROOT)): digest(p) for p in paths}
+        receipt["final_input_sha256"] = native_hashes(ROOT) | {str(p.relative_to(ROOT)): digest(p) for p in runner_paths}
         if receipt["final_input_sha256"] != initial_hashes:
             raise RuntimeError("native campaign sources changed during execution")
         receipt.update(passed=True, status="passed", source_stable=True)

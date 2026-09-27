@@ -49,6 +49,8 @@ def inputs():
         files += [module.CONTRACTS, module.OUTPUT, Path(module.__file__)]
     files += [ROOT / "verification/lookup/history.rs", ROOT / "aerostore_core/src/shm_index.rs",
         ROOT / "aerostore_core/src/shm_lock.rs"]
+    files += [ROOT / 'verification/verus/generate.py', ROOT / 'verification/verus/spec.rs']
+    files += [ROOT / 'verification/lookup_native/check_production_equivalence.py']
     return list(dict.fromkeys(files))
 
 

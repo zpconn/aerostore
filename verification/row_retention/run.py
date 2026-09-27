@@ -35,7 +35,9 @@ def digest(path: Path) -> str:
 
 
 def inputs():
-    return [generate.SOURCE,generate.CONTRACTS,generate.OUTPUT,Path(generate.__file__),Path(__file__),HERE/'test_generate.py',
+    return [ROOT / 'verification/lookup_native/check_production_equivalence.py',
+        ROOT / 'aerostore_core/src/shm_index.rs', ROOT / 'verification/verus/generate.py', ROOT / 'verification/verus/spec.rs',
+        generate.SOURCE,generate.CONTRACTS,generate.OUTPUT,Path(generate.__file__),Path(__file__),HERE/'test_generate.py',
         generate.lookup.CONTRACTS,generate.lookup.HISTORY,generate.lookup.OUTPUT,Path(generate.lookup.__file__),
         ROOT/'verification/concurrent/generate.py',ROOT/'verification/predicate_capture/generate.py',
         ROOT/'verification/predicate_capture/contracts.rs',ROOT/'aerostore_verified/src/lib.rs',PIN,

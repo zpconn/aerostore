@@ -54,7 +54,7 @@
       "reason": "Alternate in-process/MVCC/logical-database or service family; not the partitioned single-OccTable target."
     },
     "aerostore_core/src/occ_partitioned.rs": {
-      "sha256": "03719920d5553b5edc1f240a8e2490c96d67b5f0d0145d7be2285d3ffe97eb1a",
+      "sha256": "3bcabd2cf117a1a5dce0a61bc6a7a1c77a492509244ff78b0b74783b38ef14d4",
       "classification": "covered",
       "reason": "Single-table transaction/query/managed durability/bootstrap/vacuum support within stated modes and preconditions."
     },
@@ -1772,7 +1772,7 @@
     {
       "id": "occ_partitioned::OccTable::index_lookup",
       "signature": "pub fn index_lookup( &self, tx: &mut OccTransaction<T>, index: &SecondaryIndex<usize>, predicate: &IndexCompare, ) -> Result<Vec<usize>, Error>",
-      "body_sha256": "e3f9c5edb48c4266d2d468df314b5dae68162f2f965a3745a24a8ccc7dbec418",
+      "body_sha256": "d81e6d936e3e73cf48d78e6a6813ffae2290a26529bd5c9fb17b300260f6a332",
       "source": "aerostore_core/src/occ_partitioned.rs",
       "contract": "index-read",
       "classification": "covered",

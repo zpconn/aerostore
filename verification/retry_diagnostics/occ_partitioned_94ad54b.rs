@@ -553,7 +553,6 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
             };
             guards.push(guard);
         }
-        let prior_read_len = tx.index_reads.len();
         for bucket in &buckets {
             let stamp = index.transactional_stamp(*bucket)?;
             if !aerostore_verified::stamp_precedes_snapshot(stamp, tx.txid) {
@@ -562,16 +561,11 @@ impl<T: Copy + Send + Sync + 'static> OccTable<T> {
                 crate::retry_diagnostics::record(crate::retry_diagnostics::Cause::LookupPostSnapshotStamp, Some(index.header_offset()), None);
                 return Err(Error::SerializationFailure);
             }
-            let previous = if tx.index_reads.len() == prior_read_len {
-                tx.index_reads
-                    .iter()
-                    .find(|read| read.index_offset == index.header_offset() && read.bucket == *bucket)
-            } else {
-                tx.index_reads[..prior_read_len]
-                    .iter()
-                    .find(|read| read.index_offset == index.header_offset() && read.bucket == *bucket)
-            };
-            if let Some(previous) = previous {
+            if let Some(previous) = tx
+                .index_reads
+                .iter()
+                .find(|read| read.index_offset == index.header_offset() && read.bucket == *bucket)
+            {
                 if previous.stamp != stamp {
                     tx.index_conflict = true;
                     #[cfg(feature = "retry-diagnostics")]
@@ -4321,6 +4315,3 @@ mod predicate_completion_tests {
         }
     }
 }
-
-#[cfg(test)]
-mod capture_prefix_tests;

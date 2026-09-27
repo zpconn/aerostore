@@ -81,6 +81,7 @@ pub fn capture_one_dependency<I: IndexPrimitives>(index: &I, offset: usize, buck
     let mut captured = capture::Transaction { txid, index_conflict: false, index_reads: Vec::new() };
     let mut buckets = Vec::new();
     buckets.push(bucket);
+    proof { assert(capture::unique_buckets(buckets@)); }
     match capture::capture_dependencies(&view, &mut captured, &buckets) {
         Err(error) => return Err(error),
         Ok(()) => {},

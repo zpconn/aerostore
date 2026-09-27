@@ -95,7 +95,9 @@ def digest(path: Path) -> str:
 
 
 def inputs():
-    return [generate.SOURCE, generate.CONTRACTS, generate.HISTORY, generate.OUTPUT,
+    return [ROOT / 'verification/lookup_native/check_production_equivalence.py',
+        ROOT / 'aerostore_core/src/shm_index.rs', ROOT / 'verification/verus/generate.py', ROOT / 'verification/verus/spec.rs',
+        generate.SOURCE, generate.CONTRACTS, generate.HISTORY, generate.OUTPUT,
             Path(generate.__file__), Path(__file__), HERE / "test_generate.py",
             ROOT / "verification/concurrent/generate.py",
             ROOT / "verification/predicate_capture/generate.py",

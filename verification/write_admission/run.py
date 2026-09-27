@@ -47,6 +47,8 @@ def inputs():
     files.extend(ROOT/p for p in ('verification/concurrent/generate.py','verification/predicate/generate.py',
         'verification/predicate_capture/generate.py','verification/predicate_capture/contracts.rs',
         'aerostore_verified/src/lib.rs','aerostore_core/src/shm.rs'))
+    files += [ROOT / 'aerostore_core/src/shm_index.rs', ROOT / 'verification/verus/generate.py', ROOT / 'verification/verus/spec.rs']
+    files += [ROOT / 'verification/lookup_native/check_production_equivalence.py']
     return list(dict.fromkeys(files))
 
 

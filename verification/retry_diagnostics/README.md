@@ -63,20 +63,43 @@ already source-bound generator and checks the current normalizer's hash.
 Changing only the normalizer therefore rejects a previously valid receipt,
 without relying on a new proof run or on the encompassing pilot fingerprint.
 
-`default_sources.json` pins the full default token streams for
-`occ_partitioned.rs` and `wal_writer.rs` to source commit
-`4da551bbc2a17614ae11795cfee7764cb252d56a`. It also pins the position and adjacent
-tokens of every observation, requires one site for each cause, and records the
-original source file hashes. `check_default.py` checks against that immutable
-manifest, not mutable HEAD. Moving or duplicating a legal observation fails even
-when erasing it would leave the same default program. The existing concurrent
-adapter unit suite invokes this check; the frozen-boundary source set also
-includes this directory. Baseline or site updates require explicit review.
+The original instrumentation baseline is preserved byte-for-byte in
+[`default_sources_4da551b.json`](default_sources_4da551b.json), tied to commit
+`4da551bbc2a17614ae11795cfee7764cb252d56a`. It rejects the subsequent prior-prefix
+capture optimization, as it should: that change affects the native default
+program and must not disappear during diagnostic normalization.
+
+[`default_sources.json`](default_sources.json) now records the
+[explicitly reviewed capture transition](capture_prefix_review.md) from immutable
+commit `94ad54bef275dd4db0ce382569bc239e931ada87`. Its
+[archived OCC source](occ_partitioned_94ad54b.rs) is hash-bound and first checked
+against the original instrumentation baseline. The checker then derives the
+new expectation using exactly two native token edits: capture the prior read-set
+length before the stamp loop, and choose the whole-vector search only while its
+length still equals that prefix, otherwise the bounded slice search. This
+choice is evaluated for each bucket. One exact `cfg(test)`
+child-module declaration is also allowed at EOF. No other native change is
+accepted merely by updating the expected digest. WAL's original projection is
+retained. The optimization's tokens remain present after normalization.
+
+The manifest also pins every observation's position and adjacent tokens and
+requires one site for each of the 18 causes. The capture edits shift OCC offsets;
+all observation arguments and rejecting branches remain unchanged. Two windows
+include neighboring search syntax that changes; the checker pins their exact
+old/new token sequences and keeps every other window unchanged.
+Moving or duplicating a legal observation still fails even when erasing it would
+leave the same default program. `check_default.py` uses preserved artifacts,
+not mutable HEAD or a network checkout. The existing concurrent adapter unit
+suite invokes this check; the frozen-boundary source set also includes this
+directory. Baseline or site updates require explicit review.
 
 This is lexical change detection and a deliberately narrow source abstraction,
-not a Rust equivalence proof. The reviewed default tokens are unchanged and the
-generated Verus files remain unchanged. Native enabled/disabled tests support the
-instrumentation's decision-preservation argument; they do not prove every
+not a Rust equivalence proof. The new capture transition relies on unique query
+bucket IDs and preservation of the existing dependency prefix; its component
+proofs, canonicalization premises and native regressions are separate evidence.
+Old component receipts are stale after the native change, even where generated
+proof bodies happen to remain identical. Native enabled/disabled tests support
+the instrumentation's decision-preservation argument; they do not prove every
 feature-enabled execution, TLS/platform behavior or timing noninterference.
 
 ## Focused checks
@@ -101,4 +124,11 @@ clearing, runtime disablement and thread isolation. Rare defensive branches such
 as changed version identity, the traversal cap and CAS ownership races remain
 site-reviewed rather than individually forced by these tests. The checker tests
 include invalid guards/calls/arguments, moved or duplicated sites, and a real
-native predicate mutation.
+native predicate mutation. Capture-transition negatives additionally reject a
+zero or shortened prefix, restoration of the growing-vector search, altered
+full-vector arm conditions, identity/stamp checks, tampered historical artifacts,
+and changed WAL tokens,
+including attempts to approve a mutant by rewriting its expected digest.
+Missing/null transition metadata and a rewritten manifest claiming the legacy
+revision are also rejected; only the exact preserved legacy manifest can use
+the historical path.

@@ -45,8 +45,12 @@ Empty searches and later competing creation obey the same rule.
 
 ## Existing proofs and the remaining gap
 
-The native OCC and WAL control paths are unchanged. Their default token pins
-and the retry-observation normalization boundary remain intact. The existing
+The original ordered-range checkpoint left native OCC and WAL control paths
+unchanged. The subsequent [prior-prefix capture change](../predicate_capture/README.md)
+shortens dependency search while preserving the same selected buckets, stamp
+checks and guard lifetime; its reviewed token transition is recorded separately
+from the original diagnostic baseline. WAL and diagnostic normalization remain
+unchanged. The existing
 predicate capture, publication and lookup proofs abstract the mapping from a
 key to a bucket and assume query coverage. For example,
 `verification/lookup/history.rs::accepted_stamps_force_early_events` explicitly

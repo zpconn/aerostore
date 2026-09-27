@@ -204,6 +204,7 @@ pub fn indexed_read_then_validate<D: SlicePrimitives<P>, V: lookup::Storage, P: 
     let mut captured = capture::Transaction { txid: tx.txid, index_conflict: false, index_reads: Vec::new() };
     let mut buckets = Vec::new();
     buckets.push(bucket);
+    proof { assert(capture::unique_buckets(buckets@)); }
     let captured_result;
     let raw_result;
     {

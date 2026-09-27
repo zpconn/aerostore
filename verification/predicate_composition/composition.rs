@@ -95,7 +95,7 @@ pub proof fn captured_read_survives_translation(before: Seq<capture::IndexRead>,
 // No assumption states the desired conflict conclusion.
 pub fn capture_then_validate<I: capture::CaptureIndex, D: predicate::Primitives>(
     index: &I, later: &D, tx: &mut capture::Transaction, buckets: &Vec<usize>) -> (result: ReadResult)
-    requires capture::unique(old(tx).index_reads@),
+    requires capture::unique(old(tx).index_reads@), capture::unique_buckets(buckets@),
         later.state().bindings.contains_key(index.offset()),
         reads_held(later.state(), old(tx).index_reads@),
         forall|i: int| 0 <= i < buckets.len() ==>

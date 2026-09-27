@@ -13,6 +13,10 @@ interfaces represent the captured state and a later validation state. The result
 cannot be successful validation when any captured bucket has a publication stamp
 at or after the reader's start. Empty raw-query results still capture their bucket
 because candidate contents do not condition the native dependency loop.
+The caller explicitly supplies a unique requested-bucket list. The
+[capture boundary](../predicate_capture/README.md) checks native canonicalization
+and documents the default standard-library assumption and verified-selector
+bridges; this generic composition does not manufacture that premise.
 
 The provenance exported by capture is necessary here: prefix preservation and
 coverage alone would permit unrelated invented dependencies. Its stronger

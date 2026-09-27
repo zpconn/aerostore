@@ -10,19 +10,27 @@
         "transaction_history_refinement_proved"
       ],
       "roots": [
-        "find_read",
+        "find_read_prefix",
+        "prior_prefix_covers_current_bucket",
+        "canonical_sort_for_capture",
+        "canonical_bitmap_for_capture",
+        "duplicate_bucket_requires_canonicalization",
         "appended_read_preserves_unique",
         "capture_dependencies",
         "stamp_precedes_snapshot"
       ],
       "mutations": {
+        "empty_prior_prefix": "capture_dependencies",
+        "omit_last_prior_read": "capture_dependencies",
+        "search_appended_suffix": "capture_dependencies",
         "skip_snapshot_check": "capture_dependencies",
         "skip_repeat_check": "capture_dependencies",
         "forget_conflict_flag": "capture_dependencies",
         "capture_wrong_stamp": "capture_dependencies",
         "capture_wrong_bucket": "capture_dependencies",
         "capture_wrong_index": "capture_dependencies",
-        "omit_dependency": "capture_dependencies"
+        "omit_dependency": "capture_dependencies",
+        "omit_bucket_uniqueness": "capture_dependencies"
       },
       "full_check": "native_capture",
       "generated": "verification/predicate_capture/capture.verus.rs",
@@ -31,11 +39,15 @@
         "aerostore_verified/src/lib.rs",
         "verification/predicate_capture/contracts.rs",
         "verification/predicate_capture/capture.verus.rs",
+        "aerostore_core/src/shm_index.rs",
+        "verification/verus/generate.py",
+        "verification/verus/spec.rs",
         "verification/predicate_capture/generate.py",
         "verification/predicate_capture/run.py",
         "verification/predicate_capture/test_generate.py",
         "verification/concurrent/generate.py",
-        "verification/verus/toolchain.json"
+        "verification/verus/toolchain.json",
+        "verification/lookup_native/check_production_equivalence.py"
       ]
     },
     "predicate": {
@@ -128,7 +140,11 @@
         "verification/predicate_capture/capture.verus.rs",
         "verification/predicate/contracts.rs",
         "verification/predicate/generate.py",
-        "verification/predicate/predicate.verus.rs"
+        "verification/predicate/predicate.verus.rs",
+        "aerostore_core/src/shm_index.rs",
+        "verification/verus/generate.py",
+        "verification/verus/spec.rs",
+        "verification/lookup_native/check_production_equivalence.py"
       ]
     },
     "skiplist-detach": {
@@ -436,7 +452,11 @@
         "verification/predicate/generate.py",
         "verification/predicate_capture/contracts.rs",
         "verification/predicate_capture/capture.verus.rs",
-        "verification/predicate_capture/generate.py"
+        "verification/predicate_capture/generate.py",
+        "aerostore_core/src/shm_index.rs",
+        "verification/verus/generate.py",
+        "verification/verus/spec.rs",
+        "verification/lookup_native/check_production_equivalence.py"
       ]
     },
     "lifecycle-interference": {
@@ -662,7 +682,11 @@
         "verification/predicate_capture/generate.py",
         "verification/predicate_capture/contracts.rs",
         "aerostore_verified/src/lib.rs",
-        "verification/verus/toolchain.json"
+        "verification/verus/toolchain.json",
+        "aerostore_core/src/shm_index.rs",
+        "verification/verus/generate.py",
+        "verification/verus/spec.rs",
+        "verification/lookup_native/check_production_equivalence.py"
       ]
     },
     "indexed-slice": {
@@ -722,7 +746,10 @@
         "verification/predicate/generate.py",
         "verification/lookup/history.rs",
         "aerostore_core/src/shm_index.rs",
-        "aerostore_core/src/shm_lock.rs"
+        "aerostore_core/src/shm_lock.rs",
+        "verification/verus/generate.py",
+        "verification/verus/spec.rs",
+        "verification/lookup_native/check_production_equivalence.py"
       ],
       "type_mutations": {
         "raw_read_after_release": "E0382"
@@ -779,7 +806,11 @@
         "verification/predicate_capture/generate.py",
         "verification/predicate_capture/contracts.rs",
         "aerostore_verified/src/lib.rs",
-        "verification/verus/toolchain.json"
+        "verification/verus/toolchain.json",
+        "aerostore_core/src/shm_index.rs",
+        "verification/verus/generate.py",
+        "verification/verus/spec.rs",
+        "verification/lookup_native/check_production_equivalence.py"
       ]
     },
     "row-retention": {
@@ -863,7 +894,11 @@
         "verification/lifecycle/generate.py",
         "verification/lifecycle/lifecycle.verus.rs",
         "aerostore_core/src/shm.rs",
-        "verification/predicate/generate.py"
+        "verification/predicate/generate.py",
+        "aerostore_core/src/shm_index.rs",
+        "verification/verus/generate.py",
+        "verification/verus/spec.rs",
+        "verification/lookup_native/check_production_equivalence.py"
       ]
     },
     "storage-slice": {
@@ -952,7 +987,11 @@
         "verification/predicate_capture/generate.py",
         "verification/predicate_capture/contracts.rs",
         "aerostore_verified/src/lib.rs",
-        "aerostore_core/src/shm.rs"
+        "aerostore_core/src/shm.rs",
+        "aerostore_core/src/shm_index.rs",
+        "verification/verus/generate.py",
+        "verification/verus/spec.rs",
+        "verification/lookup_native/check_production_equivalence.py"
       ]
     },
     "commit-data": {
@@ -1031,7 +1070,11 @@
         "verification/predicate_capture/generate.py",
         "verification/predicate_capture/contracts.rs",
         "aerostore_verified/src/lib.rs",
-        "aerostore_core/src/shm.rs"
+        "aerostore_core/src/shm.rs",
+        "aerostore_core/src/shm_index.rs",
+        "verification/verus/generate.py",
+        "verification/verus/spec.rs",
+        "verification/lookup_native/check_production_equivalence.py"
       ]
     },
     "commit-completion": {
@@ -1142,7 +1185,10 @@
         "aerostore_core/src/shm.rs",
         "aerostore_core/src/shm_index.rs",
         "aerostore_core/src/shm_lock.rs",
-        "aerostore_verified/src/lib.rs"
+        "aerostore_verified/src/lib.rs",
+        "verification/verus/generate.py",
+        "verification/verus/spec.rs",
+        "verification/lookup_native/check_production_equivalence.py"
       ]
     },
     "write-plan": {
@@ -1239,7 +1285,10 @@
         "aerostore_core/src/occ_partitioned.rs",
         "aerostore_core/src/shm_index.rs",
         "aerostore_core/src/shm_lock.rs",
-        "aerostore_verified/src/lib.rs"
+        "aerostore_verified/src/lib.rs",
+        "verification/verus/generate.py",
+        "verification/verus/spec.rs",
+        "verification/lookup_native/check_production_equivalence.py"
       ],
       "verify_module": "planning"
     },
@@ -1317,7 +1366,11 @@
         "verification/predicate_capture/generate.py",
         "verification/predicate_capture/contracts.rs",
         "aerostore_verified/src/lib.rs",
-        "aerostore_core/src/shm.rs"
+        "aerostore_core/src/shm.rs",
+        "aerostore_core/src/shm_index.rs",
+        "verification/verus/generate.py",
+        "verification/verus/spec.rs",
+        "verification/lookup_native/check_production_equivalence.py"
       ],
       "verify_module": "admission"
     },
@@ -1444,7 +1497,10 @@
         "aerostore_core/src/shm.rs",
         "aerostore_core/src/shm_index.rs",
         "aerostore_core/src/shm_lock.rs",
-        "aerostore_verified/src/lib.rs"
+        "aerostore_verified/src/lib.rs",
+        "verification/verus/generate.py",
+        "verification/verus/spec.rs",
+        "verification/lookup_native/check_production_equivalence.py"
       ]
     }
   }

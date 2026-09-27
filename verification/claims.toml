@@ -69,11 +69,11 @@ refinement_roots = { predicate = ["index_lock_keys", "index_read_conflict", "pub
 [[claims]]
 id = "TX-PREDICATE-CAPTURE-VERUS"
 contract = "verification/predicate_capture/README.md"
-implementation = ["aerostore_core/src/occ_partitioned.rs", "verification/predicate_capture/contracts.rs"]
-scope = "Actual index_lookup dependency loop: complete capture even for empty candidates, repeat checks, prefix/provenance/uniqueness and bounded dependency growth under guarded stamp-read and allocation contracts; raw candidates and native MVCC remain open"
+implementation = ["aerostore_core/src/occ_partitioned.rs", "aerostore_core/src/shm_index.rs", "aerostore_verified/src/lib.rs", "verification/predicate_capture/contracts.rs"]
+scope = "Actual index_lookup dependency loop with proved prior-prefix search and explicit unique query buckets: complete capture, repeat checks, provenance and bounded growth; native canonicalization routing checked, default std sort/dedup trusted, verified selector kernels composed; guarded stamps/allocation remain primitive contracts"
 status = "partial"
 required_checks = ["predicate-capture", "predicate-capture-adapter-tests"]
-refinement_roots = { predicate-capture = ["capture_dependencies", "find_read"] }
+refinement_roots = { predicate-capture = ["capture_dependencies", "find_read_prefix", "prior_prefix_covers_current_bucket", "canonical_sort_for_capture", "canonical_bitmap_for_capture"] }
 
 [[claims]]
 id = "TX-PREDICATE-COMPOSITION-VERUS"

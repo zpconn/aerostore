@@ -1,15 +1,15 @@
 {
-  "baseline_commit": "94ad54bef275dd4db0ce382569bc239e931ada87",
-  "scope": "Exact native default token expectation after the explicitly reviewed hybrid prior-prefix capture transition from immutable 94ad54b. The per-bucket full-vector or bounded-prefix search remains in the native program, never erased by retry diagnostic normalization. Original 4da551b instrumentation baseline is preserved separately. Instrumented feature is not covered by default proofs.",
+  "baseline_commit": "4da551bbc2a17614ae11795cfee7764cb252d56a",
+  "scope": "Exact native token equality after erasing only reviewed feature-disabled failure observations. Module APIs and Cargo feature declaration are separately reviewed. Instrumented feature is not covered by the default proofs.",
   "files": {
     "aerostore_core/src/occ_partitioned.rs": {
-      "baseline_raw_sha256": "03719920d5553b5edc1f240a8e2490c96d67b5f0d0145d7be2285d3ffe97eb1a",
+      "baseline_raw_sha256": "f95c1c224d592a7a1fca9febf7dc9c6ca9685a55c8806d2eba37ecdbf7857a3d",
       "default_projection": {
-        "default_tokens_sha256": "3eb77b4ad3ae837d17218ee15d7118a71d68cbc546d88ea5dfa4cc4842f892d8",
+        "default_tokens_sha256": "2e9edea9bf127f56ceb0e3e04d539198d5dd2b63852a3504b9507d50e2d3c35d",
         "sites": [
           {
             "cause": "LookupPostSnapshotStamp",
-            "position": 3267,
+            "position": 3256,
             "before": [
               "::",
               "stamp_precedes_snapshot",
@@ -38,21 +38,21 @@
               ")",
               ";",
               "}",
-              "let",
-              "previous",
-              "=",
               "if",
-              "tx",
-              ".",
-              "index_reads"
+              "let",
+              "Some",
+              "(",
+              "previous",
+              ")",
+              "="
             ]
           },
           {
             "cause": "LookupChangedCapturedStamp",
-            "position": 3381,
+            "position": 3316,
             "before": [
-              "=",
-              "previous",
+              "bucket",
+              ")",
               "{",
               "if",
               "previous",
@@ -89,7 +89,7 @@
           },
           {
             "cause": "IndexBucketBusy",
-            "position": 4900,
+            "position": 4835,
             "before": [
               "thread",
               "::",
@@ -129,7 +129,7 @@
           },
           {
             "cause": "StickyIndexConflict",
-            "position": 4934,
+            "position": 4869,
             "before": [
               "T",
               ">",
@@ -169,7 +169,7 @@
           },
           {
             "cause": "PredicateValidationStamp",
-            "position": 5020,
+            "position": 4955,
             "before": [
               "read",
               ".",
@@ -209,7 +209,7 @@
           },
           {
             "cause": "LockForUpdateHeld",
-            "position": 6656,
+            "position": 6591,
             "before": [
               "(",
               "row",
@@ -249,7 +249,7 @@
           },
           {
             "cause": "LockForUpdateRace",
-            "position": 6744,
+            "position": 6679,
             "before": [
               "tx",
               ".",
@@ -289,7 +289,7 @@
           },
           {
             "cause": "ReadRowLocked",
-            "position": 6945,
+            "position": 6880,
             "before": [
               "(",
               "row",
@@ -329,7 +329,7 @@
           },
           {
             "cause": "WriteRowLocked",
-            "position": 7162,
+            "position": 7097,
             "before": [
               "(",
               "row",
@@ -369,7 +369,7 @@
           },
           {
             "cause": "WriteDirtyRowLocked",
-            "position": 7436,
+            "position": 7371,
             "before": [
               "(",
               "row",
@@ -409,7 +409,7 @@
           },
           {
             "cause": "PartitionLockBusy",
-            "position": 8149,
+            "position": 8084,
             "before": [
               "{",
               "Ok",
@@ -449,7 +449,7 @@
           },
           {
             "cause": "WriteBaseHeadChanged",
-            "position": 10191,
+            "position": 10126,
             "before": [
               "write",
               ".",
@@ -489,7 +489,7 @@
           },
           {
             "cause": "WriteBaseXmaxSet",
-            "position": 10231,
+            "position": 10166,
             "before": [
               "?",
               ";",
@@ -529,7 +529,7 @@
           },
           {
             "cause": "CommitRowLocked",
-            "position": 10381,
+            "position": 10316,
             "before": [
               "visible_ptr",
               ")",
@@ -569,7 +569,7 @@
           },
           {
             "cause": "ReadVersionIdentityChanged",
-            "position": 10447,
+            "position": 10382,
             "before": [
               "&",
               "read",
@@ -609,7 +609,7 @@
           },
           {
             "cause": "ReadVersionDeletedAfterSnapshot",
-            "position": 10504,
+            "position": 10439,
             "before": [
               ".",
               "snapshot_xmax",
@@ -649,7 +649,7 @@
           },
           {
             "cause": "VisibleChainLimit",
-            "position": 10895,
+            "position": 10830,
             "before": [
               "1",
               ")",
@@ -688,8 +688,7 @@
             ]
           }
         ]
-      },
-      "baseline_commit": "94ad54bef275dd4db0ce382569bc239e931ada87"
+      }
     },
     "aerostore_core/src/wal_writer.rs": {
       "baseline_raw_sha256": "619be861775b8b1942750f427d6ecef55abc5e208fb165e5dd4c6cf5d123a70a",
@@ -737,27 +736,7 @@
             ]
           }
         ]
-      },
-      "baseline_commit": "4da551bbc2a17614ae11795cfee7764cb252d56a"
+      }
     }
-  },
-  "reviewed_transition": {
-    "kind": "prior_prefix_capture_hybrid_v2",
-    "reference_artifact": "occ_partitioned_94ad54b.rs",
-    "reference_raw_sha256": "03719920d5553b5edc1f240a8e2490c96d67b5f0d0145d7be2285d3ffe97eb1a",
-    "historical_manifest": "default_sources_4da551b.json",
-    "historical_manifest_sha256": "90b4952ea89a54740cc8666f15673ef4ddc9947a307a9da746b50bd0e48473b4",
-    "normalizer_sha256": "c741c113689c7afe0ca94473cf9c029abfae647cefef656b4d3e40787ee7cb8c",
-    "native_edits": [
-      "Freeze prior_read_len immediately before the second, stamp-capture loop.",
-      "Search tx.index_reads[..prior_read_len] while preserving existing comparison and append order."
-    ],
-    "test_only_edit": "Append #[cfg(test)] mod capture_prefix_tests; at EOF.",
-    "semantic_premises": [
-      "Requested bucket IDs are unique before capture.",
-      "The prior dependency prefix is unchanged and append-only capture preserves every prior dependency.",
-      "The index identity, stamps, post-snapshot checks, rejection decisions and guard lifetimes remain unchanged."
-    ],
-    "claim_limit": "This transition check is lexical change detection. Updated component proofs and native tests provide separate evidence for the new semantic premises; old proof receipts remain stale."
   }
 }

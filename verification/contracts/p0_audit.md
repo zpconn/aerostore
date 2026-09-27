@@ -36,8 +36,12 @@ The optional `retry_diagnostics` module is an observation boundary. Its five
 public APIs have a defined thread-local contract and grant no transaction or
 memory ownership authority. Native observation calls are compiled out of the
 default feature configuration. The current transaction source adapters erase
-only reviewed, exactly guarded statements, with full default token equality
-pinned to `4da551b` and exact site checks. The feature-enabled implementation is
+only reviewed, exactly guarded statements. The original instrumentation
+projection is pinned to `4da551b`; the current OCC expectation additionally
+checks the exact prior-prefix capture change against preserved `94ad54b` source.
+The [semantic baseline review](../retry_diagnostics/capture_prefix_review.md)
+retains the original manifest, unchanged normalizer and exact diagnostic sites.
+The optimization remains in the default program. The feature-enabled implementation is
 covered by focused native tests and review, not by those default-feature
 refinement claims. See the [diagnostic boundary](../retry_diagnostics/README.md)
 for labels, synchronous caller obligations, and negative controls.
