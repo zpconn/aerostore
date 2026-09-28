@@ -36,6 +36,34 @@ The [complete-sweep checkpoint](bench_data/maintenance_2026-09-25/README.md) add
 
 The [qualification driver](../scripts/qualify_hyperfeed.py) retains every cell of a declared engine/rate/worker/seed matrix, including failures. It records dirty source hashes, binary hash, compiler, host, configuration and PostgreSQL settings. Full-history companions must match the measured source, binary, configuration and exact input corpus. They do not prove an unrecorded measurement history.
 
+PostgreSQL statistics are an explicit experimental setting. The default
+`--pg-analyze-after-seconds 0` keeps the existing initialization-time `ANALYZE`
+and normal autovacuum behavior. A positive value requests one additional
+`ANALYZE` of the owned records table during sustained, fixed-arrival admission;
+it must be less than `--seconds`. This option addresses the statistics-timing
+finding in the [resumed expiry experiment](hyperfeed_expiry_resume.md), without
+assuming that one refresh is the final statistics policy for a steady deployment.
+A dedicated connection executes the command so the coordinator can continue
+consuming receipts. The refresh competes for resources during measured work.
+Prepared statements, `SERIALIZABLE`, buffered writes, and durability settings
+retain their configured behavior.
+
+Each run reports `postgres_statistics`, including requested and effective policy.
+For a scheduled refresh it records the owned schema/table OIDs, backend PID,
+scheduled/actual monotonic times, command success, and before/after statistics.
+The same receipt is retained as `postgres-statistics.json` in the evidence
+directory. A dispatch more than one second late, completion outside admission,
+command failure, or missing successful receipt invalidates the run. PostgreSQL
+statistics counters can lag; command completion, rather than a presumed exact
+counter increment, establishes execution. Native engines report the common
+option as inapplicable. Correctness companions must match the requested delay,
+including on native engines. An untreated companion cannot validate a treated
+metrics run. Earlier externally treated results remain separate historical
+evidence; they are not retroactively converted into this protocol.
+
+The [statistics checkpoint](hyperfeed_statistics.md) records the first matched
+256-input/second runs and the subsequent 512-input/second conflict investigation.
+
 The gate distinguishes execution validity, useful-work acceptance and performance acceptance. For lifecycle/fleet qualification, a useful-work trial needs actual creation and family expiry, bounded missing/deferred outcomes, and the declared p99 and drained-throughput budgets. Fleet trials also require populated initial/final snapshots, positive effects from each global background kind and a full lifecycle cycle in the offered corpus. Missing/deferred fraction is not a count of all effectless messages: a valid maintenance query may return nothing. At least three seeds must pass to establish a qualified tested rate. Passing rates are lower bounds on capacity: dividing two of them is not a 10× capacity proof. A conditional synthetic comparison additionally requires a repeated PostgreSQL saturation bracket across the declared worker grid and comparable business effects. The calibrated profile has a separate diagnostic assessment and cannot supply those capacity bounds yet. The real-world replacement and architecture-promotion flags remain false.
 
 An illustrative campaign, with an explicitly managed test PostgreSQL server:

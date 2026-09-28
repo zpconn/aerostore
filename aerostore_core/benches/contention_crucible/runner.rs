@@ -66,6 +66,8 @@ struct Config {
     retry_diagnostics: bool,
     max_backlog: u64,
     pg_write_mode: postgres::WriteMode,
+    #[serde(default)]
+    pg_analyze_after_seconds: u64,
     rpc_delay_us: u64,
     service_bind: std::net::SocketAddr,
     remote_setup: Option<PathBuf>,
@@ -112,6 +114,7 @@ impl Default for Config {
             retry_diagnostics: false,
             max_backlog: 1000,
             pg_write_mode: postgres::WriteMode::Buffered,
+            pg_analyze_after_seconds: 0,
             rpc_delay_us: 0,
             service_bind: "127.0.0.1:0".parse().unwrap(),
             remote_setup: None,
@@ -387,6 +390,7 @@ fn exercise(
     attachment: Option<aerostore::Attachment>,
     service_endpoint: Option<service::Endpoint>,
     mut sample: impl FnMut() -> Result<Value, String>,
+    mut statistics: Option<&mut postgres::StatisticsControl>,
 ) -> Result<Completed, String> {
     let cfg = &case.config;
     // The small exact scenarios use one process per distinct message so the
@@ -459,6 +463,9 @@ fn exercise(
             0
         });
     let deadline_ns = admission_start_ns.saturating_add(cfg.seconds.saturating_mul(1_000_000_000));
+    if let Some(control) = statistics.as_mut() {
+        control.schedule(admission_start_ns, deadline_ns)?;
+    }
     let arrivals = (cfg.arrival_rate > 0 && messages.is_none() && calibrated.is_none()).then_some(
         ArrivalPlan {
             start_ns: admission_start_ns,
@@ -566,6 +573,9 @@ fn exercise(
         fs::File::create(case.directory.join("history.jsonl")).map_err(|e| e.to_string())?,
     );
     while done.len() < count {
+        if let Some(control) = statistics.as_mut() {
+            control.check()?;
+        }
         match receive.recv_timeout(Duration::from_millis(100)) {
             Ok((id, event)) => {
                 if done.contains(&id) {
@@ -1052,6 +1062,7 @@ fn summarize(
         "effective_due_index_origin":if case.engine!="postgres" && case.config.due_index_policy==fixture::DueIndexPolicy::Ordered {Some(case.config.due_index_origin)} else {None},
         "effective_due_index_width":if case.engine!="postgres" && case.config.due_index_policy==fixture::DueIndexPolicy::Ordered {Some(case.config.due_index_width)} else {None},
         "effective_expiry_index_policy":if case.engine=="postgres" {"housekeeping"} else {case.config.expiry_index_policy.name()},
+        "postgres_statistics":postgres::statistics_metadata(case.config.pg_analyze_after_seconds, case.engine == "postgres"),
         "service_latency_p99_us_including_retries":p99(&service_latencies),"arrival_queue_delay_p99_us":p99(&completed.queue_delays),
         "arrival_mode":if case.config.arrival_rate > 0 && case.scenario.is_none() {"independent_fixed_corpus"} else {"closed_loop"},
         "offered_messages":if case.config.arrival_rate > 0 && case.scenario.is_none() {json!(case.config.arrival_rate * case.config.seconds)} else {Value::Null},
@@ -1165,6 +1176,12 @@ fn fleet_population(rows: &[Record]) -> Value {
 }
 
 fn coordinator(case: &CaseConfig) -> Result<Value, String> {
+    if case.engine != "postgres" {
+        write_json(
+            &case.directory.join("postgres-statistics.json"),
+            &postgres::statistics_metadata(case.config.pg_analyze_after_seconds, false),
+        )?;
+    }
     let scenario = case
         .scenario
         .map(|i| model::scenarios(case.config.seed).remove(i));
@@ -1239,6 +1256,7 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
             None,
             Some(setup.endpoint.clone()),
             || Ok(Value::Null),
+            None,
         )?;
         write_json(
             &setup_path.with_extension("client-complete.json"),
@@ -1293,12 +1311,37 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
             .as_deref()
             .ok_or("missing PostgreSQL URL")?;
         postgres::initialize(url, &case.schema, &initial)?;
-        let plans = postgres::query_plan_audit(url, &case.schema)?;
+        let statistics_path = case.directory.join("postgres-statistics.json");
+        let mut statistics = None;
         let execution = (|| {
-            let mut completed =
-                exercise(case, &initial, messages, synchronise, None, None, || {
-                    postgres::retention(url, &case.schema)
-                })?;
+            write_json(
+                &statistics_path,
+                &postgres::statistics_metadata(case.config.pg_analyze_after_seconds, true),
+            )?;
+            let plans = postgres::query_plan_audit(url, &case.schema)?;
+            if case.config.pg_analyze_after_seconds > 0 {
+                statistics = Some(postgres::StatisticsControl::prepare(
+                    url,
+                    &case.schema,
+                    case.config.pg_analyze_after_seconds,
+                    &statistics_path,
+                )?);
+            }
+            let mut completed = exercise(
+                case,
+                &initial,
+                messages,
+                synchronise,
+                None,
+                None,
+                || postgres::retention(url, &case.schema),
+                statistics.as_mut(),
+            )?;
+            let statistics_report = if let Some(control) = statistics.take() {
+                control.finish()?
+            } else {
+                postgres::statistics_metadata(case.config.pg_analyze_after_seconds, true)
+            };
             let drain = postgres::drain(url, &case.schema)?;
             completed.drain_confirmed_ns = workers::monotonic_ns();
             let final_rows = postgres::snapshot(url, &case.schema)?;
@@ -1313,8 +1356,20 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
             report["query_plan_audit"] = plans;
             report["wal_drain"] = drain;
             report["transport"] = json!("postgres_connection_string_recorded_privately");
+            report["postgres_statistics"] = statistics_report;
             Ok(report)
         })();
+        let observer_cleanup = statistics
+            .take()
+            .map(postgres::StatisticsControl::cancel)
+            .transpose();
+        let execution = match (execution, observer_cleanup) {
+            (result, Ok(_)) => result,
+            (Ok(_), Err(error)) => Err(error),
+            (Err(error), Err(cleanup)) => {
+                Err(format!("{error}; statistics observer cleanup: {cleanup}"))
+            }
+        };
         let cleanup = postgres::cleanup(url, &case.schema);
         return match (execution, cleanup) {
             (Ok(report), Ok(())) => Ok(report),
@@ -1402,6 +1457,7 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
         },
         server.as_ref().map(|s| s.endpoint().clone()),
         || aerostore::retention(&shared),
+        None,
     )?;
     let drain_started = Instant::now();
     let service_stats = match &mut server {
@@ -1501,7 +1557,7 @@ fn parse() -> Result<Option<Config>, String> {
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         if arg == "--help" {
-            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--maintenance-mode batch|sweep --projection-batch-size 4 --housekeeping-batch-size 32 --max-maintenance-batches 4096 (calibrated only; terminal empty transaction counts toward cap)\n--rolling-cycle-messages 0 --rolling-retention-seconds 0 (calibrated sweep only; opt-in rate-dependent lifecycle stress)\n--expiry-index all-active|housekeeping (native fixture only; PostgreSQL already has a partial expiry index)\n--expiry-publication hashed|ordered --expiry-index-origin 1700000000000000000 --expiry-index-width 1000000000 (native expiry publication; fixed time window, no automatic rotation)\n--due-index hashed|ordered --due-index-origin 1700000000000000000 --due-index-width 1000000000 (native due publication buckets; explicit event-time units)\n--retry-diagnostics off|on (on requires retry-diagnostics build feature; bounded failed-attempt evidence)\n--pg-write-mode buffered|immediate --rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
+            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--maintenance-mode batch|sweep --projection-batch-size 4 --housekeeping-batch-size 32 --max-maintenance-batches 4096 (calibrated only; terminal empty transaction counts toward cap)\n--rolling-cycle-messages 0 --rolling-retention-seconds 0 (calibrated sweep only; opt-in rate-dependent lifecycle stress)\n--expiry-index all-active|housekeeping (native fixture only; PostgreSQL already has a partial expiry index)\n--expiry-publication hashed|ordered --expiry-index-origin 1700000000000000000 --expiry-index-width 1000000000 (native expiry publication; fixed time window, no automatic rotation)\n--due-index hashed|ordered --due-index-origin 1700000000000000000 --due-index-width 1000000000 (native due publication buckets; explicit event-time units)\n--retry-diagnostics off|on (on requires retry-diagnostics build feature; bounded failed-attempt evidence)\n--pg-write-mode buffered|immediate --pg-analyze-after-seconds 0 (0=initial only; positive=one additional owned-table ANALYZE during sustained fixed arrivals)\n--rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
             return Ok(None);
         }
         if arg == "--bench" || arg == "--noplot" {
@@ -1629,6 +1685,11 @@ fn parse() -> Result<Option<Config>, String> {
                     _ => return Err("invalid PostgreSQL write mode".into()),
                 }
             }
+            "--pg-analyze-after-seconds" => {
+                config.pg_analyze_after_seconds = value
+                    .parse()
+                    .map_err(|_| "invalid PostgreSQL ANALYZE delay")?;
+            }
             "--workers" => config.workers = value.parse().map_err(|_| "invalid workers")?,
             "--families" => config.families = value.parse().map_err(|_| "invalid families")?,
             "--seconds" => config.seconds = value.parse().map_err(|_| "invalid seconds")?,
@@ -1677,6 +1738,10 @@ fn parse() -> Result<Option<Config>, String> {
                 || config.remote_setup == config.remote_final))
         || config.due_index_width == 0
         || config.expiry_index_width == 0
+        || (config.pg_analyze_after_seconds > 0
+            && (config.mode != "sustained"
+                || config.arrival_rate == 0
+                || config.pg_analyze_after_seconds >= config.seconds))
         || !(1..=32).contains(&config.workers)
         || !(1..=1024).contains(&config.families)
         || !["legacy", "lifecycle", "fleet", "calibrated"].contains(&config.workload.as_str())

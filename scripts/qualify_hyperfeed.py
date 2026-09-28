@@ -68,8 +68,10 @@ DUE_INDEX_DEFAULTS = {"due_index_policy": "hashed", "due_index_origin": 1_700_00
 EXPIRY_PUBLICATION_DEFAULTS = {"expiry_publication_policy": "hashed",
                                "expiry_index_origin": 1_700_000_000_000_000_000,
                                "expiry_index_width": 1_000_000_000}
+POSTGRES_STATISTICS_DEFAULTS = {"pg_analyze_after_seconds": 0}
 EXPERIMENT_DEFAULTS = {"expiry_index_policy": "all-active", "retry_diagnostics": False,
-                       **DUE_INDEX_DEFAULTS, **EXPIRY_PUBLICATION_DEFAULTS}
+                       **DUE_INDEX_DEFAULTS, **EXPIRY_PUBLICATION_DEFAULTS,
+                       **POSTGRES_STATISTICS_DEFAULTS}
 EFFECT_FIELDS = ("created_views", "updated_views", "outputs", "claimed_events", "cancelled_events", "rescheduled_events", "expired_records", "expired_families")
 OUTCOME_FIELDS = EFFECT_FIELDS + ("missing_family", "allocation_deferred", "ignored_stale", "duplicate_messages")
 
@@ -887,6 +889,85 @@ def retry_trace_errors(trace: object, enabled: bool) -> list[str]:
     return errors
 
 
+def postgres_statistics_report_errors(run: dict, config: dict) -> list[str]:
+    """Bind the requested statistics treatment to observed execution, not a flag.
+
+    Historical reports without this option retain their initial-only meaning.
+    A modern explicit option, even zero, requires the corresponding metadata.
+    Runtime ANALYZE is a timed experiment; it cannot complete after admission or
+    be silently replaced by an automatic statistics update.
+    """
+    delay = config_value(config, "pg_analyze_after_seconds")
+    seconds = config.get("seconds")
+    rate = config.get("arrival_rate")
+    if (type(delay) is not int or delay < 0 or delay >= 3600
+            or (delay and (type(seconds) is not int or not delay < seconds <= 3600
+                          or type(rate) is not int or rate <= 0))):
+        return ["invalid PostgreSQL statistics schedule"]
+    reported = "postgres_statistics" in run or "pg_analyze_after_seconds" in config
+    if not reported and delay == 0:
+        return []
+    stats = run.get("postgres_statistics")
+    if not isinstance(stats, dict):
+        return ["missing PostgreSQL statistics treatment metadata"]
+    pg = config.get("engine") == "postgres"
+    policy = "not_applicable" if not pg else "initial_and_scheduled" if delay else "initial_only"
+    expected = {"format": "postgres-statistics-v1", "requested_after_seconds": delay,
+                "effective_policy": policy, "initial_analyze_executed": pg}
+    errors = []
+    if any(type(stats.get(field)) is not type(value) or stats.get(field) != value
+           for field, value in expected.items()):
+        errors.append("PostgreSQL statistics policy differs from configuration")
+    if not (pg and delay):
+        if "runtime_analyze" not in stats or stats["runtime_analyze"] is not None:
+            errors.append("unexpected runtime PostgreSQL statistics treatment")
+        return errors
+    action = stats.get("runtime_analyze")
+    if not isinstance(action, dict):
+        return errors + ["missing scheduled ANALYZE evidence"]
+    if (action.get("status") != "succeeded" or action.get("command_succeeded") is not True
+            or "error" not in action or action["error"] is not None):
+        errors.append("scheduled ANALYZE did not succeed")
+    if type(action.get("requested_after_seconds")) is not int or action["requested_after_seconds"] != delay:
+        errors.append("scheduled ANALYZE delay differs from configuration")
+    clocks = ("admission_started_ns", "admission_finished_ns", "scheduled_ns", "dispatched_ns", "finished_ns")
+    start = run.get("admission_started_ns")
+    if (type(start) is not int or start <= 0
+            or any(type(action.get(field)) is not int or action[field] <= 0 for field in clocks)):
+        errors.append("scheduled ANALYZE lacks valid monotonic timestamps")
+    else:
+        end = start + seconds * 1_000_000_000
+        if (action["admission_started_ns"] != start or action["admission_finished_ns"] != end
+                or action["scheduled_ns"] != start + delay * 1_000_000_000
+                or not action["scheduled_ns"] <= action["dispatched_ns"] <= action["finished_ns"] < end
+                or action["dispatched_ns"] - action["scheduled_ns"] > 1_000_000_000):
+            errors.append("scheduled ANALYZE ran outside its declared admission schedule")
+    if (type(action.get("maximum_dispatch_lateness_ns")) is not int
+            or action["maximum_dispatch_lateness_ns"] != 1_000_000_000):
+        errors.append("scheduled ANALYZE dispatch tolerance differs from contract")
+    for field, upper in (("backend_pid", 2**31), ("schema_oid", 2**32), ("relation_oid", 2**32)):
+        if type(action.get(field)) is not int or not 0 < action[field] < upper:
+            errors.append(f"scheduled ANALYZE lacks a valid {field}")
+    for name in ("before", "after"):
+        sample = action.get(name)
+        if not isinstance(sample, dict):
+            errors.append("scheduled ANALYZE lacks before/after statistics observations")
+            continue
+        if (any(type(sample.get(field)) is not int or not 0 <= sample[field] < 2**63
+                for field in ("analyze_count", "autoanalyze_count", "n_mod_since_analyze"))
+                or any(field not in sample or (sample[field] is not None and type(sample[field]) is not str)
+                       for field in ("last_analyze", "last_autoanalyze"))
+                or sample.get("counters_may_lag") is not True):
+            errors.append("invalid PostgreSQL statistics observation")
+        observed = sample.get("observed_ns")
+        boundary = action.get("dispatched_ns" if name == "before" else "finished_ns")
+        if (type(observed) is not int or observed <= 0 or type(boundary) is not int
+                or (name == "before" and observed > boundary)
+                or (name == "after" and observed < boundary)):
+            errors.append("PostgreSQL statistics observation is outside its command boundary")
+    return errors
+
+
 def experiment_report_errors(run: dict, config: dict) -> list[str]:
     policy, enabled = config_value(config, "expiry_index_policy"), config_value(config, "retry_diagnostics")
     due = {field: config_value(config, field) for field in DUE_INDEX_DEFAULTS}
@@ -896,7 +977,7 @@ def experiment_report_errors(run: dict, config: dict) -> list[str]:
         return ["invalid due-index publication configuration"]
     if policy not in {"all-active", "housekeeping"} or type(enabled) is not bool:
         return ["invalid expiry/diagnostic experiment configuration"]
-    errors = []
+    errors = postgres_statistics_report_errors(run, config)
     modern = "worker_retry_diagnostics" in run
     due_reported = any(field in run or field in config for field in DUE_INDEX_DEFAULTS)
     if due_reported or due != DUE_INDEX_DEFAULTS:
@@ -1381,6 +1462,8 @@ def main(argv=None) -> int:
     parser.add_argument("--cpu-budget", type=int, default=len(os.sched_getaffinity(0)))
     parser.add_argument("--shm-mib", type=int, default=256)
     parser.add_argument("--pg-write-mode", choices=["buffered", "immediate"], default="buffered")
+    parser.add_argument("--pg-analyze-after-seconds", type=int, default=0,
+                        help="one additional owned-table ANALYZE during admission; 0 keeps initial-only analysis; recorded but inapplicable on native engines")
     parser.add_argument("--rpc-delay-us", type=int, default=0)
     parser.add_argument("--evidence", choices=["full", "metrics"], default="metrics")
     parser.add_argument("--correctness-report", type=Path)
@@ -1389,6 +1472,8 @@ def main(argv=None) -> int:
     parser.add_argument("--minimum-drain-fraction", type=float, default=0.95)
     parser.add_argument("--outcome-tolerance", type=float, default=0.10)
     args = parser.parse_args(arguments)
+    if not 0 <= args.pg_analyze_after_seconds < args.seconds:
+        parser.error("PostgreSQL ANALYZE delay must be zero or positive and strictly less than --seconds")
     if not -(2**63) <= args.due_index_origin < 2**63 or not 1 <= args.due_index_width < 2**64:
         parser.error("due index origin must fit i64 and width must be a positive u64")
     if not -(2**63) <= args.expiry_index_origin < 2**63 or not 1 <= args.expiry_index_width < 2**64:
@@ -1497,6 +1582,7 @@ def main(argv=None) -> int:
                           "families": args.families, "hot_percent": args.hot_percent, "seed": seed,
                           "arrival_rate": rate, "seconds": args.seconds, "workers": workers,
                           "pg_write_mode": args.pg_write_mode, "rpc_delay_us": args.rpc_delay_us,
+                          "pg_analyze_after_seconds": args.pg_analyze_after_seconds,
                           "global_time_predicates": False, "shm_mib": args.shm_mib,
                           "max_backlog": args.max_backlog, "max_messages": args.max_messages,
                           "message_interval_us": 0, "expiry_index_policy": args.expiry_index_policy,
@@ -1507,7 +1593,7 @@ def main(argv=None) -> int:
                                   housekeeping_interval_seconds=args.housekeeping_interval_seconds,
                                   **{field: getattr(args, field) for field in CALIBRATED_DEFAULTS})
                 command = [str(binary), "--mode", "sustained", "--output", str(directory / "report.json")]
-                for field in ("engine", "workload", "evidence", "families", "hot_percent", "seed", "arrival_rate", "seconds", "workers", "pg_write_mode", "rpc_delay_us"):
+                for field in ("engine", "workload", "evidence", "families", "hot_percent", "seed", "arrival_rate", "seconds", "workers", "pg_write_mode", "pg_analyze_after_seconds", "rpc_delay_us"):
                     command += ["--" + field.replace("_", "-"), str(config[field])]
                 command += ["--max-backlog", str(args.max_backlog), "--max-messages", str(args.max_messages), "--shm-mib", str(args.shm_mib)]
                 if args.workload == "calibrated":

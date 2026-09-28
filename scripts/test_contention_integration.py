@@ -50,6 +50,49 @@ class ContentionIntegrationTests(unittest.TestCase):
         self.assertEqual(len(report["runs"]), 1)
         return report["runs"][0]
 
+    def test_statistics_schedule_is_explicitly_inapplicable_on_native(self):
+        run = self.successful("native-statistics-policy", "--seconds", "2",
+                              "--pg-analyze-after-seconds", "1")
+        self.assertEqual(run["postgres_statistics"], {
+            "format": "postgres-statistics-v1", "requested_after_seconds": 1,
+            "effective_policy": "not_applicable", "initial_analyze_executed": False,
+            "runtime_analyze": None})
+
+    def test_statistics_schedule_rejects_unreachable_or_ambiguous_deadlines(self):
+        for number, flags in enumerate((
+                ["--pg-analyze-after-seconds", "1"],
+                ["--pg-analyze-after-seconds", "-1"],
+                ["--seconds", "2", "--pg-analyze-after-seconds", "1", "--arrival-rate", "0"],
+                ["--seconds", "2", "--pg-analyze-after-seconds", "1", "--mode", "all"])):
+            receipt, report = self.run_case(f"statistics-invalid-{number}", *flags)
+            self.assertNotEqual(receipt["exit_code"], 0)
+            self.assertIs(report["passed"], False)
+            self.assertEqual(report["stage"], "configuration")
+
+    @unittest.skipUnless(os.environ.get("AEROSTORE_CONTENTION_PG_URL"), "requires disposable PostgreSQL")
+    def test_postgres_statistics_action_is_measured_and_bound_in_both_evidence_modes(self):
+        url = os.environ["AEROSTORE_CONTENTION_PG_URL"]
+        for evidence, delay in (("full", 0), ("full", 1), ("metrics", 1)):
+            receipt, report = self.run_case(f"pg-statistics-{evidence}-{delay}",
+                "--engine", "postgres", "--pg-url", url, "--seconds", "3",
+                "--arrival-rate", "16", "--evidence", evidence,
+                "--pg-analyze-after-seconds", str(delay))
+            self.assertEqual(receipt["exit_code"], 0, report)
+            run = report["runs"][0]
+            self.assertTrue(run["passed"])
+            self.assertEqual(gate.postgres_statistics_report_errors(run, report["config"]), [])
+            stats = run["postgres_statistics"]
+            if delay:
+                saved = json.loads((Path(run["evidence_directory"]) / "postgres-statistics.json").read_text())
+                self.assertEqual(saved, stats)
+                action = stats["runtime_analyze"]
+                self.assertEqual(action["status"], "succeeded")
+                self.assertGreaterEqual(action["dispatched_ns"], run["admission_started_ns"] + 1_000_000_000)
+                self.assertLessEqual(action["finished_ns"], run["admission_started_ns"] + 3_000_000_000)
+            else:
+                self.assertIsNone(stats["runtime_analyze"])
+            self.assertEqual(run["correctness_history_verified"], evidence == "full")
+
     def test_one_arrival_waits_for_full_admission_interval_and_metrics_omit_history(self):
         run = self.successful("one-arrival")
         self.assertEqual(run["offered_messages"], 1)

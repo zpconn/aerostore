@@ -201,6 +201,15 @@ A subsequent [query dependency capture optimization](docs/hyperfeed_capture_pref
 
 The optional [rolling lifecycle workload](docs/hyperfeed_rolling.md) starts empty and repeatedly creates flights, grows forks, processes arrivals, expires history, and reuses retired families. Its [first investigation](docs/hyperfeed_rolling_findings.md) exposed housekeeping retry exhaustion in the central service. The subsequent [expiry-range experiment](docs/hyperfeed_expiry_range.md) tests narrower publication dependencies, with native phantom/conflict regressions, exact correctness companions, and retained failures. The [resumed experiments](docs/hyperfeed_expiry_resume.md) completed another ordered-expiry full/metrics pair and an overflow control, while preserving both VM interruptions. A separate PostgreSQL control completed after an early statistics update, exposing a baseline issue that must be handled before comparing capacity. The ordered policy remains optional and has a fixed time window; these experiments do not establish the 10× capacity target. The [resource review](docs/hyperfeed_capacity_resources.md) records the remaining limits before testing the historical 100–300-worker deployments.
 
+The [statistics and higher-load checkpoint](docs/hyperfeed_statistics.md) makes
+that PostgreSQL treatment a tested benchmark option. Fresh full-history and
+measurement runs pass for both engines at 256 inputs/second and for the service
+at 512 inputs/second. PostgreSQL exhausts foreground retries at the higher rate
+despite a successful statistics refresh; the checkpoint preserves that failure
+and investigates its query plans and serialization conflicts. These small,
+accelerated-maintenance runs remain diagnostic evidence, with capacity gates
+closed.
+
 ## Project layout
 
 | Path | Contents |

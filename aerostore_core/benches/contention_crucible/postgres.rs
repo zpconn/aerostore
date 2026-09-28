@@ -1,5 +1,8 @@
 //! Query-driven PostgreSQL adapter: SERIALIZABLE without predeclared writes or prelocks.
 use std::collections::BTreeMap;
+use std::path::Path;
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
+use std::thread::JoinHandle;
 use std::time::Duration;
 
 use ::postgres::{Client, Config, NoTls, Row, Statement};
@@ -34,6 +37,326 @@ const OWNERSHIP_MARKER: &str = "aerostore contention-crucible disposable schema 
 const COLUMNS: &str = "id, active, kind, family, pedigree, callsign, tail, origin, destination, \
     scheduled, event_time, due, latitude, longitude, altitude, ground_speed, status, revision, \
     source, parent, sequence";
+
+pub const MAX_ANALYZE_DISPATCH_LATENESS_NS: u64 = 1_000_000_000;
+
+/// Public treatment identity is present even when the PostgreSQL-only option is
+/// carried through a matched native configuration.
+pub fn statistics_metadata(after_seconds: u64, postgres: bool) -> serde_json::Value {
+    serde_json::json!({
+        "format":"postgres-statistics-v1", "requested_after_seconds":after_seconds,
+        "effective_policy":if !postgres {"not_applicable"} else if after_seconds == 0 {"initial_only"} else {"initial_and_scheduled"},
+        "initial_analyze_executed":postgres, "runtime_analyze":null,
+    })
+}
+
+fn monotonic_ns() -> u64 {
+    let mut time = libc::timespec {
+        tv_sec: 0,
+        tv_nsec: 0,
+    };
+    assert_eq!(
+        unsafe { libc::clock_gettime(libc::CLOCK_MONOTONIC, &mut time) },
+        0
+    );
+    (time.tv_sec as u64) * 1_000_000_000 + time.tv_nsec as u64
+}
+
+fn statistics_file(path: &Path, value: &serde_json::Value) -> Result<(), String> {
+    let temporary = path.with_extension("tmp");
+    std::fs::write(
+        &temporary,
+        serde_json::to_vec_pretty(value).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| e.to_string())?;
+    std::fs::rename(temporary, path).map_err(|e| e.to_string())
+}
+
+fn owned_relation(client: &mut Client, schema: &str) -> Result<(u32, u32, i32), String> {
+    schema_name(schema)?;
+    let row = client
+        .query_opt(
+            "SELECT n.oid AS schema_oid,c.oid AS relation_oid,pg_backend_pid() AS backend_pid, \
+         obj_description(n.oid,'pg_namespace') AS marker \
+         FROM pg_namespace n JOIN pg_class c ON c.relnamespace=n.oid \
+         WHERE n.nspname=$1 AND c.relname='records' AND c.relkind='r'",
+            &[&schema],
+        )
+        .map_err(pg_error)?
+        .ok_or("owned records relation is missing")?;
+    let marker: Option<String> = row.try_get("marker").map_err(pg_error)?;
+    if marker.as_deref() != Some(OWNERSHIP_MARKER) {
+        return Err("refusing ANALYZE: missing contention-crucible ownership marker".into());
+    }
+    let schema_oid: u32 = row.try_get("schema_oid").map_err(pg_error)?;
+    let relation_oid: u32 = row.try_get("relation_oid").map_err(pg_error)?;
+    let backend_pid: i32 = row.try_get("backend_pid").map_err(pg_error)?;
+    if schema_oid == 0 || relation_oid == 0 || backend_pid <= 0 {
+        return Err("invalid owned relation/backend identity".into());
+    }
+    Ok((schema_oid, relation_oid, backend_pid))
+}
+
+fn statistics_sample(client: &mut Client, relation_oid: u32) -> Result<serde_json::Value, String> {
+    client
+        .batch_execute("SELECT pg_stat_clear_snapshot()")
+        .map_err(pg_error)?;
+    let row = client
+        .query_one(
+            "SELECT analyze_count,autoanalyze_count,n_mod_since_analyze, \
+         last_analyze::text,last_autoanalyze::text FROM pg_stat_all_tables WHERE relid=$1",
+            &[&relation_oid],
+        )
+        .map_err(pg_error)?;
+    let mut value = serde_json::Map::new();
+    for field in ["analyze_count", "autoanalyze_count", "n_mod_since_analyze"] {
+        let count: i64 = row.try_get(field).map_err(pg_error)?;
+        if count < 0 {
+            return Err(format!("negative PostgreSQL statistics counter {field}"));
+        }
+        value.insert(field.into(), count.into());
+    }
+    for field in ["last_analyze", "last_autoanalyze"] {
+        value.insert(
+            field.into(),
+            serde_json::json!(row.try_get::<_, Option<String>>(field).map_err(pg_error)?),
+        );
+    }
+    value.insert("observed_ns".into(), monotonic_ns().into());
+    value.insert("counters_may_lag".into(), true.into());
+    Ok(value.into())
+}
+
+enum StatisticsRequest {
+    Schedule { start: u64, end: u64 },
+    Cancel,
+}
+
+/// Dedicated, preconnected observer. It never blocks the coordinator's receipt
+/// consumption while ANALYZE runs. Every exit joins it before schema cleanup.
+pub struct StatisticsControl {
+    requests: Sender<StatisticsRequest>,
+    cancellation: ::postgres::CancelToken,
+    thread: Option<JoinHandle<Result<serde_json::Value, String>>>,
+    result: Option<Result<serde_json::Value, String>>,
+    scheduled: bool,
+}
+
+impl StatisticsControl {
+    pub fn prepare(
+        url: &str,
+        schema: &str,
+        after_seconds: u64,
+        path: &Path,
+    ) -> Result<Self, String> {
+        if after_seconds == 0 {
+            return Err("scheduled ANALYZE requires a positive delay".into());
+        }
+        let mut client = connect_client(url, false)?;
+        let identity = owned_relation(&mut client, schema)?;
+        let cancellation = client.cancel_token();
+        let mut report = statistics_metadata(after_seconds, true);
+        report["runtime_analyze"] = serde_json::json!({
+            "status":"prepared", "requested_after_seconds":after_seconds,
+            "admission_started_ns":null,"admission_finished_ns":null,
+            "scheduled_ns":null,"dispatched_ns":null,"finished_ns":null,
+            "maximum_dispatch_lateness_ns":MAX_ANALYZE_DISPATCH_LATENESS_NS,
+            "schema_oid":identity.0,"relation_oid":identity.1,"backend_pid":identity.2,
+            "command_succeeded":false,"before":null,"after":null,"error":null,
+        });
+        statistics_file(path, &report)?;
+        let schema = schema.to_owned();
+        let path = path.to_owned();
+        let (requests, receiver) = mpsc::channel();
+        let thread = std::thread::spawn(move || {
+            let outcome = scheduled_analyze(
+                &mut client,
+                &schema,
+                identity,
+                after_seconds,
+                &path,
+                &receiver,
+                &mut report,
+            );
+            if let Err(error) = &outcome {
+                if report["runtime_analyze"]["status"] != "cancelled" {
+                    report["runtime_analyze"]["status"] = "failed".into();
+                }
+                report["runtime_analyze"]["error"] = error.clone().into();
+            }
+            let persisted = statistics_file(&path, &report);
+            match (outcome, persisted) {
+                (Ok(()), Ok(())) => Ok(report),
+                (Err(error), Ok(())) => Err(error),
+                (Ok(()), Err(error)) => {
+                    Err(format!("statistics evidence persistence failed: {error}"))
+                }
+                (Err(error), Err(persist)) => Err(format!(
+                    "{error}; statistics evidence persistence failed: {persist}"
+                )),
+            }
+        });
+        Ok(Self {
+            requests,
+            cancellation,
+            thread: Some(thread),
+            result: None,
+            scheduled: false,
+        })
+    }
+
+    pub fn schedule(&mut self, start: u64, end: u64) -> Result<(), String> {
+        if self.scheduled {
+            return Err("statistics observer already scheduled".into());
+        }
+        self.requests
+            .send(StatisticsRequest::Schedule { start, end })
+            .map_err(|e| e.to_string())?;
+        self.scheduled = true;
+        Ok(())
+    }
+
+    fn join(&mut self) {
+        if let Some(thread) = self.thread.take() {
+            self.result = Some(
+                thread
+                    .join()
+                    .unwrap_or_else(|_| Err("statistics observer panicked".into())),
+            );
+        }
+    }
+
+    pub fn check(&mut self) -> Result<(), String> {
+        if self.thread.as_ref().is_some_and(JoinHandle::is_finished) {
+            self.join();
+        }
+        match &self.result {
+            Some(Err(error)) => Err(error.clone()),
+            _ => Ok(()),
+        }
+    }
+
+    pub fn finish(mut self) -> Result<serde_json::Value, String> {
+        if !self.scheduled {
+            return Err("statistics observer was never scheduled".into());
+        }
+        self.join();
+        self.result
+            .take()
+            .ok_or("statistics observer result missing")?
+    }
+
+    pub fn cancel(mut self) -> Result<(), String> {
+        self.stop();
+        // Cancellation caused by an existing workload error is expected; its
+        // receipt remains failed/cancelled and cannot qualify a successful run.
+        match self.result.take() {
+            Some(Ok(_)) => Ok(()),
+            Some(Err(error)) if error == "scheduled ANALYZE cancelled" => Ok(()),
+            Some(Err(error)) => Err(error),
+            None => Err("statistics observer result missing after cancellation".into()),
+        }
+    }
+
+    fn stop(&mut self) {
+        if self.thread.is_some() {
+            let _ = self.requests.send(StatisticsRequest::Cancel);
+            // Interrupt an already-running statement; the regular 60-second
+            // statement timeout remains the fallback if cancellation fails.
+            let _ = self.cancellation.cancel_query(NoTls);
+            self.join();
+        }
+    }
+}
+
+impl Drop for StatisticsControl {
+    fn drop(&mut self) {
+        self.stop();
+    }
+}
+
+fn scheduled_analyze(
+    client: &mut Client,
+    schema: &str,
+    identity: (u32, u32, i32),
+    after_seconds: u64,
+    path: &Path,
+    requests: &Receiver<StatisticsRequest>,
+    report: &mut serde_json::Value,
+) -> Result<(), String> {
+    let (start, end) = match requests.recv() {
+        Ok(StatisticsRequest::Schedule { start, end }) => (start, end),
+        _ => {
+            report["runtime_analyze"]["status"] = "cancelled".into();
+            return Err("scheduled ANALYZE cancelled".into());
+        }
+    };
+    let scheduled = after_seconds
+        .checked_mul(1_000_000_000)
+        .and_then(|delay| start.checked_add(delay))
+        .filter(|at| *at > start && *at < end)
+        .ok_or("scheduled ANALYZE must fall within admission")?;
+    report["runtime_analyze"]["status"] = "scheduled".into();
+    report["runtime_analyze"]["admission_started_ns"] = start.into();
+    report["runtime_analyze"]["admission_finished_ns"] = end.into();
+    report["runtime_analyze"]["scheduled_ns"] = scheduled.into();
+    statistics_file(path, report)?;
+    loop {
+        let now = monotonic_ns();
+        if now >= scheduled {
+            break;
+        }
+        match requests.recv_timeout(Duration::from_nanos(scheduled - now)) {
+            Err(RecvTimeoutError::Timeout) => {}
+            _ => {
+                report["runtime_analyze"]["status"] = "cancelled".into();
+                return Err("scheduled ANALYZE cancelled".into());
+            }
+        }
+    }
+    if requests.try_recv().is_ok() {
+        report["runtime_analyze"]["status"] = "cancelled".into();
+        return Err("scheduled ANALYZE cancelled".into());
+    }
+    // ANALYZE already takes this lock mode. Retain it across identity checks,
+    // ANALYZE, and commit so a dropped/replaced relation cannot qualify. It is
+    // compatible with the workload's normal RowExclusive write locks.
+    client
+        .batch_execute(&format!(
+        "BEGIN; SET LOCAL lock_timeout='1s'; LOCK TABLE {}.records IN SHARE UPDATE EXCLUSIVE MODE",
+        schema_name(schema)?))
+        .map_err(pg_error)?;
+    if owned_relation(client, schema)? != identity {
+        return Err("owned ANALYZE relation/backend identity changed".into());
+    }
+    report["runtime_analyze"]["before"] = statistics_sample(client, identity.1)?;
+    report["runtime_analyze"]["status"] = "running".into();
+    statistics_file(path, report)?;
+    let dispatched = monotonic_ns();
+    report["runtime_analyze"]["dispatched_ns"] = dispatched.into();
+    if dispatched < scheduled
+        || dispatched - scheduled > MAX_ANALYZE_DISPATCH_LATENESS_NS
+        || dispatched >= end
+    {
+        return Err("scheduled ANALYZE missed its dispatch window".into());
+    }
+    let command = client
+        .batch_execute(&format!("ANALYZE {}.records; COMMIT", schema_name(schema)?))
+        .map_err(pg_error);
+    let finished = monotonic_ns();
+    report["runtime_analyze"]["finished_ns"] = finished.into();
+    report["runtime_analyze"]["command_succeeded"] = command.is_ok().into();
+    command?;
+    if finished >= end {
+        return Err("scheduled ANALYZE completed outside admission".into());
+    }
+    report["runtime_analyze"]["after"] = statistics_sample(client, identity.1)?;
+    if owned_relation(client, schema)? != identity {
+        return Err("owned ANALYZE relation/backend identity changed".into());
+    }
+    report["runtime_analyze"]["status"] = "succeeded".into();
+    Ok(())
+}
 
 struct Queries {
     candidates: Statement,
@@ -289,6 +612,10 @@ pub fn configuration(url: &str, synchronous_commit: bool) -> Result<serde_json::
         "autovacuum_naptime",
         "autovacuum_vacuum_threshold",
         "autovacuum_vacuum_scale_factor",
+        "autovacuum_analyze_threshold",
+        "autovacuum_analyze_scale_factor",
+        "default_statistics_target",
+        "plan_cache_mode",
         "checkpoint_timeout",
         "max_wal_size",
         "track_counts",

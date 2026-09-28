@@ -19,6 +19,231 @@ use adapter::{Adapter, WriteMode};
 use existing_model::{DbError, Record, FLIGHT, POSITION, SCHEDULED};
 use storage::{Query, Store};
 
+fn monotonic_ns() -> u64 {
+    let mut time = libc::timespec {
+        tv_sec: 0,
+        tv_nsec: 0,
+    };
+    assert_eq!(
+        unsafe { libc::clock_gettime(libc::CLOCK_MONOTONIC, &mut time) },
+        0
+    );
+    time.tv_sec as u64 * 1_000_000_000 + time.tv_nsec as u64
+}
+
+#[test]
+fn statistics_policy_preserves_initial_only_default_and_native_noop_identity() {
+    let initial = adapter::statistics_metadata(0, true);
+    assert_eq!(initial["effective_policy"], "initial_only");
+    assert_eq!(initial["initial_analyze_executed"], true);
+    assert!(initial["runtime_analyze"].is_null());
+    let native = adapter::statistics_metadata(5, false);
+    assert_eq!(native["effective_policy"], "not_applicable");
+    assert_eq!(native["requested_after_seconds"], 5);
+    assert_eq!(native["initial_analyze_executed"], false);
+    assert!(native["runtime_analyze"].is_null());
+}
+
+#[test]
+#[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
+fn timed_statistics_records_owned_identity_and_preserves_business_rows() {
+    let seed = [Record {
+        id: 0,
+        active: true,
+        kind: FLIGHT,
+        ..Record::default()
+    }];
+    with_records("timed_statistics", &seed, |url, schema| {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("statistics.json");
+        let mut control = adapter::StatisticsControl::prepare(url, schema, 1, &path).unwrap();
+        let start = monotonic_ns();
+        control.schedule(start, start + 5_000_000_000).unwrap();
+        assert!(control
+            .schedule(start, start + 5_000_000_000)
+            .unwrap_err()
+            .contains("already scheduled"));
+        // The dedicated statistics connection neither owns nor changes this
+        // normal SERIALIZABLE prepared statement transaction.
+        let mut writer = Adapter::connect_with_mode(url, schema, WriteMode::Buffered).unwrap();
+        writer.begin(&[]).unwrap();
+        let mut row = writer.read(0).unwrap();
+        row.revision = 7;
+        writer.write(row).unwrap();
+        writer.commit().unwrap();
+        let report = control.finish().unwrap();
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&std::fs::read(path).unwrap()).unwrap(),
+            report
+        );
+        let action = &report["runtime_analyze"];
+        assert_eq!(action["status"], "succeeded");
+        assert_eq!(action["command_succeeded"], true);
+        assert!(action["error"].is_null());
+        assert_eq!(action["scheduled_ns"], start + 1_000_000_000);
+        assert!(action["dispatched_ns"].as_u64().unwrap() >= start + 1_000_000_000);
+        assert!(action["dispatched_ns"].as_u64().unwrap() <= start + 2_000_000_000);
+        assert!(action["finished_ns"].as_u64().unwrap() < start + 5_000_000_000);
+        for field in ["schema_oid", "relation_oid", "backend_pid"] {
+            assert!(action[field].as_u64().unwrap() > 0);
+        }
+        for when in ["before", "after"] {
+            for field in ["analyze_count", "autoanalyze_count", "n_mod_since_analyze"] {
+                assert!(action[when][field].as_i64().unwrap() >= 0);
+            }
+            assert_eq!(action[when]["counters_may_lag"], true);
+        }
+        assert_eq!(adapter::snapshot(url, schema).unwrap(), vec![row]);
+    });
+}
+
+#[test]
+#[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
+fn timed_statistics_rejects_missed_dispatch_and_retains_failure_receipt() {
+    with_records("statistics_late", &[], |url, schema| {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("statistics.json");
+        let mut control = adapter::StatisticsControl::prepare(url, schema, 1, &path).unwrap();
+        let now = monotonic_ns();
+        control
+            .schedule(now - 3_000_000_000, now + 3_000_000_000)
+            .unwrap();
+        assert!(control.finish().unwrap_err().contains("dispatch window"));
+        let report: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        assert_eq!(report["runtime_analyze"]["status"], "failed");
+        assert_eq!(report["runtime_analyze"]["command_succeeded"], false);
+        assert!(report["runtime_analyze"]["finished_ns"].is_null());
+    });
+}
+
+#[test]
+#[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
+fn timed_statistics_cancellation_joins_without_waiting_for_timer() {
+    with_records("statistics_cancel", &[], |url, schema| {
+        let directory = tempfile::tempdir().unwrap();
+        for scheduled in [false, true] {
+            let path = directory
+                .path()
+                .join(format!("statistics-{scheduled}.json"));
+            let mut control = adapter::StatisticsControl::prepare(url, schema, 30, &path).unwrap();
+            let start = monotonic_ns();
+            if scheduled {
+                control.schedule(start, start + 60_000_000_000).unwrap();
+            }
+            control.cancel().unwrap();
+            assert!(monotonic_ns() - start < 5_000_000_000);
+            let report: serde_json::Value =
+                serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+            assert_eq!(report["runtime_analyze"]["status"], "cancelled");
+            assert_eq!(report["runtime_analyze"]["command_succeeded"], false);
+            assert!(report["runtime_analyze"]["dispatched_ns"].is_null());
+        }
+    });
+}
+
+#[test]
+#[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
+fn timed_statistics_rechecks_ownership_at_dispatch() {
+    with_records("statistics_marker", &[], |url, schema| {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("statistics.json");
+        let mut control = adapter::StatisticsControl::prepare(url, schema, 1, &path).unwrap();
+        let mut client = postgres::Client::connect(url, postgres::NoTls).unwrap();
+        let marker: String = client
+            .query_one(
+                "SELECT obj_description(oid,'pg_namespace') FROM pg_namespace WHERE nspname=$1",
+                &[&schema],
+            )
+            .unwrap()
+            .get(0);
+        client
+            .batch_execute(&format!("COMMENT ON SCHEMA {schema} IS NULL"))
+            .unwrap();
+        let now = monotonic_ns();
+        control.schedule(now, now + 5_000_000_000).unwrap();
+        let outcome = control.finish();
+        // Restore our own marker for the fixture's normal guarded cleanup.
+        client
+            .batch_execute(&format!("COMMENT ON SCHEMA {schema} IS '{marker}'"))
+            .unwrap();
+        assert!(outcome.unwrap_err().contains("ownership marker"));
+        let report: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        assert_eq!(report["runtime_analyze"]["status"], "failed");
+        assert_eq!(report["runtime_analyze"]["command_succeeded"], false);
+    });
+}
+
+#[test]
+#[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
+fn timed_statistics_rejects_replaced_relation_and_terminated_backend() {
+    for terminate in [false, true] {
+        with_records(
+            if terminate {
+                "statistics_terminated"
+            } else {
+                "statistics_replaced"
+            },
+            &[],
+            |url, schema| {
+                let directory = tempfile::tempdir().unwrap();
+                let path = directory.path().join("statistics.json");
+                let mut control =
+                    adapter::StatisticsControl::prepare(url, schema, 1, &path).unwrap();
+                let prepared: serde_json::Value =
+                    serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+                let mut client = postgres::Client::connect(url, postgres::NoTls).unwrap();
+                if terminate {
+                    let pid = prepared["runtime_analyze"]["backend_pid"].as_i64().unwrap() as i32;
+                    assert!(client
+                        .query_one("SELECT pg_terminate_backend($1)", &[&pid])
+                        .unwrap()
+                        .get::<_, bool>(0));
+                } else {
+                    client.batch_execute(&format!(
+                        "ALTER TABLE {schema}.records RENAME TO replaced_records; \
+                         CREATE TABLE {schema}.records (LIKE {schema}.replaced_records INCLUDING ALL)"
+                    )).unwrap();
+                }
+                let start = monotonic_ns();
+                control.schedule(start, start + 5_000_000_000).unwrap();
+                let error = control.finish().unwrap_err();
+                if !terminate {
+                    assert!(error.contains("identity changed"), "{error}");
+                }
+                let failed: serde_json::Value =
+                    serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+                assert_eq!(failed["runtime_analyze"]["status"], "failed");
+                assert_eq!(failed["runtime_analyze"]["command_succeeded"], false);
+                assert_eq!(
+                    failed["runtime_analyze"]["relation_oid"],
+                    prepared["runtime_analyze"]["relation_oid"]
+                );
+            },
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
+fn timed_statistics_requires_scheduled_action_strictly_inside_admission() {
+    with_records("statistics_invalid_schedule", &[], |url, schema| {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("statistics.json");
+        let control = adapter::StatisticsControl::prepare(url, schema, 1, &path).unwrap();
+        assert!(control.finish().unwrap_err().contains("never scheduled"));
+        let mut control = adapter::StatisticsControl::prepare(url, schema, 1, &path).unwrap();
+        let start = monotonic_ns();
+        control.schedule(start, start + 1_000_000_000).unwrap();
+        assert!(control.finish().unwrap_err().contains("within admission"));
+        let failed: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        assert_eq!(failed["runtime_analyze"]["status"], "failed");
+        assert_eq!(failed["runtime_analyze"]["command_succeeded"], false);
+    });
+}
+
 #[test]
 #[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
 fn serializable_queries_discover_writes_without_predeclaring_them() {
