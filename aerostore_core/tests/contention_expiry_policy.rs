@@ -22,13 +22,17 @@ mod native;
 mod storage;
 
 use aerostore_core::{IndexValue, OccError};
-use fixture::{ExpiryIndexPolicy, Shared};
+use fixture::{DueIndexPolicy, ExpiryIndexPolicy, ExpiryPublicationPolicy, Shared};
 use model::{DbError, Record, DEDUP, FLIGHT, OUTBOX, POSITION, SCHEDULED};
 use storage::{Query, Store};
 
 const POLICIES: [ExpiryIndexPolicy; 2] = [
     ExpiryIndexPolicy::AllActive,
     ExpiryIndexPolicy::Housekeeping,
+];
+const PUBLICATION_POLICIES: [ExpiryPublicationPolicy; 2] = [
+    ExpiryPublicationPolicy::Hashed,
+    ExpiryPublicationPolicy::Ordered,
 ];
 
 fn rows() -> Vec<Record> {
@@ -60,6 +64,30 @@ fn fixture(policy: ExpiryIndexPolicy, rows: &[Record]) -> (tempfile::TempDir, Sh
     let shared =
         Shared::create_with_policy(&directory.path().join("arena"), 16 << 20, rows, policy)
             .unwrap();
+    (directory, shared)
+}
+
+fn publication_fixture(
+    eligibility: ExpiryIndexPolicy,
+    publication: ExpiryPublicationPolicy,
+    origin: i64,
+    width: u64,
+    rows: &[Record],
+) -> (tempfile::TempDir, Shared) {
+    let directory = tempfile::tempdir().unwrap();
+    let shared = Shared::create_with_publication_policies(
+        &directory.path().join("arena"),
+        16 << 20,
+        rows,
+        eligibility,
+        DueIndexPolicy::Hashed,
+        fixture::default_due_index_origin(),
+        fixture::default_due_index_width(),
+        publication,
+        origin,
+        width,
+    )
+    .unwrap();
     (directory, shared)
 }
 
@@ -567,4 +595,398 @@ fn due_attachment_parameters_cannot_select_a_different_persisted_policy() {
         !invalid_path.exists(),
         "validate policy before allocating a mapping"
     );
+}
+
+#[test]
+fn expiry_publication_preserves_complete_results_across_kinds_cutoffs_and_extremes() {
+    let initial = rows();
+    for eligibility in POLICIES {
+        for publication in PUBLICATION_POLICIES {
+            for (origin, width) in [(0, 1), (-100, 7), (i64::MIN, u64::MAX), (i64::MAX - 7, 3)] {
+                let (_directory, shared) =
+                    publication_fixture(eligibility, publication, origin, width, &initial);
+                for global_time in [false, true] {
+                    let mut db = native::Adapter::new(&shared, global_time);
+                    db.begin(&[]).unwrap();
+                    for before in [i64::MIN, i64::MIN + 1, 9, 10, 11, i64::MAX] {
+                        for query in [
+                            Query::GlobalExpired { before },
+                            Query::Expired { family: 3, before },
+                            Query::Expired { family: 9, before },
+                            Query::Expired {
+                                family: 999,
+                                before,
+                            },
+                        ] {
+                            assert_eq!(db.query(&query).unwrap(), matching(&initial, &query),
+                                "{eligibility:?}/{publication:?} origin={origin} width={width} {query:?}");
+                        }
+                    }
+                    db.commit().unwrap();
+                }
+                let expected = match publication {
+                    ExpiryPublicationPolicy::Hashed => {
+                        aerostore_core::IndexPublicationPolicy::Hashed
+                    }
+                    ExpiryPublicationPolicy::Ordered => {
+                        aerostore_core::IndexPublicationPolicy::OrderedI64 { origin, width }
+                    }
+                };
+                for (number, index) in shared.indexes.iter().enumerate() {
+                    assert_eq!(
+                        index.publication_policy().unwrap(),
+                        if number == 4 {
+                            expected
+                        } else {
+                            aerostore_core::IndexPublicationPolicy::Hashed
+                        }
+                    );
+                }
+                let audit = shared.audit().unwrap();
+                assert_eq!(audit["expiry_publication_policy"], publication.name());
+                assert_eq!(audit["expiry_index_origin"], origin);
+                assert_eq!(audit["expiry_index_width"], width);
+            }
+        }
+    }
+}
+
+#[test]
+fn ordered_expiry_empty_capture_and_historical_query_survive_future_insert_and_move() {
+    let initial = vec![
+        Record {
+            id: 0,
+            active: true,
+            kind: POSITION,
+            event_time: 20,
+            ..Record::default()
+        },
+        Record {
+            id: 1,
+            active: false,
+            kind: DEDUP,
+            event_time: 30,
+            ..Record::default()
+        },
+    ];
+    let query = Query::GlobalExpired { before: 10 };
+    for eligibility in POLICIES {
+        for publication in PUBLICATION_POLICIES {
+            let (_directory, shared) =
+                publication_fixture(eligibility, publication, 0, 1, &initial);
+            let mut captured = native::Adapter::new(&shared, true);
+            let mut historical = native::Adapter::new(&shared, true);
+            captured.begin(&[]).unwrap();
+            historical.begin(&[]).unwrap();
+            assert!(captured.query(&query).unwrap().is_empty());
+            write_committed(
+                &shared,
+                Record {
+                    event_time: 21,
+                    ..initial[0]
+                },
+            );
+            write_committed(
+                &shared,
+                Record {
+                    active: true,
+                    ..initial[1]
+                },
+            );
+            if publication == ExpiryPublicationPolicy::Ordered {
+                assert!(historical.query(&query).unwrap().is_empty());
+                historical.commit().unwrap();
+                captured.commit().unwrap();
+            } else {
+                assert_eq!(historical.query(&query), Err(DbError::Conflict));
+                historical.abort().unwrap();
+                assert_eq!(captured.commit(), Err(DbError::Conflict));
+            }
+            shared.audit().unwrap();
+        }
+    }
+}
+
+#[test]
+fn expiry_insert_delete_and_cutoff_moves_invalidate_captured_complete_queries() {
+    for eligibility in POLICIES {
+        for publication in PUBLICATION_POLICIES {
+            for (label, active, old_time, new_active, new_time) in [
+                ("insert", false, 9, true, 9),
+                ("delete", true, 9, false, 9),
+                ("move in", true, 10, true, 9),
+                ("move out", true, 9, true, 10),
+            ] {
+                let initial = vec![Record {
+                    id: 0,
+                    active,
+                    kind: POSITION,
+                    event_time: old_time,
+                    ..Record::default()
+                }];
+                let query = Query::GlobalExpired { before: 10 };
+                let (_directory, shared) =
+                    publication_fixture(eligibility, publication, 0, 1, &initial);
+                let mut captured = native::Adapter::new(&shared, true);
+                let mut historical = native::Adapter::new(&shared, true);
+                captured.begin(&[]).unwrap();
+                historical.begin(&[]).unwrap();
+                assert_eq!(captured.query(&query).unwrap(), matching(&initial, &query));
+                let changed = Record {
+                    active: new_active,
+                    event_time: new_time,
+                    ..initial[0]
+                };
+                write_committed(&shared, changed);
+                assert_eq!(
+                    captured.commit(),
+                    Err(DbError::Conflict),
+                    "{publication:?} {label}"
+                );
+                match historical.query(&query) {
+                    Ok(found) => {
+                        assert_eq!(found, matching(&initial, &query), "historical {label}")
+                    }
+                    Err(error) => assert_eq!(error, DbError::Conflict),
+                }
+                historical.abort().unwrap();
+                let mut fresh = native::Adapter::new(&shared, true);
+                fresh.begin(&[]).unwrap();
+                assert_eq!(fresh.query(&query).unwrap(), matching(&[changed], &query));
+                fresh.commit().unwrap();
+                shared.audit().unwrap();
+            }
+        }
+    }
+}
+
+#[test]
+fn expiry_own_writes_rollback_preserves_complete_overlay_and_predicate_dependencies() {
+    let initial = vec![
+        Record {
+            id: 0,
+            kind: POSITION,
+            event_time: 9,
+            ..Record::default()
+        },
+        Record {
+            id: 1,
+            kind: OUTBOX,
+            event_time: 8,
+            ..Record::default()
+        },
+    ];
+    let query = Query::GlobalExpired { before: 10 };
+    for eligibility in POLICIES {
+        for publication in PUBLICATION_POLICIES {
+            let (_directory, shared) =
+                publication_fixture(eligibility, publication, 0, 1, &initial);
+            let mut db = native::Adapter::new(&shared, true);
+            db.begin(&[]).unwrap();
+            let first = db.savepoint().unwrap();
+            assert!(db.query(&query).unwrap().is_empty());
+            let own = Record {
+                active: true,
+                ..initial[0]
+            };
+            db.write(own).unwrap();
+            assert_eq!(db.query(&query).unwrap(), vec![own]);
+            let second = db.savepoint().unwrap();
+            db.write(Record {
+                event_time: 10,
+                ..own
+            })
+            .unwrap();
+            assert!(db.query(&query).unwrap().is_empty());
+            db.rollback_to(second).unwrap();
+            assert_eq!(db.query(&query).unwrap(), vec![own]);
+            db.rollback_to(first).unwrap();
+            assert!(db.query(&query).unwrap().is_empty());
+            write_committed(
+                &shared,
+                Record {
+                    active: true,
+                    ..initial[1]
+                },
+            );
+            // Rolling back the writes must not forget an observed absence.
+            assert_eq!(db.commit(), Err(DbError::Conflict));
+            assert!(!shared.snapshot().unwrap()[0].active);
+            shared.audit().unwrap();
+        }
+    }
+}
+
+#[test]
+fn shifted_and_saturated_expiry_windows_preserve_results_and_conservative_conflicts() {
+    for (origin, width, before, future, changed) in [
+        (0, 1, 10, 20, 21),       // Distinct precise intervals.
+        (100, 1, 10, 20, 21),     // All keys underflow: safe, less precise.
+        (0, 1, 5000, 6000, 6001), // All keys in the saturated upper bucket.
+        (0, 10, 11, 12, 13),      // A strict boundary includes the whole interval.
+        (i64::MAX - 3, 1, i64::MAX - 2, i64::MAX, i64::MAX - 1),
+    ] {
+        let initial = vec![Record {
+            id: 0,
+            active: true,
+            kind: POSITION,
+            event_time: future,
+            ..Record::default()
+        }];
+        let (_directory, shared) = publication_fixture(
+            ExpiryIndexPolicy::AllActive,
+            ExpiryPublicationPolicy::Ordered,
+            origin,
+            width,
+            &initial,
+        );
+        let mut db = native::Adapter::new(&shared, true);
+        db.begin(&[]).unwrap();
+        let query = Query::GlobalExpired { before };
+        assert!(db.query(&query).unwrap().is_empty());
+        write_committed(
+            &shared,
+            Record {
+                event_time: changed,
+                ..initial[0]
+            },
+        );
+        if origin == 100 || before == 5000 || width == 10 {
+            assert_eq!(db.commit(), Err(DbError::Conflict));
+        } else {
+            db.commit().unwrap();
+        }
+        let mut fresh = native::Adapter::new(&shared, true);
+        fresh.begin(&[]).unwrap();
+        assert!(fresh.query(&query).unwrap().is_empty());
+        fresh.abort().unwrap();
+        shared.audit().unwrap();
+    }
+}
+
+#[test]
+fn expiry_publication_attachment_binds_policy_parameters_and_rejects_old_identity() {
+    let initial = rows();
+    for publication in PUBLICATION_POLICIES {
+        let (directory, shared) =
+            publication_fixture(ExpiryIndexPolicy::AllActive, publication, -100, 7, &initial);
+        let path = directory.path().join("arena");
+        let attachment = shared.attachment(&path);
+        let attached = Shared::attach(&attachment).unwrap();
+        assert_eq!(attached.expiry_publication_policy, publication);
+        assert_eq!(attached.expiry_index_origin, -100);
+        assert_eq!(attached.expiry_index_width, 7);
+        assert_eq!(attached.snapshot().unwrap(), initial);
+        let marker = shared.arena.boot_layout_offset();
+        let head = shared.arena.chunked_arena().head_offset();
+        for change in 0..4 {
+            let mut wrong = attachment.clone();
+            match change {
+                0 => {
+                    wrong.expiry_publication_policy =
+                        if publication == ExpiryPublicationPolicy::Ordered {
+                            ExpiryPublicationPolicy::Hashed
+                        } else {
+                            ExpiryPublicationPolicy::Ordered
+                        }
+                }
+                1 => wrong.expiry_index_origin += 1,
+                2 => wrong.expiry_index_width += 1,
+                3 => wrong.expiry_index_width = 0,
+                _ => unreachable!(),
+            }
+            assert!(Shared::attach(&wrong).is_err());
+        }
+        for name in [
+            "expiry_publication_policy",
+            "expiry_index_origin",
+            "expiry_index_width",
+        ] {
+            let mut json = serde_json::to_value(&attachment).unwrap();
+            json.as_object_mut().unwrap().remove(name);
+            let old: fixture::Attachment = serde_json::from_value(json).unwrap();
+            // Missing hashed policy is its documented default; the nondefault
+            // immutable origin/width still cannot be silently substituted.
+            assert_eq!(
+                Shared::attach(&old).is_ok(),
+                name == "expiry_publication_policy"
+                    && publication == ExpiryPublicationPolicy::Hashed
+            );
+        }
+        // Version occupies byte24 in the stable all-integer v2/v3 prefix.
+        // No worker is active and no reference to that marker is retained.
+        let version = unsafe {
+            shared
+                .arena
+                .mmap_base()
+                .as_ptr()
+                .add(marker as usize + 24)
+                .cast::<u32>()
+        };
+        unsafe {
+            version.write(2);
+        }
+        let error = Shared::attach(&attachment).err().unwrap();
+        assert!(error.contains("unsupported contention fixture identity"));
+        unsafe {
+            version.write(3);
+        }
+        assert_eq!(shared.arena.chunked_arena().head_offset(), head);
+        assert_eq!(shared.arena.boot_layout_offset(), marker);
+        assert_eq!(shared.snapshot().unwrap(), initial);
+        Shared::attach(&attachment).unwrap().audit().unwrap();
+    }
+    let directory = tempfile::tempdir().unwrap();
+    for publication in PUBLICATION_POLICIES {
+        let path = directory.path().join(publication.name());
+        assert!(Shared::create_with_publication_policies(
+            &path,
+            16 << 20,
+            &initial,
+            ExpiryIndexPolicy::AllActive,
+            DueIndexPolicy::Hashed,
+            fixture::default_due_index_origin(),
+            fixture::default_due_index_width(),
+            publication,
+            0,
+            0
+        )
+        .is_err());
+        assert!(!path.exists());
+    }
+}
+
+#[test]
+fn legacy_expiry_publication_attachment_defaults_preserve_hashed_fixture() {
+    let initial = rows();
+    let (directory, shared) = fixture(ExpiryIndexPolicy::AllActive, &initial);
+    assert_eq!(
+        shared.expiry_publication_policy,
+        ExpiryPublicationPolicy::Hashed
+    );
+    let mut json =
+        serde_json::to_value(shared.attachment(&directory.path().join("arena"))).unwrap();
+    for field in [
+        "expiry_publication_policy",
+        "expiry_index_origin",
+        "expiry_index_width",
+    ] {
+        json.as_object_mut().unwrap().remove(field);
+    }
+    let attachment: fixture::Attachment = serde_json::from_value(json).unwrap();
+    assert_eq!(
+        attachment.expiry_publication_policy,
+        ExpiryPublicationPolicy::Hashed
+    );
+    assert_eq!(
+        attachment.expiry_index_origin,
+        fixture::default_expiry_index_origin()
+    );
+    assert_eq!(
+        attachment.expiry_index_width,
+        fixture::default_expiry_index_width()
+    );
+    let reopened = Shared::attach(&attachment).unwrap();
+    assert_eq!(reopened.snapshot().unwrap(), initial);
+    reopened.audit().unwrap();
 }

@@ -46,6 +46,53 @@ class RemoteHandshakeTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,"differs from the client"):
             runner.validate_dispatch_setup({}, expected)
 
+    def test_expiry_publication_setup_defaults_exact_fields_and_malformed_values(self):
+        runner.validate_dispatch_setup({}, runner.EXPIRY_PUBLICATION_DEFAULTS)
+        runner.validate_dispatch_setup(runner.EXPIRY_PUBLICATION_DEFAULTS, runner.EXPIRY_PUBLICATION_DEFAULTS)
+        expected = dict(expiry_publication_policy="ordered", expiry_index_origin=-100, expiry_index_width=7)
+        runner.validate_dispatch_setup(expected, expected)
+        for field, value in (("expiry_publication_policy","hashed"), ("expiry_publication_policy","unknown"),
+                             ("expiry_publication_policy",[]), ("expiry_index_origin",-99),
+                             ("expiry_index_origin",True), ("expiry_index_origin",None),
+                             ("expiry_index_width",8), ("expiry_index_width",True),
+                             ("expiry_index_width",0), ("expiry_index_width",2**64)):
+            with self.subTest(field=field, value=value), self.assertRaisesRegex(RuntimeError,"differs from the client"):
+                runner.validate_dispatch_setup({**expected, field:value}, expected)
+        for base in (runner.EXPIRY_PUBLICATION_DEFAULTS, expected):
+            for field in runner.EXPIRY_PUBLICATION_DEFAULTS:
+                missing = dict(base); missing.pop(field)
+                with self.subTest(base=base, missing=field), self.assertRaisesRegex(RuntimeError,"differs from the client"):
+                    runner.validate_dispatch_setup(missing, base)
+        with self.assertRaisesRegex(RuntimeError,"differs from the client"):
+            runner.validate_dispatch_setup({}, expected)
+        for field, value in (("expiry_publication_policy","unknown"), ("expiry_index_origin",2**63),
+                             ("expiry_index_origin",-(2**63)-1), ("expiry_index_width",0),
+                             ("expiry_index_width",2**64)):
+            invalid = {**expected, field:value}
+            with self.subTest(field=field, value=value), self.assertRaisesRegex(RuntimeError,"differs from the client"):
+                runner.validate_dispatch_setup(invalid, invalid)
+
+    def test_expiry_publication_cli_bounds_and_defaults_reach_both_peers(self):
+        for origin, width in ((None,None), (-(2**63),1), (2**63-1,2**64-1)):
+            with self.subTest(origin=origin, width=width), tempfile.TemporaryDirectory() as directory:
+                binary = Path(directory) / "benchmark"; binary.write_bytes(b"never executed")
+                output = Path(directory) / "evidence"
+                expected = runner.EXPIRY_PUBLICATION_DEFAULTS if origin is None else dict(
+                    expiry_publication_policy="ordered", expiry_index_origin=origin, expiry_index_width=width)
+                flags = [] if origin is None else ["--expiry-publication","ordered",
+                    "--expiry-index-origin",str(origin),"--expiry-index-width",str(width)]
+                argv = ["run_remote_contention.py","--binary",str(binary),"--output-dir",str(output),*flags]
+                with patch.object(sys,"argv",argv), patch.object(runner.subprocess,"Popen",side_effect=RuntimeError("stop before execution")):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        self.assertEqual(runner.main(),1)
+                manifest = json.loads((output / "orchestration.json").read_text())
+                for command in (manifest["server_command"],manifest["client_command"]):
+                    for flag, value in (("--expiry-publication",expected["expiry_publication_policy"]),
+                                        ("--expiry-index-origin",str(expected["expiry_index_origin"])),
+                                        ("--expiry-index-width",str(expected["expiry_index_width"])),
+                                        ("--expiry-index","all-active"),("--due-index","hashed")):
+                        self.assertEqual(command[command.index(flag)+1],value)
+
     def test_maintenance_setup_defaults_and_every_option_must_match(self):
         runner.validate_dispatch_setup({}, runner.MAINTENANCE_DEFAULTS)
         expected = dict(maintenance_mode="sweep", projection_batch_size=8,
@@ -68,7 +115,8 @@ class RemoteHandshakeTests(unittest.TestCase):
                        "--housekeeping-batch-size": "64", "--max-maintenance-batches": "100",
                        "--rolling-cycle-messages": "64", "--rolling-retention-seconds": "20",
                        "--expiry-index":"housekeeping", "--retry-diagnostics":"on",
-                       "--due-index":"ordered", "--due-index-origin":"-100", "--due-index-width":"7"}
+                       "--due-index":"ordered", "--due-index-origin":"-100", "--due-index-width":"7",
+                       "--expiry-publication":"ordered", "--expiry-index-origin":"-200", "--expiry-index-width":"13"}
             argv = ["run_remote_contention.py", "--binary", str(binary), "--output-dir", str(output),
                     "--workload", "calibrated", "--families", "16", "--hot-percent", "0",
                     *[part for pair in options.items() for part in pair]]
@@ -124,6 +172,9 @@ class RemoteHandshakeTests(unittest.TestCase):
                         ["--maintenance-mode", "sweep", "--rolling-cycle-messages", "64", "--rolling-retention-seconds", "3601"],
                         ["--due-index-width", "0"], ["--due-index-width", str(2**64)],
                         ["--due-index-origin", str(2**63)], ["--due-index-origin", str(-(2**63)-1)],
+                        ["--expiry-publication", "unknown"], ["--expiry-index-width", "0"],
+                        ["--expiry-index-width", "-1"], ["--expiry-index-width", str(2**64)],
+                        ["--expiry-index-origin", str(2**63)], ["--expiry-index-origin", str(-(2**63)-1)],
                         ["--workload", "lifecycle", "--maintenance-mode", "sweep"],
                         ["--workload", "fleet", "--projection-batch-size", "8"],
                         ["--workload", "fleet", "--signature-pattern", "mixed"]):

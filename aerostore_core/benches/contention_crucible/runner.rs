@@ -51,6 +51,12 @@ struct Config {
     #[serde(default)]
     expiry_index_policy: fixture::ExpiryIndexPolicy,
     #[serde(default)]
+    expiry_publication_policy: fixture::ExpiryPublicationPolicy,
+    #[serde(default = "fixture::default_expiry_index_origin")]
+    expiry_index_origin: i64,
+    #[serde(default = "fixture::default_expiry_index_width")]
+    expiry_index_width: u64,
+    #[serde(default)]
     due_index_policy: fixture::DueIndexPolicy,
     #[serde(default = "fixture::default_due_index_origin")]
     due_index_origin: i64,
@@ -97,6 +103,9 @@ impl Default for Config {
             rolling_cycle_messages: 0,
             rolling_retention_seconds: 0,
             expiry_index_policy: fixture::ExpiryIndexPolicy::AllActive,
+            expiry_publication_policy: fixture::ExpiryPublicationPolicy::Hashed,
+            expiry_index_origin: fixture::default_expiry_index_origin(),
+            expiry_index_width: fixture::default_expiry_index_width(),
             due_index_policy: fixture::DueIndexPolicy::Hashed,
             due_index_origin: fixture::default_due_index_origin(),
             due_index_width: fixture::default_due_index_width(),
@@ -1030,6 +1039,12 @@ fn summarize(
         "retry_diagnostics_compiled":aerostore_core::retry_diagnostics::compiled(),
         "worker_retry_diagnostics":completed.worker_retry_diagnostics,
         "expiry_index_policy":case.config.expiry_index_policy,
+        "expiry_publication_policy":case.config.expiry_publication_policy,
+        "expiry_index_origin":case.config.expiry_index_origin,
+        "expiry_index_width":case.config.expiry_index_width,
+        "effective_expiry_publication_policy":if case.engine=="postgres" {"postgres"} else {case.config.expiry_publication_policy.name()},
+        "effective_expiry_index_origin":if case.engine!="postgres" && case.config.expiry_publication_policy==fixture::ExpiryPublicationPolicy::Ordered {Some(case.config.expiry_index_origin)} else {None},
+        "effective_expiry_index_width":if case.engine!="postgres" && case.config.expiry_publication_policy==fixture::ExpiryPublicationPolicy::Ordered {Some(case.config.expiry_index_width)} else {None},
         "due_index_policy":case.config.due_index_policy,
         "due_index_origin":case.config.due_index_origin,
         "due_index_width":case.config.due_index_width,
@@ -1203,6 +1218,9 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
             || setup.due_index_origin != case.config.due_index_origin
             || setup.due_index_width != case.config.due_index_width
             || setup.expiry_index_policy != case.config.expiry_index_policy
+            || setup.expiry_publication_policy != case.config.expiry_publication_policy
+            || setup.expiry_index_origin != case.config.expiry_index_origin
+            || setup.expiry_index_width != case.config.expiry_index_width
             || setup.retry_diagnostics != case.config.retry_diagnostics
             || setup.global_time_predicates != case.config.global_time_predicates
             || setup.initial_rows != initial
@@ -1305,7 +1323,7 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
         };
     }
     let path = case.directory.join("arena.mmap");
-    let shared = aerostore::Shared::create_with_policies(
+    let shared = aerostore::Shared::create_with_publication_policies(
         &path,
         case.config.shm_mib << 20,
         &initial,
@@ -1313,6 +1331,9 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
         case.config.due_index_policy,
         case.config.due_index_origin,
         case.config.due_index_width,
+        case.config.expiry_publication_policy,
+        case.config.expiry_index_origin,
+        case.config.expiry_index_width,
     )?;
     // Fork helpers before reader/vacuum threads exist in this coordinator.
     let writer =
@@ -1480,7 +1501,7 @@ fn parse() -> Result<Option<Config>, String> {
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         if arg == "--help" {
-            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--maintenance-mode batch|sweep --projection-batch-size 4 --housekeeping-batch-size 32 --max-maintenance-batches 4096 (calibrated only; terminal empty transaction counts toward cap)\n--rolling-cycle-messages 0 --rolling-retention-seconds 0 (calibrated sweep only; opt-in rate-dependent lifecycle stress)\n--expiry-index all-active|housekeeping (native fixture only; PostgreSQL already has a partial expiry index)\n--due-index hashed|ordered --due-index-origin 1700000000000000000 --due-index-width 1000000000 (native due publication buckets; explicit event-time units)\n--retry-diagnostics off|on (on requires retry-diagnostics build feature; bounded failed-attempt evidence)\n--pg-write-mode buffered|immediate --rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
+            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--maintenance-mode batch|sweep --projection-batch-size 4 --housekeeping-batch-size 32 --max-maintenance-batches 4096 (calibrated only; terminal empty transaction counts toward cap)\n--rolling-cycle-messages 0 --rolling-retention-seconds 0 (calibrated sweep only; opt-in rate-dependent lifecycle stress)\n--expiry-index all-active|housekeeping (native fixture only; PostgreSQL already has a partial expiry index)\n--expiry-publication hashed|ordered --expiry-index-origin 1700000000000000000 --expiry-index-width 1000000000 (native expiry publication; fixed time window, no automatic rotation)\n--due-index hashed|ordered --due-index-origin 1700000000000000000 --due-index-width 1000000000 (native due publication buckets; explicit event-time units)\n--retry-diagnostics off|on (on requires retry-diagnostics build feature; bounded failed-attempt evidence)\n--pg-write-mode buffered|immediate --rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
             return Ok(None);
         }
         if arg == "--bench" || arg == "--noplot" {
@@ -1545,6 +1566,21 @@ fn parse() -> Result<Option<Config>, String> {
                     "housekeeping" => fixture::ExpiryIndexPolicy::Housekeeping,
                     _ => return Err("invalid native expiry index policy".into()),
                 };
+            }
+            "--expiry-publication" => {
+                config.expiry_publication_policy = match value.as_str() {
+                    "hashed" => fixture::ExpiryPublicationPolicy::Hashed,
+                    "ordered" => fixture::ExpiryPublicationPolicy::Ordered,
+                    _ => return Err("expiry publication policy must be hashed or ordered".into()),
+                };
+            }
+            "--expiry-index-origin" => {
+                config.expiry_index_origin =
+                    value.parse().map_err(|_| "invalid expiry index origin")?
+            }
+            "--expiry-index-width" => {
+                config.expiry_index_width =
+                    value.parse().map_err(|_| "invalid expiry index width")?
             }
             "--due-index" => {
                 config.due_index_policy = match value.as_str() {
@@ -1640,6 +1676,7 @@ fn parse() -> Result<Option<Config>, String> {
                 || config.remote_final.is_none()
                 || config.remote_setup == config.remote_final))
         || config.due_index_width == 0
+        || config.expiry_index_width == 0
         || !(1..=32).contains(&config.workers)
         || !(1..=1024).contains(&config.families)
         || !["legacy", "lifecycle", "fleet", "calibrated"].contains(&config.workload.as_str())
@@ -1833,6 +1870,9 @@ pub fn run() -> Result<(), String> {
             config.due_index_policy,
             config.due_index_origin,
             config.due_index_width,
+            config.expiry_publication_policy,
+            config.expiry_index_origin,
+            config.expiry_index_width,
             config.retry_diagnostics,
         );
     }

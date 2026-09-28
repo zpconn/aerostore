@@ -74,6 +74,48 @@ pub fn default_due_index_width() -> u64 {
     1_000_000_000
 }
 
+pub fn default_expiry_index_origin() -> i64 {
+    default_due_index_origin()
+}
+
+pub fn default_expiry_index_width() -> u64 {
+    default_due_index_width()
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ExpiryPublicationPolicy {
+    #[default]
+    Hashed,
+    Ordered,
+}
+
+impl ExpiryPublicationPolicy {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Hashed => "hashed",
+            Self::Ordered => "ordered",
+        }
+    }
+
+    fn code(self) -> u32 {
+        match self {
+            Self::Hashed => 1,
+            Self::Ordered => 2,
+        }
+    }
+
+    fn publication_policy(self, origin: i64, width: u64) -> Result<IndexPublicationPolicy, String> {
+        if width == 0 {
+            return Err("expiry index width must be positive".into());
+        }
+        Ok(match self {
+            Self::Hashed => IndexPublicationPolicy::Hashed,
+            Self::Ordered => IndexPublicationPolicy::OrderedI64 { origin, width },
+        })
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum DueIndexPolicy {
@@ -125,14 +167,28 @@ struct FixtureIdentity {
     ring: u32,
     table_slots_offset: u32,
     table_slots_count: u32,
+    expiry_publication: u32,
+    expiry_index_origin: i64,
+    expiry_index_width: u64,
 }
+
+/// The v2/v3 prefix is stable. Reject an older marker before interpreting the
+/// larger v3 identity. No fixture upgrade or production recovery is attempted.
+#[repr(C)]
+struct FixtureIdentityPrefix {
+    magic: u64,
+    due_index_origin: i64,
+    due_index_width: u64,
+    version: u32,
+}
+
 impl FixtureIdentity {
     fn expected(attachment: &Attachment, table_slots_offset: u32) -> Result<Self, String> {
         Ok(Self {
             magic: 0x4846_4558_5049_5831, // HFEXPIX1
             due_index_origin: attachment.due_index_origin,
             due_index_width: attachment.due_index_width,
-            version: 2,
+            version: 3,
             expiry_policy: attachment.expiry_index_policy.code(),
             due_policy: attachment.due_index_policy.code(),
             table_header: attachment.table_header,
@@ -148,6 +204,9 @@ impl FixtureIdentity {
                 .len()
                 .try_into()
                 .map_err(|_| "too many contention table slots")?,
+            expiry_publication: attachment.expiry_publication_policy.code(),
+            expiry_index_origin: attachment.expiry_index_origin,
+            expiry_index_width: attachment.expiry_index_width,
         })
     }
 }
@@ -168,6 +227,12 @@ pub struct Attachment {
     pub due_index_origin: i64,
     #[serde(default = "default_due_index_width")]
     pub due_index_width: u64,
+    #[serde(default)]
+    pub expiry_publication_policy: ExpiryPublicationPolicy,
+    #[serde(default = "default_expiry_index_origin")]
+    pub expiry_index_origin: i64,
+    #[serde(default = "default_expiry_index_width")]
+    pub expiry_index_width: u64,
 }
 
 pub struct Shared {
@@ -179,6 +244,9 @@ pub struct Shared {
     pub due_index_policy: DueIndexPolicy,
     pub due_index_origin: i64,
     pub due_index_width: u64,
+    pub expiry_publication_policy: ExpiryPublicationPolicy,
+    pub expiry_index_origin: i64,
+    pub expiry_index_width: u64,
 }
 
 fn keys(row: &Record) -> [Option<i64>; 5] {
@@ -308,8 +376,36 @@ impl Shared {
         due_index_origin: i64,
         due_index_width: u64,
     ) -> Result<Self, String> {
+        Self::create_with_publication_policies(
+            path,
+            bytes,
+            records,
+            expiry_index_policy,
+            due_index_policy,
+            due_index_origin,
+            due_index_width,
+            ExpiryPublicationPolicy::Hashed,
+            default_expiry_index_origin(),
+            default_expiry_index_width(),
+        )
+    }
+
+    pub fn create_with_publication_policies(
+        path: &Path,
+        bytes: usize,
+        records: &[Record],
+        expiry_index_policy: ExpiryIndexPolicy,
+        due_index_policy: DueIndexPolicy,
+        due_index_origin: i64,
+        due_index_width: u64,
+        expiry_publication_policy: ExpiryPublicationPolicy,
+        expiry_index_origin: i64,
+        expiry_index_width: u64,
+    ) -> Result<Self, String> {
         let due_publication =
             due_index_policy.publication_policy(due_index_origin, due_index_width)?;
+        let expiry_publication = expiry_publication_policy
+            .publication_policy(expiry_index_origin, expiry_index_width)?;
         // Reject oversized fixture transactions before any rows can commit.
         let maximum = maximum_wal_record_bytes()?;
         if maximum > WAL_SLOT_BYTES {
@@ -334,6 +430,8 @@ impl Shared {
                     Arc::clone(&arena),
                     if number == 3 {
                         due_publication
+                    } else if number == 4 {
+                        expiry_publication
                     } else {
                         IndexPublicationPolicy::Hashed
                     },
@@ -367,6 +465,9 @@ impl Shared {
             due_index_policy,
             due_index_origin,
             due_index_width,
+            expiry_publication_policy,
+            expiry_index_origin,
+            expiry_index_width,
         };
         let attachment = shared.attachment(path);
         let slot_bytes = attachment
@@ -424,6 +525,9 @@ impl Shared {
             due_index_policy: self.due_index_policy,
             due_index_origin: self.due_index_origin,
             due_index_width: self.due_index_width,
+            expiry_publication_policy: self.expiry_publication_policy,
+            expiry_index_origin: self.expiry_index_origin,
+            expiry_index_width: self.expiry_index_width,
         }
     }
 
@@ -431,10 +535,22 @@ impl Shared {
         let due_publication = a
             .due_index_policy
             .publication_policy(a.due_index_origin, a.due_index_width)?;
+        let expiry_publication = a
+            .expiry_publication_policy
+            .publication_policy(a.expiry_index_origin, a.expiry_index_width)?;
         if a.indexes.len() != INDEX_NAMES.len() {
             return Err("invalid contention index attachment".into());
         }
         let arena = Arc::new(attach_existing_arena(&a.path, a.bytes)?);
+        let prefix = RelPtr::<FixtureIdentityPrefix>::from_offset(arena.boot_layout_offset());
+        let prefix = prefix
+            .as_ref(arena.mmap_base())
+            .ok_or("missing or invalid contention fixture identity")?;
+        if prefix.magic != 0x4846_4558_5049_5831 || prefix.version != 3 {
+            return Err(
+                "unsupported contention fixture identity; rebuild the quiescent fixture".into(),
+            );
+        }
         let identity = RelPtr::<FixtureIdentity>::from_offset(arena.boot_layout_offset());
         let identity = identity
             .as_ref(arena.mmap_base())
@@ -469,6 +585,8 @@ impl Shared {
         for (number, index) in indexes.iter().enumerate() {
             let expected = if number == 3 {
                 due_publication
+            } else if number == 4 {
+                expiry_publication
             } else {
                 IndexPublicationPolicy::Hashed
             };
@@ -494,6 +612,9 @@ impl Shared {
             due_index_policy: a.due_index_policy,
             due_index_origin: a.due_index_origin,
             due_index_width: a.due_index_width,
+            expiry_publication_policy: a.expiry_publication_policy,
+            expiry_index_origin: a.expiry_index_origin,
+            expiry_index_width: a.expiry_index_width,
         })
     }
 
@@ -517,6 +638,9 @@ impl Shared {
             let expected_policy = if number == 3 {
                 self.due_index_policy
                     .publication_policy(self.due_index_origin, self.due_index_width)?
+            } else if number == 4 {
+                self.expiry_publication_policy
+                    .publication_policy(self.expiry_index_origin, self.expiry_index_width)?
             } else {
                 IndexPublicationPolicy::Hashed
             };
@@ -559,7 +683,7 @@ impl Shared {
             audits.push(serde_json::json!({"index":INDEX_NAMES[number],"postings":actual.len(),"ownership":format!("{audit:?}"),"retired_postings":telemetry.retired_postings}));
         }
         Ok(
-            serde_json::json!({"indexes":audits,"arena_high_water_bytes":self.arena.chunked_arena().head_offset(),"expiry_index_policy":self.expiry_index_policy,"due_index_policy":self.due_index_policy,"due_index_origin":self.due_index_origin,"due_index_width":self.due_index_width}),
+            serde_json::json!({"indexes":audits,"arena_high_water_bytes":self.arena.chunked_arena().head_offset(),"expiry_index_policy":self.expiry_index_policy,"due_index_policy":self.due_index_policy,"due_index_origin":self.due_index_origin,"due_index_width":self.due_index_width,"expiry_publication_policy":self.expiry_publication_policy,"expiry_index_origin":self.expiry_index_origin,"expiry_index_width":self.expiry_index_width}),
         )
     }
 }

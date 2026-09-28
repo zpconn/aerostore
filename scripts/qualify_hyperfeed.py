@@ -65,7 +65,11 @@ ROLLING_DEFAULTS = {"rolling_cycle_messages": 0, "rolling_retention_seconds": 0}
 CALIBRATED_DEFAULTS = {**DISPATCH_DEFAULTS, **MAINTENANCE_DEFAULTS, **ROLLING_DEFAULTS}
 DUE_INDEX_DEFAULTS = {"due_index_policy": "hashed", "due_index_origin": 1_700_000_000_000_000_000,
                       "due_index_width": 1_000_000_000}
-EXPERIMENT_DEFAULTS = {"expiry_index_policy": "all-active", "retry_diagnostics": False, **DUE_INDEX_DEFAULTS}
+EXPIRY_PUBLICATION_DEFAULTS = {"expiry_publication_policy": "hashed",
+                               "expiry_index_origin": 1_700_000_000_000_000_000,
+                               "expiry_index_width": 1_000_000_000}
+EXPERIMENT_DEFAULTS = {"expiry_index_policy": "all-active", "retry_diagnostics": False,
+                       **DUE_INDEX_DEFAULTS, **EXPIRY_PUBLICATION_DEFAULTS}
 EFFECT_FIELDS = ("created_views", "updated_views", "outputs", "claimed_events", "cancelled_events", "rescheduled_events", "expired_records", "expired_families")
 OUTCOME_FIELDS = EFFECT_FIELDS + ("missing_family", "allocation_deferred", "ignored_stale", "duplicate_messages")
 
@@ -905,6 +909,22 @@ def experiment_report_errors(run: dict, config: dict) -> list[str]:
                      "effective_due_index_width": due["due_index_width"] if ordered else None}
         if any(type(run.get(field)) is not type(value) or run.get(field) != value for field, value in effective.items()):
             errors.append("reported effective due-index publication differs from engine configuration")
+    expiry = {field: config_value(config, field) for field in EXPIRY_PUBLICATION_DEFAULTS}
+    if (type(expiry["expiry_publication_policy"]) is not str or expiry["expiry_publication_policy"] not in {"hashed", "ordered"}
+            or type(expiry["expiry_index_origin"]) is not int or not -(2**63) <= expiry["expiry_index_origin"] < 2**63
+            or type(expiry["expiry_index_width"]) is not int or not 1 <= expiry["expiry_index_width"] < 2**64):
+        return errors + ["invalid expiry-index publication configuration"]
+    expected_expiry = "postgres" if config.get("engine") == "postgres" else expiry["expiry_publication_policy"]
+    effective_expiry = {"effective_expiry_publication_policy": expected_expiry,
+                        "effective_expiry_index_origin": expiry["expiry_index_origin"] if expected_expiry == "ordered" else None,
+                        "effective_expiry_index_width": expiry["expiry_index_width"] if expected_expiry == "ordered" else None}
+    expiry_reported = (any(field in run or field in config for field in EXPIRY_PUBLICATION_DEFAULTS)
+                       or any(field in run for field in effective_expiry))
+    if expiry_reported or expiry != EXPIRY_PUBLICATION_DEFAULTS:
+        if any(field not in run or type(run[field]) is not type(value) or run[field] != value for field, value in expiry.items()):
+            errors.append("reported expiry-index publication parameters differ from configuration")
+        if any(field not in run or type(run[field]) is not type(value) or run[field] != value for field, value in effective_expiry.items()):
+            errors.append("reported effective expiry-index publication differs from engine configuration")
     if run.get("expiry_index_policy", "all-active") != policy:
         errors.append("reported native expiry eligibility differs from configuration")
     expected_policy = "housekeeping" if config.get("engine") == "postgres" else policy
@@ -1341,6 +1361,9 @@ def main(argv=None) -> int:
     parser.add_argument("--rolling-retention-seconds", type=int, default=0,
                         help="calibrated only: synthetic retention horizon; requires an enabled rolling cycle")
     parser.add_argument("--expiry-index", dest="expiry_index_policy", choices=["all-active", "housekeeping"], default="all-active", help="native fixture eligibility; PostgreSQL already uses housekeeping-only eligibility")
+    parser.add_argument("--expiry-publication", dest="expiry_publication_policy", choices=["hashed", "ordered"], default="hashed", help="native expiry-index publication policy, separate from eligibility; PostgreSQL is unchanged")
+    parser.add_argument("--expiry-index-origin", type=int, default=EXPIRY_PUBLICATION_DEFAULTS["expiry_index_origin"], help="signed expiry event-time origin; default calibrated nanosecond epoch")
+    parser.add_argument("--expiry-index-width", type=int, default=EXPIRY_PUBLICATION_DEFAULTS["expiry_index_width"], help="positive expiry bucket width in event-time units; default one calibrated second")
     parser.add_argument("--due-index", dest="due_index_policy", choices=["hashed", "ordered"], default="hashed", help="native due-index publication policy; PostgreSQL is unchanged")
     parser.add_argument("--due-index-origin", type=int, default=DUE_INDEX_DEFAULTS["due_index_origin"], help="signed event-time origin; default calibrated nanosecond epoch")
     parser.add_argument("--due-index-width", type=int, default=DUE_INDEX_DEFAULTS["due_index_width"], help="positive bucket width in event-time units; default one calibrated second")
@@ -1368,6 +1391,8 @@ def main(argv=None) -> int:
     args = parser.parse_args(arguments)
     if not -(2**63) <= args.due_index_origin < 2**63 or not 1 <= args.due_index_width < 2**64:
         parser.error("due index origin must fit i64 and width must be a positive u64")
+    if not -(2**63) <= args.expiry_index_origin < 2**63 or not 1 <= args.expiry_index_width < 2**64:
+        parser.error("expiry index origin must fit i64 and width must be a positive u64")
     try:
         dispatch_config(vars(args))
         maintenance_config(vars(args))
@@ -1476,7 +1501,7 @@ def main(argv=None) -> int:
                           "max_backlog": args.max_backlog, "max_messages": args.max_messages,
                           "message_interval_us": 0, "expiry_index_policy": args.expiry_index_policy,
                           "retry_diagnostics": args.retry_diagnostics == "on",
-                          **{field: getattr(args, field) for field in DUE_INDEX_DEFAULTS}}
+                          **{field: getattr(args, field) for field in (*DUE_INDEX_DEFAULTS, *EXPIRY_PUBLICATION_DEFAULTS)}}
                 if args.workload == "calibrated":
                     config.update(projection_interval_seconds=args.projection_interval_seconds,
                                   housekeeping_interval_seconds=args.housekeeping_interval_seconds,
@@ -1490,7 +1515,10 @@ def main(argv=None) -> int:
                         command += ["--" + name.replace("_", "-"), str(config[name])]
                 command += ["--expiry-index", args.expiry_index_policy, "--retry-diagnostics", args.retry_diagnostics,
                             "--due-index", args.due_index_policy, "--due-index-origin", str(args.due_index_origin),
-                            "--due-index-width", str(args.due_index_width)]
+                            "--due-index-width", str(args.due_index_width),
+                            "--expiry-publication", args.expiry_publication_policy,
+                            "--expiry-index-origin", str(args.expiry_index_origin),
+                            "--expiry-index-width", str(args.expiry_index_width)]
                 public_command = command.copy()
                 if engine == "postgres":
                     command += ["--pg-url", secret]

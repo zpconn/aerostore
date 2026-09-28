@@ -11,6 +11,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 import qualify_hyperfeed as gate
 
@@ -1315,7 +1316,8 @@ class RetryDiagnosticGateTests(unittest.TestCase):
         self.assertEqual(gate.key(legacy["config"]), gate.key(explicit))
         for changed in ({"expiry_index_policy":"housekeeping"}, {"retry_diagnostics":True},
                         {"due_index_policy":"ordered"}, {"due_index_origin":-100},
-                        {"due_index_width":7}):
+                        {"due_index_width":7}, {"expiry_publication_policy":"ordered"},
+                        {"expiry_index_origin":-100}, {"expiry_index_width":7}):
             self.assertNotEqual(gate.key(explicit), gate.key({**explicit, **changed}))
             self.assertFalse(gate.assess_trial(legacy, POLICY, {gate.key({**explicit, **changed})})["correctness_companion_verified"])
 
@@ -1354,6 +1356,118 @@ class RetryDiagnosticGateTests(unittest.TestCase):
                     gate.main(["--binary","/missing/benchmark","--output",directory,
                                "--engines","aerostore","--slo-ms","100",*flags])
                 self.assertEqual(error.exception.code, 2)
+
+    def test_expiry_publication_requested_and_effective_metadata_are_exact(self):
+        for engine in ("aerostore", "service-unix", "service-tcp", "postgres"):
+            for publication in ("hashed", "ordered"):
+                config = dict(engine=engine, expiry_publication_policy=publication,
+                              expiry_index_origin=-100, expiry_index_width=7)
+                effective = "postgres" if engine == "postgres" else publication
+                run = {**config, "effective_expiry_publication_policy":effective,
+                       "effective_expiry_index_origin":-100 if effective == "ordered" else None,
+                       "effective_expiry_index_width":7 if effective == "ordered" else None}
+                self.assertEqual(gate.experiment_report_errors(run, config), [])
+                for field in (*gate.EXPIRY_PUBLICATION_DEFAULTS, "effective_expiry_publication_policy",
+                              "effective_expiry_index_origin", "effective_expiry_index_width"):
+                    with self.subTest(engine=engine, publication=publication, field=field):
+                        missing = copy.deepcopy(run); missing.pop(field)
+                        self.assertTrue(gate.experiment_report_errors(missing, config))
+                        self.assertTrue(gate.experiment_report_errors({**run, field:True}, config))
+                for field, value in (("expiry_publication_policy","unknown"),
+                                     ("expiry_index_origin",-99), ("expiry_index_width",8),
+                                     ("effective_expiry_publication_policy","unknown"),
+                                     ("effective_expiry_index_origin",101), ("effective_expiry_index_width",1)):
+                    self.assertTrue(gate.experiment_report_errors({**run, field:value}, config), (engine,publication,field))
+
+    def test_expiry_publication_legacy_defaults_and_erased_modern_metadata(self):
+        legacy = trial()
+        self.assertTrue(gate.assess_trial(legacy, POLICY)["execution_valid"])
+        self.assertEqual(gate.experiment_report_errors({}, {"engine":"postgres"}), [])
+        modern = copy.deepcopy(legacy)
+        modern["config"].update(gate.EXPIRY_PUBLICATION_DEFAULTS)
+        modern["report"]["config"].update(gate.EXPIRY_PUBLICATION_DEFAULTS)
+        # Explicit current configuration cannot masquerade as historical output.
+        self.assertFalse(gate.assess_trial(modern, POLICY)["execution_valid"])
+        run = modern["report"]["runs"][0]
+        run.update(**gate.EXPIRY_PUBLICATION_DEFAULTS, effective_expiry_publication_policy="hashed",
+                   effective_expiry_index_origin=None, effective_expiry_index_width=None)
+        self.assertTrue(gate.assess_trial(modern, POLICY)["execution_valid"])
+        # Effective-only metadata is also a modern report, even with legacy input.
+        for field in ("effective_expiry_publication_policy", "effective_expiry_index_origin",
+                      "effective_expiry_index_width"):
+            self.assertTrue(gate.experiment_report_errors({field:run[field]}, legacy["config"]))
+
+    def test_expiry_publication_config_numeric_bounds_and_types(self):
+        for origin, width in ((-(2**63),1), (2**63-1,2**64-1)):
+            config = dict(engine="aerostore", expiry_publication_policy="ordered",
+                          expiry_index_origin=origin, expiry_index_width=width)
+            run = {**config, "effective_expiry_publication_policy":"ordered",
+                   "effective_expiry_index_origin":origin, "effective_expiry_index_width":width}
+            self.assertEqual(gate.experiment_report_errors(run, config), [])
+        for field, value in (("expiry_publication_policy","unknown"), ("expiry_publication_policy",[]),
+                             ("expiry_index_origin",True), ("expiry_index_origin",1.0),
+                             ("expiry_index_origin",None), ("expiry_index_origin",2**63),
+                             ("expiry_index_origin",-(2**63)-1), ("expiry_index_width",True),
+                             ("expiry_index_width",0), ("expiry_index_width",-1),
+                             ("expiry_index_width",2**64), ("expiry_index_width","7")):
+            with self.subTest(field=field, value=value):
+                self.assertIn("invalid expiry-index publication configuration",
+                              gate.experiment_report_errors({}, {field:value}))
+
+    def test_expiry_publication_companions_and_report_config_tamper(self):
+        item = trial(evidence="metrics")
+        config = dict(expiry_publication_policy="ordered", expiry_index_origin=-100, expiry_index_width=7)
+        item["config"].update(config); item["report"]["config"].update(config)
+        item["report"]["runs"][0].update(**config, effective_expiry_publication_policy="ordered",
+                                        effective_expiry_index_origin=-100, effective_expiry_index_width=7)
+        self.assertTrue(gate.assess_trial(item, POLICY, {gate.key(item["config"])})["correctness_companion_verified"])
+        self.assertFalse(gate.assess_trial(item, POLICY)["history_verified"])
+        for field, value in (("expiry_publication_policy","hashed"), ("expiry_index_origin",-99),
+                             ("expiry_index_width",8)):
+            other = {**item["config"], field:value}
+            self.assertFalse(gate.assess_trial(item, POLICY, {gate.key(other)})["correctness_companion_verified"])
+            altered = copy.deepcopy(item); altered["report"]["config"][field] = value
+            self.assertFalse(gate.assess_trial(altered, POLICY, {gate.key(item["config"])})["execution_valid"])
+            altered = copy.deepcopy(item); altered["report"]["config"].pop(field)
+            self.assertFalse(gate.assess_trial(altered, POLICY, {gate.key(item["config"])})["execution_valid"])
+
+    def test_invalid_expiry_publication_cli_rejects_before_binary_resolution(self):
+        for flags in (["--expiry-publication","unknown"], ["--expiry-index-width","0"],
+                      ["--expiry-index-width","-1"], ["--expiry-index-width",str(2**64)],
+                      ["--expiry-index-origin",str(2**63)], ["--expiry-index-origin",str(-(2**63)-1)]):
+            with self.subTest(flags=flags), tempfile.TemporaryDirectory() as directory:
+                with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:
+                    gate.main(["--binary","/missing/benchmark","--output",directory,
+                               "--engines","aerostore","--slo-ms","100",*flags])
+                self.assertEqual(error.exception.code, 2)
+
+    def test_expiry_publication_cli_reaches_config_and_command_without_changing_other_selectors(self):
+        for values in (gate.EXPIRY_PUBLICATION_DEFAULTS,
+                       dict(expiry_publication_policy="ordered", expiry_index_origin=-(2**63), expiry_index_width=1),
+                       dict(expiry_publication_policy="ordered", expiry_index_origin=2**63-1, expiry_index_width=2**64-1)):
+            with self.subTest(values=values), tempfile.TemporaryDirectory() as directory:
+                binary = Path(directory) / "benchmark"; binary.write_bytes(b"never executed")
+                output = Path(directory) / "evidence"
+                flags = [] if values == gate.EXPIRY_PUBLICATION_DEFAULTS else [
+                    "--expiry-publication",values["expiry_publication_policy"],
+                    "--expiry-index-origin",str(values["expiry_index_origin"]),
+                    "--expiry-index-width",str(values["expiry_index_width"])]
+                with patch.object(gate, "snapshot_sources", return_value={"sha256":"source","files":{}}), \
+                     patch.object(gate, "host_info", return_value={}), \
+                     patch.object(gate.subprocess, "check_output", return_value="fixture metadata"), \
+                     patch.object(gate, "run_process", side_effect=RuntimeError("stop before execution")) as start:
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        self.assertEqual(gate.main(["--binary",str(binary),"--output",str(output),
+                            "--engines","aerostore","--rates","32","--workers","1","--seeds","11",
+                            "--slo-ms","100",*flags]), 1)
+                    start.assert_called_once()
+                cell = json.loads((output / "campaign.json").read_text())["trials"][0]
+                self.assertEqual({field:cell["config"][field] for field in values}, values)
+                for flag, value in (("--expiry-publication",values["expiry_publication_policy"]),
+                                    ("--expiry-index-origin",str(values["expiry_index_origin"])),
+                                    ("--expiry-index-width",str(values["expiry_index_width"])),
+                                    ("--expiry-index","all-active"), ("--due-index","hashed")):
+                    self.assertEqual(cell["command"][cell["command"].index(flag)+1], value)
 
     def test_successful_report_reconciles_failures_and_feature_support(self):
         item = trial(); item["config"].update(expiry_index_policy="housekeeping", retry_diagnostics=True)
