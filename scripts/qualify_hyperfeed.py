@@ -69,9 +69,10 @@ EXPIRY_PUBLICATION_DEFAULTS = {"expiry_publication_policy": "hashed",
                                "expiry_index_origin": 1_700_000_000_000_000_000,
                                "expiry_index_width": 1_000_000_000}
 POSTGRES_STATISTICS_DEFAULTS = {"pg_analyze_after_seconds": 0}
+POSTGRES_CANDIDATE_DEFAULTS = {"pg_candidate_query": "or"}
 EXPERIMENT_DEFAULTS = {"expiry_index_policy": "all-active", "retry_diagnostics": False,
                        **DUE_INDEX_DEFAULTS, **EXPIRY_PUBLICATION_DEFAULTS,
-                       **POSTGRES_STATISTICS_DEFAULTS}
+                       **POSTGRES_STATISTICS_DEFAULTS, **POSTGRES_CANDIDATE_DEFAULTS}
 EFFECT_FIELDS = ("created_views", "updated_views", "outputs", "claimed_events", "cancelled_events", "rescheduled_events", "expired_records", "expired_families")
 OUTCOME_FIELDS = EFFECT_FIELDS + ("missing_family", "allocation_deferred", "ignored_stale", "duplicate_messages")
 
@@ -889,6 +890,30 @@ def retry_trace_errors(trace: object, enabled: bool) -> list[str]:
     return errors
 
 
+def postgres_candidate_query_report_errors(run: dict, config: dict) -> list[str]:
+    """Require the selected candidate SQL treatment, including native no-ops.
+
+    Historical omission means the original OR predicate. A modern explicit
+    request requires matching metadata so removing the treatment cannot make a
+    split-query run eligible for an original-query correctness companion.
+    """
+    requested = config_value(config, "pg_candidate_query")
+    if type(requested) is not str or requested not in {"or", "split"}:
+        return ["invalid PostgreSQL candidate-query configuration"]
+    reported = "postgres_candidate_query" in run or "pg_candidate_query" in config
+    if not reported:
+        return []
+    metadata = run.get("postgres_candidate_query")
+    if not isinstance(metadata, dict):
+        return ["missing PostgreSQL candidate-query treatment metadata"]
+    expected = {"format": "postgres-candidate-query-v1", "requested": requested,
+                "effective": requested if config.get("engine") == "postgres" else "not_applicable"}
+    if any(type(metadata.get(field)) is not type(value) or metadata.get(field) != value
+           for field, value in expected.items()):
+        return ["PostgreSQL candidate-query treatment differs from configuration"]
+    return []
+
+
 def postgres_statistics_report_errors(run: dict, config: dict) -> list[str]:
     """Bind the requested statistics treatment to observed execution, not a flag.
 
@@ -977,7 +1002,8 @@ def experiment_report_errors(run: dict, config: dict) -> list[str]:
         return ["invalid due-index publication configuration"]
     if policy not in {"all-active", "housekeeping"} or type(enabled) is not bool:
         return ["invalid expiry/diagnostic experiment configuration"]
-    errors = postgres_statistics_report_errors(run, config)
+    errors = (postgres_statistics_report_errors(run, config)
+              + postgres_candidate_query_report_errors(run, config))
     modern = "worker_retry_diagnostics" in run
     due_reported = any(field in run or field in config for field in DUE_INDEX_DEFAULTS)
     if due_reported or due != DUE_INDEX_DEFAULTS:
@@ -1060,7 +1086,12 @@ def assess_trial(trial: dict, policy: dict, companion_keys: set[tuple] = frozens
         reasons.append("expected exactly one sustained run")
         return result
     run = runs[0]
-    reasons.extend(experiment_report_errors(run, config))
+    # An explicit default in the executable's report is also modern evidence;
+    # dropping the driver's optional field must not erase its receipt obligation.
+    experiment_config = config
+    if "pg_candidate_query" in actual and "pg_candidate_query" not in config:
+        experiment_config = {**config, "pg_candidate_query": config_value(config, "pg_candidate_query")}
+    reasons.extend(experiment_report_errors(run, experiment_config))
     if run.get("engine") != config.get("engine") or run.get("scenario") != "sustained-mixed":
         reasons.append("wrong engine or sustained scenario")
     if run.get("passed") is not True or run.get("execution_completed") is not True or run.get("error"):
@@ -1464,6 +1495,8 @@ def main(argv=None) -> int:
     parser.add_argument("--pg-write-mode", choices=["buffered", "immediate"], default="buffered")
     parser.add_argument("--pg-analyze-after-seconds", type=int, default=0,
                         help="one additional owned-table ANALYZE during admission; 0 keeps initial-only analysis; recorded but inapplicable on native engines")
+    parser.add_argument("--pg-candidate-query", choices=["or", "split"], default="or",
+                        help="PostgreSQL flight-candidate SQL shape; original OR or separate identity branches; recorded but inapplicable on native engines")
     parser.add_argument("--rpc-delay-us", type=int, default=0)
     parser.add_argument("--evidence", choices=["full", "metrics"], default="metrics")
     parser.add_argument("--correctness-report", type=Path)
@@ -1583,6 +1616,7 @@ def main(argv=None) -> int:
                           "arrival_rate": rate, "seconds": args.seconds, "workers": workers,
                           "pg_write_mode": args.pg_write_mode, "rpc_delay_us": args.rpc_delay_us,
                           "pg_analyze_after_seconds": args.pg_analyze_after_seconds,
+                          "pg_candidate_query": args.pg_candidate_query,
                           "global_time_predicates": False, "shm_mib": args.shm_mib,
                           "max_backlog": args.max_backlog, "max_messages": args.max_messages,
                           "message_interval_us": 0, "expiry_index_policy": args.expiry_index_policy,
@@ -1593,7 +1627,7 @@ def main(argv=None) -> int:
                                   housekeeping_interval_seconds=args.housekeeping_interval_seconds,
                                   **{field: getattr(args, field) for field in CALIBRATED_DEFAULTS})
                 command = [str(binary), "--mode", "sustained", "--output", str(directory / "report.json")]
-                for field in ("engine", "workload", "evidence", "families", "hot_percent", "seed", "arrival_rate", "seconds", "workers", "pg_write_mode", "pg_analyze_after_seconds", "rpc_delay_us"):
+                for field in ("engine", "workload", "evidence", "families", "hot_percent", "seed", "arrival_rate", "seconds", "workers", "pg_write_mode", "pg_analyze_after_seconds", "pg_candidate_query", "rpc_delay_us"):
                     command += ["--" + field.replace("_", "-"), str(config[field])]
                 command += ["--max-backlog", str(args.max_backlog), "--max-messages", str(args.max_messages), "--shm-mib", str(args.shm_mib)]
                 if args.workload == "calibrated":

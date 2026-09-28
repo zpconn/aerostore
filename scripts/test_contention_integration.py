@@ -58,6 +58,39 @@ class ContentionIntegrationTests(unittest.TestCase):
             "effective_policy": "not_applicable", "initial_analyze_executed": False,
             "runtime_analyze": None})
 
+    def test_candidate_query_is_explicitly_inapplicable_on_native_and_service(self):
+        for engine in ("aerostore", "service-unix"):
+            for query in ("or", "split"):
+                run = self.successful(f"candidate-query-{engine}-{query}",
+                    "--engine", engine, "--pg-candidate-query", query)
+                self.assertEqual(run["postgres_candidate_query"], {
+                    "format": "postgres-candidate-query-v1", "requested": query,
+                    "effective": "not_applicable"})
+
+    def test_candidate_query_rejects_unknown_shape(self):
+        receipt, report = self.run_case("candidate-query-invalid", "--pg-candidate-query", "union")
+        self.assertNotEqual(receipt["exit_code"], 0)
+        self.assertIs(report["passed"], False)
+        self.assertEqual(report["stage"], "configuration")
+
+    @unittest.skipUnless(os.environ.get("AEROSTORE_CONTENTION_PG_URL"), "requires disposable PostgreSQL")
+    def test_postgres_candidate_query_is_bound_in_both_evidence_modes(self):
+        url = os.environ["AEROSTORE_CONTENTION_PG_URL"]
+        for evidence in ("full", "metrics"):
+            for query in ("or", "split"):
+                receipt, report = self.run_case(f"pg-candidate-query-{evidence}-{query}",
+                    "--engine", "postgres", "--pg-url", url, "--arrival-rate", "16",
+                    "--evidence", evidence, "--pg-candidate-query", query)
+                self.assertEqual(receipt["exit_code"], 0, report)
+                run = report["runs"][0]
+                self.assertTrue(run["passed"])
+                self.assertEqual(report["config"]["pg_candidate_query"], query)
+                self.assertEqual(run["postgres_candidate_query"], {
+                    "format": "postgres-candidate-query-v1", "requested": query,
+                    "effective": query})
+                self.assertEqual(gate.postgres_candidate_query_report_errors(run, report["config"]), [])
+                self.assertEqual(run["correctness_history_verified"], evidence == "full")
+
     def test_statistics_schedule_rejects_unreachable_or_ambiguous_deadlines(self):
         for number, flags in enumerate((
                 ["--pg-analyze-after-seconds", "1"],

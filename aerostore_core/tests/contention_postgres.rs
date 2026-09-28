@@ -15,7 +15,7 @@ mod adapter;
 #[path = "../benches/contention_crucible/storage.rs"]
 mod storage;
 
-use adapter::{Adapter, WriteMode};
+use adapter::{Adapter, CandidateQuery, WriteMode};
 use existing_model::{DbError, Record, FLIGHT, POSITION, SCHEDULED};
 use storage::{Query, Store};
 
@@ -42,6 +42,21 @@ fn statistics_policy_preserves_initial_only_default_and_native_noop_identity() {
     assert_eq!(native["requested_after_seconds"], 5);
     assert_eq!(native["initial_analyze_executed"], false);
     assert!(native["runtime_analyze"].is_null());
+}
+
+#[test]
+fn candidate_query_defaults_and_effective_metadata_preserve_treatment_identity() {
+    assert_eq!(CandidateQuery::default(), CandidateQuery::Or);
+    for query in [CandidateQuery::Or, CandidateQuery::Split] {
+        let postgres = adapter::candidate_query_metadata(query, true);
+        let native = adapter::candidate_query_metadata(query, false);
+        assert_eq!(postgres["format"], "postgres-candidate-query-v1");
+        assert_eq!(postgres["requested"], serde_json::json!(query));
+        assert_eq!(postgres["effective"], serde_json::json!(query));
+        assert_eq!(native["requested"], serde_json::json!(query));
+        assert_eq!(native["effective"], "not_applicable");
+    }
+    assert!(serde_json::from_str::<CandidateQuery>("\"other\"").is_err());
 }
 
 #[test]
@@ -247,18 +262,35 @@ fn timed_statistics_requires_scheduled_action_strictly_inside_admission() {
 #[test]
 #[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
 fn serializable_queries_discover_writes_without_predeclaring_them() {
-    empty_predicate_race(WriteMode::Immediate);
+    for query in [CandidateQuery::Or, CandidateQuery::Split] {
+        empty_predicate_race(WriteMode::Immediate, query, false);
+    }
 }
 
 #[test]
 #[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
 fn buffered_empty_predicates_reject_competing_creation() {
-    empty_predicate_race(WriteMode::Buffered);
+    for query in [CandidateQuery::Or, CandidateQuery::Split] {
+        empty_predicate_race(WriteMode::Buffered, query, false);
+    }
 }
 
-fn empty_predicate_race(mode: WriteMode) {
+#[test]
+#[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
+fn tail_only_empty_predicates_reject_competing_creation_for_both_sql_forms() {
+    for mode in [WriteMode::Immediate, WriteMode::Buffered] {
+        for query in [CandidateQuery::Or, CandidateQuery::Split] {
+            empty_predicate_race(mode, query, true);
+        }
+    }
+}
+
+fn empty_predicate_race(mode: WriteMode, query: CandidateQuery, tail_only: bool) {
     let url = std::env::var("AEROSTORE_CONTENTION_PG_URL").expect("disposable PostgreSQL URL");
-    let schema = format!("contention_contract_{mode:?}_{}", std::process::id());
+    let schema = format!(
+        "contention_contract_{mode:?}_{query:?}_{tail_only}_{}",
+        std::process::id()
+    );
     let records = vec![
         Record {
             id: 0,
@@ -271,14 +303,16 @@ fn empty_predicate_race(mode: WriteMode) {
     ];
     adapter::initialize(&url, &schema, &records).unwrap();
     let result = std::panic::catch_unwind(|| {
-        let mut a = Adapter::connect_with_mode(&url, &schema, mode).unwrap();
-        let mut b = Adapter::connect_with_mode(&url, &schema, mode).unwrap();
+        let mut a =
+            Adapter::connect_with_candidate_query(&url, &schema, false, mode, query).unwrap();
+        let mut b =
+            Adapter::connect_with_candidate_query(&url, &schema, false, mode, query).unwrap();
         assert!(matches!(a.begin(&[0]), Err(DbError::Fatal(_))));
         a.begin(&[]).unwrap();
         b.begin(&[]).unwrap();
         let predicate = Query::Candidates {
-            callsign: 42,
-            tail: 0,
+            callsign: if tail_only { 99 } else { 42 },
+            tail: if tail_only { -7 } else { 0 },
             scheduled: 0,
             window: 1,
         };
@@ -289,6 +323,7 @@ fn empty_predicate_race(mode: WriteMode) {
             active: true,
             kind: FLIGHT,
             callsign: 42,
+            tail: if tail_only { -7 } else { 0 },
             ..Record::default()
         };
         a.write(create(0)).unwrap();
@@ -374,6 +409,12 @@ fn with_records(
 #[test]
 #[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
 fn buffered_overlay_merges_predicate_entries_exits_and_restores_savepoints() {
+    for query in [CandidateQuery::Or, CandidateQuery::Split] {
+        buffered_overlay_contract(query);
+    }
+}
+
+fn buffered_overlay_contract(query: CandidateQuery) {
     let seed = vec![
         // Distinct nonzero payload columns also detect a transposed batch array
         // while the transaction changes only the callsign.
@@ -423,7 +464,9 @@ fn buffered_overlay_merges_predicate_entries_exits_and_restores_savepoints() {
         },
     ];
     with_records("overlay", &seed, |url, schema| {
-        let mut db = Adapter::connect_with_mode(url, schema, WriteMode::Buffered).unwrap();
+        let mut db =
+            Adapter::connect_with_candidate_query(url, schema, false, WriteMode::Buffered, query)
+                .unwrap();
         db.begin(&[]).unwrap();
         // SQL query populates the snapshot cache; changing a row must supersede
         // that cache for point reads and for predicates it enters or leaves.
@@ -582,12 +625,16 @@ fn predicate_extremes_and_global_searches_match_both_modes() {
         ])
         .collect();
     with_records("extremes", &seed, |url, schema| {
-        for mode in [WriteMode::Immediate, WriteMode::Buffered] {
-            let mut db = Adapter::connect_with_mode(url, schema, mode).unwrap();
+        for (mode, query) in [WriteMode::Immediate, WriteMode::Buffered]
+            .into_iter()
+            .flat_map(|mode| [CandidateQuery::Or, CandidateQuery::Split].map(|query| (mode, query)))
+        {
+            let mut db =
+                Adapter::connect_with_candidate_query(url, schema, false, mode, query).unwrap();
             db.begin(&[]).unwrap();
             for scheduled in [i64::MIN, -1, 0, 1, i64::MAX] {
                 for window in [0, 1, i64::MAX, -1, i64::MIN] {
-                    for (callsign, tail) in [(42, 0), (99, 7), (99, 0)] {
+                    for (callsign, tail) in [(42, 0), (42, 7), (99, 7), (99, 0)] {
                         let q = Query::Candidates {
                             callsign,
                             tail,
@@ -596,7 +643,7 @@ fn predicate_extremes_and_global_searches_match_both_modes() {
                         };
                         let expected: Vec<_> =
                             seed.iter().copied().filter(|row| q.matches(row)).collect();
-                        assert_eq!(db.query(&q).unwrap(), expected, "{mode:?} {q:?}");
+                        assert_eq!(db.query(&q).unwrap(), expected, "{mode:?} {query:?} {q:?}");
                     }
                 }
             }
@@ -618,6 +665,138 @@ fn predicate_extremes_and_global_searches_match_both_modes() {
                 );
             }
             db.commit().unwrap();
+        }
+    });
+}
+
+#[test]
+#[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
+fn candidate_forms_preserve_identity_boundaries_uniqueness_and_global_order() {
+    // Deliberately interleave tail-only, dual, and callsign-only matches by id;
+    // each branch's own ordering is insufficient for the required global order.
+    let seed: Vec<_> = [
+        (true, FLIGHT, 99, -7, 0),
+        (true, FLIGHT, 42, -7, 0),
+        (true, FLIGHT, 42, 0, 0),
+        (false, FLIGHT, 42, -7, 0),
+        (true, POSITION, 42, -7, 0),
+        (true, FLIGHT, 42, -7, 2),
+        (true, FLIGHT, 0, 0, 0),
+        (true, FLIGHT, -42, 7, -1),
+        (true, FLIGHT, i64::MIN, i64::MAX, i64::MIN),
+        (true, FLIGHT, i64::MAX, i64::MIN, i64::MAX),
+    ]
+    .into_iter()
+    .enumerate()
+    .map(|(id, (active, kind, callsign, tail, scheduled))| Record {
+        id,
+        active,
+        kind,
+        callsign,
+        tail,
+        scheduled,
+        ..Record::default()
+    })
+    .collect();
+    with_records("candidate_identity", &seed, |url, schema| {
+        for mode in [WriteMode::Immediate, WriteMode::Buffered] {
+            for form in [CandidateQuery::Or, CandidateQuery::Split] {
+                let mut db =
+                    Adapter::connect_with_candidate_query(url, schema, false, mode, form).unwrap();
+                db.begin(&[]).unwrap();
+                for (callsign, tail) in [
+                    (42, -7),
+                    (42, 0),
+                    (0, 0),
+                    (-42, 7),
+                    (99, -7),
+                    (99, 0),
+                    (i64::MIN, i64::MAX),
+                    (i64::MAX, i64::MIN),
+                ] {
+                    for (scheduled, window) in [
+                        (0, 1),
+                        (-1, 0),
+                        (i64::MIN, 0),
+                        (i64::MAX, 0),
+                        (0, -1),
+                        (i64::MAX, i64::MIN),
+                    ] {
+                        let query = Query::Candidates {
+                            callsign,
+                            tail,
+                            scheduled,
+                            window,
+                        };
+                        let expected: Vec<_> = seed
+                            .iter()
+                            .copied()
+                            .filter(|row| query.matches(row))
+                            .collect();
+                        let actual = db.query(&query).unwrap();
+                        assert_eq!(actual, expected, "{form:?} {mode:?} {query:?}");
+                        assert!(actual.windows(2).all(|pair| pair[0].id < pair[1].id));
+                    }
+                }
+                db.abort().unwrap();
+            }
+        }
+    });
+}
+
+#[test]
+#[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
+fn candidate_branch_changes_and_nested_savepoints_preserve_visible_rows() {
+    let seed: Vec<_> = [(99, -7), (42, -7), (42, 0)]
+        .into_iter()
+        .enumerate()
+        .map(|(id, (callsign, tail))| Record {
+            id,
+            active: true,
+            kind: FLIGHT,
+            callsign,
+            tail,
+            ..Record::default()
+        })
+        .collect();
+    with_records("candidate_savepoints", &seed, |url, schema| {
+        let predicate = Query::Candidates {
+            callsign: 42,
+            tail: -7,
+            scheduled: 0,
+            window: 1,
+        };
+        for mode in [WriteMode::Immediate, WriteMode::Buffered] {
+            for form in [CandidateQuery::Or, CandidateQuery::Split] {
+                let mut db =
+                    Adapter::connect_with_candidate_query(url, schema, false, mode, form).unwrap();
+                db.begin(&[]).unwrap();
+                assert_eq!(db.query(&predicate).unwrap(), seed);
+                let outer = db.savepoint().unwrap();
+                let mut expected = seed.clone();
+                // Move a tail-only row into both branches, and a dual-match
+                // row into tail-only. Both must remain visible exactly once.
+                expected[0].callsign = 42;
+                expected[1].callsign = 99;
+                db.write(expected[0]).unwrap();
+                db.write(expected[1]).unwrap();
+                assert_eq!(db.query(&predicate).unwrap(), expected);
+                let inner = db.savepoint().unwrap();
+                let mut removed = expected[0];
+                removed.callsign = 99;
+                removed.tail = 0;
+                db.write(removed).unwrap();
+                let mut inactive = expected[2];
+                inactive.active = false;
+                db.write(inactive).unwrap();
+                assert_eq!(db.query(&predicate).unwrap(), vec![expected[1]]);
+                db.rollback_to(inner).unwrap();
+                assert_eq!(db.query(&predicate).unwrap(), expected);
+                db.rollback_to(outer).unwrap();
+                assert_eq!(db.query(&predicate).unwrap(), seed);
+                db.commit().unwrap();
+                assert_eq!(adapter::snapshot(url, schema).unwrap(), seed);
+            }
         }
     });
 }
@@ -753,6 +932,18 @@ fn diagnostics_report_actual_settings_plans_and_wal_drain() {
             let audit = adapter::query_plan_audit(url, schema).unwrap();
             assert_eq!(audit["plans"].as_object().unwrap().len(), 8);
             assert_eq!(audit["indexes"].as_array().unwrap().len(), 9);
+            assert_eq!(audit["postgres_candidate_query"]["effective"], "or");
+            assert_eq!(audit["prepared_generic_plans_measured"], false);
+            let split =
+                adapter::query_plan_audit_with_candidate_query(url, schema, CandidateQuery::Split)
+                    .unwrap();
+            assert_eq!(split["postgres_candidate_query"]["effective"], "split");
+            assert_eq!(split["plans"].as_object().unwrap().len(), 8);
+            assert!(split["plans"]["candidates"]["sql"]
+                .as_str()
+                .unwrap()
+                .contains("UNION ALL"));
+            assert_eq!(split["prepared_generic_plans_measured"], false);
             let retention = adapter::retention(url, schema).unwrap();
             assert!(retention["database_counters"]["deadlocks"].is_number());
             assert!(retention["cluster_wal_counters"]["wal_bytes"].is_number());

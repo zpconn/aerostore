@@ -25,6 +25,8 @@ pub struct Config {
     #[serde(default)]
     pub retry_diagnostics: bool,
     pub pg_write_mode: postgres::WriteMode,
+    #[serde(default)]
+    pub pg_candidate_query: postgres::CandidateQuery,
     pub max_backlog: u64,
     pub rpc_delay_us: u64,
     pub attachment: Option<aerostore::Attachment>,
@@ -969,13 +971,15 @@ fn worker_inner(config_path: &Path) -> Result<(), WorkerFailure> {
         }
         "postgres" => worker_loop(
             &config,
-            &mut postgres::Adapter::connect_with_mode(
+            &mut postgres::Adapter::connect_with_candidate_query(
                 config
                     .pg_url
                     .as_deref()
                     .ok_or("missing PostgreSQL connection")?,
                 &config.schema,
+                false,
                 config.pg_write_mode,
+                config.pg_candidate_query,
             )?,
         ),
         _ => Err("invalid worker engine".into()),

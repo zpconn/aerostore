@@ -67,6 +67,8 @@ struct Config {
     max_backlog: u64,
     pg_write_mode: postgres::WriteMode,
     #[serde(default)]
+    pg_candidate_query: postgres::CandidateQuery,
+    #[serde(default)]
     pg_analyze_after_seconds: u64,
     rpc_delay_us: u64,
     service_bind: std::net::SocketAddr,
@@ -114,6 +116,7 @@ impl Default for Config {
             retry_diagnostics: false,
             max_backlog: 1000,
             pg_write_mode: postgres::WriteMode::Buffered,
+            pg_candidate_query: postgres::CandidateQuery::Or,
             pg_analyze_after_seconds: 0,
             rpc_delay_us: 0,
             service_bind: "127.0.0.1:0".parse().unwrap(),
@@ -415,6 +418,7 @@ fn exercise(
             workload: cfg.workload.clone(),
             record_history: cfg.evidence == "full" || messages.is_some(),
             pg_write_mode: cfg.pg_write_mode,
+            pg_candidate_query: cfg.pg_candidate_query,
             max_backlog: cfg.max_backlog,
             rpc_delay_us: cfg.rpc_delay_us,
             attachment: attachment.clone(),
@@ -1063,6 +1067,7 @@ fn summarize(
         "effective_due_index_width":if case.engine!="postgres" && case.config.due_index_policy==fixture::DueIndexPolicy::Ordered {Some(case.config.due_index_width)} else {None},
         "effective_expiry_index_policy":if case.engine=="postgres" {"housekeeping"} else {case.config.expiry_index_policy.name()},
         "postgres_statistics":postgres::statistics_metadata(case.config.pg_analyze_after_seconds, case.engine == "postgres"),
+        "postgres_candidate_query":postgres::candidate_query_metadata(case.config.pg_candidate_query, case.engine == "postgres"),
         "service_latency_p99_us_including_retries":p99(&service_latencies),"arrival_queue_delay_p99_us":p99(&completed.queue_delays),
         "arrival_mode":if case.config.arrival_rate > 0 && case.scenario.is_none() {"independent_fixed_corpus"} else {"closed_loop"},
         "offered_messages":if case.config.arrival_rate > 0 && case.scenario.is_none() {json!(case.config.arrival_rate * case.config.seconds)} else {Value::Null},
@@ -1318,7 +1323,12 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
                 &statistics_path,
                 &postgres::statistics_metadata(case.config.pg_analyze_after_seconds, true),
             )?;
-            let plans = postgres::query_plan_audit(url, &case.schema)?;
+            let plans = postgres::query_plan_audit_with_candidate_query(
+                url,
+                &case.schema,
+                case.config.pg_candidate_query,
+            )?;
+            write_json(&case.directory.join("query-plan-audit.json"), &plans)?;
             if case.config.pg_analyze_after_seconds > 0 {
                 statistics = Some(postgres::StatisticsControl::prepare(
                     url,
@@ -1557,7 +1567,7 @@ fn parse() -> Result<Option<Config>, String> {
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         if arg == "--help" {
-            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--maintenance-mode batch|sweep --projection-batch-size 4 --housekeeping-batch-size 32 --max-maintenance-batches 4096 (calibrated only; terminal empty transaction counts toward cap)\n--rolling-cycle-messages 0 --rolling-retention-seconds 0 (calibrated sweep only; opt-in rate-dependent lifecycle stress)\n--expiry-index all-active|housekeeping (native fixture only; PostgreSQL already has a partial expiry index)\n--expiry-publication hashed|ordered --expiry-index-origin 1700000000000000000 --expiry-index-width 1000000000 (native expiry publication; fixed time window, no automatic rotation)\n--due-index hashed|ordered --due-index-origin 1700000000000000000 --due-index-width 1000000000 (native due publication buckets; explicit event-time units)\n--retry-diagnostics off|on (on requires retry-diagnostics build feature; bounded failed-attempt evidence)\n--pg-write-mode buffered|immediate --pg-analyze-after-seconds 0 (0=initial only; positive=one additional owned-table ANALYZE during sustained fixed arrivals)\n--rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
+            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--maintenance-mode batch|sweep --projection-batch-size 4 --housekeeping-batch-size 32 --max-maintenance-batches 4096 (calibrated only; terminal empty transaction counts toward cap)\n--rolling-cycle-messages 0 --rolling-retention-seconds 0 (calibrated sweep only; opt-in rate-dependent lifecycle stress)\n--expiry-index all-active|housekeeping (native fixture only; PostgreSQL already has a partial expiry index)\n--expiry-publication hashed|ordered --expiry-index-origin 1700000000000000000 --expiry-index-width 1000000000 (native expiry publication; fixed time window, no automatic rotation)\n--due-index hashed|ordered --due-index-origin 1700000000000000000 --due-index-width 1000000000 (native due publication buckets; explicit event-time units)\n--retry-diagnostics off|on (on requires retry-diagnostics build feature; bounded failed-attempt evidence)\n--pg-write-mode buffered|immediate --pg-candidate-query or|split (equivalent predicates; default or)\n--pg-analyze-after-seconds 0 (0=initial only; positive=one additional owned-table ANALYZE during sustained fixed arrivals)\n--rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
             return Ok(None);
         }
         if arg == "--bench" || arg == "--noplot" {
@@ -1683,6 +1693,13 @@ fn parse() -> Result<Option<Config>, String> {
                     "immediate" => postgres::WriteMode::Immediate,
                     "buffered" => postgres::WriteMode::Buffered,
                     _ => return Err("invalid PostgreSQL write mode".into()),
+                }
+            }
+            "--pg-candidate-query" => {
+                config.pg_candidate_query = match value.as_str() {
+                    "or" => postgres::CandidateQuery::Or,
+                    "split" => postgres::CandidateQuery::Split,
+                    _ => return Err("invalid PostgreSQL candidate query".into()),
                 }
             }
             "--pg-analyze-after-seconds" => {

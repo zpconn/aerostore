@@ -64,6 +64,18 @@ evidence; they are not retroactively converted into this protocol.
 The [statistics checkpoint](hyperfeed_statistics.md) records the first matched
 256-input/second runs and the subsequent 512-input/second conflict investigation.
 
+Candidate matching is independently selectable with
+`--pg-candidate-query or|split`. The default `or` preserves the original SQL;
+`split` uses disjoint callsign and registration branches in one ordered
+`UNION ALL` statement. Both retain SERIALIZABLE semantics. Reports include
+`postgres_candidate_query` requested/effective metadata, and exact companions
+must match this option even for native engines, where it is inapplicable.
+Historical omission means `or`; an explicit modern request requires its receipt.
+Initialization-time literal plan audits are retained on workload failure but
+do not establish the prepared plans executed under load. The
+[candidate-query checkpoint](hyperfeed_candidate_queries.md) compares those
+executed plans and retains the remaining housekeeping failures.
+
 The gate distinguishes execution validity, useful-work acceptance and performance acceptance. For lifecycle/fleet qualification, a useful-work trial needs actual creation and family expiry, bounded missing/deferred outcomes, and the declared p99 and drained-throughput budgets. Fleet trials also require populated initial/final snapshots, positive effects from each global background kind and a full lifecycle cycle in the offered corpus. Missing/deferred fraction is not a count of all effectless messages: a valid maintenance query may return nothing. At least three seeds must pass to establish a qualified tested rate. Passing rates are lower bounds on capacity: dividing two of them is not a 10× capacity proof. A conditional synthetic comparison additionally requires a repeated PostgreSQL saturation bracket across the declared worker grid and comparable business effects. The calibrated profile has a separate diagnostic assessment and cannot supply those capacity bounds yet. The real-world replacement and architecture-promotion flags remain false.
 
 An illustrative campaign, with an explicitly managed test PostgreSQL server:

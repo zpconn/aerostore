@@ -210,6 +210,13 @@ and investigates its query plans and serialization conflicts. These small,
 accelerated-maintenance runs remain diagnostic evidence, with capacity gates
 closed.
 
+The [candidate-query investigation](docs/hyperfeed_candidate_queries.md) adds an
+optional split PostgreSQL lookup and confirms that executed prepared plans now
+use flight identities in index conditions. Both query forms still exhaust
+housekeeping retries in the harder workload. The remaining investigation focuses
+on maintenance queries that read the complete eligible set before selecting a
+small write batch; these results do not establish a capacity ratio.
+
 ## Project layout
 
 | Path | Contents |

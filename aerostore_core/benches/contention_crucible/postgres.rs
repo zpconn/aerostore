@@ -20,6 +20,23 @@ pub enum WriteMode {
     Buffered,
 }
 
+/// Equivalent candidate predicates with different PostgreSQL access paths.
+/// The default retains the original query for controlled comparisons.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CandidateQuery {
+    #[default]
+    Or,
+    Split,
+}
+
+pub fn candidate_query_metadata(query: CandidateQuery, postgres: bool) -> serde_json::Value {
+    serde_json::json!({
+        "format":"postgres-candidate-query-v1", "requested":query,
+        "effective":if postgres {serde_json::json!(query)} else {serde_json::json!("not_applicable")},
+    })
+}
+
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct SqlMetrics {
     pub point_read_statements: u64,
@@ -37,6 +54,30 @@ const OWNERSHIP_MARKER: &str = "aerostore contention-crucible disposable schema 
 const COLUMNS: &str = "id, active, kind, family, pedigree, callsign, tail, origin, destination, \
     scheduled, event_time, due, latitude, longitude, altitude, ground_speed, status, revision, \
     source, parent, sequence";
+
+fn candidate_sql(select: &str, query: CandidateQuery, parameters: [&str; 4]) -> String {
+    let [callsign, tail, lower, upper] = parameters;
+    // `callsign` and `tail` are NOT NULL: the second branch excludes exactly
+    // the first branch's rows, so UNION ALL preserves both uniqueness and the
+    // original predicate. Explicit tail<>0 makes the partial-index condition
+    // visible even to a generic prepared plan. One statement retains one SSI
+    // snapshot, and ORDER BY applies to the complete union.
+    match query {
+        CandidateQuery::Or => format!(
+            "{select} WHERE active AND kind=1 \
+             AND (callsign={callsign} OR (({tail})::bigint<>0 AND tail={tail})) \
+             AND scheduled BETWEEN {lower} AND {upper} ORDER BY id"
+        ),
+        CandidateQuery::Split => format!(
+            "{select} WHERE active AND kind=1 AND callsign={callsign} \
+             AND scheduled BETWEEN {lower} AND {upper} \
+             UNION ALL \
+             {select} WHERE active AND kind=1 AND ({tail})::bigint<>0 \
+             AND tail<>0 AND tail={tail} AND callsign<>{callsign} \
+             AND scheduled BETWEEN {lower} AND {upper} ORDER BY id"
+        ),
+    }
+}
 
 pub const MAX_ANALYZE_DISPATCH_LATENESS_NS: u64 = 1_000_000_000;
 
@@ -801,6 +842,14 @@ pub fn drain(url: &str, schema: &str) -> Result<serde_json::Value, String> {
 /// exists; each sample is included so a small-fixture sequential scan is not
 /// mistaken for evidence about a production-sized workload.
 pub fn query_plan_audit(url: &str, schema: &str) -> Result<serde_json::Value, String> {
+    query_plan_audit_with_candidate_query(url, schema, CandidateQuery::Or)
+}
+
+pub fn query_plan_audit_with_candidate_query(
+    url: &str,
+    schema: &str,
+    candidate_query: CandidateQuery,
+) -> Result<serde_json::Value, String> {
     let quoted = schema_name(schema)?;
     let mut client = connect_client(url, false)?;
     let seed = client.query_opt(&format!("SELECT {COLUMNS} FROM {quoted}.records WHERE active AND kind=1 ORDER BY id LIMIT 1"), &[])
@@ -809,18 +858,60 @@ pub fn query_plan_audit(url: &str, schema: &str) -> Result<serde_json::Value, St
     let lower = seed.scheduled.saturating_sub(1800);
     let upper = seed.scheduled.saturating_add(1800);
     let predicates = [
-        ("candidates", format!("active AND kind=1 AND (callsign={} OR ({}::bigint<>0 AND tail={})) AND scheduled BETWEEN {lower} AND {upper}",seed.callsign,seed.tail,seed.tail)),
-        ("family", format!("active AND family={} AND kind=1",seed.family)),
-        ("positions", format!("active AND family={} AND pedigree={} AND kind=2",seed.family,seed.pedigree)),
-        ("due", format!("active AND family={} AND kind=3 AND due<={}",seed.family,seed.due)),
-        ("expired", format!("active AND family={} AND kind IN (2,4,5) AND event_time<{}",seed.family,seed.event_time)),
-        ("global_due", format!("active AND kind=3 AND due<={}",seed.due)),
-        ("global_expired", format!("active AND kind IN (2,4,5) AND event_time<{}",seed.event_time)),
+        (
+            "family",
+            format!("active AND family={} AND kind=1", seed.family),
+        ),
+        (
+            "positions",
+            format!(
+                "active AND family={} AND pedigree={} AND kind=2",
+                seed.family, seed.pedigree
+            ),
+        ),
+        (
+            "due",
+            format!(
+                "active AND family={} AND kind=3 AND due<={}",
+                seed.family, seed.due
+            ),
+        ),
+        (
+            "expired",
+            format!(
+                "active AND family={} AND kind IN (2,4,5) AND event_time<{}",
+                seed.family, seed.event_time
+            ),
+        ),
+        (
+            "global_due",
+            format!("active AND kind=3 AND due<={}", seed.due),
+        ),
+        (
+            "global_expired",
+            format!(
+                "active AND kind IN (2,4,5) AND event_time<{}",
+                seed.event_time
+            ),
+        ),
         ("all", "active".into()),
     ];
     let mut plans = serde_json::Map::new();
-    for (name, predicate) in predicates {
-        let sql = format!("{select} WHERE {predicate} ORDER BY id");
+    let candidates = candidate_sql(
+        &select,
+        candidate_query,
+        [
+            &seed.callsign.to_string(),
+            &seed.tail.to_string(),
+            &lower.to_string(),
+            &upper.to_string(),
+        ],
+    );
+    for (name, sql) in std::iter::once(("candidates", candidates)).chain(
+        predicates
+            .into_iter()
+            .map(|(name, predicate)| (name, format!("{select} WHERE {predicate} ORDER BY id"))),
+    ) {
         let row = client
             .query_one(&format!("EXPLAIN (FORMAT JSON, SETTINGS) {sql}"), &[])
             .map_err(pg_error)?;
@@ -832,6 +923,7 @@ pub fn query_plan_audit(url: &str, schema: &str) -> Result<serde_json::Value, St
     ).map_err(pg_error)?.into_iter().map(|row| serde_json::json!({"name":row.get::<_,String>(0),"definition":row.get::<_,String>(1)})).collect::<Vec<_>>();
     Ok(
         serde_json::json!({"parameters_from_seed":seed,"plans":plans,"indexes":indexes,
+        "postgres_candidate_query":candidate_query_metadata(candidate_query, true),
         "analyze_executed":false,"prepared_generic_plans_measured":false}),
     )
 }
@@ -860,6 +952,22 @@ impl Adapter {
         schema: &str,
         synchronous_commit: bool,
         mode: WriteMode,
+    ) -> Result<Self, String> {
+        Self::connect_with_candidate_query(
+            url,
+            schema,
+            synchronous_commit,
+            mode,
+            CandidateQuery::Or,
+        )
+    }
+
+    pub fn connect_with_candidate_query(
+        url: &str,
+        schema: &str,
+        synchronous_commit: bool,
+        mode: WriteMode,
+        candidate_query: CandidateQuery,
     ) -> Result<Self, String> {
         let schema = schema_name(schema)?;
         let mut client = connect_client(url, synchronous_commit)?;
@@ -910,11 +1018,7 @@ impl Adapter {
             ))
             .map_err(pg_error)?;
         let queries = Queries {
-            candidates: client.prepare(&format!(
-                "{select} WHERE active AND kind=1 \
-                 AND (callsign=$1 OR ($2::bigint<>0 AND tail=$2)) \
-                 AND scheduled BETWEEN $3 AND $4 ORDER BY id"
-            )).map_err(pg_error)?,
+            candidates: client.prepare(&candidate_sql(&select, candidate_query, ["$1", "$2", "$3", "$4"])).map_err(pg_error)?,
             family: client.prepare(&format!(
                 "{select} WHERE active AND family=$1 AND kind=$2 ORDER BY id"
             )).map_err(pg_error)?,
