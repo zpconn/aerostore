@@ -11,6 +11,10 @@ reported WSL VM crash.** Its first two attempts finished before the interruption
 the third has only partial progress. Hashed publication remains the default; no
 architecture or performance promotion has been made.
 
+The user subsequently confirmed that Windows stayed running when WSL stopped.
+The next morning's recorded Windows restart is separate from that interruption.
+The available recovery logs do not establish its cause.
+
 The [rolling workload investigation](hyperfeed_rolling_findings.md) found
 housekeeping retry exhaustion in a quiet 185-second service run. Instrumented
 short runs identified expiry predicate-stamp validation as the largest rejection
