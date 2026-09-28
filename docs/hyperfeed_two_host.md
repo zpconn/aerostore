@@ -15,6 +15,24 @@ peers and PostgreSQL. The setup handshake rejects generation/retention mismatch.
 Its message-count lifecycle is rate-dependent and remains a synthetic stress
 profile; adding it to a TCP command does not establish physical MMHF capacity.
 
+The optional [expiry-range experiment](hyperfeed_expiry_range.md) also accepts
+`--expiry-publication ordered --expiry-index-origin 1700000000000000000
+--expiry-index-width 1000000000`. Both peers must use the same publication
+policy, origin and width; the remote helper forwards them to the owner and
+client, and setup rejects a mismatch. Record the same requested settings in a
+paired PostgreSQL command, whose effective publication policy remains
+`postgres`. These flags are separate from `--expiry-index`, which selects row
+eligibility, and `--due-index`, which controls projection dependencies. Hashed
+expiry publication remains the default.
+
+The ordered window is static: the default nanosecond origin and one-second
+width cover 4,093 interior intervals, about 68 minutes. Earlier and later
+timestamps share endpoint buckets; the window does not advance or wrap.
+Choose and record an origin appropriate to the workload's event timestamps,
+and retain endpoint stress coverage. Changing these settings requires matching
+fresh correctness companions. Local or loopback success with this option does
+not establish physical MMHF performance.
+
 Run from the repository root on Linux using the [prepared pinned toolchain](../verification/README.md). Capture Cargo's executable record instead of selecting an arbitrary file from `target/release/deps`:
 
 ```bash

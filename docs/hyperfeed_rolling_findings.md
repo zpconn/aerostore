@@ -1,5 +1,8 @@
 # Rolling workload findings — 2026-09-27
 
+The follow-up [expiry-range experiment](hyperfeed_expiry_range.md) implements
+the bounded investigation proposed below and retains its results separately.
+
 The next bounded engine experiment should test narrower expiry-range
 dependencies. The existing expiry-eligibility filter did not resolve contention
 in the new rolling controls. Keep the current database-owned service as a
