@@ -222,6 +222,14 @@ housekeeping failure. AeroStore initially preserves complete native predicate
 capture before selecting the prefix. These results do not establish a capacity
 ratio.
 
+The [population-scaling checkpoint](docs/hyperfeed_population_scaling.md) reuses
+that engine at 256 and 1,024 synthetic flight identities. Larger sweeps reproduce
+native projection retry exhaustion; the existing ordered-due policy restores
+completion. A separate expiry-eligibility treatment leaves a substantial
+housekeeping latency gap. The next proposed experiment targets excess family
+query reads with a selective index, before changing the core prefix algorithm.
+These results remain diagnostic evidence, not a 10× capacity claim.
+
 ## Project layout
 
 | Path | Contents |
