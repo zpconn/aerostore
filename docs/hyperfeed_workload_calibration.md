@@ -92,6 +92,15 @@ population; this difference prevents treating mode comparisons as an isolated
 transaction-loop benchmark. Full jobs are not atomic snapshots, and finite cohorts
 do not supply sustained lifecycle turnover.
 
+An opt-in [rolling lifecycle stress mode](hyperfeed_rolling.md) now starts empty,
+creates and grows flights, marks arrivals, and retires/reuses bounded physical
+families through query-discovered transactions. It has no seeded expiry cohorts.
+Its generation length is a configured number of input events per identity, so
+offered rate changes lifecycle speed. This extends transaction coverage without
+establishing an empirical flight lifetime or arrival distribution. Useful
+projection, housekeeping and slot reuse must be observed in each run; empty
+retirement probes are excluded from business-message throughput.
+
 The harness currently accepts at most 32 foreground workers and 1,024 logical
 families. The archived calibration runs used four foreground workers and 16
 families. Those runs establish functional behavior under those limits; they do
@@ -99,6 +108,8 @@ not exercise the newly supplied operating scale. Raising an argument limit alone
 would not establish support: transaction registrations, service sessions,
 PostgreSQL connections, memory allocation, history capture and the oracle need
 an explicit resource and scaling review.
+The [resource review](hyperfeed_capacity_resources.md) now records those limits
+and the bounded 16/32-worker starting scope. The limits themselves are unchanged.
 
 Two concrete limits already need attention. The [service prototype](../aerostore_core/benches/contention_crucible/service.rs)
 defaults to 128 sessions. The native [process array](../aerostore_core/src/procarray.rs)
@@ -126,7 +137,8 @@ bounds or a blindly increased constant.
    batch-size sensitivity, retries and whole-job completion; the default
    four-event/32-record sizes are synthetic. Keep timer cadence and seed cohorts
    fixed when comparing sizes. Then add flight creation, growth, terminal
-   transitions and retirement. Treat daily
+   transitions and retirement under wall-time lifecycle distributions; the
+   implemented rolling stress mode is an intermediate coverage step. Treat daily
    flight volume, concurrently updating flights and retained families as separate
    inputs.
 4. Expand the reviewed harness/resource limits to support 100/200/300-worker

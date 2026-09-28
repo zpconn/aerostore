@@ -36,6 +36,10 @@ pub struct FrameSetup {
     #[serde(default = "calibrated::default_max_maintenance_batches")]
     pub max_maintenance_batches: u64,
     #[serde(default)]
+    pub rolling_cycle_messages: u64,
+    #[serde(default)]
+    pub rolling_retention_seconds: u64,
+    #[serde(default)]
     pub expiry_index_policy: fixture::ExpiryIndexPolicy,
     #[serde(default)]
     pub due_index_policy: fixture::DueIndexPolicy,
@@ -233,6 +237,8 @@ pub fn serve(
     projection_batch_size: usize,
     housekeeping_batch_size: usize,
     max_maintenance_batches: u64,
+    rolling_cycle_messages: u64,
+    rolling_retention_seconds: u64,
     expiry_index_policy: fixture::ExpiryIndexPolicy,
     due_index_policy: fixture::DueIndexPolicy,
     due_index_origin: i64,
@@ -263,7 +269,14 @@ pub fn serve(
                 || maintenance_mode != maintenance::Mode::Batch
                 || projection_batch_size != 4
                 || housekeeping_batch_size != 32
-                || max_maintenance_batches != 4096))
+                || max_maintenance_batches != 4096
+                || rolling_cycle_messages != 0
+                || rolling_retention_seconds != 0))
+        || (rolling_cycle_messages == 0 && rolling_retention_seconds != 0)
+        || (rolling_cycle_messages != 0
+            && (!(16..=1_000_000).contains(&rolling_cycle_messages)
+                || !(1..=3600).contains(&rolling_retention_seconds)
+                || maintenance_mode != maintenance::Mode::Sweep))
         || !(1..=16).contains(&projection_batch_size)
         || !(1..=64).contains(&housekeeping_batch_size)
         || !(1..=4096).contains(&max_maintenance_batches)
@@ -312,6 +325,8 @@ pub fn serve(
             projection_batch_size,
             housekeeping_batch_size,
             max_maintenance_batches,
+            rolling_cycle_messages,
+            rolling_retention_seconds,
         })?
     } else {
         model::sustained_initial_for(workload, families, seed)
@@ -403,6 +418,8 @@ pub fn serve(
             projection_batch_size,
             housekeeping_batch_size,
             max_maintenance_batches,
+            rolling_cycle_messages,
+            rolling_retention_seconds,
             expiry_index_policy,
             due_index_policy,
             due_index_origin,

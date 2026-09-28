@@ -81,6 +81,9 @@ pub enum CreationPolicy {
     ExistingOnly,
     /// New generations may defer while their reserved physical space is live.
     IfVacant,
+    /// Rolling generations also retain inactive flight identity evidence:
+    /// an expired equal/older generation must never be created again.
+    NewerIfVacant,
 }
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Message {
@@ -515,10 +518,17 @@ fn process(store: &mut impl Store, message: &Message) -> Result<Outcome, DbError
             // empty predicate therefore cannot be rescued by a shared row lock.
             let family = message.allocation_family as i64;
             let mut occupied = Vec::new();
+            let mut retired_generation = false;
             for pedigree in 1..=7 {
                 let row = store.read(slot(family, pedigree - 1))?;
                 if row.active {
                     occupied.push(row);
+                } else if message.creation == CreationPolicy::NewerIfVacant
+                    && row.kind == FLIGHT
+                    && row.revision > 0
+                    && row.scheduled >= message.scheduled
+                {
+                    retired_generation = true;
                 }
             }
             if !occupied.is_empty() {
@@ -529,7 +539,11 @@ fn process(store: &mut impl Store, message: &Message) -> Result<Outcome, DbError
                             || (row.callsign == message.callsign
                                 && row.destination == message.destination))
                 });
-                if message.creation == CreationPolicy::IfVacant && !missed_match {
+                if matches!(
+                    message.creation,
+                    CreationPolicy::IfVacant | CreationPolicy::NewerIfVacant
+                ) && !missed_match
+                {
                     outcome.allocation_deferred = true;
                     return Ok(outcome);
                 } else {
@@ -537,6 +551,10 @@ fn process(store: &mut impl Store, message: &Message) -> Result<Outcome, DbError
                         "empty candidate search missed occupied allocation".into(),
                     ));
                 }
+            }
+            if message.creation == CreationPolicy::NewerIfVacant && retired_generation {
+                outcome.missing_family = true;
+                return Ok(outcome);
             }
             family
         }

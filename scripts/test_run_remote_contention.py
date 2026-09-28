@@ -15,6 +15,16 @@ import run_remote_contention as runner
 
 
 class RemoteHandshakeTests(unittest.TestCase):
+    def test_rolling_setup_requires_exact_generation_and_retention_contract(self):
+        runner.validate_dispatch_setup({}, runner.ROLLING_DEFAULTS)
+        expected = dict(rolling_cycle_messages=64, rolling_retention_seconds=20)
+        runner.validate_dispatch_setup(expected, expected)
+        for changed in ({}, {**expected, "rolling_cycle_messages": 65},
+                        {**expected, "rolling_retention_seconds": 21},
+                        {**expected, "rolling_retention_seconds": True}):
+            with self.subTest(changed=changed), self.assertRaisesRegex(RuntimeError, "differs from the client"):
+                runner.validate_dispatch_setup(changed, expected)
+
     def test_expiry_and_diagnostic_setup_defaults_cannot_hide_peer_mismatch(self):
         runner.validate_dispatch_setup({}, runner.EXPERIMENT_DEFAULTS)
         expected = {"expiry_index_policy":"housekeeping", "retry_diagnostics":True}
@@ -56,6 +66,7 @@ class RemoteHandshakeTests(unittest.TestCase):
             output = Path(directory) / "evidence"
             options = {"--maintenance-mode": "sweep", "--projection-batch-size": "8",
                        "--housekeeping-batch-size": "64", "--max-maintenance-batches": "100",
+                       "--rolling-cycle-messages": "64", "--rolling-retention-seconds": "20",
                        "--expiry-index":"housekeeping", "--retry-diagnostics":"on",
                        "--due-index":"ordered", "--due-index-origin":"-100", "--due-index-width":"7"}
             argv = ["run_remote_contention.py", "--binary", str(binary), "--output-dir", str(output),
@@ -107,6 +118,10 @@ class RemoteHandshakeTests(unittest.TestCase):
                         ["--projection-batch-size", "0"], ["--projection-batch-size", "17"],
                         ["--housekeeping-batch-size", "0"], ["--housekeeping-batch-size", "65"],
                         ["--max-maintenance-batches", "0"], ["--max-maintenance-batches", "4097"],
+                        ["--rolling-cycle-messages", "64"], ["--rolling-retention-seconds", "20"],
+                        ["--maintenance-mode", "sweep", "--rolling-cycle-messages", "15", "--rolling-retention-seconds", "20"],
+                        ["--maintenance-mode", "sweep", "--rolling-cycle-messages", "1000001", "--rolling-retention-seconds", "20"],
+                        ["--maintenance-mode", "sweep", "--rolling-cycle-messages", "64", "--rolling-retention-seconds", "3601"],
                         ["--due-index-width", "0"], ["--due-index-width", str(2**64)],
                         ["--due-index-origin", str(2**63)], ["--due-index-origin", str(-(2**63)-1)],
                         ["--workload", "lifecycle", "--maintenance-mode", "sweep"],

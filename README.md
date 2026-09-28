@@ -195,6 +195,8 @@ Optional [retry diagnostics and expiry-index controls](docs/hyperfeed_retry_diag
 
 A subsequent [query dependency capture optimization](docs/hyperfeed_capture_prefix.md) removes quadratic work within fresh broad queries while preserving prior-query dependencies and conflict checks. In the [90-cell comparison](docs/bench_data/capture_prefix_2026-09-27/README.md), all 36 candidate runs completed usefully; in metrics runs, default hashed-index foreground p99 fell about 81% at 512 messages/second versus the previous engine. The source-bound proof adapters and native regressions were updated with the change. These are short synthetic latency and overload results; realistic sustained capacity and worker-death availability remain open.
 
+The optional [rolling lifecycle workload](docs/hyperfeed_rolling.md) starts empty and repeatedly creates flights, grows forks, processes arrivals, expires history, and reuses retired families. Its [first investigation](docs/hyperfeed_rolling_findings.md) confirms recurrent useful maintenance and exposes housekeeping retry exhaustion in the central service during a longer run. Expiry conflict tracking is the next measured hypothesis. This remains synthetic stress evidence; the [resource review](docs/hyperfeed_capacity_resources.md) also records the limits that must be addressed before testing the historical 100–300-worker deployments.
+
 ## Project layout
 
 | Path | Contents |

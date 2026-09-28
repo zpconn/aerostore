@@ -8,6 +8,13 @@ These commands prepare a transport and stress investigation, not a complete Hype
 
 ## Select the actual benchmark executable
 
+For the optional [rolling lifecycle experiment](hyperfeed_rolling.md), both
+helpers also forward `--rolling-cycle-messages N --rolling-retention-seconds S`.
+Enable these only with calibrated sweep mode and use identical values on both
+peers and PostgreSQL. The setup handshake rejects generation/retention mismatch.
+Its message-count lifecycle is rate-dependent and remains a synthetic stress
+profile; adding it to a TCP command does not establish physical MMHF capacity.
+
 Run from the repository root on Linux using the [prepared pinned toolchain](../verification/README.md). Capture Cargo's executable record instead of selecting an arbitrary file from `target/release/deps`:
 
 ```bash

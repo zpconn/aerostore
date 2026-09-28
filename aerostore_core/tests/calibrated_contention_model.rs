@@ -39,7 +39,35 @@ fn config() -> Config {
         projection_batch_size: calibrated::PROJECTION_BATCH_LIMIT,
         housekeeping_batch_size: calibrated::HOUSEKEEPING_BATCH_LIMIT,
         max_maintenance_batches: calibrated::MAX_MAINTENANCE_BATCHES,
+        rolling_cycle_messages: 0,
+        rolling_retention_seconds: 0,
     }
+}
+
+fn rolling_config() -> Config {
+    Config {
+        duration_ns: 400 * NANOS_PER_SECOND,
+        foreground_rate: 6,
+        foreground_workers: 1,
+        families: 8,
+        projection_interval_seconds: 10,
+        housekeeping_interval_seconds: 10,
+        maintenance_mode: maintenance::Mode::Sweep,
+        rolling_cycle_messages: 96,
+        rolling_retention_seconds: 40,
+        ..config()
+    }
+}
+
+fn rolling_input(schedule: &Schedule, identity: usize, ordinal: u64) -> model::Message {
+    assert_eq!(schedule.config.foreground_workers, 1);
+    schedule
+        .event(
+            0,
+            ordinal * schedule.active_families() as u64 + identity as u64,
+        )
+        .unwrap()
+        .message
 }
 fn events(schedule: &Schedule) -> Vec<ScheduledEvent> {
     let mut events: Vec<_> = (0..schedule.worker_count())
@@ -1493,4 +1521,479 @@ fn failed_empty_terminal_attempt_is_aborted_and_retried_before_completion_eviden
     assert_eq!(store.commits, 2);
     assert_eq!(store.aborts, 1);
     assert!(store.inner.writes.is_empty());
+}
+
+#[test]
+fn rolling_configuration_is_opt_in_and_legacy_serialized_bytes_are_unchanged() {
+    let legacy = config();
+    let json = serde_json::to_string(&legacy).unwrap();
+    assert!(!json.contains("rolling_"));
+    assert_eq!(serde_json::from_str::<Config>(&json).unwrap(), legacy);
+    for (cycle, retention) in [(0, 1), (15, 1), (1_000_001, 1), (16, 0), (16, 3601)] {
+        let invalid = Config {
+            rolling_cycle_messages: cycle,
+            rolling_retention_seconds: retention,
+            ..config()
+        };
+        assert!(calibrated::validate_config(&invalid).is_err());
+    }
+    for (cycle, retention) in [(16, 1), (1_000_000, 3600)] {
+        let valid = Config {
+            rolling_cycle_messages: cycle,
+            rolling_retention_seconds: retention,
+            ..rolling_config()
+        };
+        assert!(calibrated::validate_config(&valid).is_ok());
+        let restored =
+            serde_json::from_str::<Config>(&serde_json::to_string(&valid).unwrap()).unwrap();
+        assert_eq!(restored, valid);
+    }
+    assert!(calibrated::validate_config(&Config {
+        maintenance_mode: maintenance::Mode::Batch,
+        ..rolling_config()
+    })
+    .is_err());
+}
+
+#[test]
+fn rolling_starts_empty_and_initialization_does_not_depend_on_admission_parameters() {
+    let cfg = rolling_config();
+    let initial = calibrated::initial_records_for(&cfg).unwrap();
+    assert!(initial.iter().all(|row| !row.active));
+    assert_eq!(calibrated::housekeeping_seed_cohorts(&cfg), 0);
+    let remote_initial_config = Config {
+        duration_ns: NANOS_PER_SECOND,
+        foreground_rate: 1,
+        foreground_workers: 1,
+        ..cfg
+    };
+    assert_eq!(
+        calibrated::initial_records_for(&remote_initial_config).unwrap(),
+        initial
+    );
+}
+
+#[test]
+fn rolling_phase_sources_generations_aliases_and_timer_cutoffs_are_reconstructable() {
+    let cfg = Config {
+        signature_pattern: calibrated::SignaturePattern::Mixed,
+        rolling_cycle_messages: 17,
+        ..rolling_config()
+    };
+    let plan = Schedule::new(cfg.clone()).unwrap();
+    for generation in 0..3 {
+        for step in 0..cfg.rolling_cycle_messages {
+            let ordinal = generation * cfg.rolling_cycle_messages + step;
+            let input = rolling_input(&plan, 0, ordinal);
+            let sequence = calibrated::foreground_sequence(&cfg, input.id).unwrap();
+            let metadata = calibrated::rolling_step(&cfg, sequence).unwrap();
+            assert_eq!(metadata.logical_identity, 0);
+            assert_eq!(metadata.generation, generation);
+            assert_eq!(metadata.step, step);
+            assert_eq!(
+                input.event_time,
+                EVENT_EPOCH_NS
+                    + sequence as i64 * NANOS_PER_SECOND as i64 / cfg.foreground_rate as i64
+            );
+            assert_eq!(input.scheduled, 1_700_001_000 + generation as i64 * 3600);
+            if step == 0 {
+                assert_eq!(input.creation, model::CreationPolicy::NewerIfVacant);
+                assert_eq!(
+                    (input.callsign, input.tail),
+                    (100, 10_000 + generation as i64 * cfg.families as i64)
+                );
+                assert_eq!(metadata.phase, calibrated::RollingPhase::Creation);
+            } else {
+                assert_eq!(input.creation, model::CreationPolicy::ExistingOnly);
+                let both = (100, 10_000 + generation as i64 * cfg.families as i64);
+                let signature = match (ordinal / 2) % 3 {
+                    1 => (both.0, 0),
+                    2 => (0, both.1),
+                    _ => both,
+                };
+                assert_eq!((input.callsign, input.tail), signature);
+            }
+            let expected_source = match step {
+                0 | 1 => 1,
+                2 | 3 => 2,
+                4 | 5 => 4,
+                n if n == cfg.rolling_cycle_messages - 4 => 1,
+                n if n == cfg.rolling_cycle_messages - 3 => 2,
+                n if n == cfg.rolling_cycle_messages - 2 => 4,
+                n if n == cfg.rolling_cycle_messages - 1 => 0,
+                _ => {
+                    1 << (((3 * (step - 6) / (cfg.rolling_cycle_messages - 10)).min(2)
+                        + generation)
+                        % 3)
+                }
+            };
+            assert_eq!(input.source, expected_source);
+            if let MessageKind::ExpireFamily {
+                family,
+                before,
+                stale_before,
+            } = input.kind
+            {
+                assert_eq!(family, (generation as usize + 1) % 2);
+                assert_eq!(
+                    before,
+                    input.event_time
+                        - ((cfg.rolling_retention_seconds + cfg.housekeeping_interval_seconds)
+                            * NANOS_PER_SECOND) as i64
+                );
+                assert_eq!(stale_before, None);
+                assert_eq!(metadata.retirement_generation, generation.checked_sub(1));
+            } else {
+                assert_eq!(input.allocation_family, generation as usize % 2);
+                assert_eq!(metadata.retirement_generation, None);
+            }
+        }
+    }
+    let projection = plan.event(1, 0).unwrap();
+    let housekeeping = plan.event(2, 0).unwrap();
+    assert_eq!(
+        projection.offset_ns,
+        cfg.projection_interval_seconds * NANOS_PER_SECOND
+    );
+    assert_eq!(
+        housekeeping.offset_ns,
+        cfg.housekeeping_interval_seconds * NANOS_PER_SECOND
+    );
+    assert!(
+        matches!(housekeeping.message.kind, MessageKind::GlobalHousekeeping { before, .. }
+        if before == housekeeping.message.event_time - (cfg.rolling_retention_seconds * NANOS_PER_SECOND) as i64)
+    );
+}
+
+#[test]
+fn rolling_corpus_is_worker_independent_and_routes_creation_with_both_aliases() {
+    let cfg = Config {
+        duration_ns: 40 * NANOS_PER_SECOND,
+        rolling_cycle_messages: 16,
+        ..rolling_config()
+    };
+    let baseline = events(&Schedule::new(cfg.clone()).unwrap());
+    for workers in [1, 2, 4, 8, 16, 32] {
+        for dispatch in [
+            calibrated::Dispatch::Identity,
+            calibrated::Dispatch::SignatureAffinity,
+        ] {
+            let plan = Schedule::new(Config {
+                foreground_workers: workers,
+                dispatch,
+                affinity_ttl_ms: if dispatch == calibrated::Dispatch::Identity {
+                    0
+                } else {
+                    50
+                },
+                ..cfg.clone()
+            })
+            .unwrap();
+            assert_eq!(events(&plan), baseline);
+            for worker in 0..plan.worker_count() {
+                let prepared = plan.worker_schedule(worker);
+                prepared.validate().unwrap();
+                for ordinal in 0..prepared.offered() {
+                    assert_eq!(prepared.event(ordinal), plan.event(worker, ordinal));
+                }
+            }
+        }
+    }
+}
+
+fn check_rolling_replenishment(config: Config) -> serde_json::Value {
+    let plan = Schedule::new(config).unwrap();
+    let initial = plan.initial_records().unwrap();
+    assert!(initial.iter().all(|row| !row.active));
+    let mut rows = as_map(&initial);
+    let mut positive_hk_streak = 0;
+    let mut longest_hk_streak = 0;
+    let mut positive_hk_jobs = 0;
+    let mut positive_projection_jobs = 0;
+    let mut retired = 0;
+    let mut generations_created = BTreeSet::new();
+    let mut hk_generations = BTreeSet::new();
+    for event in events(&plan) {
+        if event.class == EventClass::Foreground {
+            let body = model::serial_apply(&mut rows, &event.message).unwrap();
+            assert!(!body.outcome.missing_family && !body.outcome.allocation_deferred);
+            retired += body.outcome.expired_families;
+            let step = calibrated::rolling_step(
+                &plan.config,
+                calibrated::foreground_sequence(&plan.config, event.message.id).unwrap(),
+            )
+            .unwrap();
+            if step.phase == calibrated::RollingPhase::Creation && body.outcome.created_views > 0 {
+                generations_created.insert(step.generation);
+            }
+        } else {
+            let (receipts, complete) = serial_sweep(&mut rows, &event.message, 4096);
+            assert!(complete);
+            maintenance::validate_terminal(
+                &receipts.last().unwrap().message,
+                &receipts.last().unwrap().body,
+            )
+            .unwrap();
+            if event.class == EventClass::Housekeeping {
+                let expired: usize = receipts
+                    .iter()
+                    .map(|r| r.body.outcome.expired_records)
+                    .sum();
+                if expired > 0 {
+                    positive_hk_jobs += 1;
+                    positive_hk_streak += 1;
+                    longest_hk_streak = longest_hk_streak.max(positive_hk_streak);
+                } else {
+                    positive_hk_streak = 0;
+                }
+                for receipt in receipts {
+                    for op in receipt.body.operations {
+                        if let Operation::Query {
+                            query: storage::Query::GlobalExpired { .. },
+                            rows: observed,
+                        } = op
+                        {
+                            for row in observed {
+                                assert!(
+                                    row.event_time >= EVENT_EPOCH_NS,
+                                    "no old seed work can count"
+                                );
+                                if row.kind == POSITION {
+                                    hk_generations.insert((row.scheduled - 1_700_001_000) / 3600);
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if receipts.iter().any(|r| !r.body.outcome.outputs.is_empty()) {
+                positive_projection_jobs += 1;
+            }
+        }
+    }
+    assert!(positive_hk_jobs >= 3);
+    assert!(
+        positive_projection_jobs >= 3,
+        "source blocks must permit useful global projection"
+    );
+    assert!(retired >= 2 * plan.active_families());
+    assert!(
+        generations_created.contains(&3),
+        "same physical slots must be reused repeatedly"
+    );
+    assert!(
+        hk_generations.len() >= 3,
+        "housekeeping must observe history from later admitted generations"
+    );
+    model::validate_snapshot(&rows.into_values().collect::<Vec<_>>()).unwrap();
+    serde_json::json!({
+        "families":plan.config.families,"foreground_rate":plan.config.foreground_rate,
+        "cycle_messages":plan.config.rolling_cycle_messages,"retention_seconds":plan.config.rolling_retention_seconds,
+        "duration_seconds":plan.config.duration_ns / NANOS_PER_SECOND,
+        "longest_positive_housekeeping_streak":longest_hk_streak,
+        "positive_housekeeping_jobs":positive_hk_jobs,
+        "positive_projection_jobs":positive_projection_jobs,"retired_families":retired,
+        "generations_created":generations_created,"housekept_generations":hk_generations
+    })
+}
+
+#[test]
+fn rolling_replenishes_three_successive_housekeeping_jobs_and_projects_new_flights() {
+    let coverage = check_rolling_replenishment(rolling_config());
+    assert!(
+        coverage["longest_positive_housekeeping_streak"]
+            .as_u64()
+            .unwrap()
+            >= 3
+    );
+    eprintln!("rolling coverage {}", coverage);
+}
+
+#[test]
+fn rolling_accelerated_candidate_profile_has_fresh_maintenance_and_turnover() {
+    let cfg = Config {
+        duration_ns: 185 * NANOS_PER_SECOND,
+        foreground_rate: 128,
+        families: 16,
+        projection_interval_seconds: 5,
+        housekeeping_interval_seconds: 5,
+        rolling_cycle_messages: 640,
+        ..rolling_config()
+    };
+    eprintln!("rolling coverage {}", check_rolling_replenishment(cfg));
+}
+
+#[test]
+fn rolling_delayed_creator_and_observation_cannot_resurrect_an_expired_generation() {
+    let cfg = Config {
+        rolling_cycle_messages: 16,
+        rolling_retention_seconds: 1,
+        housekeeping_interval_seconds: 1,
+        ..rolling_config()
+    };
+    let plan = Schedule::new(cfg).unwrap();
+    let mut rows = as_map(&plan.initial_records().unwrap());
+    for ordinal in 0..32 {
+        model::serial_apply(&mut rows, &rolling_input(&plan, 0, ordinal)).unwrap();
+    }
+    assert!(rows.values().filter(|r| r.family == 0).all(|r| !r.active));
+    let before = rows.clone();
+    for ordinal in [0, 1, 2, 3, 4, 5] {
+        let body = model::serial_apply(&mut rows, &rolling_input(&plan, 0, ordinal)).unwrap();
+        assert!(body.outcome.missing_family);
+        assert_eq!(rows, before);
+    }
+}
+
+#[test]
+fn rolling_old_retirement_cannot_delete_a_fully_arrived_new_generation_in_the_reused_pool() {
+    let cfg = Config {
+        rolling_cycle_messages: 16,
+        rolling_retention_seconds: 1,
+        housekeeping_interval_seconds: 1,
+        ..rolling_config()
+    };
+    let plan = Schedule::new(cfg).unwrap();
+    let mut rows = as_map(&plan.initial_records().unwrap());
+    for ordinal in 0..47 {
+        model::serial_apply(&mut rows, &rolling_input(&plan, 0, ordinal)).unwrap();
+    }
+    let current: Vec<_> = rows
+        .values()
+        .filter(|r| r.active && r.kind == FLIGHT && r.family == 0)
+        .collect();
+    assert_eq!(current.len(), 7);
+    assert!(current
+        .iter()
+        .all(|r| r.status == shared_model::ARRIVED && r.scheduled == 1_700_008_200));
+    let before = rows.clone();
+    let old_retirement = rolling_input(&plan, 0, 31);
+    let body = model::serial_apply(&mut rows, &old_retirement).unwrap();
+    assert_eq!(body.outcome.expired_families, 0);
+    assert_eq!(rows, before);
+}
+
+#[test]
+fn rolling_late_never_created_generation_stays_live_and_blocks_reuse_without_forced_expiry() {
+    let cfg = Config {
+        rolling_cycle_messages: 16,
+        rolling_retention_seconds: 1,
+        housekeeping_interval_seconds: 1,
+        ..rolling_config()
+    };
+    let plan = Schedule::new(cfg).unwrap();
+    let mut rows = as_map(&plan.initial_records().unwrap());
+    for ordinal in 1..32 {
+        model::serial_apply(&mut rows, &rolling_input(&plan, 0, ordinal)).unwrap();
+    }
+    let delayed_birth = model::serial_apply(&mut rows, &rolling_input(&plan, 0, 0)).unwrap();
+    assert_eq!(delayed_birth.outcome.created_views, 1);
+    let before = rows.clone();
+    let expired = model::serial_apply(&mut rows, &rolling_input(&plan, 0, 31)).unwrap();
+    assert_eq!(
+        expired.outcome.expired_families, 0,
+        "nonterminal family is retained conservatively"
+    );
+    let new_birth = model::serial_apply(&mut rows, &rolling_input(&plan, 0, 32)).unwrap();
+    assert!(new_birth.outcome.allocation_deferred);
+    assert_eq!(
+        rows, before,
+        "no live generation can be overwritten to keep the workload moving"
+    );
+}
+
+#[test]
+fn rolling_message_ids_are_invertible_disjoint_and_keep_all_ring_slots_available() {
+    for families in [4, 16, 32, 64, 1024] {
+        let cfg = Config {
+            families,
+            foreground_rate: 1_000_000,
+            duration_ns: 3_200_000_000,
+            ..rolling_config()
+        };
+        calibrated::validate_config(&cfg).unwrap();
+        let active = families - (families / 4).max(1);
+        let mut ids = BTreeSet::new();
+        for sequence in (0..4096).chain([3_199_999]) {
+            let ordinal = sequence / active as u64;
+            let identity = sequence % active as u64;
+            let id = calibrated::FOREGROUND_ID_START
+                + ordinal * calibrated::ROLLING_ID_STRIDE
+                + identity;
+            assert!(ids.insert(id));
+            assert!(id < maintenance::JOB_ID_START);
+            assert_eq!(calibrated::foreground_sequence(&cfg, id), Some(sequence));
+        }
+        assert_eq!(
+            calibrated::foreground_sequence(&cfg, calibrated::FOREGROUND_ID_START - 1),
+            None
+        );
+        assert_eq!(
+            calibrated::foreground_sequence(&cfg, calibrated::FOREGROUND_ID_START + active as u64),
+            None
+        );
+        assert_eq!(
+            calibrated::foreground_sequence(&cfg, maintenance::JOB_ID_START),
+            None
+        );
+        assert_eq!(
+            calibrated::foreground_sequence(&cfg, maintenance::BATCH_ID_START),
+            None
+        );
+        let outside = calibrated::FOREGROUND_ID_START
+            + (3_200_000 / active as u64) * calibrated::ROLLING_ID_STRIDE
+            + 3_200_000 % active as u64;
+        assert_eq!(calibrated::foreground_sequence(&cfg, outside), None);
+        for size in [8, 26, 32] {
+            let visited: BTreeSet<_> = (0..size)
+                .map(|ordinal| {
+                    (calibrated::FOREGROUND_ID_START + ordinal * calibrated::ROLLING_ID_STRIDE)
+                        % size
+                })
+                .collect();
+            assert_eq!(visited.len(), size as usize);
+        }
+    }
+    let legacy = config();
+    for sequence in [0, 191] {
+        assert_eq!(
+            calibrated::foreground_sequence(&legacy, calibrated::FOREGROUND_ID_START + sequence),
+            Some(sequence)
+        );
+    }
+    assert_eq!(
+        calibrated::foreground_sequence(&legacy, calibrated::FOREGROUND_ID_START + 192),
+        None
+    );
+    for families in [16, 32, 64] {
+        let plan = Schedule::new(Config {
+            families,
+            foreground_rate: 512,
+            rolling_cycle_messages: 128,
+            ..rolling_config()
+        })
+        .unwrap();
+        let mut rows = as_map(&plan.initial_records().unwrap());
+        for ordinal in 0..14 {
+            let body = model::serial_apply(&mut rows, &rolling_input(&plan, 0, ordinal)).unwrap();
+            if ordinal >= 6 {
+                assert_eq!(
+                    body.outcome.updated_views, 4,
+                    "one position must update all eligible forks"
+                );
+            }
+        }
+        for pedigree in [1, 3, 5, 7] {
+            let history: Vec<_> = rows
+                .values()
+                .filter(|r| {
+                    r.active && r.kind == POSITION && r.family == 0 && r.pedigree == pedigree
+                })
+                .collect();
+            assert_eq!(
+                history.len(),
+                8,
+                "global sequence strides must not collapse the position ring"
+            );
+        }
+    }
 }

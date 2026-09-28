@@ -13,9 +13,12 @@ it starts from 16 warmup rounds and interleaves live generations across identiti
 housekeeping timers. Optional signature affinity can reorder one flight across
 workers; the history oracle checks that order, while discarded stale updates
 remain excluded from complete useful-work evidence. Short/accelerated checks can validate execution, but cannot
-demonstrate the operator's five-to-ten-minute maintenance cadence. Its fixed
-population remains capacity-unqualified even when --maintenance-mode sweep
-covers complete batched sweeps at representative intervals.
+demonstrate the operator's five-to-ten-minute maintenance cadence. The default
+population stays fixed. Opt-in rolling cycles start empty and exercise bounded
+pool reuse, with generation lifetime determined by the offered message rate.
+Repeated useful maintenance beyond the retention/projection horizons is checked
+separately; retirement controls do not earn useful business-message throughput.
+Both profiles remain capacity-unqualified, including at representative timers.
 
 First use --evidence full to produce a correctness companion. A metrics campaign
 may name that campaign's campaign.json via --correctness-report. Companions must
@@ -58,7 +61,8 @@ CALIBRATED_FIELDS = ("projection_interval_seconds", "housekeeping_interval_secon
 DISPATCH_DEFAULTS = {"dispatch": "identity", "affinity_ttl_ms": 0, "signature_pattern": "both"}
 MAINTENANCE_DEFAULTS = {"maintenance_mode": "batch", "projection_batch_size": 4,
                         "housekeeping_batch_size": 32, "max_maintenance_batches": 4096}
-CALIBRATED_DEFAULTS = {**DISPATCH_DEFAULTS, **MAINTENANCE_DEFAULTS}
+ROLLING_DEFAULTS = {"rolling_cycle_messages": 0, "rolling_retention_seconds": 0}
+CALIBRATED_DEFAULTS = {**DISPATCH_DEFAULTS, **MAINTENANCE_DEFAULTS, **ROLLING_DEFAULTS}
 DUE_INDEX_DEFAULTS = {"due_index_policy": "hashed", "due_index_origin": 1_700_000_000_000_000_000,
                       "due_index_width": 1_000_000_000}
 EXPERIMENT_DEFAULTS = {"expiry_index_policy": "all-active", "retry_diagnostics": False, **DUE_INDEX_DEFAULTS}
@@ -142,9 +146,21 @@ def maintenance_config(config: dict) -> tuple[str, int, int, int]:
     return mode, projection, housekeeping, cap
 
 
+def rolling_config(config: dict) -> tuple[int, int]:
+    cycle, retention = (config_value(config, field) for field in ROLLING_DEFAULTS)
+    if (type(cycle) is not int or type(retention) is not int
+            or not ((cycle == 0 and retention == 0)
+                    or (16 <= cycle <= 1000000 and 1 <= retention <= 3600))):
+        raise ValueError("rolling lifecycle needs cycle messages 16..1000000 and retention seconds 1..3600, or both zero for the legacy control")
+    if cycle and config_value(config, "maintenance_mode") != "sweep":
+        raise ValueError("rolling lifecycle requires complete maintenance sweeps")
+    return cycle, retention
+
+
 @lru_cache(maxsize=64)
 def _dispatch_summary(active: int, workers: int, foreground: int, rate: int,
-                      dispatch: str, ttl: int, pattern: str) -> dict:
+                      dispatch: str, ttl: int, pattern: str,
+                      cycle: int = 0, families: int = 0) -> dict:
     """Reconstruct routing from offered inputs, without Rust assignments.
 
     The finite fixture retains expired signatures so new and expired misses
@@ -157,9 +173,12 @@ def _dispatch_summary(active: int, workers: int, foreground: int, rate: int,
     counts, cursor, fingerprint = [0] * workers, 0, 0xcbf29ce484222325
     for sequence in range(foreground):
         identity, ordinal = sequence % active, sequence // active
+        generation = ordinal // cycle if cycle else 0
         alias = (ordinal // 2) % 3 if pattern == "mixed" else 0
+        if cycle and ordinal % cycle == 0:
+            alias = 0  # A creation establishes both aliases before partial signatures.
         signature = (0 if alias == 2 else 100 + identity // 4,
-                     0 if alias == 1 else 10000 + identity)
+                     0 if alias == 1 else 10000 + identity + generation * families)
         seen.add(signature)
         if dispatch == "identity":
             owner = identity % workers
@@ -192,10 +211,34 @@ def _dispatch_summary(active: int, workers: int, foreground: int, rate: int,
 
 def calibrated_dispatch(config: dict) -> dict:
     dispatch, ttl, pattern = dispatch_config(config)
+    cycle, _ = rolling_config(config)
     families = config["families"]
     return _dispatch_summary(families - max(1, families // 4), config["workers"],
                              config["arrival_rate"] * config["seconds"], config["arrival_rate"],
-                             dispatch, ttl, pattern)
+                             dispatch, ttl, pattern, cycle, families)
+
+
+ROLLING_PHASES = ("creation", "source_growth", "position", "arrival", "retirement")
+
+
+def rolling_phase_counts(config: dict) -> dict:
+    """Count admitted phases from complete and partial per-identity rounds."""
+    cycle, _ = rolling_config(config)
+    if not cycle:
+        return {}
+    families = config["families"]
+    active = families - max(1, families // 4)
+    foreground = config["arrival_rate"] * config["seconds"]
+    complete, remainder = divmod(foreground, cycle * active)
+
+    def step_count(step):
+        return complete * active + max(0, min(active, remainder - step * active))
+
+    counts = {"creation": step_count(0), "source_growth": step_count(2) + step_count(4),
+              "arrival": sum(step_count(step) for step in range(cycle - 4, cycle - 1)),
+              "retirement": step_count(cycle - 1)}
+    counts["position"] = foreground - sum(counts.values())
+    return {phase: counts[phase] for phase in ROLLING_PHASES}
 
 
 def calibrated_timer_counts(config: dict) -> tuple[int, int]:
@@ -220,6 +263,7 @@ def calibrated_corpus(config: dict) -> dict:
     active = families - quiet
     dispatch, _, _ = dispatch_config(config)
     maintenance_config(config)
+    cycle, _ = rolling_config(config)
     projection, housekeeping = calibrated_timer_counts(config)
     foreground = rate * config["seconds"]
     rounds, remainder = divmod(foreground, active)
@@ -228,9 +272,15 @@ def calibrated_corpus(config: dict) -> dict:
         worker_counts[identity % workers] += rounds + int(identity < remainder)
     if dispatch == "signature-affinity":
         worker_counts = calibrated_dispatch(config)["worker_counts"]
-    plans = (foreground // (16 * active)) * active + min(foreground % (16 * active), active)
-    kinds = {"plan": plans, "position": foreground - plans,
-             "global_projection": projection, "global_housekeeping": housekeeping}
+    if cycle:
+        phases = rolling_phase_counts(config)
+        kinds = {"plan": phases["creation"] + phases["source_growth"],
+                 "position": phases["position"], "arrival": phases["arrival"],
+                 "expire_family": phases["retirement"]}
+    else:
+        plans = (foreground // (16 * active)) * active + min(foreground % (16 * active), active)
+        kinds = {"plan": plans, "position": foreground - plans}
+    kinds.update(global_projection=projection, global_housekeeping=housekeeping)
     return {"foreground": foreground, "projection": projection, "housekeeping": housekeeping,
             "total": foreground + projection + housekeeping,
             "active_families": active, "quiet_families": quiet,
@@ -320,7 +370,7 @@ def maintenance_report_errors(run: dict, config: dict) -> list[str]:
                 "scope": "complete_sweep_batched_transactions"}
     if not isinstance(audit, dict) or any(type(audit.get(field)) is not type(value) or audit[field] != value for field, value in required.items()):
         errors.append("maintenance sweep summary differs from individual completed jobs")
-    transaction_kinds = {kind: count for kind, count in kinds.items() if kind in {"plan", "position"}}
+    transaction_kinds = {kind: count for kind, count in kinds.items() if kind not in {"global_projection", "global_housekeeping"}}
     for name, selected in class_jobs.items():
         selected.sort(key=lambda job: job["job_ordinal"])
         if any(left["finished_ns"] > right["started_ns"] for left, right in zip(selected, selected[1:])):
@@ -358,6 +408,89 @@ def maintenance_report_errors(run: dict, config: dict) -> list[str]:
     return errors
 
 
+def rolling_report_errors(run: dict, config: dict) -> list[str]:
+    """Reconcile receipt aggregates; metrics do not prove a temporal lifecycle."""
+    cycle, retention = rolling_config(config)
+    schedule = run.get("calibrated_schedule", {})
+    if not isinstance(schedule, dict):
+        return ["rolling schedule is missing or malformed"]
+    explicit = any(field in config or field in schedule for field in ROLLING_DEFAULTS)
+    if explicit and any(type(schedule.get(field)) is not int
+                        or schedule[field] != config_value(config, field) for field in ROLLING_DEFAULTS):
+        return ["rolling schedule parameters differ from configuration or are missing"]
+    audit = run.get("rolling_lifecycle")
+    if not cycle:
+        return ["legacy control reports an enabled rolling lifecycle"] if audit is not None else []
+    expected_policy = {
+        "enabled": True, "cycle_messages": cycle, "record_retention_seconds": retention,
+        "policy": "rate_dependent_per_identity_lifecycle_v1", "event_clock": "offered_wall_time_nanoseconds",
+        "maintenance_clock": "independent_wall_time_timers", "initial_population": "empty_when_enabled",
+        "creation": "newer_generation_only_in_vacant_alternating_pool",
+        "position_sources": "three_contiguous_blocks_rotated_by_generation",
+        "message_id_stride": 1025, "message_id": "1000000+per_identity_ordinal*1025+logical_identity",
+        "terminal_retention_seconds": retention + config["housekeeping_interval_seconds"],
+        "retirement_generation": "planned_previous_generation_not_actual_row_evidence", "capacity_qualified": False,
+    }
+    policy = schedule.get("rolling_policy")
+    errors = []
+    if (not isinstance(policy, dict)
+            or any(type(policy.get(field)) is not type(value) or policy[field] != value for field, value in expected_policy.items())
+            or type(schedule.get("housekeeping_seed_cohorts")) is not int
+            or schedule["housekeeping_seed_cohorts"] != 0):
+        errors.append("rolling policy differs from the empty-seeded rate-dependent lifecycle")
+    counts = {phase: count for phase, count in rolling_phase_counts(config).items() if count}
+    if (not isinstance(audit, dict) or any(audit.get(field) is not True for field in ("enabled", "checked", "passed"))
+            or not counts_match(audit.get("phase_counts"), counts)):
+        return errors + ["rolling phase receipts differ from independently admitted lifecycle inputs"]
+    positives, outcomes = audit.get("phase_positive_effects"), audit.get("phase_outcomes")
+    if (not isinstance(positives, dict) or set(positives) != set(counts)
+            or any(type(value) is not int or not 0 <= value <= counts[phase] for phase, value in positives.items())
+            or not isinstance(outcomes, dict) or set(outcomes) != set(counts)
+            or any(not isinstance(row, dict) or set(row) != set(OUTCOME_FIELDS)
+                   or any(type(value) is not int or not 0 <= value < 2**64 for value in row.values())
+                   for row in outcomes.values())):
+        return errors + ["rolling phase effects are missing, inflated or malformed"]
+    for phase, row in outcomes.items():
+        effects = sum(row[field] for field in EFFECT_FIELDS)
+        if effects < positives[phase] or (effects == 0) != (positives[phase] == 0):
+            errors.append("rolling positive phase counts disagree with observed effects")
+    per_kind = run.get("per_kind", {})
+    for kind, phases in {"plan": ("creation", "source_growth"), "position": ("position",),
+                         "arrival": ("arrival",), "expire_family": ("retirement",)}.items():
+        selected = [phase for phase in phases if phase in counts]
+        if not selected:
+            continue
+        actual = per_kind.get(kind, {})
+        if (not isinstance(actual, dict) or not isinstance(actual.get("outcomes"), dict)
+                or any(actual["outcomes"].get(field) != sum(outcomes[phase][field] for phase in selected)
+                       for field in OUTCOME_FIELDS)):
+            errors.append("rolling phase effects do not reconcile with foreground message kinds")
+    if run.get("workload_classes", {}).get("foreground", {}).get("positive_effect_jobs") != sum(positives.values()):
+        errors.append("rolling positive phase counts do not reconcile with foreground jobs")
+    fields = ("created_generations", "retired_families", "reused_family_generations", "physical_families_reused")
+    if any(type(audit.get(field)) is not int or not 0 <= audit[field] < 2**64 for field in fields):
+        return errors + ["rolling observed generation counts are missing or invalid"]
+    created, retired, reused, physical = (audit[field] for field in fields)
+    active = config["families"] - max(1, config["families"] // 4)
+    if (created != positives.get("creation", 0)
+            or retired != outcomes.get("retirement", {}).get("expired_families", 0)
+            or retired != positives.get("retirement", 0)
+            or reused > min(retired, max(0, counts.get("creation", 0) - 2 * active), max(0, created - 1))
+            or not 0 <= created - reused <= 2 * active
+            or not 0 <= physical <= min(reused, created - reused)
+            or (reused == 0) != (physical == 0)):
+        errors.append("rolling observed generation counts disagree with creation, retirement or bounded pools")
+    initial = run.get("initial_fleet", {}).get("live_families")
+    final = run.get("final_fleet", {}).get("live_families")
+    if (type(initial) is not int or initial != 0 or type(final) is not int
+            or created < retired or final != created - retired):
+        errors.append("rolling empty-start family population does not conserve observed creations and retirements")
+    turnover = created > 0 and retired > 0
+    if run.get("population_turnover_tested") is not turnover or schedule.get("population_turnover_tested") is not turnover:
+        errors.append("rolling turnover flag is not supported by observed creation and retirement")
+    return errors
+
+
 def calibrated_report_errors(run: dict, config: dict, expected_counts: list[int]) -> list[str]:
     """Check calibrated scheduling evidence independently of cadence realism."""
     errors = []
@@ -374,6 +507,11 @@ def calibrated_report_errors(run: dict, config: dict, expected_counts: list[int]
     corpus = calibrated_corpus(config)
     dispatch, ttl, pattern = dispatch_config(config)
     maintenance_mode, projection_limit, housekeeping_limit, _ = maintenance_config(config)
+    cycle, _ = rolling_config(config)
+    audit = run.get("rolling_lifecycle", {})
+    turnover = (cycle > 0 and isinstance(audit, dict)
+                and type(audit.get("created_generations")) is int and audit["created_generations"] > 0
+                and type(audit.get("retired_families")) is int and audit["retired_families"] > 0)
     intervals = [config[name] for name in CALIBRATED_FIELDS]
     cadence = ("accelerated" if min(intervals) < 300 else
                "representative_interval_config" if max(intervals) <= 600 else "custom_outside_calibration")
@@ -386,7 +524,7 @@ def calibrated_report_errors(run: dict, config: dict, expected_counts: list[int]
                 "per_flight_ordering": "stable_foreground_worker_fifo" if dispatch == "identity" else "signature_affinity_worker_fifo",
                 "projection_batch_limit": projection_limit, "housekeeping_batch_limit": housekeeping_limit,
                 "maintenance_scope": "complete_sweep_batched_transactions" if maintenance_mode == "sweep" else "bounded_batch_not_full_sweep",
-                "population_turnover_tested": False,
+                "population_turnover_tested": turnover,
                 "global_maintenance_sweep_complete": maintenance_mode == "sweep" and projection + housekeeping > 0}
     # Historical reports predate configurable batches; only the exact default
     # control may omit the mode and cap fields.
@@ -468,28 +606,37 @@ def calibrated_report_errors(run: dict, config: dict, expected_counts: list[int]
         errors.append("calibrated worker retry counts differ from the total")
     if not errors:
         errors.extend(maintenance_report_errors(run, config))
+    if not errors:
+        errors.extend(rolling_report_errors(run, config))
     return errors
 
 
 def assess_calibrated_scope(result: dict, run: dict, config: dict, policy: dict) -> dict:
-    """Keep steady-state diagnostic budgets separate from capacity claims.
-
-    This profile covers timer cadence, foreground ordering and optional batched
-    sweeps, but deliberately omits population turnover. Even a long run
-    at representative intervals therefore cannot supply a capacity bound yet.
-    """
+    """Keep steady-state and rolling diagnostic coverage separate from capacity."""
     classes = run["workload_classes"]
     foreground = classes["foreground"]["completed"]
+    cycle, retention = rolling_config(config)
+    rolling = run.get("rolling_lifecycle", {}) if cycle else {}
+    phase_counts = rolling_phase_counts(config)
+    business = foreground - phase_counts.get("retirement", 0)
     foreground_outcomes = {}
-    for kind in ("plan", "position"):
+    for kind in (("plan", "position", "arrival", "expire_family") if cycle else ("plan", "position")):
         for name, value in run.get("per_kind", {}).get(kind, {}).get("outcomes", {}).items():
             foreground_outcomes[name] = foreground_outcomes.get(name, 0) + value
     missing = foreground_outcomes.get("missing_family", 0) + foreground_outcomes.get("allocation_deferred", 0)
     population = [run.get(snapshot, {}).get("live_families") for snapshot in ("initial_fleet", "final_fleet")]
-    populated = all(type(count) is int and count == config["families"] for count in population)
+    if cycle:
+        active = config["families"] - max(1, config["families"] // 4)
+        populated = (all(type(count) is int for count in population)
+                     and population[0] == 0 and 0 < population[1] <= 2 * active)
+        positive_business = all(rolling["phase_positive_effects"].get(phase, 0) == count
+                                for phase, count in phase_counts.items() if phase != "retirement")
+    else:
+        populated = all(type(count) is int and count == config["families"] for count in population)
+        positive_business = classes["foreground"]["positive_effect_jobs"] == foreground
     foreground_complete = (missing == 0 and foreground_outcomes.get("ignored_stale", 0) == 0
                            and foreground_outcomes.get("duplicate_messages", 0) == 0
-                           and classes["foreground"]["positive_effect_jobs"] == foreground)
+                           and positive_business)
     useful = foreground_complete and foreground_outcomes.get("updated_views", 0) > 0 and populated
     representative = all(300 <= config[name] <= 600 for name in CALIBRATED_FIELDS)
     repeated = all(classes[name]["completed"] >= 2 for name in ("projection", "housekeeping"))
@@ -502,14 +649,32 @@ def assess_calibrated_scope(result: dict, run: dict, config: dict, policy: dict)
     view_updates = foreground_outcomes.get("updated_views", 0) + foreground_outcomes.get("ignored_stale", 0)
     dispatch, _, _ = dispatch_config(config)
     sweep = config_value(config, "maintenance_mode") == "sweep"
+    late = {}
+    rolling_coverage = False
+    if cycle:
+        for name, horizon, effect in (("projection", 30, "outputs"), ("housekeeping", retention, "expired_records")):
+            jobs = [job for job in run["maintenance_jobs"] if job["class"] == name
+                    and job["scheduled_ns"] - run["admission_started_ns"] > horizon * 1000000000]
+            late[name] = {"horizon_seconds": horizon, "completed_jobs": len(jobs),
+                          "positive_effect_jobs": sum(job["outcomes"][effect] > 0 for job in jobs),
+                          "effect": effect, "effect_count": sum(job["outcomes"][effect] for job in jobs)}
+        rolling_coverage = (foreground_complete and populated and rolling["retired_families"] > 0
+                            and rolling["reused_family_generations"] > 0
+                            and all(row["positive_effect_jobs"] >= 2 for row in late.values()))
+        cadence_covered = cadence_covered and rolling_coverage
+    diagnostic_passed = result["continuous_timing_passed"] and useful and slo and rate
     result.update(
-        no_op_fraction=missing / foreground, useful_work_passed=useful,
+        no_op_fraction=missing / business if business else 0, useful_work_passed=useful,
         foreground_outcomes=foreground_outcomes,
         foreground_effect_coverage_passed=foreground_complete,
         foreground_positive_job_fraction=classes["foreground"]["positive_effect_jobs"] / foreground,
         foreground_stale_view_update_fraction=foreground_outcomes.get("ignored_stale", 0) / view_updates if view_updates else None,
         foreground_p99_ms=classes["foreground"]["p99_us_including_retries"] / 1000,
+        foreground_p99_scope="all foreground inputs including retirement controls" if cycle else "all foreground business inputs",
         foreground_throughput_with_drain=foreground_rate,
+        useful_foreground_messages=business if foreground_complete else None,
+        useful_foreground_throughput_with_drain=(business / elapsed if foreground_complete and finite_number(elapsed) and elapsed > 0 else None),
+        retirement_control_messages=phase_counts.get("retirement", 0),
         fleet_population_snapshots_passed=populated,
         representative_cadence_config=representative,
         repeated_maintenance_occurrences=repeated, repeated_positive_maintenance_jobs=positive,
@@ -518,17 +683,25 @@ def assess_calibrated_scope(result: dict, run: dict, config: dict, policy: dict)
                           for name in ("projection", "housekeeping")},
         foreground_ordering_required=dispatch == "identity",
         foreground_ordering_passed=run["per_flight_order"]["passed"],
-        diagnostic_performance_passed=result["continuous_timing_passed"] and useful and slo and rate,
-        population_turnover_tested=False,
+        diagnostic_performance_passed=diagnostic_passed,
+        population_turnover_tested=bool(cycle and rolling["created_generations"] > 0 and rolling["retired_families"] > 0),
+        rolling_enabled=bool(cycle), rolling_coverage_passed=rolling_coverage,
+        rolling_diagnostic_performance_passed=bool(cycle and rolling_coverage and diagnostic_passed),
+        rolling_late_maintenance=late,
+        rolling_lifecycle=rolling,
         global_maintenance_sweep_complete=sweep and classes["maintenance"]["completed"] > 0,
         calibrated_capacity_qualification_complete=False,
         performance_passed=False, qualified_capacity_trial=False, capacity_failure=False,
-        qualification_limitations=["steady-state population omits lifecycle turnover",
-                                   "other background cadences and production workload distributions remain uncalibrated"]
+        qualification_limitations=(["rate-dependent rolling lifecycle is synthetic stress, not a calibrated production population",
+                                    "resource equivalence, replacement compatibility and failure availability remain unqualified"] if cycle else
+                                   ["steady-state population omits lifecycle turnover",
+                                    "other background cadences and production workload distributions remain uncalibrated"])
                                  + ([] if sweep else ["maintenance jobs are bounded batches, not complete global sweeps"]),
     )
     if not useful:
-        result["reasons"].append("calibrated foreground has missing/deferred/stale/duplicate or effectless inputs, lacks updates, or changes its seeded population")
+        result["reasons"].append("calibrated foreground has missing/deferred/stale/duplicate or effectless business inputs, lacks updates, or violates its population scope")
+    if cycle and not rolling_coverage:
+        result["reasons"].append("rolling diagnostic coverage needs observed pool reuse and two late jobs with actual projection outputs and housekeeping expirations")
     if not representative:
         result["reasons"].append("accelerated/out-of-range maintenance intervals do not represent five-to-ten-minute cadence")
     if not repeated or not positive:
@@ -1163,6 +1336,10 @@ def main(argv=None) -> int:
     parser.add_argument("--housekeeping-batch-size", type=int, default=32)
     parser.add_argument("--max-maintenance-batches", type=int, default=4096,
                         help="sweep transaction cap per job, including its required empty terminal transaction")
+    parser.add_argument("--rolling-cycle-messages", type=int, default=0,
+                        help="calibrated only: opt-in rate-dependent lifecycle stress; 0 preserves the control")
+    parser.add_argument("--rolling-retention-seconds", type=int, default=0,
+                        help="calibrated only: synthetic retention horizon; requires an enabled rolling cycle")
     parser.add_argument("--expiry-index", dest="expiry_index_policy", choices=["all-active", "housekeeping"], default="all-active", help="native fixture eligibility; PostgreSQL already uses housekeeping-only eligibility")
     parser.add_argument("--due-index", dest="due_index_policy", choices=["hashed", "ordered"], default="hashed", help="native due-index publication policy; PostgreSQL is unchanged")
     parser.add_argument("--due-index-origin", type=int, default=DUE_INDEX_DEFAULTS["due_index_origin"], help="signed event-time origin; default calibrated nanosecond epoch")
@@ -1194,6 +1371,7 @@ def main(argv=None) -> int:
     try:
         dispatch_config(vars(args))
         maintenance_config(vars(args))
+        rolling_config(vars(args))
     except ValueError as error:
         parser.error(str(error))
     if args.workload != "calibrated" and any(getattr(args, field) != value for field, value in CALIBRATED_DEFAULTS.items()):

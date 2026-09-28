@@ -45,6 +45,10 @@ struct Config {
     #[serde(default = "calibrated::default_max_maintenance_batches")]
     max_maintenance_batches: u64,
     #[serde(default)]
+    rolling_cycle_messages: u64,
+    #[serde(default)]
+    rolling_retention_seconds: u64,
+    #[serde(default)]
     expiry_index_policy: fixture::ExpiryIndexPolicy,
     #[serde(default)]
     due_index_policy: fixture::DueIndexPolicy,
@@ -90,6 +94,8 @@ impl Default for Config {
             projection_batch_size: 4,
             housekeeping_batch_size: 32,
             max_maintenance_batches: 4096,
+            rolling_cycle_messages: 0,
+            rolling_retention_seconds: 0,
             expiry_index_policy: fixture::ExpiryIndexPolicy::AllActive,
             due_index_policy: fixture::DueIndexPolicy::Hashed,
             due_index_origin: fixture::default_due_index_origin(),
@@ -133,6 +139,8 @@ fn calibrated_config(config: &Config) -> calibrated::Config {
         projection_batch_size: config.projection_batch_size,
         housekeeping_batch_size: config.housekeeping_batch_size,
         max_maintenance_batches: config.max_maintenance_batches,
+        rolling_cycle_messages: config.rolling_cycle_messages,
+        rolling_retention_seconds: config.rolling_retention_seconds,
     }
 }
 
@@ -241,6 +249,65 @@ fn positive_effect(outcome: &model::Outcome) -> bool {
         || outcome.rescheduled_events > 0
         || outcome.expired_families > 0
         || !outcome.outputs.is_empty()
+}
+
+/// Receipts have already been matched to the offered schedule by the
+/// coordinator. These counters describe observed effects, not a second serial
+/// history proof. In particular, do not assume a retirement found the planned
+/// previous generation: an earlier allocation may have been deferred.
+fn rolling_lifecycle_audit(config: &Config, receipts: &[oracle::Receipt]) -> Result<Value, String> {
+    let calibrated = calibrated_config(config);
+    let mut phases = BTreeMap::<String, (u64, u64, [usize; 12])>::new();
+    let mut created = BTreeMap::<i64, BTreeSet<i64>>::new();
+    let mut retired = 0;
+    for receipt in receipts {
+        let Some(sequence) = calibrated::foreground_sequence(&calibrated, receipt.message.id)
+        else {
+            continue;
+        };
+        let step = calibrated::rolling_step(&calibrated, sequence)
+            .ok_or("rolling receipt lacks its offered phase")?;
+        let phase = serde_json::to_value(step.phase).map_err(|e| e.to_string())?;
+        let phase = phase.as_str().ok_or("rolling phase is not a name")?;
+        let outcome = &receipt.body.outcome;
+        let counts = phases.entry(phase.into()).or_default();
+        counts.0 += 1;
+        counts.1 += u64::from(positive_effect(outcome));
+        for (sum, value) in counts.2.iter_mut().zip(outcome_totals(outcome)) {
+            *sum += value;
+        }
+        if outcome.created_views > 0 {
+            let family = outcome
+                .family
+                .ok_or("created views lack an observed family")?;
+            created
+                .entry(family)
+                .or_default()
+                .insert(receipt.message.scheduled);
+        }
+        retired += outcome.expired_families;
+    }
+    let counts: BTreeMap<_, _> = phases
+        .iter()
+        .map(|(phase, values)| (phase, values.0))
+        .collect();
+    let positives: BTreeMap<_, _> = phases
+        .iter()
+        .map(|(phase, values)| (phase, values.1))
+        .collect();
+    let outcomes: BTreeMap<_, _> = phases
+        .iter()
+        .map(|(phase, values)| (phase, outcome_json(&values.2)))
+        .collect();
+    Ok(json!({
+        "enabled":true,"checked":true,"passed":true,
+        "scope":"Receipt effect aggregation, with no inferred retirement generation or serialization order. Full evidence additionally checks the complete serial history; metrics evidence does not.",
+        "phase_counts":counts,"phase_positive_effects":positives,"phase_outcomes":outcomes,
+        "created_generations":created.values().map(BTreeSet::len).sum::<usize>(),
+        "retired_families":retired,
+        "reused_family_generations":created.values().map(|generations| generations.len().saturating_sub(1)).sum::<usize>(),
+        "physical_families_reused":created.values().filter(|generations| generations.len()>1).count()
+    }))
 }
 #[derive(Clone, Default, Serialize)]
 struct PendingMaintenance {
@@ -1043,6 +1110,21 @@ fn summarize(
         report["calibrated_schedule"]["timer_event_time"] = json!("Scheduled tick time; delayed jobs retain their admitted timestamp and every tick is drained, without coalescing.");
         report["calibrated_schedule"]["backlog_measurement"] = json!("Maximum sampled due-but-unfinished jobs at worker scheduling boundaries; not a continuous queue maximum.");
         report["population_turnover_tested"] = json!(false);
+        report["calibrated_schedule"]["rolling_cycle_messages"] =
+            json!(case.config.rolling_cycle_messages);
+        report["calibrated_schedule"]["rolling_retention_seconds"] =
+            json!(case.config.rolling_retention_seconds);
+        if case.config.rolling_cycle_messages > 0 {
+            let audit = rolling_lifecycle_audit(&case.config, &completed.receipts)?;
+            let turnover = audit["created_generations"].as_u64().unwrap_or(0) > 0
+                && audit["retired_families"].as_u64().unwrap_or(0) > 0;
+            report["rolling_lifecycle"] = audit;
+            report["population_turnover_tested"] = json!(turnover);
+            report["calibrated_schedule"]["population_turnover_tested"] = json!(turnover);
+            report["calibrated_schedule"]["scope"] = json!("Synthetic rolling lifecycle stress: offered-message count controls generation lifetime, so changing offered rate changes lifecycle speed. Maintenance timers and event timestamps retain real wall time. Bounded reusable pools and fixed source phases are not a calibrated production flight population.");
+            report["calibrated_schedule"]["rolling_policy"] =
+                calibrated::rolling_summary(&calibrated_config(&case.config));
+        }
         report["global_maintenance_sweep_complete"] = json!(sweep_complete);
         report["calibrated_schedule"]["maintenance_completion"] = json!(if sweep_mode {
             "Each job commits bounded batches at its original cutoff, ending only with a committed complete empty query. This is a serial observation at that transaction, not an atomic snapshot of the sweep; later eligible writes belong to a later job."
@@ -1115,6 +1197,8 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
             || setup.projection_batch_size != case.config.projection_batch_size
             || setup.housekeeping_batch_size != case.config.housekeeping_batch_size
             || setup.max_maintenance_batches != case.config.max_maintenance_batches
+            || setup.rolling_cycle_messages != case.config.rolling_cycle_messages
+            || setup.rolling_retention_seconds != case.config.rolling_retention_seconds
             || setup.due_index_policy != case.config.due_index_policy
             || setup.due_index_origin != case.config.due_index_origin
             || setup.due_index_width != case.config.due_index_width
@@ -1396,7 +1480,7 @@ fn parse() -> Result<Option<Config>, String> {
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         if arg == "--help" {
-            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--maintenance-mode batch|sweep --projection-batch-size 4 --housekeeping-batch-size 32 --max-maintenance-batches 4096 (calibrated only; terminal empty transaction counts toward cap)\n--expiry-index all-active|housekeeping (native fixture only; PostgreSQL already has a partial expiry index)\n--due-index hashed|ordered --due-index-origin 1700000000000000000 --due-index-width 1000000000 (native due publication buckets; explicit event-time units)\n--retry-diagnostics off|on (on requires retry-diagnostics build feature; bounded failed-attempt evidence)\n--pg-write-mode buffered|immediate --rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
+            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--maintenance-mode batch|sweep --projection-batch-size 4 --housekeeping-batch-size 32 --max-maintenance-batches 4096 (calibrated only; terminal empty transaction counts toward cap)\n--rolling-cycle-messages 0 --rolling-retention-seconds 0 (calibrated sweep only; opt-in rate-dependent lifecycle stress)\n--expiry-index all-active|housekeeping (native fixture only; PostgreSQL already has a partial expiry index)\n--due-index hashed|ordered --due-index-origin 1700000000000000000 --due-index-width 1000000000 (native due publication buckets; explicit event-time units)\n--retry-diagnostics off|on (on requires retry-diagnostics build feature; bounded failed-attempt evidence)\n--pg-write-mode buffered|immediate --rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
             return Ok(None);
         }
         if arg == "--bench" || arg == "--noplot" {
@@ -1442,6 +1526,14 @@ fn parse() -> Result<Option<Config>, String> {
                 config.housekeeping_batch_size = value
                     .parse()
                     .map_err(|_| "invalid housekeeping batch size")?
+            }
+            "--rolling-cycle-messages" => {
+                config.rolling_cycle_messages =
+                    value.parse().map_err(|_| "invalid rolling cycle size")?
+            }
+            "--rolling-retention-seconds" => {
+                config.rolling_retention_seconds =
+                    value.parse().map_err(|_| "invalid rolling retention")?
             }
             "--max-maintenance-batches" => {
                 config.max_maintenance_batches =
@@ -1566,7 +1658,14 @@ fn parse() -> Result<Option<Config>, String> {
                 || config.maintenance_mode != maintenance::Mode::Batch
                 || config.projection_batch_size != 4
                 || config.housekeeping_batch_size != 32
-                || config.max_maintenance_batches != 4096))
+                || config.max_maintenance_batches != 4096
+                || config.rolling_cycle_messages != 0
+                || config.rolling_retention_seconds != 0))
+        || (config.rolling_cycle_messages == 0 && config.rolling_retention_seconds != 0)
+        || (config.rolling_cycle_messages != 0
+            && (!(16..=1_000_000).contains(&config.rolling_cycle_messages)
+                || !(1..=3600).contains(&config.rolling_retention_seconds)
+                || config.maintenance_mode != maintenance::Mode::Sweep))
         || !(1..=16).contains(&config.projection_batch_size)
         || !(1..=64).contains(&config.housekeeping_batch_size)
         || !(1..=4096).contains(&config.max_maintenance_batches)
@@ -1728,6 +1827,8 @@ pub fn run() -> Result<(), String> {
             config.projection_batch_size,
             config.housekeeping_batch_size,
             config.max_maintenance_batches,
+            config.rolling_cycle_messages,
+            config.rolling_retention_seconds,
             config.expiry_index_policy,
             config.due_index_policy,
             config.due_index_origin,

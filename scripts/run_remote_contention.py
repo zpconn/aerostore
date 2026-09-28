@@ -25,7 +25,8 @@ import uuid
 DISPATCH_DEFAULTS = {"dispatch": "identity", "affinity_ttl_ms": 0, "signature_pattern": "both"}
 MAINTENANCE_DEFAULTS = {"maintenance_mode": "batch", "projection_batch_size": 4,
                         "housekeeping_batch_size": 32, "max_maintenance_batches": 4096}
-CALIBRATED_DEFAULTS = {**DISPATCH_DEFAULTS, **MAINTENANCE_DEFAULTS}
+ROLLING_DEFAULTS = {"rolling_cycle_messages": 0, "rolling_retention_seconds": 0}
+CALIBRATED_DEFAULTS = {**DISPATCH_DEFAULTS, **MAINTENANCE_DEFAULTS, **ROLLING_DEFAULTS}
 DUE_INDEX_DEFAULTS = {"due_index_policy": "hashed", "due_index_origin": 1_700_000_000_000_000_000,
                       "due_index_width": 1_000_000_000}
 EXPERIMENT_DEFAULTS = {"expiry_index_policy": "all-active", "retry_diagnostics": False, **DUE_INDEX_DEFAULTS}
@@ -232,6 +233,10 @@ def main() -> int:
     parser.add_argument("--projection-batch-size", type=int, default=4)
     parser.add_argument("--housekeeping-batch-size", type=int, default=32)
     parser.add_argument("--max-maintenance-batches", type=int, default=4096)
+    parser.add_argument("--rolling-cycle-messages", type=int, default=0,
+                        help="opt-in rate-dependent lifecycle stress; 0 preserves fixed population")
+    parser.add_argument("--rolling-retention-seconds", type=int, default=0,
+                        help="experimental rolling history retention, required with rolling cycles")
     parser.add_argument("--evidence", choices=["full", "metrics"], default="metrics")
     parser.add_argument("--arrival-rate", type=int, default=100)
     parser.add_argument("--max-backlog", type=int, default=1000)
@@ -246,6 +251,12 @@ def main() -> int:
         parser.error("signature-affinity requires an explicit TTL in 1..3600000 ms; identity requires TTL 0")
     if not 1 <= args.projection_batch_size <= 16 or not 1 <= args.housekeeping_batch_size <= 64 or not 1 <= args.max_maintenance_batches <= 4096:
         parser.error("maintenance batch bounds are projection 1..16, housekeeping 1..64, cap 1..4096 including terminal")
+    if ((args.rolling_cycle_messages == 0 and args.rolling_retention_seconds != 0)
+            or (args.rolling_cycle_messages != 0
+                and (not 16 <= args.rolling_cycle_messages <= 1000000
+                     or not 1 <= args.rolling_retention_seconds <= 3600
+                     or args.maintenance_mode != "sweep"))):
+        parser.error("rolling requires sweep mode, cycle16..1000000 and retention1..3600; disabled defaults are0/0")
     if args.workload != "calibrated" and any(getattr(args, field) != value for field, value in CALIBRATED_DEFAULTS.items()):
         parser.error("dispatch/signature/maintenance overrides apply only to --workload calibrated")
     timeout = args.timeout if args.timeout is not None else args.seconds + 240
@@ -296,6 +307,8 @@ def main() -> int:
               "--projection-batch-size", str(args.projection_batch_size),
               "--housekeeping-batch-size", str(args.housekeeping_batch_size),
               "--max-maintenance-batches", str(args.max_maintenance_batches),
+              "--rolling-cycle-messages", str(args.rolling_cycle_messages),
+              "--rolling-retention-seconds", str(args.rolling_retention_seconds),
               "--expiry-index", args.expiry_index_policy, "--retry-diagnostics", args.retry_diagnostics,
               "--due-index", args.due_index_policy, "--due-index-origin", str(args.due_index_origin),
               "--due-index-width", str(args.due_index_width)]

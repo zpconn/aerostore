@@ -69,6 +69,12 @@ empty completed job does not count as repeated positive maintenance coverage.
 Projection also need not find new work at every accelerated tick: a processed
 event is rescheduled 30 physical seconds beyond that job's cutoff.
 
+The optional [rolling lifecycle mode](hyperfeed_rolling.md) starts empty and
+supplies new history through foreground transactions, with explicit experimental
+retention and generation length. It does not use these seed cohorts. Its reports
+separate recurring useful maintenance and observed generation reuse from the
+fixed-population control and from capacity qualification.
+
 The default batch mode retains its exact earlier seed population. Consequently,
 a batch-versus-sweep comparison changes both job execution and retained-record
 ages. It is a workload comparison, **not an isolated measurement of the cost of

@@ -1,8 +1,10 @@
-//! Partially calibrated, fixed-population workload with independent real-wall
+//! Partially calibrated workload with independent real-wall
 //! maintenance timers. Dispatch selects permanent per-flight FIFO or temporary
 //! input-signature affinity. TTL, alias mix, quiet quarter, source mix, retained
 //! history and fixed lifetime are explicit synthetic assumptions. A timer
 //! selects either one bounded batch or a job of successive batch transactions.
+//! Optional rolling lifecycles use an explicit per-identity message count:
+//! their pace is rate-dependent, while event and maintenance clocks stay physical.
 use super::maintenance;
 use super::model::{self, CreationPolicy, Message, MessageKind};
 use super::storage::Record;
@@ -64,7 +66,9 @@ fn is_zero(value: &u64) -> bool {
     *value == 0
 }
 
-const FOREGROUND_ID_START: u64 = 1_000_000;
+pub const FOREGROUND_ID_START: u64 = 1_000_000;
+/// Exceeds every bounded identity index and is coprime to the 8/26/32 rings.
+pub const ROLLING_ID_STRIDE: u64 = 1025;
 const MAINTENANCE_ID_START: u64 = maintenance::JOB_ID_START;
 
 pub fn default_projection_batch_size() -> usize {
@@ -88,9 +92,9 @@ fn is_default_max_maintenance_batches(value: &u64) -> bool {
 
 /// Fixed, finite retained-history cohorts are independent of admission duration,
 /// rate, dispatch and worker count. Every timestamp remains before the epoch.
-/// Zero labels the legacy control, which retains its exact original population.
+/// Zero labels the legacy batch control or an empty rolling population.
 pub fn housekeeping_seed_cohorts(config: &Config) -> u64 {
-    if config.maintenance_mode == maintenance::Mode::Batch {
+    if config.rolling_cycle_messages != 0 || config.maintenance_mode == maintenance::Mode::Batch {
         0
     } else {
         MAX_HOUSEKEEPING_SEED_COHORTS.min(
@@ -131,6 +135,90 @@ pub struct Config {
         skip_serializing_if = "is_default_max_maintenance_batches"
     )]
     pub max_maintenance_batches: u64,
+    /// Explicit rate-dependent synthetic lifecycle; zero preserves the fixed fixture.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub rolling_cycle_messages: u64,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub rolling_retention_seconds: u64,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RollingPhase {
+    Creation,
+    SourceGrowth,
+    Position,
+    Arrival,
+    Retirement,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct RollingStep {
+    pub logical_identity: usize,
+    pub generation: u64,
+    pub step: u64,
+    pub phase: RollingPhase,
+    pub source: i64,
+    pub target_family: usize,
+    /// Planned previous generation; actual retained rows can be older after a deferred cycle.
+    pub retirement_generation: Option<u64>,
+}
+
+pub fn rolling_step(config: &Config, sequence: u64) -> Option<RollingStep> {
+    let cycle = config.rolling_cycle_messages;
+    if cycle == 0 {
+        return None;
+    }
+    let active = active_families(config) as u64;
+    let logical_identity = (sequence % active) as usize;
+    let ordinal = sequence / active;
+    let generation = ordinal / cycle;
+    let step = ordinal % cycle;
+    let (phase, source) = match step {
+        0 => (RollingPhase::Creation, 1),
+        1 => (RollingPhase::Position, 1),
+        2 => (RollingPhase::SourceGrowth, 2),
+        3 => (RollingPhase::Position, 2),
+        4 => (RollingPhase::SourceGrowth, 4),
+        5 => (RollingPhase::Position, 4),
+        n if n == cycle - 4 => (RollingPhase::Arrival, 1),
+        n if n == cycle - 3 => (RollingPhase::Arrival, 2),
+        n if n == cycle - 2 => (RollingPhase::Arrival, 4),
+        n if n == cycle - 1 => (RollingPhase::Retirement, 0),
+        _ => {
+            let block = (3 * (step - 6) / (cycle - 10)).min(2);
+            (RollingPhase::Position, 1 << ((block + generation) % 3))
+        }
+    };
+    let retirement = phase == RollingPhase::Retirement;
+    Some(RollingStep {
+        logical_identity,
+        generation,
+        step,
+        phase,
+        source,
+        target_family: logical_identity * 2 + ((generation % 2) as usize ^ usize::from(retirement)),
+        retirement_generation: retirement.then(|| generation.checked_sub(1)).flatten(),
+    })
+}
+
+pub fn rolling_summary(config: &Config) -> serde_json::Value {
+    serde_json::json!({
+        "enabled":config.rolling_cycle_messages != 0,
+        "cycle_messages":config.rolling_cycle_messages,
+        "record_retention_seconds":config.rolling_retention_seconds,
+        "policy":"rate_dependent_per_identity_lifecycle_v1",
+        "event_clock":"offered_wall_time_nanoseconds",
+        "maintenance_clock":"independent_wall_time_timers",
+        "initial_population":"empty_when_enabled",
+        "creation":"newer_generation_only_in_vacant_alternating_pool",
+        "position_sources":"three_contiguous_blocks_rotated_by_generation",
+        "message_id_stride":ROLLING_ID_STRIDE,
+        "message_id":"1000000+per_identity_ordinal*1025+logical_identity",
+        "terminal_retention_seconds":config.rolling_retention_seconds + config.housekeeping_interval_seconds,
+        "retirement_generation":"planned_previous_generation_not_actual_row_evidence",
+        "capacity_qualified":false
+    })
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -244,6 +332,13 @@ pub fn validate_config(config: &Config) -> Result<(), String> {
         || !(1..=16).contains(&config.projection_batch_size)
         || !(1..=64).contains(&config.housekeeping_batch_size)
         || !(1..=MAX_MAINTENANCE_BATCHES).contains(&config.max_maintenance_batches)
+        || if config.rolling_cycle_messages == 0 {
+            config.rolling_retention_seconds != 0
+        } else {
+            !(16..=1_000_000).contains(&config.rolling_cycle_messages)
+                || !(1..=3600).contains(&config.rolling_retention_seconds)
+                || config.maintenance_mode != maintenance::Mode::Sweep
+        }
         || match config.dispatch {
             Dispatch::Identity => config.affinity_ttl_ms != 0,
             Dispatch::SignatureAffinity => !(1..=3_600_000).contains(&config.affinity_ttl_ms),
@@ -263,6 +358,25 @@ fn foreground_offered(config: &Config) -> u64 {
     (config.duration_ns as u128 * config.foreground_rate as u128).div_ceil(NANOS_PER_SECOND as u128)
         as u64
 }
+/// Recover the offered global sequence without treating maintenance IDs or
+/// unused rolling identity lanes as foreground input. Config is validated by
+/// Schedule/WorkerSchedule before use.
+pub fn foreground_sequence(config: &Config, id: u64) -> Option<u64> {
+    let relative = id.checked_sub(FOREGROUND_ID_START)?;
+    let sequence = if config.rolling_cycle_messages == 0 {
+        relative
+    } else {
+        let identity = relative % ROLLING_ID_STRIDE;
+        let active = active_families(config) as u64;
+        if identity >= active {
+            return None;
+        }
+        (relative / ROLLING_ID_STRIDE)
+            .checked_mul(active)?
+            .checked_add(identity)?
+    };
+    (sequence < foreground_offered(config)).then_some(sequence)
+}
 fn offset(config: &Config, sequence: u64) -> u64 {
     (sequence as u128 * NANOS_PER_SECOND as u128 / config.foreground_rate as u128) as u64
 }
@@ -270,7 +384,16 @@ fn signature(config: &Config, sequence: u64) -> (i64, i64) {
     let active = active_families(config) as u64;
     let identity = sequence % active;
     let ordinal = sequence / active;
-    let both = (100 + (identity / 4) as i64, 10_000 + identity as i64);
+    let rolling = rolling_step(config, sequence);
+    let generation = rolling.map_or(0, |step| step.generation);
+    let both = (
+        100 + (identity / 4) as i64,
+        10_000 + identity as i64 + (generation * config.families as u64) as i64,
+    );
+    // Creation must establish both alias keys before later partial signatures.
+    if rolling.is_some_and(|step| step.phase == RollingPhase::Creation) {
+        return both;
+    }
     match (config.signature_pattern, (ordinal / 2) % 3) {
         (SignaturePattern::Mixed, 1) => (both.0, 0),
         (SignaturePattern::Mixed, 2) => (0, both.1),
@@ -336,21 +459,45 @@ fn event_for(
         let identity = (sequence % active_families(config) as u64) as usize;
         let flight_ordinal = sequence / active_families(config) as u64;
         let offset_ns = offset(config, sequence);
-        let id = FOREGROUND_ID_START + sequence;
-        let source = 1 << (flight_ordinal % 3);
-        let kind = if flight_ordinal % 16 == 0 {
+        let rolling = rolling_step(config, sequence);
+        let id = FOREGROUND_ID_START
+            + if rolling.is_some() {
+                flight_ordinal * ROLLING_ID_STRIDE + identity as u64
+            } else {
+                sequence
+            };
+        let source = rolling.map_or(1 << (flight_ordinal % 3), |step| step.source);
+        let at = EVENT_EPOCH_NS + offset_ns as i64;
+        let kind = if let Some(step) = rolling {
+            match step.phase {
+                RollingPhase::Creation | RollingPhase::SourceGrowth => MessageKind::Plan,
+                RollingPhase::Position => position(config.seed, id),
+                RollingPhase::Arrival => MessageKind::Arrival,
+                RollingPhase::Retirement => MessageKind::ExpireFamily {
+                    family: step.target_family,
+                    before: at
+                        - ((config.rolling_retention_seconds
+                            + config.housekeeping_interval_seconds)
+                            * NANOS_PER_SECOND) as i64,
+                    stale_before: None,
+                },
+            }
+        } else if flight_ordinal % 16 == 0 {
             MessageKind::Plan
         } else {
             position(config.seed, id)
         };
-        let mut input = message(
-            id,
-            identity,
-            source,
-            EVENT_EPOCH_NS + offset_ns as i64,
-            kind,
-        );
+        let mut input = message(id, identity, source, at, kind);
         (input.callsign, input.tail) = signature(config, sequence);
+        if let Some(step) = rolling {
+            input.allocation_family = step.target_family;
+            input.scheduled += step.generation as i64 * 3600;
+            input.creation = if step.phase == RollingPhase::Creation {
+                CreationPolicy::NewerIfVacant
+            } else {
+                CreationPolicy::ExistingOnly
+            };
+        }
         Some(ScheduledEvent {
             offset_ns,
             class: EventClass::Foreground,
@@ -374,7 +521,12 @@ fn event_for(
             (
                 EventClass::Housekeeping,
                 MessageKind::GlobalHousekeeping {
-                    before: at - RECORD_RETENTION_SECONDS * NANOS_PER_SECOND as i64,
+                    before: at
+                        - if config.rolling_cycle_messages == 0 {
+                            RECORD_RETENTION_SECONDS
+                        } else {
+                            config.rolling_retention_seconds as i64
+                        } * NANOS_PER_SECOND as i64,
                     limit: config.housekeeping_batch_size,
                 },
             )
@@ -600,6 +752,9 @@ impl Schedule {
     /// obsolete positions and one recent position per view. Seed work is not
     /// timed and does not claim an empirical HyperFeed age distribution.
     pub fn initial_records(&self) -> Result<Vec<Record>, String> {
+        if self.config.rolling_cycle_messages != 0 {
+            return Ok(empty_records(self.config.families * 2));
+        }
         let mut rows: BTreeMap<_, _> = empty_records(self.config.families * 2)
             .into_iter()
             .map(|row| (row.id, row))
@@ -696,12 +851,14 @@ pub fn initial_records(families: usize, seed: u64) -> Result<Vec<Record>, String
         projection_batch_size: PROJECTION_BATCH_LIMIT,
         housekeeping_batch_size: HOUSEKEEPING_BATCH_LIMIT,
         max_maintenance_batches: MAX_MAINTENANCE_BATCHES,
+        rolling_cycle_messages: 0,
+        rolling_retention_seconds: 0,
     })?
     .initial_records()
 }
 
-/// Sweep initialization also depends on housekeeping cadence because retained
-/// expiry records form explicit synthetic cohorts at its first deadlines.
+/// Fixed sweep initialization depends on housekeeping cadence because retained
+/// expiry records form finite synthetic cohorts. Rolling initialization is empty.
 pub fn initial_records_for(config: &Config) -> Result<Vec<Record>, String> {
     validate_config(config)?;
     // Initialization must not materialize the potentially large input router.

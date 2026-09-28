@@ -238,6 +238,77 @@ def sweep_trial(evidence="full", seconds=5, projection_batch_size=4, housekeepin
     return item
 
 
+def rolling_trial(evidence="full", seconds=40, cycle=16, retention=1):
+    item = sweep_trial(evidence=evidence, seconds=seconds)
+    config = item["config"]
+    config.update(rolling_cycle_messages=cycle, rolling_retention_seconds=retention)
+    item["report"]["config"].update(config)
+    run = item["report"]["runs"][0]
+    # Explicit phase sequence provides an independent oracle for the gate's
+    # arithmetic over complete and partial identity rounds.
+    sequence = (["creation", "position", "source_growth", "position", "source_growth", "position"]
+                + ["position"] * (cycle - 10) + ["arrival"] * 3 + ["retirement"])
+    counts, positives, outcomes = Counter(), Counter(), {}
+    created, retired = {}, 0
+    active = config["families"] - max(1, config["families"] // 4)
+    for q in range(config["arrival_rate"] * seconds):
+        identity, ordinal = q % active, q // active
+        generation, step = divmod(ordinal, cycle)
+        phase = sequence[step]
+        counts[phase] += 1
+        positives.setdefault(phase, 0)
+        row = outcomes.setdefault(phase, {name: 0 for name in gate.OUTCOME_FIELDS})
+        if phase != "retirement":
+            positives[phase] += 1
+            row["updated_views"] += 1
+            row["outputs"] += 1
+        if phase == "creation":
+            row["created_views"] += 1
+            created.setdefault(identity * 2 + generation % 2, set()).add(generation)
+        elif phase == "source_growth":
+            row["created_views"] += 2 if step == 2 else 4
+        elif phase == "retirement" and generation > 0:
+            positives[phase] += 1
+            row["expired_families"] += 1
+            row["expired_records"] += 7
+            retired += 1
+    kinds = {"creation": "plan", "source_growth": "plan", "position": "position",
+             "arrival": "arrival", "retirement": "expire_family"}
+    run["per_kind"] = {name: row for name, row in run["per_kind"].items() if name.startswith("global_")}
+    for phase, count in counts.items():
+        row = run["per_kind"].setdefault(kinds[phase], {"completed": 0, "transactions": 0,
+                                                       "outcomes": {name: 0 for name in gate.OUTCOME_FIELDS}})
+        row["completed"] += count
+        row["transactions"] += count
+        for name, value in outcomes[phase].items():
+            row["outcomes"][name] += value
+    run["message_kinds"] = {name: row["completed"] for name, row in run["per_kind"].items()}
+    run["transaction_kinds"] = {name: row["transactions"] for name, row in run["per_kind"].items()}
+    run["rolling_lifecycle"] = {
+        "enabled": True, "checked": True, "passed": True,
+        "phase_counts": dict(counts), "phase_positive_effects": dict(positives), "phase_outcomes": outcomes,
+        "created_generations": sum(len(values) for values in created.values()), "retired_families": retired,
+        "reused_family_generations": sum(len(values) - 1 for values in created.values()),
+        "physical_families_reused": sum(len(values) > 1 for values in created.values()),
+    }
+    turnover = bool(created and retired)
+    run["population_turnover_tested"] = turnover
+    run["calibrated_schedule"].update(rolling_cycle_messages=cycle, rolling_retention_seconds=retention,
+        housekeeping_seed_cohorts=0, population_turnover_tested=turnover,
+        rolling_policy={"enabled": True, "cycle_messages": cycle, "record_retention_seconds": retention,
+            "policy": "rate_dependent_per_identity_lifecycle_v1", "event_clock": "offered_wall_time_nanoseconds",
+            "maintenance_clock": "independent_wall_time_timers", "initial_population": "empty_when_enabled",
+            "creation": "newer_generation_only_in_vacant_alternating_pool",
+            "position_sources": "three_contiguous_blocks_rotated_by_generation",
+            "message_id_stride": 1025, "message_id": "1000000+per_identity_ordinal*1025+logical_identity",
+            "terminal_retention_seconds": retention + config["housekeeping_interval_seconds"],
+            "retirement_generation": "planned_previous_generation_not_actual_row_evidence", "capacity_qualified": False})
+    run["initial_fleet"]["live_families"] = 0
+    run["final_fleet"]["live_families"] = sum(len(values) for values in created.values()) - retired
+    run["workload_classes"]["foreground"]["positive_effect_jobs"] = sum(positives.values())
+    return item
+
+
 class QualificationTests(unittest.TestCase):
     def test_invalid_maintenance_bounds_and_noncalibrated_overrides_fail_before_execution(self):
         for flags in (["--projection-batch-size", "0"], ["--projection-batch-size", "17"],
@@ -1002,6 +1073,193 @@ class QualificationTests(unittest.TestCase):
             self.assertFalse(report["passed"])
             self.assertFalse(report["completed"])
             self.assertEqual(report["stage"], "configuration")
+
+
+class RollingQualificationTests(unittest.TestCase):
+    def test_rolling_configuration_bounds_and_legacy_defaults(self):
+        self.assertEqual(gate.rolling_config({}), (0, 0))
+        for cycle, retention in ((16, 1), (1000000, 3600)):
+            self.assertEqual(gate.rolling_config({"rolling_cycle_messages": cycle,
+                                                  "rolling_retention_seconds": retention,
+                                                  "maintenance_mode": "sweep"}), (cycle, retention))
+        for cycle, retention in ((0, 1), (16, 0), (15, 1), (1000001, 1),
+                                  (16, 3601), (-1, 0), (True, 1), (16, True),
+                                  (16.0, 1), (16, None)):
+            with self.subTest(cycle=cycle, retention=retention), self.assertRaises(ValueError):
+                gate.rolling_config({"rolling_cycle_messages": cycle,
+                                     "rolling_retention_seconds": retention})
+        with self.assertRaises(ValueError):
+            gate.rolling_config({"rolling_cycle_messages": 16, "rolling_retention_seconds": 1})
+
+    def test_rolling_companion_keys_include_both_parameters(self):
+        config = calibrated_trial()["config"]
+        self.assertEqual(gate.key(config), gate.key({**config, **gate.ROLLING_DEFAULTS}))
+        rolling = {**config, "rolling_cycle_messages": 16, "rolling_retention_seconds": 1, "maintenance_mode": "sweep"}
+        for changed in ({}, {"rolling_cycle_messages": 17}, {"rolling_retention_seconds": 2}):
+            other = config if not changed else {**rolling, **changed}
+            self.assertNotEqual(gate.key(rolling), gate.key(other))
+
+    def test_invalid_rolling_cli_is_rejected_before_execution(self):
+        for flags in (["--rolling-cycle-messages", "16"],
+                      ["--rolling-retention-seconds", "1"],
+                      ["--rolling-cycle-messages", "15", "--rolling-retention-seconds", "1"],
+                      ["--rolling-cycle-messages", "1000001", "--rolling-retention-seconds", "1"],
+                      ["--rolling-cycle-messages", "16", "--rolling-retention-seconds", "3601"],
+                      ["--workload", "fleet", "--rolling-cycle-messages", "16", "--rolling-retention-seconds", "1"]):
+            with self.subTest(flags=flags), tempfile.TemporaryDirectory() as directory:
+                with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as caught:
+                    gate.main(["--binary", "/nonexistent/benchmark", "--output", directory,
+                               "--workload", "calibrated", "--families", "16", "--hot-percent", "0",
+                               "--slo-ms", "50", *flags])
+                self.assertEqual(caught.exception.code, 2)
+
+    def test_rolling_kind_and_phase_counts_match_independent_enumeration(self):
+        for seconds, cycle in ((1, 16), (7, 16), (8, 16), (9, 16), (40, 17), (41, 23)):
+            with self.subTest(seconds=seconds, cycle=cycle):
+                item = rolling_trial(seconds=seconds, cycle=cycle)
+                run, config = item["report"]["runs"][0], item["config"]
+                phases = {phase: count for phase, count in gate.rolling_phase_counts(config).items() if count}
+                self.assertEqual(phases, run["rolling_lifecycle"]["phase_counts"])
+                self.assertEqual(gate.calibrated_corpus(config)["kinds"], run["message_kinds"])
+                verdict = gate.assess_trial(item, POLICY)
+                self.assertTrue(verdict["execution_valid"], verdict["reasons"])
+
+    def test_rolling_creation_keeps_both_aliases_across_later_generations(self):
+        # At ordinals16 and32 mixed signatures would normally be tail-only and
+        # callsign-only. Creation overrides both, producing distinct new keys.
+        config = {"families": 4, "workers": 4, "arrival_rate": 3, "seconds": 36,
+                  "dispatch": "signature-affinity", "affinity_ttl_ms": 100000,
+                  "signature_pattern": "mixed", "maintenance_mode": "sweep",
+                  "rolling_cycle_messages": 16, "rolling_retention_seconds": 1}
+        audit = gate.calibrated_dispatch(config)
+        # Golden values were calculated from explicit per-ordinal owner rows,
+        # without using the gate's signature/router reconstruction.
+        self.assertEqual(audit["worker_counts"], [24, 20, 18, 46])
+        self.assertEqual(audit["assignment_fingerprint"], "c15e85f5a3f12a65")
+        self.assertEqual(audit["new_signature_misses"], 19)
+        self.assertEqual(audit["unique_signatures"], 19)
+        self.assertEqual(audit["hits"], 89)
+        self.assertEqual(audit["planned_flight_worker_changes"], 45)
+
+    def test_rolling_useful_counts_exclude_all_retirement_controls(self):
+        item = rolling_trial()
+        run = item["report"]["runs"][0]
+        verdict = gate.assess_trial(item, POLICY)
+        self.assertTrue(verdict["execution_valid"], verdict["reasons"])
+        self.assertTrue(verdict["rolling_coverage_passed"])
+        self.assertTrue(verdict["rolling_diagnostic_performance_passed"])
+        self.assertTrue(verdict["population_turnover_tested"])
+        self.assertEqual(verdict["retirement_control_messages"], 15)
+        self.assertEqual(verdict["useful_foreground_messages"], 225)
+        self.assertAlmostEqual(verdict["useful_foreground_throughput_with_drain"], 225 / run["elapsed_seconds_including_drain"])
+        self.assertLess(verdict["useful_foreground_throughput_with_drain"], verdict["foreground_throughput_with_drain"])
+        self.assertIn("retirement", verdict["foreground_p99_scope"])
+        for flag in ("performance_passed", "qualified_capacity_trial", "capacity_failure",
+                     "calibrated_capacity_qualification_complete", "representative_cadence_coverage_passed"):
+            self.assertFalse(verdict[flag], flag)
+
+    def test_rolling_short_runs_and_horizon_endpoint_do_not_claim_recurrence(self):
+        for seconds in (1, 10, 31, 32):
+            verdict = gate.assess_trial(rolling_trial(seconds=seconds), POLICY)
+            self.assertTrue(verdict["execution_valid"], verdict["reasons"])
+            self.assertFalse(verdict["rolling_coverage_passed"])
+            self.assertFalse(verdict["rolling_diagnostic_performance_passed"])
+        verdict = gate.assess_trial(rolling_trial(seconds=33), POLICY)
+        self.assertEqual(verdict["rolling_late_maintenance"]["projection"]["completed_jobs"], 2)
+        self.assertTrue(verdict["rolling_coverage_passed"])
+
+    def test_reschedule_only_projection_does_not_count_as_useful_late_work(self):
+        item = rolling_trial()
+        run = item["report"]["runs"][0]
+        for job in run["maintenance_jobs"]:
+            if job["class"] == "projection" and job["scheduled_ns"] - run["admission_started_ns"] > 30000000000:
+                job["outcomes"]["outputs"] = 0
+        run["per_kind"]["global_projection"]["outcomes"]["outputs"] = sum(
+            job["outcomes"]["outputs"] for job in run["maintenance_jobs"] if job["class"] == "projection")
+        verdict = gate.assess_trial(item, POLICY)
+        self.assertTrue(verdict["execution_valid"], verdict["reasons"])
+        self.assertTrue(verdict["repeated_positive_maintenance_jobs"])
+        self.assertEqual(verdict["rolling_late_maintenance"]["projection"]["positive_effect_jobs"], 0)
+        self.assertFalse(verdict["rolling_coverage_passed"])
+
+    def test_rolling_actual_reuse_is_required_separately_from_creation_and_retirement(self):
+        item = rolling_trial(seconds=40, cycle=64)
+        verdict = gate.assess_trial(item, POLICY)
+        self.assertTrue(verdict["execution_valid"], verdict["reasons"])
+        self.assertEqual(verdict["rolling_lifecycle"]["reused_family_generations"], 0)
+        self.assertFalse(verdict["rolling_coverage_passed"])
+
+    def test_rolling_audit_and_config_tampering_fails_closed(self):
+        mutations = [
+            lambda run: run.pop("rolling_lifecycle"),
+            lambda run: run["rolling_lifecycle"].update(passed=False),
+            lambda run: run["rolling_lifecycle"]["phase_counts"].update(creation=0),
+            lambda run: run["rolling_lifecycle"]["phase_positive_effects"].update(creation=True),
+            lambda run: run["rolling_lifecycle"]["phase_outcomes"]["arrival"].update(outputs=999),
+            lambda run: run["rolling_lifecycle"].update(created_generations=999),
+            lambda run: run["rolling_lifecycle"].update(retired_families=0),
+            lambda run: run["rolling_lifecycle"].update(reused_family_generations=999),
+            lambda run: run["rolling_lifecycle"].update(physical_families_reused=0),
+            lambda run: run.update(population_turnover_tested=False),
+            lambda run: run["initial_fleet"].update(live_families=1),
+            lambda run: run["final_fleet"].update(live_families=4),
+            lambda run: run["calibrated_schedule"].update(housekeeping_seed_cohorts=3),
+            lambda run: run["calibrated_schedule"]["rolling_policy"].update(capacity_qualified=True),
+            lambda run: run["calibrated_schedule"]["rolling_policy"].update(terminal_retention_seconds=1),
+            lambda run: run["calibrated_schedule"]["rolling_policy"].update(message_id_stride=8),
+            lambda run: run["calibrated_schedule"]["rolling_policy"].pop("message_id"),
+            lambda run: run["calibrated_schedule"].pop("rolling_cycle_messages"),
+        ]
+        for mutate in mutations:
+            with self.subTest(mutation=mutate):
+                item = rolling_trial()
+                mutate(item["report"]["runs"][0])
+                self.assertFalse(gate.assess_trial(item, POLICY)["execution_valid"])
+
+    def test_rolling_stale_or_duplicate_effects_cannot_earn_useful_rate(self):
+        for field in ("ignored_stale", "duplicate_messages", "allocation_deferred", "missing_family"):
+            with self.subTest(field=field):
+                item = rolling_trial()
+                run = item["report"]["runs"][0]
+                run["rolling_lifecycle"]["phase_outcomes"]["position"][field] = 1
+                run["per_kind"]["position"]["outcomes"][field] = 1
+                verdict = gate.assess_trial(item, POLICY)
+                self.assertTrue(verdict["execution_valid"], verdict["reasons"])
+                self.assertTrue(verdict["history_verified"])
+                self.assertFalse(verdict["useful_work_passed"])
+                self.assertFalse(verdict["rolling_coverage_passed"])
+                self.assertIsNone(verdict["useful_foreground_messages"])
+                self.assertIsNone(verdict["useful_foreground_throughput_with_drain"])
+
+    def test_rolling_metrics_need_exact_companion_and_never_gain_own_history(self):
+        item = rolling_trial(evidence="metrics")
+        without = gate.assess_trial(item, POLICY)
+        self.assertTrue(without["rolling_coverage_passed"])
+        self.assertFalse(without["correctness_companion_verified"])
+        own_key = gate.key(item["config"])
+        paired = gate.assess_trial(item, POLICY, {own_key})
+        self.assertTrue(paired["correctness_companion_verified"])
+        self.assertFalse(paired["history_verified"])
+        for field in gate.ROLLING_DEFAULTS:
+            wrong = {**item["config"], field: item["config"][field] + 1}
+            self.assertFalse(gate.assess_trial(item, POLICY, {gate.key(wrong)})["correctness_companion_verified"])
+        for flag in ("qualified_capacity_trial", "capacity_failure", "calibrated_capacity_qualification_complete"):
+            self.assertFalse(paired[flag])
+
+    def test_explicit_zero_controls_cannot_omit_rolling_report_metadata(self):
+        old = calibrated_trial()
+        self.assertTrue(gate.assess_trial(old, POLICY)["execution_valid"])
+        for config in (old["config"], old["report"]["config"]):
+            config.update(gate.ROLLING_DEFAULTS)
+        self.assertFalse(gate.assess_trial(old, POLICY)["execution_valid"])
+        old["report"]["runs"][0]["calibrated_schedule"].update(gate.ROLLING_DEFAULTS)
+        self.assertTrue(gate.assess_trial(old, POLICY)["execution_valid"])
+
+    def test_rolling_and_control_corpora_cannot_mix_in_one_matrix(self):
+        result = gate.build_gate([rolling_trial(), sweep_trial(seconds=40)], POLICY,
+                                 ["aerostore"], [6], [2], [11])
+        self.assertFalse(result["corpus_configuration_matches"])
+        self.assertTrue(all(not item["assessment"]["execution_valid"] for item in result["trial_assessments"]))
 
 
 class RetryDiagnosticGateTests(unittest.TestCase):
