@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use ::postgres::{Client, Config, NoTls, Row, Statement};
 
-use super::storage::{Query, Store};
+use super::storage::{MaintenanceSelection, Query, Store};
 use crate::extended_crucible::metrics::StoreMetrics;
 use crate::extended_crucible::model::{DbError, Record};
 
@@ -407,6 +407,8 @@ struct Queries {
     expired: Statement,
     global_due: Statement,
     global_expired: Statement,
+    first_due: Statement,
+    first_expired: Statement,
     all: Statement,
 }
 
@@ -533,6 +535,18 @@ fn record_parameters<'a>(
 }
 
 pub fn initialize(url: &str, schema: &str, records: &[Record]) -> Result<(), String> {
+    initialize_with_maintenance_selection(url, schema, records, MaintenanceSelection::Complete)
+}
+
+/// The complete-result control keeps its original indexes. Prefix selection
+/// replaces the two single-time indexes in this freshly created schema with
+/// time/id indexes that also cover the original time-range searches.
+pub fn initialize_with_maintenance_selection(
+    url: &str,
+    schema: &str,
+    records: &[Record],
+    selection: MaintenanceSelection,
+) -> Result<(), String> {
     let schema = schema_name(schema)?;
     let mut client = connect_client(url, false)?;
     let fsync: String = client
@@ -569,6 +583,16 @@ pub fn initialize(url: &str, schema: &str, records: &[Record]) -> Result<(), Str
          CREATE INDEX event_time_idx ON {schema}.records (event_time) WHERE active AND kind IN (2,4,5);"
         ))
         .map_err(pg_error)?;
+    if selection == MaintenanceSelection::Prefix {
+        transaction
+            .batch_execute(&format!(
+                "DROP INDEX {schema}.due_idx, {schema}.event_time_idx; \
+                 CREATE INDEX due_prefix_idx ON {schema}.records (due,id) WHERE active AND kind=3; \
+                 CREATE INDEX expiry_prefix_idx ON {schema}.records (event_time,id) \
+                 WHERE active AND kind IN (2,4,5)"
+            ))
+            .map_err(pg_error)?;
+    }
     let statement = transaction
         .prepare(&format!(
             "INSERT INTO {schema}.records ({COLUMNS}) VALUES \
@@ -850,6 +874,15 @@ pub fn query_plan_audit_with_candidate_query(
     schema: &str,
     candidate_query: CandidateQuery,
 ) -> Result<serde_json::Value, String> {
+    query_plan_audit_with_options(url, schema, candidate_query, MaintenanceSelection::Complete)
+}
+
+pub fn query_plan_audit_with_options(
+    url: &str,
+    schema: &str,
+    candidate_query: CandidateQuery,
+    maintenance_selection: MaintenanceSelection,
+) -> Result<serde_json::Value, String> {
     let quoted = schema_name(schema)?;
     let mut client = connect_client(url, false)?;
     let seed = client.query_opt(&format!("SELECT {COLUMNS} FROM {quoted}.records WHERE active AND kind=1 ORDER BY id LIMIT 1"), &[])
@@ -907,11 +940,22 @@ pub fn query_plan_audit_with_candidate_query(
             &upper.to_string(),
         ],
     );
-    for (name, sql) in std::iter::once(("candidates", candidates)).chain(
-        predicates
-            .into_iter()
-            .map(|(name, predicate)| (name, format!("{select} WHERE {predicate} ORDER BY id"))),
-    ) {
+    let prefix_queries = if maintenance_selection == MaintenanceSelection::Prefix {
+        vec![
+            ("first_due", format!("{select} WHERE active AND kind=3 AND due<={} ORDER BY due,id LIMIT 4", seed.due)),
+            ("first_expired", format!("{select} WHERE active AND kind IN (2,4,5) AND event_time<{} ORDER BY event_time,id LIMIT 32", seed.event_time)),
+        ]
+    } else {
+        Vec::new()
+    };
+    for (name, sql) in std::iter::once(("candidates", candidates))
+        .chain(
+            predicates
+                .into_iter()
+                .map(|(name, predicate)| (name, format!("{select} WHERE {predicate} ORDER BY id"))),
+        )
+        .chain(prefix_queries)
+    {
         let row = client
             .query_one(&format!("EXPLAIN (FORMAT JSON, SETTINGS) {sql}"), &[])
             .map_err(pg_error)?;
@@ -919,11 +963,22 @@ pub fn query_plan_audit_with_candidate_query(
         plans.insert(name.into(), serde_json::json!({"sql":sql,"plan":plan}));
     }
     let indexes = client.query(
-        "SELECT indexname,indexdef FROM pg_indexes WHERE schemaname=$1 AND tablename='records' ORDER BY indexname", &[&schema]
-    ).map_err(pg_error)?.into_iter().map(|row| serde_json::json!({"name":row.get::<_,String>(0),"definition":row.get::<_,String>(1)})).collect::<Vec<_>>();
+        "SELECT c.relname,pg_get_indexdef(i.indexrelid),i.indisvalid,i.indisready,am.amname, \
+         ARRAY(SELECT pg_get_indexdef(i.indexrelid,n,true) FROM generate_series(1,i.indnkeyatts) n ORDER BY n), \
+         pg_get_expr(i.indpred,i.indrelid) \
+         FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid \
+         JOIN pg_class t ON t.oid=i.indrelid JOIN pg_namespace ns ON ns.oid=t.relnamespace \
+         JOIN pg_am am ON am.oid=c.relam WHERE ns.nspname=$1 AND t.relname='records' ORDER BY c.relname", &[&schema]
+    ).map_err(pg_error)?.into_iter().map(|row| serde_json::json!({
+        "name":row.get::<_,String>(0),"definition":row.get::<_,String>(1),
+        "valid":row.get::<_,bool>(2),"ready":row.get::<_,bool>(3),"access_method":row.get::<_,String>(4),
+        "key_columns":row.get::<_,Vec<String>>(5),"predicate":row.get::<_,Option<String>>(6),
+    })).collect::<Vec<_>>();
     Ok(
         serde_json::json!({"parameters_from_seed":seed,"plans":plans,"indexes":indexes,
         "postgres_candidate_query":candidate_query_metadata(candidate_query, true),
+        "maintenance_selection":maintenance_selection,
+        "prefix_limit_samples":if maintenance_selection == MaintenanceSelection::Prefix {serde_json::json!({"first_due":4,"first_expired":32})} else {serde_json::Value::Null},
         "analyze_executed":false,"prepared_generic_plans_measured":false}),
     )
 }
@@ -1036,6 +1091,12 @@ impl Adapter {
             )).map_err(pg_error)?,
             global_expired: client.prepare(&format!(
                 "{select} WHERE active AND kind IN (2,4,5) AND event_time<$1 ORDER BY id"
+            )).map_err(pg_error)?,
+            first_due: client.prepare(&format!(
+                "{select} WHERE active AND kind=3 AND due<=$1 ORDER BY due,id LIMIT $2"
+            )).map_err(pg_error)?,
+            first_expired: client.prepare(&format!(
+                "{select} WHERE active AND kind IN (2,4,5) AND event_time<$1 ORDER BY event_time,id LIMIT $2"
             )).map_err(pg_error)?,
             all: client.prepare(&format!("{select} WHERE active ORDER BY id"))
                 .map_err(pg_error)?,
@@ -1241,8 +1302,30 @@ impl Store for Adapter {
 
     fn query(&mut self, query: &Query) -> Result<Vec<Record>, DbError> {
         self.ensure_open()?;
+        query.validate().map_err(|error| self.fail(error))?;
         self.metrics.queries += 1;
         self.sql_metrics.predicate_statements += 1;
+        // At most one base row per overlay entry can disappear from the
+        // visible prefix. Fetch K+M to refill every such hole, then merge all
+        // eligible overlay rows before choosing the final K. LIMIT K before
+        // merging would miss the next base row when an old leader is removed.
+        let prefix_limit = match query {
+            Query::FirstDue { limit, .. } | Query::FirstExpired { limit, .. } => Some(
+                limit
+                    .checked_add(if self.mode == WriteMode::Buffered {
+                        self.overlay.len()
+                    } else {
+                        0
+                    })
+                    .and_then(|count| i64::try_from(count).ok())
+                    .ok_or_else(|| {
+                        self.fail(DbError::Fatal(
+                            "PostgreSQL prefix limit exceeds bigint".into(),
+                        ))
+                    })?,
+            ),
+            _ => None,
+        };
         let rows = match query {
             Query::Candidates {
                 callsign,
@@ -1273,6 +1356,14 @@ impl Store for Adapter {
             Query::GlobalExpired { before } => {
                 self.client.query(&self.queries.global_expired, &[before])
             }
+            Query::FirstDue { at, .. } => self.client.query(
+                &self.queries.first_due,
+                &[at, &prefix_limit.expect("prefix query limit")],
+            ),
+            Query::FirstExpired { before, .. } => self.client.query(
+                &self.queries.first_expired,
+                &[before, &prefix_limit.expect("prefix query limit")],
+            ),
             Query::All => self.client.query(&self.queries.all, &[]),
         }
         .map_err(|error| self.database_failure("query", error))?;
@@ -1301,6 +1392,10 @@ impl Store for Adapter {
                     .filter(|row| query.matches(row))
                     .cloned(),
             );
+        }
+        if prefix_limit.is_some() {
+            query.sort_and_limit(&mut records);
+        } else if self.mode == WriteMode::Buffered {
             records.sort_unstable_by_key(|row| row.id);
         }
         self.metrics.returned_rows += records.len() as u64;

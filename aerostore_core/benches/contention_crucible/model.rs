@@ -1,7 +1,7 @@
 //! Query-discovered synthetic HyperFeed work. Physical slots are bounded;
 //! identity, family, and actual writes are discovered after the snapshot starts.
 //! This complements, rather than replaces, the deterministic pedigree fixture.
-pub use super::storage::{Query, Store};
+pub use super::storage::{MaintenanceSelection, Query, Store};
 use crate::extended_crucible::model::{
     DbError, Emission, Record, AIRBORNE, ARRIVED, DEDUP, FLIGHT, OUTBOX, PLANNED, POSITION,
     PROJECTED, SCHEDULED, SLOTS_PER_FAMILY,
@@ -108,6 +108,8 @@ pub struct Message {
     pub kind: MessageKind,
     #[serde(default)]
     pub creation: CreationPolicy,
+    #[serde(default, skip_serializing_if = "MaintenanceSelection::is_complete")]
+    pub maintenance_selection: MaintenanceSelection,
 }
 fn event_time_units_default() -> i64 {
     1
@@ -116,6 +118,20 @@ fn event_time_units_are_seconds(units: &i64) -> bool {
     *units == 1
 }
 impl Message {
+    pub fn with_maintenance_selection(mut self, selection: MaintenanceSelection) -> Self {
+        self.maintenance_selection = if matches!(
+            self.kind,
+            MessageKind::GlobalProject { .. }
+                | MessageKind::GlobalCancel { .. }
+                | MessageKind::GlobalReschedule { .. }
+                | MessageKind::GlobalHousekeeping { .. }
+        ) {
+            selection
+        } else {
+            MaintenanceSelection::Complete
+        };
+        self
+    }
     fn time_units(&self) -> Result<i64, DbError> {
         match self.event_time_units_per_second {
             1 | 1_000_000_000 => Ok(self.event_time_units_per_second),
@@ -131,6 +147,19 @@ impl Message {
             .ok_or_else(|| DbError::Fatal("scheduled event-time overflow".into()))
     }
     fn validate_clock(&self) -> Result<(), DbError> {
+        if self.maintenance_selection == MaintenanceSelection::Prefix
+            && !matches!(
+                self.kind,
+                MessageKind::GlobalProject { .. }
+                    | MessageKind::GlobalCancel { .. }
+                    | MessageKind::GlobalReschedule { .. }
+                    | MessageKind::GlobalHousekeeping { .. }
+            )
+        {
+            return Err(DbError::Fatal(
+                "prefix selection requires a global maintenance message".into(),
+            ));
+        }
         self.next_due(self.event_time)?;
         if let MessageKind::Project { at } | MessageKind::GlobalProject { at, .. } = self.kind {
             self.next_due(at)?;
@@ -200,9 +229,17 @@ impl<S: Store> Store for Recorder<'_, S> {
         Ok(row)
     }
     fn query(&mut self, query: &Query) -> Result<Vec<Record>, DbError> {
+        query.validate()?;
         let mut rows = self.store.query(query)?;
-        rows.sort_by_key(|row| row.id);
-        if rows.windows(2).any(|pair| pair[0].id == pair[1].id) {
+        // Preserve the observable ordered prefix. Sorting or truncating here
+        // would hide an adapter's ordering/oversized-result defect from replay.
+        let duplicate = if query.selection_limit().is_some() {
+            rows.iter().map(|row| row.id).collect::<BTreeSet<_>>().len() != rows.len()
+        } else {
+            rows.sort_by_key(|row| row.id);
+            rows.windows(2).any(|pair| pair[0].id == pair[1].id)
+        };
+        if duplicate {
             return Err(DbError::Fatal("query returned duplicate row ids".into()));
         }
         if self.record {
@@ -366,9 +403,11 @@ fn background(store: &mut impl Store, message: &Message) -> Result<Option<Outcom
                     "rescheduled due time must follow the claim cutoff".into(),
                 ));
             }
-            // The complete result is observed before selecting a bounded
-            // deterministic batch. Query completeness is never size-limited.
-            let mut due = store.query(&Query::GlobalDue { at })?;
+            let query = match message.maintenance_selection {
+                MaintenanceSelection::Complete => Query::GlobalDue { at },
+                MaintenanceSelection::Prefix => Query::FirstDue { at, limit },
+            };
+            let mut due = store.query(&query)?;
             due.sort_by_key(|event| (event.due, event.id));
             for event in due.into_iter().take(limit) {
                 match message.kind {
@@ -398,7 +437,11 @@ fn background(store: &mut impl Store, message: &Message) -> Result<Option<Outcom
         }
         MessageKind::GlobalHousekeeping { before, limit } => {
             check_batch_limit(limit, MAX_GLOBAL_EXPIRED)?;
-            let mut expired = store.query(&Query::GlobalExpired { before })?;
+            let query = match message.maintenance_selection {
+                MaintenanceSelection::Complete => Query::GlobalExpired { before },
+                MaintenanceSelection::Prefix => Query::FirstExpired { before, limit },
+            };
+            let mut expired = store.query(&query)?;
             expired.sort_by_key(|row| (row.event_time, row.id));
             for row in expired.into_iter().take(limit) {
                 put(
@@ -790,17 +833,32 @@ impl Store for ReferenceStore<'_> {
             .ok_or_else(|| DbError::Fatal(format!("unknown slot {id}")))
     }
     fn query(&mut self, query: &Query) -> Result<Vec<Record>, DbError> {
+        query.validate()?;
         let pending = self
             .pending
             .as_ref()
             .ok_or_else(|| DbError::Fatal("query outside transaction".into()))?;
-        Ok(self
+        let mut rows: Vec<_> = self
             .committed
             .iter()
             .map(|(id, row)| pending.get(id).unwrap_or(row))
             .filter(|row| query.matches(row))
             .copied()
-            .collect())
+            .collect();
+        // Independent full-image selection, deliberately separate from the
+        // adapters' sort/limit helper and PostgreSQL's SQL/overlay algorithm.
+        match *query {
+            Query::FirstDue { limit, .. } => {
+                rows.sort_by_key(|row| (row.due, row.id));
+                rows.truncate(limit);
+            }
+            Query::FirstExpired { limit, .. } => {
+                rows.sort_by_key(|row| (row.event_time, row.id));
+                rows.truncate(limit);
+            }
+            _ => {}
+        }
+        Ok(rows)
     }
     fn write(&mut self, row: Record) -> Result<(), DbError> {
         if !self.committed.contains_key(&row.id) {
@@ -926,6 +984,7 @@ fn message(
         source,
         kind,
         creation: CreationPolicy::AdHoc,
+        maintenance_selection: MaintenanceSelection::Complete,
     }
 }
 fn position(seed: u64, id: u64) -> MessageKind {

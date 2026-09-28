@@ -29,6 +29,8 @@ pub struct FrameSetup {
     pub signature_pattern: calibrated::SignaturePattern,
     #[serde(default)]
     pub maintenance_mode: maintenance::Mode,
+    #[serde(default)]
+    pub maintenance_selection: model::MaintenanceSelection,
     #[serde(default = "calibrated::default_projection_batch_size")]
     pub projection_batch_size: usize,
     #[serde(default = "calibrated::default_housekeeping_batch_size")]
@@ -240,6 +242,7 @@ pub fn serve(
     affinity_ttl_ms: u64,
     signature_pattern: calibrated::SignaturePattern,
     maintenance_mode: maintenance::Mode,
+    maintenance_selection: model::MaintenanceSelection,
     projection_batch_size: usize,
     housekeeping_batch_size: usize,
     max_maintenance_batches: u64,
@@ -334,6 +337,7 @@ pub fn serve(
             affinity_ttl_ms,
             signature_pattern,
             maintenance_mode,
+            maintenance_selection,
             projection_batch_size,
             housekeeping_batch_size,
             max_maintenance_batches,
@@ -430,6 +434,7 @@ pub fn serve(
             affinity_ttl_ms,
             signature_pattern,
             maintenance_mode,
+            maintenance_selection,
             projection_batch_size,
             housekeeping_batch_size,
             max_maintenance_batches,

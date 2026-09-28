@@ -15,6 +15,16 @@ import run_remote_contention as runner
 
 
 class RemoteHandshakeTests(unittest.TestCase):
+    def test_maintenance_selection_is_bound_across_remote_setup(self):
+        runner.validate_dispatch_setup({}, {"maintenance_selection": "complete"})
+        runner.validate_dispatch_setup({"maintenance_selection": "prefix"}, {"maintenance_selection": "prefix"})
+        for setup in ({}, {"maintenance_selection": "complete"}, {"maintenance_selection": True}):
+            with self.subTest(setup=setup), self.assertRaisesRegex(RuntimeError, "differs from the client"):
+                runner.validate_dispatch_setup(setup, {"maintenance_selection": "prefix"})
+        for selection in (None, True, [], "unknown"):
+            with self.subTest(selection=selection), self.assertRaisesRegex(RuntimeError, "invalid maintenance-selection"):
+                runner.validate_dispatch_setup({"maintenance_selection": selection}, {"maintenance_selection": selection})
+
     def test_rolling_setup_requires_exact_generation_and_retention_contract(self):
         runner.validate_dispatch_setup({}, runner.ROLLING_DEFAULTS)
         expected = dict(rolling_cycle_messages=64, rolling_retention_seconds=20)
@@ -112,6 +122,7 @@ class RemoteHandshakeTests(unittest.TestCase):
             binary.write_bytes(b"fixture; never executed")
             output = Path(directory) / "evidence"
             options = {"--maintenance-mode": "sweep", "--projection-batch-size": "8",
+                       "--maintenance-selection": "prefix",
                        "--housekeeping-batch-size": "64", "--max-maintenance-batches": "100",
                        "--rolling-cycle-messages": "64", "--rolling-retention-seconds": "20",
                        "--expiry-index":"housekeeping", "--retry-diagnostics":"on",

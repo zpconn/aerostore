@@ -70,9 +70,11 @@ EXPIRY_PUBLICATION_DEFAULTS = {"expiry_publication_policy": "hashed",
                                "expiry_index_width": 1_000_000_000}
 POSTGRES_STATISTICS_DEFAULTS = {"pg_analyze_after_seconds": 0}
 POSTGRES_CANDIDATE_DEFAULTS = {"pg_candidate_query": "or"}
+MAINTENANCE_SELECTION_DEFAULTS = {"maintenance_selection": "complete"}
 EXPERIMENT_DEFAULTS = {"expiry_index_policy": "all-active", "retry_diagnostics": False,
                        **DUE_INDEX_DEFAULTS, **EXPIRY_PUBLICATION_DEFAULTS,
-                       **POSTGRES_STATISTICS_DEFAULTS, **POSTGRES_CANDIDATE_DEFAULTS}
+                       **POSTGRES_STATISTICS_DEFAULTS, **POSTGRES_CANDIDATE_DEFAULTS,
+                       **MAINTENANCE_SELECTION_DEFAULTS}
 EFFECT_FIELDS = ("created_views", "updated_views", "outputs", "claimed_events", "cancelled_events", "rescheduled_events", "expired_records", "expired_families")
 OUTCOME_FIELDS = EFFECT_FIELDS + ("missing_family", "allocation_deferred", "ignored_stale", "duplicate_messages")
 
@@ -535,7 +537,8 @@ def calibrated_report_errors(run: dict, config: dict, expected_counts: list[int]
                 "global_maintenance_sweep_complete": maintenance_mode == "sweep" and projection + housekeeping > 0}
     # Historical reports predate configurable batches; only the exact default
     # control may omit the mode and cap fields.
-    for name, default in (("maintenance_mode", "batch"), ("max_maintenance_batches", 4096)):
+    for name, default in (("maintenance_mode", "batch"), ("max_maintenance_batches", 4096),
+                          ("maintenance_selection", "complete")):
         if type(schedule.get(name, default)) is not type(config_value(config, name)) or schedule.get(name, default) != config_value(config, name):
             errors.append("calibrated maintenance mode or batch cap differs from configuration")
     if any(type(schedule.get(name)) is not type(value) or schedule[name] != value for name, value in required.items()):
@@ -890,6 +893,70 @@ def retry_trace_errors(trace: object, enabled: bool) -> list[str]:
     return errors
 
 
+def maintenance_selection_report_errors(run: dict, config: dict) -> list[str]:
+    """Bind the explicit query contract and its source-bound implementation.
+
+    Prefix metadata does not claim the native fallback avoids complete reads.
+    Catalog observations identify the PostgreSQL index treatment; their raw
+    predicate text is retained for review, not interpreted as a SQL proof.
+    """
+    selection = config_value(config, "maintenance_selection")
+    if type(selection) is not str or selection not in {"complete", "prefix"}:
+        return ["invalid maintenance-selection configuration"]
+    modern = "maintenance_selection" in config or "maintenance_selection_metadata" in run
+    if not modern:
+        return []
+    metadata = run.get("maintenance_selection_metadata")
+    pg = config.get("engine") == "postgres"
+    effective = "complete_query" if selection == "complete" else "ordered_sql_prefix" if pg else "complete_read_prefix"
+    expected = {"format": "maintenance-selection-v1", "requested": selection, "effective": effective}
+    errors = []
+    if not isinstance(metadata, dict) or any(type(metadata.get(key)) is not type(value) or metadata.get(key) != value
+                                            for key, value in expected.items()):
+        errors.append("maintenance-selection treatment differs from configuration")
+    if config.get("workload") == "calibrated":
+        schedule = run.get("calibrated_schedule")
+        if not isinstance(schedule, dict) or schedule.get("maintenance_selection") != selection:
+            errors.append("calibrated schedule lacks the explicit maintenance selection")
+    if not pg:
+        return errors
+    audit = run.get("query_plan_audit")
+    if not isinstance(audit, dict) or audit.get("maintenance_selection") != selection:
+        return errors + ["PostgreSQL plan audit lacks the maintenance selection"]
+    indexes = audit.get("indexes")
+    if not isinstance(indexes, list) or any(not isinstance(index, dict) or type(index.get("name")) is not str for index in indexes):
+        return errors + ["PostgreSQL maintenance index catalog is malformed"]
+    names = [index["name"] for index in indexes]
+    if len(names) != len(set(names)):
+        errors.append("PostgreSQL maintenance index catalog contains duplicate names")
+    prefix_indexes = {"due_prefix_idx": ["due", "id"], "expiry_prefix_idx": ["event_time", "id"]}
+    selected_indexes = prefix_indexes if selection == "prefix" else {"due_idx": ["due"], "event_time_idx": ["event_time"]}
+    common = {"records_pkey", "callsign_idx", "tail_idx", "family_idx", "positions_idx", "family_due_idx", "family_expired_idx"}
+    if set(names) != common | set(selected_indexes):
+        errors.append("PostgreSQL maintenance index set differs from the selected nine-index treatment")
+    for name, columns in selected_indexes.items():
+        index = next((index for index in indexes if index["name"] == name), {})
+        if (index.get("valid") is not True or index.get("ready") is not True
+                or index.get("access_method") != "btree" or index.get("key_columns") != columns
+                or type(index.get("predicate")) is not str or not index["predicate"].strip()
+                or type(index.get("definition")) is not str or not index["definition"].strip()):
+            errors.append("PostgreSQL maintenance time-index treatment is missing or malformed")
+    if selection == "complete":
+        if audit.get("prefix_limit_samples") is not None:
+            errors.append("complete-query control contains prefix plan samples")
+        return errors
+    samples = audit.get("prefix_limit_samples")
+    if not isinstance(samples, dict) or not counts_match(samples, {"first_due": 4, "first_expired": 32}):
+        errors.append("PostgreSQL prefix plan sample limits differ from the audit contract")
+    plans = audit.get("plans")
+    if (not isinstance(plans, dict) or any(not isinstance(plans.get(name), dict)
+            or type(plans[name].get("sql")) is not str or not plans[name]["sql"].strip()
+            or not isinstance(plans[name].get("plan"), list) or not plans[name]["plan"]
+            for name in ("first_due", "first_expired"))):
+        errors.append("PostgreSQL prefix literal plan samples are missing")
+    return errors
+
+
 def postgres_candidate_query_report_errors(run: dict, config: dict) -> list[str]:
     """Require the selected candidate SQL treatment, including native no-ops.
 
@@ -1003,7 +1070,8 @@ def experiment_report_errors(run: dict, config: dict) -> list[str]:
     if policy not in {"all-active", "housekeeping"} or type(enabled) is not bool:
         return ["invalid expiry/diagnostic experiment configuration"]
     errors = (postgres_statistics_report_errors(run, config)
-              + postgres_candidate_query_report_errors(run, config))
+              + postgres_candidate_query_report_errors(run, config)
+              + maintenance_selection_report_errors(run, config))
     modern = "worker_retry_diagnostics" in run
     due_reported = any(field in run or field in config for field in DUE_INDEX_DEFAULTS)
     if due_reported or due != DUE_INDEX_DEFAULTS:
@@ -1089,8 +1157,9 @@ def assess_trial(trial: dict, policy: dict, companion_keys: set[tuple] = frozens
     # An explicit default in the executable's report is also modern evidence;
     # dropping the driver's optional field must not erase its receipt obligation.
     experiment_config = config
-    if "pg_candidate_query" in actual and "pg_candidate_query" not in config:
-        experiment_config = {**config, "pg_candidate_query": config_value(config, "pg_candidate_query")}
+    for field in ("pg_candidate_query", "maintenance_selection"):
+        if field in actual and field not in config:
+            experiment_config = {**experiment_config, field: config_value(config, field)}
     reasons.extend(experiment_report_errors(run, experiment_config))
     if run.get("engine") != config.get("engine") or run.get("scenario") != "sustained-mixed":
         reasons.append("wrong engine or sustained scenario")
@@ -1464,6 +1533,8 @@ def main(argv=None) -> int:
                         help="calibrated only: mixed repeats two both, two callsign-only and two tail-only inputs per flight")
     parser.add_argument("--maintenance-mode", choices=["batch", "sweep"], default="batch",
                         help="calibrated only: one bounded batch or successive transactions through an empty query")
+    parser.add_argument("--maintenance-selection", choices=["complete", "prefix"], default="complete",
+                        help="global maintenance reads the complete eligible set or an ordered bounded prefix; changes the explicit query contract")
     parser.add_argument("--projection-batch-size", type=int, default=4)
     parser.add_argument("--housekeeping-batch-size", type=int, default=32)
     parser.add_argument("--max-maintenance-batches", type=int, default=4096,
@@ -1617,6 +1688,7 @@ def main(argv=None) -> int:
                           "pg_write_mode": args.pg_write_mode, "rpc_delay_us": args.rpc_delay_us,
                           "pg_analyze_after_seconds": args.pg_analyze_after_seconds,
                           "pg_candidate_query": args.pg_candidate_query,
+                          "maintenance_selection": args.maintenance_selection,
                           "global_time_predicates": False, "shm_mib": args.shm_mib,
                           "max_backlog": args.max_backlog, "max_messages": args.max_messages,
                           "message_interval_us": 0, "expiry_index_policy": args.expiry_index_policy,
@@ -1627,7 +1699,7 @@ def main(argv=None) -> int:
                                   housekeeping_interval_seconds=args.housekeeping_interval_seconds,
                                   **{field: getattr(args, field) for field in CALIBRATED_DEFAULTS})
                 command = [str(binary), "--mode", "sustained", "--output", str(directory / "report.json")]
-                for field in ("engine", "workload", "evidence", "families", "hot_percent", "seed", "arrival_rate", "seconds", "workers", "pg_write_mode", "pg_analyze_after_seconds", "pg_candidate_query", "rpc_delay_us"):
+                for field in ("engine", "workload", "evidence", "families", "hot_percent", "seed", "arrival_rate", "seconds", "workers", "pg_write_mode", "pg_analyze_after_seconds", "pg_candidate_query", "maintenance_selection", "rpc_delay_us"):
                     command += ["--" + field.replace("_", "-"), str(config[field])]
                 command += ["--max-backlog", str(args.max_backlog), "--max-messages", str(args.max_messages), "--shm-mib", str(args.shm_mib)]
                 if args.workload == "calibrated":

@@ -36,6 +36,7 @@ fn config() -> Config {
         affinity_ttl_ms: 0,
         signature_pattern: calibrated::SignaturePattern::Both,
         maintenance_mode: maintenance::Mode::Batch,
+        maintenance_selection: storage::MaintenanceSelection::Complete,
         projection_batch_size: calibrated::PROJECTION_BATCH_LIMIT,
         housekeeping_batch_size: calibrated::HOUSEKEEPING_BATCH_LIMIT,
         max_maintenance_batches: calibrated::MAX_MAINTENANCE_BATCHES,
@@ -660,6 +661,119 @@ fn default_dispatch_preserves_old_config_json_and_input_fields() {
     assert_eq!(input.event_time, EVENT_EPOCH_NS);
     assert_eq!(input.source, 1);
     assert_eq!(input.scheduled, 1_700_001_000);
+}
+
+#[test]
+fn prefix_selection_changes_only_admitted_maintenance_messages() {
+    let complete = Schedule::new(config()).unwrap();
+    let prefix = Schedule::new(Config {
+        maintenance_selection: storage::MaintenanceSelection::Prefix,
+        ..config()
+    })
+    .unwrap();
+    assert_eq!(
+        complete.initial_records().unwrap(),
+        prefix.initial_records().unwrap()
+    );
+    let before = events(&complete);
+    let after = events(&prefix);
+    assert_eq!(before.len(), after.len());
+    for (old, new) in before.iter().zip(&after) {
+        assert_eq!(old.offset_ns, new.offset_ns);
+        assert_eq!(old.class, new.class);
+        assert_eq!(old.logical_identity, new.logical_identity);
+        assert_eq!(old.foreground_ordinal, new.foreground_ordinal);
+        if old.class == EventClass::Foreground {
+            assert_eq!(old.message, new.message);
+            assert!(new.message.maintenance_selection.is_complete());
+        } else {
+            assert_eq!(
+                new.message,
+                old.message
+                    .clone()
+                    .with_maintenance_selection(storage::MaintenanceSelection::Prefix)
+            );
+            let batch = maintenance::batch_message(&new.message, 0).unwrap();
+            assert_eq!(
+                batch.maintenance_selection,
+                storage::MaintenanceSelection::Prefix
+            );
+            assert!(matches!(
+                maintenance::query(&batch).unwrap(),
+                storage::Query::FirstDue { .. } | storage::Query::FirstExpired { .. }
+            ));
+        }
+    }
+}
+
+#[test]
+fn prefix_selection_survives_prepared_worker_schedule_serialization() {
+    let cfg = Config {
+        maintenance_selection: storage::MaintenanceSelection::Prefix,
+        ..affinity_config()
+    };
+    let serialized = serde_json::to_value(&cfg).unwrap();
+    assert_eq!(serialized["maintenance_selection"], "prefix");
+    let schedule = Schedule::new(serde_json::from_value(serialized).unwrap()).unwrap();
+    for worker in 0..schedule.worker_count() {
+        let prepared = schedule.worker_schedule(worker);
+        let decoded: calibrated::WorkerSchedule =
+            serde_json::from_value(serde_json::to_value(&prepared).unwrap()).unwrap();
+        assert_eq!(
+            decoded.config.maintenance_selection,
+            storage::MaintenanceSelection::Prefix
+        );
+        for ordinal in 0..schedule.worker_offered(worker) {
+            assert_eq!(decoded.event(ordinal), schedule.event(worker, ordinal));
+        }
+    }
+    let complete = serde_json::to_value(config()).unwrap();
+    assert!(complete.get("maintenance_selection").is_none());
+    assert!(serde_json::from_value::<Config>(complete)
+        .unwrap()
+        .maintenance_selection
+        .is_complete());
+}
+
+#[test]
+fn prefix_sweeps_require_the_exact_empty_ordered_query_at_their_positive_limit() {
+    let schedule = Schedule::new(Config {
+        maintenance_selection: storage::MaintenanceSelection::Prefix,
+        ..config()
+    })
+    .unwrap();
+    for worker in config().foreground_workers..schedule.worker_count() {
+        let event = schedule.event(worker, 0).unwrap();
+        let mut message = maintenance::batch_message(&event.message, 0).unwrap();
+        let query = maintenance::query(&message).unwrap();
+        let body = model::ReceiptBody {
+            operations: vec![Operation::Query {
+                query: query.clone(),
+                rows: Vec::new(),
+            }],
+            outcome: model::Outcome::default(),
+        };
+        maintenance::validate_terminal(&message, &body).unwrap();
+        let old = match query {
+            storage::Query::FirstDue { at, .. } => storage::Query::GlobalDue { at },
+            storage::Query::FirstExpired { before, .. } => storage::Query::GlobalExpired { before },
+            _ => panic!("expected an ordered maintenance prefix"),
+        };
+        let changed = model::ReceiptBody {
+            operations: vec![Operation::Query {
+                query: old,
+                rows: Vec::new(),
+            }],
+            outcome: model::Outcome::default(),
+        };
+        assert!(maintenance::validate_terminal(&message, &changed).is_err());
+        match &mut message.kind {
+            MessageKind::GlobalProject { limit, .. }
+            | MessageKind::GlobalHousekeeping { limit, .. } => *limit = 0,
+            _ => unreachable!(),
+        }
+        assert!(maintenance::validate_terminal(&message, &body).is_err());
+    }
 }
 
 #[test]

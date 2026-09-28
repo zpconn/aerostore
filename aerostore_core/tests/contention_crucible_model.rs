@@ -19,6 +19,259 @@ use shared_model::Record;
 use std::collections::BTreeMap;
 
 #[test]
+fn bounded_maintenance_preserves_serial_business_effects_and_legacy_message_bytes() {
+    use model::MaintenanceSelection;
+    let mut global_kinds = std::collections::BTreeSet::new();
+    for scenario in model::scenarios(81) {
+        let mut complete: BTreeMap<_, _> = scenario.initial.iter().map(|r| (r.id, *r)).collect();
+        let mut prefix = complete.clone();
+        for message in scenario.messages {
+            let bytes = serde_json::to_vec(&message).unwrap();
+            assert!(!String::from_utf8(bytes.clone())
+                .unwrap()
+                .contains("maintenance_selection"));
+            assert_eq!(
+                serde_json::from_slice::<model::Message>(&bytes).unwrap(),
+                message
+            );
+            let selected = message
+                .clone()
+                .with_maintenance_selection(MaintenanceSelection::Prefix);
+            if selected.maintenance_selection == MaintenanceSelection::Prefix {
+                global_kinds.insert(selected.kind.name());
+                assert!(serde_json::to_string(&selected)
+                    .unwrap()
+                    .contains("\"maintenance_selection\":\"prefix\""));
+            }
+            let before = model::serial_apply(&mut complete, &message).unwrap();
+            let after = model::serial_apply(&mut prefix, &selected).unwrap();
+            assert_eq!(before.outcome, after.outcome, "{}", message.kind.name());
+            assert_eq!(complete, prefix);
+        }
+    }
+    assert_eq!(
+        global_kinds,
+        [
+            "global_projection",
+            "global_cancel",
+            "global_reschedule",
+            "global_housekeeping"
+        ]
+        .into()
+    );
+}
+
+#[test]
+fn oracle_rejects_wrong_missing_duplicate_oversized_and_reordered_prefixes() {
+    use model::MaintenanceSelection;
+    let mut scenario = model::scenarios(82).remove(3);
+    scenario.messages.truncate(1);
+    scenario.messages[0] = scenario.messages[0]
+        .clone()
+        .with_maintenance_selection(MaintenanceSelection::Prefix);
+    // Time order differs from ID order, with more eligible rows than the limit.
+    for row in &mut scenario.initial {
+        if row.active && row.kind == shared_model::SCHEDULED {
+            row.due -= (row.id % 5) as i64;
+        }
+    }
+    let (receipts, rows) = history(&scenario, false);
+    assert_eq!(
+        oracle::check(&scenario.initial, &receipts, &rows, 100).status,
+        Status::Valid
+    );
+    let mut all: Vec<_> = scenario
+        .initial
+        .iter()
+        .copied()
+        .filter(|r| RecordedQuery::GlobalDue { at: 1_700_000_500 }.matches(r))
+        .collect();
+    all.sort_by_key(|r| (r.due, r.id));
+    for mutation in 0..5 {
+        let mut corrupt = receipts.clone();
+        let observed = corrupt[0]
+            .body
+            .operations
+            .iter_mut()
+            .find_map(|op| match op {
+                Operation::Query {
+                    query: RecordedQuery::FirstDue { .. },
+                    rows,
+                } => Some(rows),
+                _ => None,
+            })
+            .unwrap();
+        assert_eq!(observed.len(), 8);
+        assert_eq!(observed, &all[..8]);
+        match mutation {
+            0 => {
+                observed.pop();
+            }
+            1 => {
+                observed[7] = all[8];
+            }
+            2 => {
+                observed[7] = observed[0];
+            }
+            3 => {
+                observed.push(all[8]);
+            }
+            4 => {
+                observed.swap(0, 1);
+            }
+            _ => unreachable!(),
+        }
+        assert_eq!(
+            oracle::check(&scenario.initial, &corrupt, &rows, 100).status,
+            Status::Invalid,
+            "mutation {mutation}"
+        );
+    }
+}
+
+#[test]
+fn prefix_reference_handles_extremes_ties_overlay_refill_and_invalid_limits() {
+    use storage::{Query, Store};
+    for kind in [shared_model::SCHEDULED, shared_model::POSITION] {
+        let state: BTreeMap<_, _> = [9, i64::MIN, 3, 3, i64::MAX]
+            .into_iter()
+            .enumerate()
+            .map(|(id, time)| {
+                (
+                    id,
+                    Record {
+                        id,
+                        active: true,
+                        kind,
+                        due: time,
+                        event_time: time,
+                        ..Record::default()
+                    },
+                )
+            })
+            .collect();
+        let query = if kind == shared_model::SCHEDULED {
+            Query::FirstDue {
+                at: i64::MAX,
+                limit: 3,
+            }
+        } else {
+            Query::FirstExpired {
+                before: i64::MAX,
+                limit: 3,
+            }
+        };
+        let mut db = model::ReferenceStore::new(&state);
+        db.begin(&[]).unwrap();
+        let ids = |rows: Vec<Record>| rows.into_iter().map(|r| r.id).collect::<Vec<_>>();
+        assert_eq!(ids(db.query(&query).unwrap()), [1, 2, 3]);
+        let save = db.savepoint().unwrap();
+        db.write(Record {
+            active: false,
+            ..state[&1]
+        })
+        .unwrap();
+        assert_eq!(ids(db.query(&query).unwrap()), [2, 3, 0]);
+        db.write(Record {
+            due: i64::MIN,
+            event_time: i64::MIN,
+            ..state[&4]
+        })
+        .unwrap();
+        assert_eq!(ids(db.query(&query).unwrap()), [4, 2, 3]);
+        db.rollback_to(save).unwrap();
+        assert_eq!(ids(db.query(&query).unwrap()), [1, 2, 3]);
+        for bad in [
+            Query::FirstDue { at: 0, limit: 0 },
+            Query::FirstDue { at: 0, limit: 17 },
+            Query::FirstExpired {
+                before: 0,
+                limit: 0,
+            },
+            Query::FirstExpired {
+                before: 0,
+                limit: 65,
+            },
+        ] {
+            assert!(matches!(
+                db.query(&bad),
+                Err(shared_model::DbError::Fatal(_))
+            ));
+        }
+        assert!(db
+            .query(&Query::FirstExpired {
+                before: i64::MIN,
+                limit: 1
+            })
+            .unwrap()
+            .is_empty());
+        db.abort().unwrap();
+    }
+}
+
+#[test]
+fn oracle_rejects_duplicate_prefix_claims_with_overlapping_snapshots() {
+    let mut scenario = model::scenarios(83).remove(3);
+    scenario.messages.truncate(2);
+    scenario.messages[0] = scenario.messages[0]
+        .clone()
+        .with_maintenance_selection(model::MaintenanceSelection::Prefix);
+    scenario.messages[1] = scenario.messages[0].clone();
+    scenario.messages[1].id += 100;
+    let initial: BTreeMap<_, _> = scenario.initial.iter().map(|r| (r.id, *r)).collect();
+    let mut combined = initial.clone();
+    let mut receipts = Vec::new();
+    for message in scenario.messages {
+        let mut store = model::ReferenceStore::new(&initial);
+        let body = model::execute_attempt(&mut store, &message).unwrap();
+        combined.extend(store.writes);
+        receipts.push(Receipt {
+            message,
+            started: 1,
+            finished: 10,
+            body,
+        });
+    }
+    assert_eq!(
+        oracle::check(
+            &scenario.initial,
+            &receipts,
+            &combined.values().copied().collect::<Vec<_>>(),
+            100
+        )
+        .status,
+        Status::Invalid
+    );
+}
+
+#[test]
+fn prefix_requests_reject_nonmaintenance_messages_and_zero_limits_without_writes() {
+    let scenario = model::scenarios(84).remove(0);
+    let initial: BTreeMap<_, _> = scenario.initial.iter().map(|r| (r.id, *r)).collect();
+    let mut message = scenario.messages[0].clone();
+    message.maintenance_selection = model::MaintenanceSelection::Prefix;
+    for kind in [
+        model::MessageKind::Plan,
+        model::MessageKind::GlobalProject {
+            at: 1_700_000_500,
+            limit: 0,
+        },
+        model::MessageKind::GlobalHousekeeping {
+            before: 1_700_000_500,
+            limit: 0,
+        },
+    ] {
+        message.kind = kind;
+        let mut store = model::ReferenceStore::new(&initial);
+        assert!(matches!(
+            model::execute_attempt(&mut store, &message),
+            Err(shared_model::DbError::Fatal(_))
+        ));
+        assert!(store.writes.is_empty());
+    }
+}
+
+#[test]
 fn lifecycle_stress_corpus_keeps_its_pre_fleet_serialized_bytes() {
     let mut hash = 0xcbf29ce484222325_u64;
     for sequence in 0..1024 {

@@ -73,6 +73,74 @@ class ContentionIntegrationTests(unittest.TestCase):
         self.assertIs(report["passed"], False)
         self.assertEqual(report["stage"], "configuration")
 
+    def test_maintenance_selection_rejects_unknown_contract(self):
+        receipt, report = self.run_case("maintenance-selection-invalid", "--maintenance-selection", "limit")
+        self.assertNotEqual(receipt["exit_code"], 0)
+        self.assertIs(report["passed"], False)
+        self.assertEqual(report["stage"], "configuration")
+
+    def assert_prefix_history(self, run):
+        observed = set()
+        global_kinds = {"GlobalProject", "GlobalCancel", "GlobalReschedule", "GlobalHousekeeping"}
+        for line in (Path(run["evidence_directory"]) / "history.jsonl").read_text().splitlines():
+            receipt = json.loads(line)["receipt"]
+            message = receipt["message"]
+            kind = message["kind"]
+            name = next(iter(kind)) if isinstance(kind, dict) else kind
+            self.assertEqual(message.get("maintenance_selection", "complete"),
+                             "prefix" if name in global_kinds else "complete")
+            for operation in receipt["body"]["operations"]:
+                query = operation.get("Query", {})
+                for variant, order in (("FirstDue", "due"), ("FirstExpired", "event_time")):
+                    if variant in query.get("query", {}):
+                        observed.add(variant)
+                        rows = query["rows"]
+                        self.assertLessEqual(len(rows), query["query"][variant]["limit"])
+                        self.assertEqual(rows, sorted(rows, key=lambda row: (row[order], row["id"])))
+        self.assertEqual(observed, {"FirstDue", "FirstExpired"})
+
+    def test_native_fleet_prefix_covers_all_global_handlers(self):
+        run = self.successful("native-fleet-prefix", "--workload", "fleet", "--families", "16",
+            "--hot-percent", "0", "--workers", "4", "--arrival-rate", "128", "--seconds", "3",
+            "--evidence", "full", "--maintenance-selection", "prefix")
+        self.assertTrue(run["correctness_history_verified"])
+        self.assertEqual(run["maintenance_selection_metadata"], {
+            "format": "maintenance-selection-v1", "requested": "prefix", "effective": "complete_read_prefix"})
+        for name in ("global_projection", "global_cancel", "global_reschedule", "global_housekeeping"):
+            self.assertGreater(run["per_kind"][name]["completed"], 0)
+        self.assert_prefix_history(run)
+
+    def test_service_calibrated_prefix_binds_schedule_and_full_history(self):
+        receipt, report = self.run_case("service-calibrated-prefix", "--engine", "service-unix",
+            "--workload", "calibrated", "--families", "4", "--hot-percent", "0", "--seconds", "3",
+            "--arrival-rate", "8", "--projection-interval-seconds", "1", "--housekeeping-interval-seconds", "1",
+            "--maintenance-mode", "sweep", "--maintenance-selection", "prefix", "--evidence", "full")
+        self.assertEqual(receipt["exit_code"], 0, report)
+        run = report["runs"][0]
+        self.assertTrue(run["correctness_history_verified"])
+        self.assertEqual(gate.maintenance_selection_report_errors(run, report["config"]), [])
+        self.assertEqual(run["calibrated_schedule"]["maintenance_selection"], "prefix")
+        self.assertEqual(run["maintenance_selection_metadata"]["effective"], "complete_read_prefix")
+        self.assert_prefix_history(run)
+
+    @unittest.skipUnless(os.environ.get("AEROSTORE_CONTENTION_PG_URL"), "requires disposable PostgreSQL")
+    def test_postgres_prefix_uses_bound_ordered_index_treatment_in_both_evidence_modes(self):
+        url = os.environ["AEROSTORE_CONTENTION_PG_URL"]
+        for evidence in ("full", "metrics"):
+            receipt, report = self.run_case(f"pg-maintenance-prefix-{evidence}",
+                "--engine", "postgres", "--pg-url", url, "--workload", "calibrated", "--families", "4",
+                "--hot-percent", "0", "--seconds", "3", "--arrival-rate", "8", "--projection-interval-seconds", "1",
+                "--housekeeping-interval-seconds", "1", "--maintenance-mode", "sweep",
+                "--maintenance-selection", "prefix", "--evidence", evidence)
+            self.assertEqual(receipt["exit_code"], 0, report)
+            run = report["runs"][0]
+            self.assertTrue(run["passed"])
+            self.assertEqual(gate.maintenance_selection_report_errors(run, report["config"]), [])
+            self.assertEqual(run["maintenance_selection_metadata"]["effective"], "ordered_sql_prefix")
+            self.assertEqual(run["correctness_history_verified"], evidence == "full")
+            if evidence == "full":
+                self.assert_prefix_history(run)
+
     @unittest.skipUnless(os.environ.get("AEROSTORE_CONTENTION_PG_URL"), "requires disposable PostgreSQL")
     def test_postgres_candidate_query_is_bound_in_both_evidence_modes(self):
         url = os.environ["AEROSTORE_CONTENTION_PG_URL"]

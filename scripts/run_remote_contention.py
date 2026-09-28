@@ -33,11 +33,15 @@ EXPIRY_PUBLICATION_DEFAULTS = {"expiry_publication_policy": "hashed",
                                "expiry_index_origin": 1_700_000_000_000_000_000,
                                "expiry_index_width": 1_000_000_000}
 EXPERIMENT_DEFAULTS = {"expiry_index_policy": "all-active", "retry_diagnostics": False,
+                       "maintenance_selection": "complete",
                        **DUE_INDEX_DEFAULTS, **EXPIRY_PUBLICATION_DEFAULTS}
 
 
 def validate_dispatch_setup(setup: dict, expected: dict) -> None:
     """Missing fields identify the historic identity/both control only."""
+    selection = expected.get("maintenance_selection", "complete")
+    if type(selection) is not str or selection not in {"complete", "prefix"}:
+        raise RuntimeError("invalid maintenance-selection configuration")
     expiry = {field: expected.get(field, default) for field, default in EXPIRY_PUBLICATION_DEFAULTS.items()}
     invalid_expiry = (type(expiry["expiry_publication_policy"]) is not str or expiry["expiry_publication_policy"] not in {"hashed", "ordered"}
                       or type(expiry["expiry_index_origin"]) is not int or not -(2**63) <= expiry["expiry_index_origin"] < 2**63
@@ -245,6 +249,7 @@ def main() -> int:
     parser.add_argument("--due-index-width", type=int, default=DUE_INDEX_DEFAULTS["due_index_width"], help="positive bucket width in event-time units; default one calibrated second")
     parser.add_argument("--retry-diagnostics", choices=["off", "on"], default="off")
     parser.add_argument("--maintenance-mode", choices=["batch", "sweep"], default="batch")
+    parser.add_argument("--maintenance-selection", choices=["complete", "prefix"], default="complete")
     parser.add_argument("--projection-batch-size", type=int, default=4)
     parser.add_argument("--housekeeping-batch-size", type=int, default=32)
     parser.add_argument("--max-maintenance-batches", type=int, default=4096)
@@ -321,6 +326,7 @@ def main() -> int:
               "--dispatch", args.dispatch, "--affinity-ttl-ms", str(args.affinity_ttl_ms),
               "--signature-pattern", args.signature_pattern,
               "--maintenance-mode", args.maintenance_mode,
+              "--maintenance-selection", args.maintenance_selection,
               "--projection-batch-size", str(args.projection_batch_size),
               "--housekeeping-batch-size", str(args.housekeeping_batch_size),
               "--max-maintenance-batches", str(args.max_maintenance_batches),

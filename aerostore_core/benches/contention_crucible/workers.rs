@@ -27,6 +27,8 @@ pub struct Config {
     pub pg_write_mode: postgres::WriteMode,
     #[serde(default)]
     pub pg_candidate_query: postgres::CandidateQuery,
+    #[serde(default)]
+    pub maintenance_selection: model::MaintenanceSelection,
     pub max_backlog: u64,
     pub rpc_delay_us: u64,
     pub attachment: Option<aerostore::Attachment>,
@@ -673,7 +675,8 @@ fn worker_loop_inner(
                         config.families,
                         config.seed,
                         config.hot_percent,
-                    );
+                    )
+                    .with_maintenance_selection(config.maintenance_selection);
                     let message_started = execute(
                         store,
                         trace,
@@ -734,6 +737,7 @@ fn worker_loop_inner(
                     .ok_or("calibrated admission deadline overflow")?;
                 if schedule_config.families != config.families
                     || schedule_config.seed != config.seed
+                    || schedule_config.maintenance_selection != config.maintenance_selection
                     || config.workload != "calibrated"
                 {
                     return Err("calibrated worker configuration mismatch".into());
@@ -1092,6 +1096,7 @@ mod retry_diagnostic_tests {
             source: 1,
             kind: model::MessageKind::GlobalProject { at: 1, limit: 1 },
             creation: model::CreationPolicy::ExistingOnly,
+            maintenance_selection: model::MaintenanceSelection::Complete,
         }
     }
     fn run(

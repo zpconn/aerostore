@@ -73,7 +73,8 @@ fn result(
     }
 }
 
-/// Replay every point read, whole predicate result, write, and outcome against
+/// Replay every point read, complete predicate or exact ordered-prefix result,
+/// write, and outcome against
 /// the independent model. The final image must match as well. Enumeration is
 /// iterative (no call-stack growth), with reversible changed-row journals.
 /// Search width is bounded by overlapping successful transaction intervals;

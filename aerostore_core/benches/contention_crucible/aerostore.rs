@@ -136,14 +136,15 @@ impl Store for Adapter<'_> {
     }
 
     fn query(&mut self, query: &Query) -> Result<Vec<Record>, DbError> {
+        query.validate()?;
         aerostore_core::retry_diagnostics::set_enabled(self.detailed_diagnostics);
         self.metrics.queries += 1;
         let stage = match query {
             Query::Candidates { .. } => "candidate_lookup",
             Query::Due { .. } => "due_lookup",
             Query::Expired { .. } => "expiry_lookup",
-            Query::GlobalDue { .. } => "global_due_lookup",
-            Query::GlobalExpired { .. } => "global_expiry_lookup",
+            Query::GlobalDue { .. } | Query::FirstDue { .. } => "global_due_lookup",
+            Query::GlobalExpired { .. } | Query::FirstExpired { .. } => "global_expiry_lookup",
             Query::Positions { .. } => "history_lookup",
             Query::Family { .. } => "family_lookup",
             Query::All => "all_lookup",
@@ -193,10 +194,12 @@ impl Store for Adapter<'_> {
                             .into_iter()
                             .collect()
                     }
-                    Query::GlobalDue { at } => lookup(3, IndexCompare::Lte(IndexValue::I64(at)))?
-                        .into_iter()
-                        .collect(),
-                    Query::GlobalExpired { before } => {
+                    Query::GlobalDue { at } | Query::FirstDue { at, .. } => {
+                        lookup(3, IndexCompare::Lte(IndexValue::I64(at)))?
+                            .into_iter()
+                            .collect()
+                    }
+                    Query::GlobalExpired { before } | Query::FirstExpired { before, .. } => {
                         lookup(4, IndexCompare::Lt(IndexValue::I64(before)))?
                             .into_iter()
                             .collect()
@@ -234,6 +237,12 @@ impl Store for Adapter<'_> {
                 if query.matches(&row) {
                     rows.push(row);
                 }
+            }
+            // Conservative prefix implementation: retain complete predicate
+            // capture and materialization, then choose the exact ordered prefix.
+            // This does not use the core's raw-posting limited lookup.
+            if query.selection_limit().is_some() {
+                query.sort_and_limit(&mut rows);
             }
             self.metrics.returned_rows += rows.len() as u64;
             *self

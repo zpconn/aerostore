@@ -19,7 +19,9 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
-const VERSION: u32 = 1;
+// Version 2 adds exact ordered maintenance prefixes. Reject mixed clients at
+// connection establishment rather than discovering unsupported queries later.
+const VERSION: u32 = 2;
 const FRAME_BYTES: usize = 8 << 20;
 
 fn connect_unix(path: &std::path::Path, timeout: Duration) -> Result<UnixStream, String> {
@@ -1151,6 +1153,66 @@ impl Store for Client {
 mod protocol_tests {
     use super::*;
     use std::sync::atomic::AtomicUsize;
+
+    #[test]
+    fn prefix_wire_queries_preserve_legacy_tags_and_round_trip_exact_limits() {
+        for (query, tag) in [
+            (Query::All, 7_u32),
+            (
+                Query::FirstDue {
+                    at: i64::MIN,
+                    limit: 1,
+                },
+                8,
+            ),
+            (
+                Query::FirstExpired {
+                    before: i64::MAX,
+                    limit: 64,
+                },
+                9,
+            ),
+        ] {
+            let bytes = bincode::DefaultOptions::new()
+                .with_fixint_encoding()
+                .serialize(&query)
+                .unwrap();
+            assert_eq!(&bytes[..4], &tag.to_le_bytes());
+            let decoded: Query = bincode::DefaultOptions::new()
+                .with_fixint_encoding()
+                .reject_trailing_bytes()
+                .deserialize(&bytes)
+                .unwrap();
+            assert_eq!(decoded, query);
+        }
+    }
+
+    #[test]
+    fn clients_reject_legacy_servers_before_sending_new_queries() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let endpoint = Endpoint::Tcp(listener.local_addr().unwrap());
+        let sender = thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            write_frame(
+                &mut Socket::Tcp(stream),
+                &Welcome {
+                    version: 1,
+                    session: SessionId {
+                        epoch: [0; 16],
+                        number: 1,
+                    },
+                },
+                Instant::now() + Duration::from_secs(2),
+            )
+            .unwrap();
+        });
+        let error = match Client::connect(&endpoint, Duration::from_secs(2)) {
+            Ok(_) => panic!("legacy server accepted"),
+            Err(error) => error,
+        };
+        assert!(error.contains("protocol version mismatch"), "{error}");
+        sender.join().unwrap();
+    }
 
     // This fixture checks protocol bookkeeping only. The integration target
     // separately exercises actual native transactions, indexes and WAL.

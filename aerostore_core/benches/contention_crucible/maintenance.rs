@@ -2,7 +2,7 @@
 //! An empty complete query ends a sweep at that transaction's serialization
 //! position; this does not promise an atomic snapshot of the whole sweep.
 use super::model::{Message, MessageKind, Operation, Outcome, ReceiptBody};
-use super::storage::Query;
+use super::storage::{MaintenanceSelection, Query};
 use serde::{Deserialize, Serialize};
 
 pub const JOB_ID_START: u64 = 4_000_000_000;
@@ -48,17 +48,24 @@ pub fn batch_message(job: &Message, index: u64) -> Result<Message, String> {
 pub fn query(message: &Message) -> Result<Query, String> {
     match message.kind {
         MessageKind::GlobalProject { at, limit } if (1..=16).contains(&limit) => {
-            Ok(Query::GlobalDue { at })
+            Ok(match message.maintenance_selection {
+                MaintenanceSelection::Complete => Query::GlobalDue { at },
+                MaintenanceSelection::Prefix => Query::FirstDue { at, limit },
+            })
         }
         MessageKind::GlobalHousekeeping { before, limit } if (1..=64).contains(&limit) => {
-            Ok(Query::GlobalExpired { before })
+            Ok(match message.maintenance_selection {
+                MaintenanceSelection::Complete => Query::GlobalExpired { before },
+                MaintenanceSelection::Prefix => Query::FirstExpired { before, limit },
+            })
         }
         _ => Err("maintenance batch requires a supported positive bounded limit".into()),
     }
 }
 
 /// A positive limit is essential: only then does zero selected rows imply an
-/// empty complete query in the existing global handlers. Full-history callers
+/// empty eligible set, for either a complete query or an exact ordered prefix.
+/// Full-history callers
 /// must additionally validate the recorded terminal query below.
 pub fn processed(message: &Message, outcome: &Outcome) -> Result<usize, String> {
     query(message)?;

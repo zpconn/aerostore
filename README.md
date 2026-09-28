@@ -213,9 +213,14 @@ closed.
 The [candidate-query investigation](docs/hyperfeed_candidate_queries.md) adds an
 optional split PostgreSQL lookup and confirms that executed prepared plans now
 use flight identities in index conditions. Both query forms still exhaust
-housekeeping retries in the harder workload. The remaining investigation focuses
-on maintenance queries that read the complete eligible set before selecting a
-small write batch; these results do not establish a capacity ratio.
+housekeeping retries in the harder workload. This motivated the
+[ordered maintenance experiment](docs/hyperfeed_maintenance_prefix.md), which
+adds an explicit prefix-query contract with independent serial-oracle checks.
+PostgreSQL's prefix query and composite-index treatment completes both 185-second
+runs at 512 inputs/second while the complete-query control reproduces its
+housekeeping failure. AeroStore initially preserves complete native predicate
+capture before selecting the prefix. These results do not establish a capacity
+ratio.
 
 ## Project layout
 

@@ -7,7 +7,7 @@
 //! their pace is rate-dependent, while event and maintenance clocks stay physical.
 use super::maintenance;
 use super::model::{self, CreationPolicy, Message, MessageKind};
-use super::storage::Record;
+use super::storage::{MaintenanceSelection, Record};
 use crate::extended_crucible::model::{
     initial_records as empty_records, FLIGHT, POSITION, SLOTS_PER_FAMILY,
 };
@@ -120,6 +120,8 @@ pub struct Config {
     pub signature_pattern: SignaturePattern,
     #[serde(default, skip_serializing_if = "maintenance::Mode::is_batch")]
     pub maintenance_mode: maintenance::Mode,
+    #[serde(default, skip_serializing_if = "MaintenanceSelection::is_complete")]
+    pub maintenance_selection: MaintenanceSelection,
     #[serde(
         default = "default_projection_batch_size",
         skip_serializing_if = "is_default_projection_batch_size"
@@ -542,7 +544,8 @@ fn event_for(
                 0,
                 at,
                 kind,
-            ),
+            )
+            .with_maintenance_selection(config.maintenance_selection),
         })
     }
 }
@@ -848,6 +851,7 @@ pub fn initial_records(families: usize, seed: u64) -> Result<Vec<Record>, String
         affinity_ttl_ms: 0,
         signature_pattern: SignaturePattern::Both,
         maintenance_mode: maintenance::Mode::Batch,
+        maintenance_selection: MaintenanceSelection::Complete,
         projection_batch_size: PROJECTION_BATCH_LIMIT,
         housekeeping_batch_size: HOUSEKEEPING_BATCH_LIMIT,
         max_maintenance_batches: MAX_MAINTENANCE_BATCHES,
@@ -884,6 +888,7 @@ fn message(id: u64, identity: usize, source: i64, at: i64, kind: MessageKind) ->
         source,
         kind,
         creation: CreationPolicy::ExistingOnly,
+        maintenance_selection: MaintenanceSelection::Complete,
     }
 }
 

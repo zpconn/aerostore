@@ -113,6 +113,135 @@ fn write_committed(shared: &Shared, row: Record) {
 }
 
 #[test]
+fn native_prefix_uses_time_order_and_refills_after_overlay_removal() {
+    for kind in [SCHEDULED, POSITION] {
+        let initial: Vec<_> = [9, i64::MIN, 3, 3, i64::MAX]
+            .into_iter()
+            .enumerate()
+            .map(|(id, time)| Record {
+                id,
+                active: true,
+                kind,
+                due: time,
+                event_time: time,
+                ..Record::default()
+            })
+            .collect();
+        let query = if kind == SCHEDULED {
+            Query::FirstDue {
+                at: i64::MAX,
+                limit: 3,
+            }
+        } else {
+            Query::FirstExpired {
+                before: i64::MAX,
+                limit: 3,
+            }
+        };
+        for policy in POLICIES {
+            let (_dir, shared) = fixture(policy, &initial);
+            let mut db = native::Adapter::new(&shared, false);
+            db.begin(&[]).unwrap();
+            let ids = |rows: Vec<Record>| rows.into_iter().map(|r| r.id).collect::<Vec<_>>();
+            assert_eq!(ids(db.query(&query).unwrap()), [1, 2, 3]);
+            let save = db.savepoint().unwrap();
+            db.write(Record {
+                active: false,
+                ..initial[1]
+            })
+            .unwrap();
+            assert_eq!(ids(db.query(&query).unwrap()), [2, 3, 0]);
+            db.write(Record {
+                due: i64::MIN,
+                event_time: i64::MIN,
+                ..initial[4]
+            })
+            .unwrap();
+            assert_eq!(ids(db.query(&query).unwrap()), [4, 2, 3]);
+            db.rollback_to(save).unwrap();
+            assert_eq!(ids(db.query(&query).unwrap()), [1, 2, 3]);
+            assert!(db
+                .query(&Query::FirstExpired {
+                    before: i64::MIN,
+                    limit: 1
+                })
+                .unwrap()
+                .is_empty());
+            for bad in [
+                Query::FirstDue { at: 0, limit: 0 },
+                Query::FirstDue { at: 0, limit: 17 },
+                Query::FirstExpired {
+                    before: 0,
+                    limit: 0,
+                },
+                Query::FirstExpired {
+                    before: 0,
+                    limit: 65,
+                },
+            ] {
+                assert!(matches!(db.query(&bad), Err(DbError::Fatal(_))));
+            }
+            db.abort().unwrap();
+            shared.audit().unwrap();
+        }
+    }
+}
+
+#[test]
+fn native_prefix_retains_phantoms_and_rejects_new_rows_in_old_snapshots() {
+    for empty in [false, true] {
+        for eligibility in POLICIES {
+            for publication in PUBLICATION_POLICIES {
+                let initial = vec![
+                    Record {
+                        id: 0,
+                        active: true,
+                        kind: FLIGHT,
+                        event_time: 1,
+                        ..Record::default()
+                    },
+                    Record {
+                        id: 1,
+                        active: !empty,
+                        kind: POSITION,
+                        event_time: 9,
+                        ..Record::default()
+                    },
+                ];
+                let (_dir, shared) = publication_fixture(eligibility, publication, 0, 1, &initial);
+                let query = Query::FirstExpired {
+                    before: 10,
+                    limit: 1,
+                };
+                let mut reader = native::Adapter::new(&shared, true);
+                let mut historical = native::Adapter::new(&shared, true);
+                reader.begin(&[]).unwrap();
+                historical.begin(&[]).unwrap();
+                let expected = if empty { vec![] } else { vec![initial[1]] };
+                assert_eq!(reader.query(&query).unwrap(), expected);
+                historical.read(0).unwrap();
+                let earlier = Record {
+                    kind: POSITION,
+                    ..initial[0]
+                };
+                write_committed(&shared, earlier);
+                assert_eq!(reader.commit(), Err(DbError::Conflict));
+                match historical.query(&query) {
+                    Ok(rows) => assert_eq!(rows, expected),
+                    Err(error) => assert_eq!(error, DbError::Conflict),
+                }
+                historical.abort().unwrap();
+                let mut fresh = native::Adapter::new(&shared, true);
+                fresh.begin(&[]).unwrap();
+                assert_eq!(fresh.query(&query).unwrap(), vec![earlier]);
+                fresh.abort().unwrap();
+                shared.audit().unwrap();
+            }
+        }
+    }
+}
+
+#[test]
 fn filtered_expiry_results_match_all_kinds_cutoff_boundaries_and_family_plans() {
     let rows = rows();
     for policy in POLICIES {

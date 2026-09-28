@@ -4,6 +4,25 @@ pub use crate::extended_crucible::model::{DbError, Record};
 use crate::extended_crucible::model::{DEDUP, FLIGHT, OUTBOX, POSITION, SCHEDULED};
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MaintenanceSelection {
+    #[default]
+    Complete,
+    Prefix,
+}
+impl MaintenanceSelection {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Complete => "complete",
+            Self::Prefix => "prefix",
+        }
+    }
+    pub fn is_complete(&self) -> bool {
+        *self == Self::Complete
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Query {
     Candidates {
@@ -37,8 +56,50 @@ pub enum Query {
         before: i64,
     },
     All,
+    /// The first `limit` eligible events ordered by (due, id), including all
+    /// earlier matches at the transaction's serialization position.
+    FirstDue {
+        at: i64,
+        limit: usize,
+    },
+    /// The first `limit` eligible records ordered by (event_time, id).
+    FirstExpired {
+        before: i64,
+        limit: usize,
+    },
 }
 impl Query {
+    pub fn validate(&self) -> Result<(), DbError> {
+        match *self {
+            Self::FirstDue { limit, .. } if !(1..=16).contains(&limit) => {
+                Err(DbError::Fatal("due prefix limit must be in 1..=16".into()))
+            }
+            Self::FirstExpired { limit, .. } if !(1..=64).contains(&limit) => Err(DbError::Fatal(
+                "expiry prefix limit must be in 1..=64".into(),
+            )),
+            _ => Ok(()),
+        }
+    }
+    pub fn selection_limit(&self) -> Option<usize> {
+        match *self {
+            Self::FirstDue { limit, .. } | Self::FirstExpired { limit, .. } => Some(limit),
+            _ => None,
+        }
+    }
+    /// Adapter utility after complete eligibility and overlay reconciliation.
+    /// The independent reference implementation does not use this helper.
+    pub fn sort_and_limit(&self, rows: &mut Vec<Record>) {
+        match self {
+            Self::FirstDue { .. } => rows.sort_by_key(|row| (row.due, row.id)),
+            Self::FirstExpired { .. } => rows.sort_by_key(|row| (row.event_time, row.id)),
+            _ => rows.sort_by_key(|row| row.id),
+        }
+        if let Some(limit) = self.selection_limit() {
+            rows.truncate(limit);
+        }
+    }
+    /// Eligibility alone; membership in a bounded prefix also depends on the
+    /// other eligible rows and their ordering, not just this record.
     pub fn matches(&self, row: &Record) -> bool {
         if !row.active {
             return false;
@@ -66,8 +127,10 @@ impl Query {
                     && row.event_time < before
                     && matches!(row.kind, POSITION | OUTBOX | DEDUP)
             }
-            Self::GlobalDue { at } => row.kind == SCHEDULED && row.due <= at,
-            Self::GlobalExpired { before } => {
+            Self::GlobalDue { at } | Self::FirstDue { at, .. } => {
+                row.kind == SCHEDULED && row.due <= at
+            }
+            Self::GlobalExpired { before } | Self::FirstExpired { before, .. } => {
                 row.event_time < before && matches!(row.kind, POSITION | OUTBOX | DEDUP)
             }
             Self::All => true,
@@ -86,8 +149,11 @@ impl From<&Query> for Query {
 pub trait Store {
     fn begin(&mut self, write_slots: &[usize]) -> Result<(), DbError>;
     fn read(&mut self, id: usize) -> Result<Record, DbError>;
-    /// Return the complete predicate result, including read-your-writes. Batch
-    /// limits belong in business execution after this query, never here.
+    /// Return the complete result of the named query, including read-your-writes.
+    /// Existing predicates remain unlimited and ordered by ID. FirstDue and
+    /// FirstExpired instead promise the exact ordered prefix (time, ID): a
+    /// short result means no other eligible row exists. Unordered truncation
+    /// and silently limiting a complete predicate violate this contract.
     fn query(&mut self, query: &Query) -> Result<Vec<Record>, DbError>;
     fn write(&mut self, row: Record) -> Result<(), DbError>;
     fn savepoint(&mut self) -> Result<usize, DbError>;

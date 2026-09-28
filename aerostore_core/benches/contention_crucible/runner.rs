@@ -38,6 +38,8 @@ struct Config {
     signature_pattern: calibrated::SignaturePattern,
     #[serde(default)]
     maintenance_mode: maintenance::Mode,
+    #[serde(default)]
+    maintenance_selection: model::MaintenanceSelection,
     #[serde(default = "calibrated::default_projection_batch_size")]
     projection_batch_size: usize,
     #[serde(default = "calibrated::default_housekeeping_batch_size")]
@@ -101,6 +103,7 @@ impl Default for Config {
             affinity_ttl_ms: 0,
             signature_pattern: calibrated::SignaturePattern::Both,
             maintenance_mode: maintenance::Mode::Batch,
+            maintenance_selection: model::MaintenanceSelection::Complete,
             projection_batch_size: 4,
             housekeeping_batch_size: 32,
             max_maintenance_batches: 4096,
@@ -151,6 +154,7 @@ fn calibrated_config(config: &Config) -> calibrated::Config {
         affinity_ttl_ms: config.affinity_ttl_ms,
         signature_pattern: config.signature_pattern,
         maintenance_mode: config.maintenance_mode,
+        maintenance_selection: config.maintenance_selection,
         projection_batch_size: config.projection_batch_size,
         housekeeping_batch_size: config.housekeeping_batch_size,
         max_maintenance_batches: config.max_maintenance_batches,
@@ -419,6 +423,7 @@ fn exercise(
             record_history: cfg.evidence == "full" || messages.is_some(),
             pg_write_mode: cfg.pg_write_mode,
             pg_candidate_query: cfg.pg_candidate_query,
+            maintenance_selection: cfg.maintenance_selection,
             max_backlog: cfg.max_backlog,
             rpc_delay_us: cfg.rpc_delay_us,
             attachment: attachment.clone(),
@@ -770,7 +775,8 @@ fn exercise(
                                 cfg.families,
                                 cfg.seed,
                                 cfg.hot_percent,
-                            );
+                            )
+                            .with_maintenance_selection(cfg.maintenance_selection);
                             if receipt.message != expected {
                                 return Err(
                                     "sustained message stream differs from deterministic generator"
@@ -1068,6 +1074,7 @@ fn summarize(
         "effective_expiry_index_policy":if case.engine=="postgres" {"housekeeping"} else {case.config.expiry_index_policy.name()},
         "postgres_statistics":postgres::statistics_metadata(case.config.pg_analyze_after_seconds, case.engine == "postgres"),
         "postgres_candidate_query":postgres::candidate_query_metadata(case.config.pg_candidate_query, case.engine == "postgres"),
+        "maintenance_selection_metadata":maintenance_selection_metadata(case.config.maintenance_selection, case.engine == "postgres"),
         "service_latency_p99_us_including_retries":p99(&service_latencies),"arrival_queue_delay_p99_us":p99(&completed.queue_delays),
         "arrival_mode":if case.config.arrival_rate > 0 && case.scenario.is_none() {"independent_fixed_corpus"} else {"closed_loop"},
         "offered_messages":if case.config.arrival_rate > 0 && case.scenario.is_none() {json!(case.config.arrival_rate * case.config.seconds)} else {Value::Null},
@@ -1133,6 +1140,7 @@ fn summarize(
             "cadence":if case.config.projection_interval_seconds<300 || case.config.housekeeping_interval_seconds<300 {"accelerated"} else if (300..=600).contains(&case.config.projection_interval_seconds) && (300..=600).contains(&case.config.housekeeping_interval_seconds) {"representative_interval_config"} else {"custom_outside_calibration"},
             "projection_batch_limit":case.config.projection_batch_size,"housekeeping_batch_limit":case.config.housekeeping_batch_size,
             "maintenance_mode":case.config.maintenance_mode,"max_maintenance_batches":case.config.max_maintenance_batches,
+            "maintenance_selection":case.config.maintenance_selection,
             "maintenance_scope":maintenance_scope,
             "housekeeping_seed_cohorts":calibrated::housekeeping_seed_cohorts(&calibrated_config(&case.config)),
             "population_turnover_tested":false,"global_maintenance_sweep_complete":sweep_complete,
@@ -1180,6 +1188,15 @@ fn fleet_population(rows: &[Record]) -> Value {
         "scope":"initial/final snapshot population, not a measured runtime minimum"})
 }
 
+fn maintenance_selection_metadata(selection: model::MaintenanceSelection, postgres: bool) -> Value {
+    json!({"format":"maintenance-selection-v1", "requested":selection,
+    "effective":match selection {
+        model::MaintenanceSelection::Complete => "complete_query",
+        model::MaintenanceSelection::Prefix if postgres => "ordered_sql_prefix",
+        model::MaintenanceSelection::Prefix => "complete_read_prefix",
+    }})
+}
+
 fn coordinator(case: &CaseConfig) -> Result<Value, String> {
     if case.engine != "postgres" {
         write_json(
@@ -1187,9 +1204,15 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
             &postgres::statistics_metadata(case.config.pg_analyze_after_seconds, false),
         )?;
     }
-    let scenario = case
-        .scenario
-        .map(|i| model::scenarios(case.config.seed).remove(i));
+    let scenario = case.scenario.map(|i| {
+        let mut scenario = model::scenarios(case.config.seed).remove(i);
+        scenario.messages = scenario
+            .messages
+            .into_iter()
+            .map(|message| message.with_maintenance_selection(case.config.maintenance_selection))
+            .collect();
+        scenario
+    });
     let initial = if scenario.is_none() && case.config.workload == "calibrated" {
         calibrated::initial_records_for(&calibrated_config(&case.config))?
     } else {
@@ -1231,6 +1254,7 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
             || setup.affinity_ttl_ms != case.config.affinity_ttl_ms
             || setup.signature_pattern != case.config.signature_pattern
             || setup.maintenance_mode != case.config.maintenance_mode
+            || setup.maintenance_selection != case.config.maintenance_selection
             || setup.projection_batch_size != case.config.projection_batch_size
             || setup.housekeeping_batch_size != case.config.housekeeping_batch_size
             || setup.max_maintenance_batches != case.config.max_maintenance_batches
@@ -1315,7 +1339,12 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
             .pg_url
             .as_deref()
             .ok_or("missing PostgreSQL URL")?;
-        postgres::initialize(url, &case.schema, &initial)?;
+        postgres::initialize_with_maintenance_selection(
+            url,
+            &case.schema,
+            &initial,
+            case.config.maintenance_selection,
+        )?;
         let statistics_path = case.directory.join("postgres-statistics.json");
         let mut statistics = None;
         let execution = (|| {
@@ -1323,10 +1352,11 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
                 &statistics_path,
                 &postgres::statistics_metadata(case.config.pg_analyze_after_seconds, true),
             )?;
-            let plans = postgres::query_plan_audit_with_candidate_query(
+            let plans = postgres::query_plan_audit_with_options(
                 url,
                 &case.schema,
                 case.config.pg_candidate_query,
+                case.config.maintenance_selection,
             )?;
             write_json(&case.directory.join("query-plan-audit.json"), &plans)?;
             if case.config.pg_analyze_after_seconds > 0 {
@@ -1567,7 +1597,7 @@ fn parse() -> Result<Option<Config>, String> {
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         if arg == "--help" {
-            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--maintenance-mode batch|sweep --projection-batch-size 4 --housekeeping-batch-size 32 --max-maintenance-batches 4096 (calibrated only; terminal empty transaction counts toward cap)\n--rolling-cycle-messages 0 --rolling-retention-seconds 0 (calibrated sweep only; opt-in rate-dependent lifecycle stress)\n--expiry-index all-active|housekeeping (native fixture only; PostgreSQL already has a partial expiry index)\n--expiry-publication hashed|ordered --expiry-index-origin 1700000000000000000 --expiry-index-width 1000000000 (native expiry publication; fixed time window, no automatic rotation)\n--due-index hashed|ordered --due-index-origin 1700000000000000000 --due-index-width 1000000000 (native due publication buckets; explicit event-time units)\n--retry-diagnostics off|on (on requires retry-diagnostics build feature; bounded failed-attempt evidence)\n--pg-write-mode buffered|immediate --pg-candidate-query or|split (equivalent predicates; default or)\n--pg-analyze-after-seconds 0 (0=initial only; positive=one additional owned-table ANALYZE during sustained fixed arrivals)\n--rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
+            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--maintenance-selection complete|prefix (global maintenance query contract; default complete)\n--maintenance-mode batch|sweep --projection-batch-size 4 --housekeeping-batch-size 32 --max-maintenance-batches 4096 (calibrated only; terminal empty transaction counts toward cap)\n--rolling-cycle-messages 0 --rolling-retention-seconds 0 (calibrated sweep only; opt-in rate-dependent lifecycle stress)\n--expiry-index all-active|housekeeping (native fixture only; PostgreSQL already has a partial expiry index)\n--expiry-publication hashed|ordered --expiry-index-origin 1700000000000000000 --expiry-index-width 1000000000 (native expiry publication; fixed time window, no automatic rotation)\n--due-index hashed|ordered --due-index-origin 1700000000000000000 --due-index-width 1000000000 (native due publication buckets; explicit event-time units)\n--retry-diagnostics off|on (on requires retry-diagnostics build feature; bounded failed-attempt evidence)\n--pg-write-mode buffered|immediate --pg-candidate-query or|split (equivalent predicates; default or)\n--pg-analyze-after-seconds 0 (0=initial only; positive=one additional owned-table ANALYZE during sustained fixed arrivals)\n--rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
             return Ok(None);
         }
         if arg == "--bench" || arg == "--noplot" {
@@ -1693,6 +1723,13 @@ fn parse() -> Result<Option<Config>, String> {
                     "immediate" => postgres::WriteMode::Immediate,
                     "buffered" => postgres::WriteMode::Buffered,
                     _ => return Err("invalid PostgreSQL write mode".into()),
+                }
+            }
+            "--maintenance-selection" => {
+                config.maintenance_selection = match value.as_str() {
+                    "complete" => model::MaintenanceSelection::Complete,
+                    "prefix" => model::MaintenanceSelection::Prefix,
+                    _ => return Err("invalid maintenance selection".into()),
                 }
             }
             "--pg-candidate-query" => {
@@ -1943,6 +1980,7 @@ pub fn run() -> Result<(), String> {
             config.affinity_ttl_ms,
             config.signature_pattern,
             config.maintenance_mode,
+            config.maintenance_selection,
             config.projection_batch_size,
             config.housekeeping_batch_size,
             config.max_maintenance_batches,

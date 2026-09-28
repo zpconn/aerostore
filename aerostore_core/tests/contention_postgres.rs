@@ -17,7 +17,7 @@ mod storage;
 
 use adapter::{Adapter, CandidateQuery, WriteMode};
 use existing_model::{DbError, Record, FLIGHT, POSITION, SCHEDULED};
-use storage::{Query, Store};
+use storage::{MaintenanceSelection, Query, Store};
 
 fn monotonic_ns() -> u64 {
     let mut time = libc::timespec {
@@ -396,9 +396,18 @@ fn with_records(
     records: &[Record],
     test: impl FnOnce(&str, &str) + std::panic::UnwindSafe,
 ) {
+    with_records_and_selection(label, records, MaintenanceSelection::Complete, test);
+}
+
+fn with_records_and_selection(
+    label: &str,
+    records: &[Record],
+    selection: MaintenanceSelection,
+    test: impl FnOnce(&str, &str) + std::panic::UnwindSafe,
+) {
     let url = std::env::var("AEROSTORE_CONTENTION_PG_URL").expect("disposable PostgreSQL URL");
     let schema = format!("contention_{}_{}", label, std::process::id());
-    adapter::initialize(&url, &schema, records).unwrap();
+    adapter::initialize_with_maintenance_selection(&url, &schema, records, selection).unwrap();
     let result = std::panic::catch_unwind(|| test(&url, &schema));
     adapter::cleanup(&url, &schema).unwrap();
     if let Err(payload) = result {
@@ -971,4 +980,405 @@ fn diagnostics_report_actual_settings_plans_and_wal_drain() {
                 .contains("updated 0 rows"));
         },
     );
+}
+
+fn expected_prefix(rows: &[Record], query: &Query) -> Vec<Record> {
+    let mut selected: Vec<_> = rows
+        .iter()
+        .copied()
+        .filter(|row| {
+            row.active
+                && match query {
+                    Query::FirstDue { at, .. } => row.kind == SCHEDULED && row.due <= *at,
+                    Query::FirstExpired { before, .. } => {
+                        matches!(
+                            row.kind,
+                            POSITION | existing_model::OUTBOX | existing_model::DEDUP
+                        ) && row.event_time < *before
+                    }
+                    _ => panic!("prefix test helper requires a prefix query"),
+                }
+        })
+        .collect();
+    let limit = match query {
+        Query::FirstDue { limit, .. } => {
+            selected.sort_by_key(|row| (row.due, row.id));
+            *limit
+        }
+        Query::FirstExpired { limit, .. } => {
+            selected.sort_by_key(|row| (row.event_time, row.id));
+            *limit
+        }
+        _ => unreachable!(),
+    };
+    selected.truncate(limit);
+    selected
+}
+
+#[test]
+#[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
+fn maintenance_prefix_indexes_and_audits_are_explicit_opt_in() {
+    for selection in [MaintenanceSelection::Complete, MaintenanceSelection::Prefix] {
+        with_records_and_selection("prefix_indexes", &[], selection, |url, schema| {
+            let audit = adapter::query_plan_audit_with_options(
+                url,
+                schema,
+                CandidateQuery::Split,
+                selection,
+            )
+            .unwrap();
+            let indexes = audit["indexes"].as_array().unwrap();
+            let prefix = selection == MaintenanceSelection::Prefix;
+            assert_eq!(indexes.len(), 9);
+            for name in ["due_idx", "event_time_idx"] {
+                assert_eq!(indexes.iter().any(|row| row["name"] == name), !prefix);
+            }
+            for (name, columns) in [
+                ("due_prefix_idx", "(due, id)"),
+                ("expiry_prefix_idx", "(event_time, id)"),
+            ] {
+                let entry = indexes.iter().find(|row| row["name"] == name);
+                assert_eq!(entry.is_some(), prefix);
+                if let Some(entry) = entry {
+                    assert!(entry["definition"].as_str().unwrap().contains(columns));
+                }
+            }
+            assert_eq!(audit["maintenance_selection"], serde_json::json!(selection));
+            assert_eq!(
+                audit["plans"].as_object().unwrap().len(),
+                if prefix { 10 } else { 8 }
+            );
+            assert_eq!(audit["prepared_generic_plans_measured"], false);
+            if prefix {
+                assert!(audit["plans"]["first_due"]["sql"]
+                    .as_str()
+                    .unwrap()
+                    .contains("ORDER BY due,id LIMIT 4"));
+                assert!(audit["plans"]["first_expired"]["sql"]
+                    .as_str()
+                    .unwrap()
+                    .contains("ORDER BY event_time,id LIMIT 32"));
+            }
+        });
+    }
+}
+
+#[test]
+#[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
+fn maintenance_prefix_matches_independent_selection_for_ties_extrema_and_short_results() {
+    let mut seed: Vec<_> = (0..96)
+        .map(|id| Record {
+            id,
+            active: true,
+            kind: if id < 24 {
+                SCHEDULED
+            } else {
+                [POSITION, existing_model::OUTBOX, existing_model::DEDUP][id % 3]
+            },
+            due: match id {
+                0 => 10,
+                22 => i64::MIN,
+                23 => i64::MAX,
+                _ => 0,
+            },
+            event_time: match id {
+                24 => 10,
+                94 => i64::MIN,
+                95 => i64::MAX,
+                _ => 0,
+            },
+            ..Record::default()
+        })
+        .collect();
+    seed.extend([
+        Record {
+            id: 96,
+            active: true,
+            kind: FLIGHT,
+            due: i64::MIN,
+            event_time: i64::MIN,
+            ..Record::default()
+        },
+        Record {
+            id: 97,
+            active: false,
+            kind: SCHEDULED,
+            due: i64::MIN,
+            ..Record::default()
+        },
+        Record {
+            id: 98,
+            active: false,
+            kind: POSITION,
+            event_time: i64::MIN,
+            ..Record::default()
+        },
+    ]);
+    with_records_and_selection(
+        "prefix_boundaries",
+        &seed,
+        MaintenanceSelection::Prefix,
+        |url, schema| {
+            for mode in [WriteMode::Immediate, WriteMode::Buffered] {
+                for candidates in [CandidateQuery::Or, CandidateQuery::Split] {
+                    let mut db =
+                        Adapter::connect_with_candidate_query(url, schema, false, mode, candidates)
+                            .unwrap();
+                    db.begin(&[]).unwrap();
+                    for cutoff in [i64::MIN, -1, 0, 1, 10, i64::MAX] {
+                        for query in [
+                            Query::FirstDue {
+                                at: cutoff,
+                                limit: 1,
+                            },
+                            Query::FirstDue {
+                                at: cutoff,
+                                limit: 16,
+                            },
+                            Query::FirstExpired {
+                                before: cutoff,
+                                limit: 1,
+                            },
+                            Query::FirstExpired {
+                                before: cutoff,
+                                limit: 64,
+                            },
+                        ] {
+                            assert_eq!(
+                                db.query(&query).unwrap(),
+                                expected_prefix(&seed, &query),
+                                "{mode:?} {candidates:?} {query:?}"
+                            );
+                        }
+                    }
+                    // Complete predicates retain their complete ID-ordered contract.
+                    for query in [
+                        Query::GlobalDue { at: i64::MAX },
+                        Query::GlobalExpired { before: i64::MAX },
+                    ] {
+                        let expected: Vec<_> = seed
+                            .iter()
+                            .copied()
+                            .filter(|row| query.matches(row))
+                            .collect();
+                        assert_eq!(db.query(&query).unwrap(), expected);
+                    }
+                    db.abort().unwrap();
+                }
+            }
+        },
+    );
+}
+
+#[test]
+#[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
+fn maintenance_prefix_rejects_zero_and_oversized_limits_without_committing_writes() {
+    let seed = [Record {
+        id: 0,
+        active: true,
+        kind: SCHEDULED,
+        ..Record::default()
+    }];
+    with_records_and_selection(
+        "prefix_limits",
+        &seed,
+        MaintenanceSelection::Prefix,
+        |url, schema| {
+            for mode in [WriteMode::Immediate, WriteMode::Buffered] {
+                let mut db = Adapter::connect_with_mode(url, schema, mode).unwrap();
+                for query in [
+                    Query::FirstDue { at: 0, limit: 0 },
+                    Query::FirstDue { at: 0, limit: 17 },
+                    Query::FirstExpired {
+                        before: 1,
+                        limit: 0,
+                    },
+                    Query::FirstExpired {
+                        before: 1,
+                        limit: 65,
+                    },
+                    Query::FirstExpired {
+                        before: 1,
+                        limit: usize::MAX,
+                    },
+                ] {
+                    db.begin(&[]).unwrap();
+                    db.write(Record {
+                        revision: 99,
+                        ..seed[0]
+                    })
+                    .unwrap();
+                    assert!(matches!(db.query(&query), Err(DbError::Fatal(_))));
+                    assert!(matches!(db.commit(), Err(DbError::Fatal(_))));
+                    assert_eq!(adapter::snapshot(url, schema).unwrap(), seed);
+                }
+            }
+        },
+    );
+}
+
+#[test]
+#[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
+fn maintenance_prefix_refills_overlay_holes_and_restores_nested_savepoints() {
+    for expired in [false, true] {
+        let seed: Vec<_> = [5, 0, 1, 2, 3, 9, 0]
+            .into_iter()
+            .enumerate()
+            .map(|(id, time)| Record {
+                id,
+                active: id != 6,
+                kind: if expired { POSITION } else { SCHEDULED },
+                due: time,
+                event_time: time,
+                ..Record::default()
+            })
+            .collect();
+        let query = if expired {
+            Query::FirstExpired {
+                before: 11,
+                limit: 2,
+            }
+        } else {
+            Query::FirstDue { at: 10, limit: 2 }
+        };
+        with_records_and_selection(
+            "prefix_overlay",
+            &seed,
+            MaintenanceSelection::Prefix,
+            |url, schema| {
+                for mode in [WriteMode::Immediate, WriteMode::Buffered] {
+                    let mut db = Adapter::connect_with_mode(url, schema, mode).unwrap();
+                    db.begin(&[]).unwrap();
+                    assert_eq!(db.query(&query).unwrap(), vec![seed[1], seed[2]]);
+                    let outer = db.savepoint().unwrap();
+                    let mut expected = seed.clone();
+                    expected[1].active = false;
+                    expected[2].due = 20;
+                    expected[2].event_time = 20;
+                    expected[6].active = true;
+                    expected[6].due = -1;
+                    expected[6].event_time = -1;
+                    expected[0].due = -2;
+                    expected[0].event_time = -2;
+                    for id in [1, 2, 6, 0] {
+                        db.write(expected[id]).unwrap();
+                    }
+                    assert_eq!(
+                        db.query(&query).unwrap(),
+                        expected_prefix(&expected, &query)
+                    );
+                    let inner = db.savepoint().unwrap();
+                    let mut holes = expected.clone();
+                    for id in [0, 6] {
+                        holes[id].active = false;
+                        db.write(holes[id]).unwrap();
+                    }
+                    // Both original leaders are now absent. Reading only the SQL
+                    // first two before applying an overlay would incorrectly yield
+                    // no result instead of these later reserved rows.
+                    assert_eq!(db.query(&query).unwrap(), vec![seed[3], seed[4]]);
+                    db.rollback_to(inner).unwrap();
+                    assert_eq!(
+                        db.query(&query).unwrap(),
+                        expected_prefix(&expected, &query)
+                    );
+                    db.rollback_to(outer).unwrap();
+                    assert_eq!(db.query(&query).unwrap(), vec![seed[1], seed[2]]);
+                    db.commit().unwrap();
+                    assert_eq!(adapter::snapshot(url, schema).unwrap(), seed);
+                    // A later transaction must not reuse the rolled-back prefix
+                    // membership or buffered row cache from this transaction.
+                    db.begin(&[]).unwrap();
+                    assert_eq!(db.query(&query).unwrap(), vec![seed[1], seed[2]]);
+                    db.abort().unwrap();
+                }
+            },
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires AEROSTORE_CONTENTION_PG_URL pointing to disposable PostgreSQL"]
+fn maintenance_prefix_serializable_reads_reject_competing_earlier_rows_and_empty_phantoms() {
+    for mode in [WriteMode::Immediate, WriteMode::Buffered] {
+        for expired in [false, true] {
+            for empty in [false, true] {
+                let kind = if expired { POSITION } else { SCHEDULED };
+                let seed = [
+                    Record {
+                        id: 0,
+                        active: !empty,
+                        kind,
+                        due: 10,
+                        event_time: 10,
+                        ..Record::default()
+                    },
+                    Record {
+                        id: 1,
+                        ..Record::default()
+                    },
+                    Record {
+                        id: 2,
+                        ..Record::default()
+                    },
+                ];
+                let query = if expired {
+                    Query::FirstExpired {
+                        before: 100,
+                        limit: 1,
+                    }
+                } else {
+                    Query::FirstDue { at: 100, limit: 1 }
+                };
+                with_records_and_selection(
+                    "prefix_phantom",
+                    &seed,
+                    MaintenanceSelection::Prefix,
+                    |url, schema| {
+                        let mut a = Adapter::connect_with_mode(url, schema, mode).unwrap();
+                        let mut b = Adapter::connect_with_mode(url, schema, mode).unwrap();
+                        for db in [&mut a, &mut b] {
+                            db.begin(&[]).unwrap();
+                            assert_eq!(db.query(&query).unwrap(), expected_prefix(&seed, &query));
+                        }
+                        let create = |id| Record {
+                            id,
+                            active: true,
+                            kind,
+                            due: 0,
+                            event_time: 0,
+                            ..Record::default()
+                        };
+                        a.write(create(1)).unwrap();
+                        let b_write = b.write(create(2));
+                        let results = [a.commit(), b_write.and_then(|()| b.commit())];
+                        assert_eq!(results.iter().filter(|result|result.is_ok()).count(),1,"{mode:?} expired={expired} empty={empty}: both old prefixes cannot precede each other's earlier insert");
+                        for rejected in results.into_iter().filter_map(Result::err) {
+                            assert_eq!(rejected, DbError::Conflict);
+                        }
+                        assert!(a
+                            .retry_causes
+                            .keys()
+                            .chain(b.retry_causes.keys())
+                            .all(|key| key.ends_with(":40001")));
+                        let committed = adapter::snapshot(url, schema).unwrap();
+                        assert_eq!(
+                            committed
+                                .iter()
+                                .filter(|row| row.id > 0 && row.active)
+                                .count(),
+                            1
+                        );
+                        let mut retry = Adapter::connect_with_mode(url, schema, mode).unwrap();
+                        retry.begin(&[]).unwrap();
+                        let prefix = retry.query(&query).unwrap();
+                        assert_eq!(prefix, expected_prefix(&committed, &query));
+                        assert_eq!(prefix.len(), 1);
+                        assert_ne!(prefix[0].id, 0);
+                        retry.abort().unwrap();
+                    },
+                );
+            }
+        }
+    }
 }
