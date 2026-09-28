@@ -75,6 +75,10 @@ See [the Tcl example](aerostore_tcl/test.tcl) for more ingestion and query examp
 
 ## Tests and verification
 
+Before large builds or campaigns, follow the [disk-space runbook](docs/disk-space.md).
+It covers capacity checks and cleanup of compiler intermediates while preserving
+the histories, executables, and receipts needed to validate results.
+
 Run the release workspace suite with serial test scheduling for the process-heavy tests:
 
 ```bash
@@ -195,7 +199,7 @@ Optional [retry diagnostics and expiry-index controls](docs/hyperfeed_retry_diag
 
 A subsequent [query dependency capture optimization](docs/hyperfeed_capture_prefix.md) removes quadratic work within fresh broad queries while preserving prior-query dependencies and conflict checks. In the [90-cell comparison](docs/bench_data/capture_prefix_2026-09-27/README.md), all 36 candidate runs completed usefully; in metrics runs, default hashed-index foreground p99 fell about 81% at 512 messages/second versus the previous engine. The source-bound proof adapters and native regressions were updated with the change. These are short synthetic latency and overload results; realistic sustained capacity and worker-death availability remain open.
 
-The optional [rolling lifecycle workload](docs/hyperfeed_rolling.md) starts empty and repeatedly creates flights, grows forks, processes arrivals, expires history, and reuses retired families. Its [first investigation](docs/hyperfeed_rolling_findings.md) exposed housekeeping retry exhaustion in the central service. The subsequent [expiry-range experiment](docs/hyperfeed_expiry_range.md) tests narrower publication dependencies, with native phantom/conflict regressions, exact correctness companions, and retained failures. Ordered expiry completed a long full/metrics pair and a second full-history run before a WSL interruption stopped the campaign; unfinished runs remain excluded. The ordered policy remains optional and has a fixed time window; these experiments do not establish the 10× capacity target. The [resource review](docs/hyperfeed_capacity_resources.md) records the remaining limits before testing the historical 100–300-worker deployments.
+The optional [rolling lifecycle workload](docs/hyperfeed_rolling.md) starts empty and repeatedly creates flights, grows forks, processes arrivals, expires history, and reuses retired families. Its [first investigation](docs/hyperfeed_rolling_findings.md) exposed housekeeping retry exhaustion in the central service. The subsequent [expiry-range experiment](docs/hyperfeed_expiry_range.md) tests narrower publication dependencies, with native phantom/conflict regressions, exact correctness companions, and retained failures. The [resumed experiments](docs/hyperfeed_expiry_resume.md) completed another ordered-expiry full/metrics pair and an overflow control, while preserving both VM interruptions. A separate PostgreSQL control completed after an early statistics update, exposing a baseline issue that must be handled before comparing capacity. The ordered policy remains optional and has a fixed time window; these experiments do not establish the 10× capacity target. The [resource review](docs/hyperfeed_capacity_resources.md) records the remaining limits before testing the historical 100–300-worker deployments.
 
 ## Project layout
 

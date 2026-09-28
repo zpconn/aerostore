@@ -1,5 +1,7 @@
 # Expiry-range publication experiment
 
+This report preserves the original checkpoint. The later [resumption and PostgreSQL statistics control](hyperfeed_expiry_resume.md) completed fresh attempts and retains its failures and interruptions separately.
+
 This experiment tests whether narrower expiry dependencies reduce housekeeping
 retries in AeroStore's database-owned service. All twelve short diagnostic runs
 completed with valid histories. Ordered publication reduced observed
@@ -226,8 +228,8 @@ interrupted campaign or describe runs spanning the reboot as one uninterrupted
 batch. This checkpoint makes no new performance comparison across the reboot.
 
 The implementation checkpoint was committed and pushed as `9cb2a022`; the
-measured source bytes still match the pre-interruption build receipts. No
-benchmark or PostgreSQL server was restarted after the VM returned. The old
+measured source bytes still match the pre-interruption build receipts. At that checkpoint, no
+benchmark or PostgreSQL server had been restarted after the VM returned. The old
 test-server PID file was deliberately retained: its pre-reboot PID identity is
 insufficient authority for cleanup in the new boot. The cause of the VM
 interruption remains unknown.
