@@ -236,6 +236,10 @@ and asynchronous-durability differences, not a 10× production HyperFeed claim.
 The next experiment targets measured worker/service communication overhead;
 selective family indexes and broader RPC batching remain deferred.
 
+The [fast iteration loop](docs/hyperfeed_iteration.md) compares preserved baseline
+and candidate executables with short, alternating workload screens. Full-history
+checks and sustained capacity trials remain promotion checks for finalists.
+
 ## Project layout
 
 | Path | Contents |
