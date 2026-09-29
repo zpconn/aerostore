@@ -33,6 +33,16 @@ and retain endpoint stress coverage. Changing these settings requires matching
 fresh correctness companions. Local or loopback success with this option does
 not establish physical MMHF performance.
 
+The remote helper accepts `--arena-backing file|memfd` (default `file`) and
+forwards it to both peers. The server records the actual arena filesystem and
+attachment lifetime in setup and final metadata; the client rejects missing or
+mismatched observations. Memfd changes the arena on the server host, while the
+server WAL stays in its case directory. See the
+[backing contract](hyperfeed_qualification.md#arena-backing) before selecting
+memfd, especially its requirement for a live owner when opening new attachments.
+Record the same requested option in a paired PostgreSQL command, where its
+effective value is `not_applicable`.
+
 Run from the repository root on Linux using the [prepared pinned toolchain](../verification/README.md). Capture Cargo's executable record instead of selecting an arbitrary file from `target/release/deps`:
 
 ```bash

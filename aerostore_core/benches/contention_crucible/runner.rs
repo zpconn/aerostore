@@ -84,6 +84,8 @@ struct Config {
     seed: u64,
     hot_percent: u32,
     shm_mib: usize,
+    #[serde(default)]
+    arena_backing: fixture::ArenaBacking,
     oracle_budget: usize,
     global_time_predicates: bool,
     pg_url: Option<String>,
@@ -133,6 +135,7 @@ impl Default for Config {
             seed: 20260924,
             hot_percent: 80,
             shm_mib: 256,
+            arena_backing: fixture::ArenaBacking::File,
             oracle_budget: 2_000_000,
             global_time_predicates: false,
             pg_url: None,
@@ -1184,6 +1187,7 @@ fn summarize(
         "effective_expiry_index_policy":if case.engine=="postgres" {"housekeeping"} else {case.config.expiry_index_policy.name()},
         "postgres_statistics":postgres::statistics_metadata(case.config.pg_analyze_after_seconds, case.engine == "postgres"),
         "postgres_candidate_query":postgres::candidate_query_metadata(case.config.pg_candidate_query, case.engine == "postgres"),
+        "arena_backing_metadata":read_arena_backing_metadata(case)?,
         "maintenance_selection_metadata":maintenance_selection_metadata(case.config.maintenance_selection, case.engine == "postgres"),
         "service_latency_p99_us_including_retries":p99(&service_latencies),"arrival_queue_delay_p99_us":p99(&completed.queue_delays),
         "arrival_mode":if case.config.arrival_rate > 0 && case.scenario.is_none() {"independent_fixed_corpus"} else {"closed_loop"},
@@ -1308,7 +1312,40 @@ fn maintenance_selection_metadata(selection: model::MaintenanceSelection, postgr
     }})
 }
 
+fn pending_arena_backing_metadata(case: &CaseConfig) -> fixture::ArenaBackingMetadata {
+    fixture::ArenaBackingMetadata::pending(case.config.arena_backing, case.engine == "postgres")
+}
+
+fn read_arena_backing_metadata(case: &CaseConfig) -> Result<fixture::ArenaBackingMetadata, String> {
+    let metadata: fixture::ArenaBackingMetadata = serde_json::from_slice(
+        &fs::read(case.directory.join("arena-backing.json")).map_err(|error| error.to_string())?,
+    )
+    .map_err(|error| error.to_string())?;
+    if case.engine == "postgres" {
+        if metadata != pending_arena_backing_metadata(case) {
+            return Err("PostgreSQL arena backing metadata must be not_applicable".into());
+        }
+    } else {
+        metadata.validate_native(case.config.arena_backing)?;
+    }
+    Ok(metadata)
+}
+
+fn failed_case(case: &CaseConfig, error: String) -> Value {
+    // Keep actual observations when setup reached mapping creation, including
+    // after a hard coordinator failure. Missing/invalid observations stay explicit.
+    let metadata =
+        read_arena_backing_metadata(case).unwrap_or_else(|_| pending_arena_backing_metadata(case));
+    json!({"engine":case.engine,"scenario":case.scenario,"passed":false,
+        "execution_completed":false,"error":error,"evidence_directory":case.directory,
+        "arena_backing_metadata":metadata})
+}
+
 fn coordinator(case: &CaseConfig) -> Result<Value, String> {
+    write_json(
+        &case.directory.join("arena-backing.json"),
+        &pending_arena_backing_metadata(case),
+    )?;
     if case.engine != "postgres" {
         write_json(
             &case.directory.join("postgres-statistics.json"),
@@ -1354,6 +1391,7 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
         let setup: remote::FrameSetup =
             serde_json::from_slice(&fs::read(setup_path).map_err(|e| e.to_string())?)
                 .map_err(|e| e.to_string())?;
+        setup.validate_arena_backing(case.config.arena_backing)?;
         if setup.version != 1
             || setup.run_id.is_empty()
             || setup.workload != case.config.workload
@@ -1386,6 +1424,10 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
         {
             return Err("remote setup does not match this bounded workload".into());
         }
+        write_json(
+            &case.directory.join("arena-backing.json"),
+            &setup.arena_backing_metadata,
+        )?;
         // Worker timestamps and arrival scheduling belong entirely to the client
         // host. Server samples have their own epoch and are reported separately.
         let mut completed = exercise(
@@ -1412,6 +1454,7 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
                 Err(e) => return Err(format!("remote final frame unavailable: {e}")),
             }
         };
+        final_frame.validate_arena_backing(&setup)?;
         if final_frame.version != 1
             || final_frame.run_id != setup.run_id
             || !final_frame.passed
@@ -1529,7 +1572,7 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
         };
     }
     let path = case.directory.join("arena.mmap");
-    let shared = aerostore::Shared::create_with_publication_policies(
+    let shared = aerostore::Shared::create_with_arena_backing(
         &path,
         case.config.shm_mib << 20,
         &initial,
@@ -1540,6 +1583,11 @@ fn coordinator(case: &CaseConfig) -> Result<Value, String> {
         case.config.expiry_publication_policy,
         case.config.expiry_index_origin,
         case.config.expiry_index_width,
+        case.config.arena_backing,
+    )?;
+    write_json(
+        &case.directory.join("arena-backing.json"),
+        &shared.arena_backing_metadata,
     )?;
     // Fork helpers before reader/vacuum threads exist in this coordinator.
     let writer =
@@ -1704,11 +1752,21 @@ fn isolated_case(case: &CaseConfig) -> Result<Value, String> {
 }
 
 fn parse() -> Result<Option<Config>, String> {
+    parse_arguments(
+        std::env::args().skip(1),
+        std::env::var_os(fixture::ARENA_BACKING_ENV).as_deref(),
+    )
+}
+
+fn parse_arguments(
+    mut args: impl Iterator<Item = String>,
+    legacy_backing: Option<&std::ffi::OsStr>,
+) -> Result<Option<Config>, String> {
+    fixture::reject_legacy_arena_environment(legacy_backing)?;
     let mut config = Config::default();
-    let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         if arg == "--help" {
-            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker; max100000, or1000000 for calibrated sustained metrics) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--maintenance-selection complete|prefix (global maintenance query contract; default complete)\n--maintenance-mode batch|sweep --projection-batch-size 4 --housekeeping-batch-size 32 --max-maintenance-batches 4096 (calibrated only; terminal empty transaction counts toward cap)\n--rolling-cycle-messages 0 --rolling-retention-seconds 0 (calibrated sweep only; opt-in rate-dependent lifecycle stress)\n--expiry-index all-active|housekeeping (native fixture only; PostgreSQL already has a partial expiry index)\n--expiry-publication hashed|ordered --expiry-index-origin 1700000000000000000 --expiry-index-width 1000000000 (native expiry publication; fixed time window, no automatic rotation)\n--due-index hashed|ordered --due-index-origin 1700000000000000000 --due-index-width 1000000000 (native due publication buckets; explicit event-time units)\n--retry-diagnostics off|on (on requires retry-diagnostics build feature; bounded failed-attempt evidence)\n--pg-write-mode buffered|immediate --pg-candidate-query or|split (equivalent predicates; default or)\n--pg-analyze-after-seconds 0 (0=initial only; positive=one additional owned-table ANALYZE during sustained fixed arrivals)\n--rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
+            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker; max100000, or1000000 for calibrated sustained metrics) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--maintenance-selection complete|prefix (global maintenance query contract; default complete)\n--maintenance-mode batch|sweep --projection-batch-size 4 --housekeeping-batch-size 32 --max-maintenance-batches 4096 (calibrated only; terminal empty transaction counts toward cap)\n--rolling-cycle-messages 0 --rolling-retention-seconds 0 (calibrated sweep only; opt-in rate-dependent lifecycle stress)\n--expiry-index all-active|housekeeping (native fixture only; PostgreSQL already has a partial expiry index)\n--expiry-publication hashed|ordered --expiry-index-origin 1700000000000000000 --expiry-index-width 1000000000 (native expiry publication; fixed time window, no automatic rotation)\n--due-index hashed|ordered --due-index-origin 1700000000000000000 --due-index-width 1000000000 (native due publication buckets; explicit event-time units)\n--retry-diagnostics off|on (on requires retry-diagnostics build feature; bounded failed-attempt evidence)\n--pg-write-mode buffered|immediate --pg-candidate-query or|split (equivalent predicates; default or)\n--pg-analyze-after-seconds 0 (0=initial only; positive=one additional owned-table ANALYZE during sustained fixed arrivals)\n--rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--arena-backing file|memfd (native only; default file; WAL stays in case directory; memfd new attachments require live owner)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
             return Ok(None);
         }
         if arg == "--bench" || arg == "--noplot" {
@@ -1869,6 +1927,7 @@ fn parse() -> Result<Option<Config>, String> {
             "--hot-percent" => {
                 config.hot_percent = value.parse().map_err(|_| "invalid hot-percent")?
             }
+            "--arena-backing" => config.arena_backing = fixture::ArenaBacking::parse(&value)?,
             "--shm-mib" => config.shm_mib = value.parse().map_err(|_| "invalid shm-mib")?,
             "--oracle-budget" => {
                 config.oracle_budget = value.parse().map_err(|_| "invalid oracle budget")?
@@ -1948,7 +2007,10 @@ fn parse() -> Result<Option<Config>, String> {
         || (config.rpc_delay_us > 0 && !config.engine.starts_with("service-"))
         || !(1..=3600).contains(&config.seconds)
         || !super::corpus_limits::message_cap_allowed(
-            &config.workload, &config.evidence, &config.mode, config.max_messages,
+            &config.workload,
+            &config.evidence,
+            &config.mode,
+            config.max_messages,
         )
         || config.message_interval_us > 1_000_000
         || config.hot_percent > 100
@@ -1991,7 +2053,7 @@ fn run_engines(config: &Config, evidence: &Path, report: &mut Value) -> Result<(
                     number
                 ),
             };
-            let result = isolated_case(&case).unwrap_or_else(|error| json!({"engine":engine,"scenario":scenario,"passed":false,"execution_completed":false,"error":error,"evidence_directory":case.directory}));
+            let result = isolated_case(&case).unwrap_or_else(|error| failed_case(&case, error));
             if engine == "postgres" && result["postgres_configuration"].is_object() {
                 report["postgres_configuration"] = result["postgres_configuration"].clone();
             }
@@ -2044,12 +2106,16 @@ pub fn run() -> Result<(), String> {
         } else {
             Ok(Value::Null)
         };
-        let result = configuration.and_then(|configuration| {
-            coordinator(&case).map(|mut report| {
-                if case.engine == "postgres" { report["postgres_configuration"] = configuration; }
-                report
+        let result = configuration
+            .and_then(|configuration| {
+                coordinator(&case).map(|mut report| {
+                    if case.engine == "postgres" {
+                        report["postgres_configuration"] = configuration;
+                    }
+                    report
+                })
             })
-        }).unwrap_or_else(|error| json!({"engine":case.engine,"scenario":case.scenario,"passed":false,"execution_completed":false,"error":error,"evidence_directory":case.directory}));
+            .unwrap_or_else(|error| failed_case(&case, error));
         write_json(&case.directory.join("result.json"), &result)?;
         // Skip destructors for any abandoned native critical section on errors.
         std::process::exit(0);
@@ -2107,6 +2173,7 @@ pub fn run() -> Result<(), String> {
             config.expiry_index_origin,
             config.expiry_index_width,
             config.retry_diagnostics,
+            config.arena_backing,
         );
     }
     if config.engine == "service-remote" {
@@ -2176,5 +2243,147 @@ pub fn run() -> Result<(), String> {
             "contention correctness/progress check failed: {}",
             config.output.display()
         ))
+    }
+}
+
+#[cfg(test)]
+mod arena_backing_configuration_tests {
+    use super::*;
+
+    fn arguments(values: &[&str]) -> Result<Option<Config>, String> {
+        parse_arguments(values.iter().map(|value| (*value).to_owned()), None)
+    }
+
+    #[test]
+    fn arena_backing_cli_defaults_and_propagates_to_every_engine_and_coordinator() {
+        assert_eq!(
+            arguments(&[]).unwrap().unwrap().arena_backing,
+            fixture::ArenaBacking::File
+        );
+        for engine in [
+            "aerostore",
+            "service-unix",
+            "service-tcp",
+            "postgres",
+            "both",
+        ] {
+            let config = arguments(&["--engine", engine, "--arena-backing", "memfd"])
+                .unwrap()
+                .unwrap();
+            assert_eq!(config.arena_backing, fixture::ArenaBacking::Memfd);
+            let case = CaseConfig {
+                config,
+                engine: engine.into(),
+                scenario: None,
+                directory: PathBuf::from("unused"),
+                schema: "unused".into(),
+            };
+            let value = serde_json::to_value(&case).unwrap();
+            assert_eq!(value["config"]["arena_backing"], "memfd");
+            let decoded: CaseConfig = serde_json::from_value(value).unwrap();
+            assert_eq!(decoded.config.arena_backing, fixture::ArenaBacking::Memfd);
+        }
+        let config = arguments(&[
+            "--engine",
+            "service-remote",
+            "--mode",
+            "sustained",
+            "--remote-setup",
+            "setup.json",
+            "--remote-final",
+            "final.json",
+            "--arena-backing",
+            "memfd",
+        ])
+        .unwrap()
+        .unwrap();
+        assert_eq!(config.arena_backing, fixture::ArenaBacking::Memfd);
+        let config = arguments(&[
+            "--engine",
+            "service-tcp",
+            "--mode",
+            "serve",
+            "--arena-backing",
+            "memfd",
+        ])
+        .unwrap()
+        .unwrap();
+        assert_eq!(config.arena_backing, fixture::ArenaBacking::Memfd);
+    }
+
+    #[test]
+    fn arena_backing_cli_rejects_bad_options_and_legacy_environment() {
+        for value in ["", "tmpfs", "MEMFD", " memfd", "memfd "] {
+            assert!(arguments(&["--arena-backing", value]).is_err());
+        }
+        assert!(arguments(&["--arena-backing"]).is_err());
+        for value in ["", "file", "memfd", "anything"] {
+            let error = parse_arguments(
+                ["--arena-backing".into(), "file".into()].into_iter(),
+                Some(std::ffi::OsStr::new(value)),
+            )
+            .err()
+            .unwrap();
+            assert!(error.contains("unset it and use --arena-backing"));
+        }
+    }
+
+    #[test]
+    fn arena_backing_failure_retains_observed_or_explicitly_unobserved_metadata() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut config = Config::default();
+        config.arena_backing = fixture::ArenaBacking::Memfd;
+        let case = CaseConfig {
+            config,
+            engine: "service-unix".into(),
+            scenario: None,
+            directory: directory.path().to_path_buf(),
+            schema: "unused".into(),
+        };
+        assert_eq!(
+            failed_case(&case, "before setup".into())["arena_backing_metadata"]["effective"],
+            "unobserved"
+        );
+        let shared = fixture::Shared::create_with_arena_backing(
+            &directory.path().join("arena.mmap"),
+            16 << 20,
+            &[Record::default()],
+            fixture::ExpiryIndexPolicy::AllActive,
+            fixture::DueIndexPolicy::Hashed,
+            fixture::default_due_index_origin(),
+            fixture::default_due_index_width(),
+            fixture::ExpiryPublicationPolicy::Hashed,
+            fixture::default_expiry_index_origin(),
+            fixture::default_expiry_index_width(),
+            fixture::ArenaBacking::Memfd,
+        )
+        .unwrap();
+        write_json(
+            &directory.path().join("arena-backing.json"),
+            &shared.arena_backing_metadata,
+        )
+        .unwrap();
+        let failure = failed_case(&case, "after setup".into());
+        assert_eq!(
+            failure["arena_backing_metadata"],
+            serde_json::to_value(&shared.arena_backing_metadata).unwrap()
+        );
+        assert_eq!(failure["passed"], false);
+        let mut wrong = shared.arena_backing_metadata.clone();
+        wrong.requested = fixture::ArenaBacking::File;
+        write_json(&directory.path().join("arena-backing.json"), &wrong).unwrap();
+        assert!(read_arena_backing_metadata(&case).is_err());
+        assert_eq!(
+            failed_case(&case, "wrong metadata".into())["arena_backing_metadata"]["effective"],
+            "unobserved"
+        );
+        let mut postgres = case.clone();
+        postgres.engine = "postgres".into();
+        let metadata = pending_arena_backing_metadata(&postgres);
+        write_json(&directory.path().join("arena-backing.json"), &metadata).unwrap();
+        assert_eq!(
+            read_arena_backing_metadata(&postgres).unwrap().effective,
+            "not_applicable"
+        );
     }
 }

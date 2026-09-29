@@ -104,7 +104,8 @@ def compare_inputs(base, candidate, allowed):
             "identical_binary": base["benchmark"]["sha256"] == candidate["benchmark"]["sha256"]}
 
 
-def qualifier_parameters(manifest, output, lane, rate, seed):
+def qualifier_parameters(manifest, output, lane, rate, seed, arena_backing="file"):
+    require(arena_backing in {"file", "memfd"}, "unknown arena backing")
     seconds, timer = LANES[lane]
     values = {
         "binary": manifest["benchmark"]["path"], "output": output,
@@ -112,6 +113,7 @@ def qualifier_parameters(manifest, output, lane, rate, seed):
         "workload": "calibrated", "evidence": "metrics", "families": 1024,
         "seconds": seconds, "hot-percent": 0, "slo-ms": 50,
         "max-backlog": 10000, "max-messages": 100000, "shm-mib": 2048,
+        "arena-backing": arena_backing,
         "cpu-budget": 24, "outcome-tolerance": 0, "max-noop-fraction": 0,
         "minimum-drain-fraction": .99, "pg-write-mode": "buffered",
         "pg-analyze-after-seconds": 5, "pg-candidate-query": "split",
@@ -142,8 +144,8 @@ def expected_config(values):
             for key, value in values.items() if key not in driver_only}
 
 
-def qualifier_command(manifest, output, lane, rate, seed):
-    values = qualifier_parameters(manifest, output, lane, rate, seed)
+def qualifier_command(manifest, output, lane, rate, seed, arena_backing="file"):
+    values = qualifier_parameters(manifest, output, lane, rate, seed, arena_backing)
     driver = Path(manifest["source"]["root"]) / "scripts/qualify_hyperfeed.py"
     return [sys.executable, str(driver), *[v for key, value in values.items()
                                           for v in ("--" + key, str(value))]]
@@ -259,6 +261,7 @@ def screen(args):
     record = {"format": "hyperfeed-iteration-screen-v1", "started_at": now(), "completed": False,
               "scope": SCOPE, "sustained_capacity_established": False,
               "source_comparison": comparison, "lane": args.lane, "rate": args.rate,
+              "arena_backing": args.arena_backing,
               "cpu_affinity": cpus, "plan": plan, "trials": [],
               "captures": {label: {"path": str(path), "sha256": digest(path)}
                            for label, path in paths.items()},
@@ -283,7 +286,7 @@ def screen(args):
             folder.mkdir()
             write(folder / "admission.json", check)
             print(f"START {cell['id']} lane={args.lane} rate={args.rate}", flush=True)
-            command = qualifier_command(manifest, folder / "qualification", args.lane, args.rate, cell["seed"])
+            command = qualifier_command(manifest, folder / "qualification", args.lane, args.rate, cell["seed"], args.arena_backing)
             envelope = run_envelope(command, folder, cpus, LANES[args.lane][0] + 150,
                                     driver / "run_memory_envelope.py")
             last_envelope = envelope
@@ -299,7 +302,7 @@ def screen(args):
                     "actual trial CPU affinity differs from plan")
             capture.validate_capture(paths[cell["variant"]])
             trial_policy = {**record["policy"], "expected_config": expected_config(
-                qualifier_parameters(manifest, folder / "qualification", args.lane, args.rate, cell["seed"]))}
+                qualifier_parameters(manifest, folder / "qualification", args.lane, args.rate, cell["seed"], args.arena_backing))}
             result = assessment.assess_screen_trial(campaign["trials"][0], envelope, trial_policy)
             row = {**cell, "assessment": result, "campaign": str(campaign_path),
                    "campaign_sha256": digest(campaign_path)}
@@ -349,6 +352,8 @@ def main(argv=None):
             p.add_argument("--candidate", type=Path, required=True)
             p.add_argument("--allow-change", action="append", default=[])
             p.add_argument("--lane", choices=LANES, default="foreground")
+            p.add_argument("--arena-backing", choices=["file", "memfd"], default="file",
+                           help="same native arena configuration for both implementation captures")
             p.add_argument("--rate", type=int, default=3584)
             p.add_argument("--seeds", type=int, nargs=2, default=SEEDS)
     args = parser.parse_args(argv)

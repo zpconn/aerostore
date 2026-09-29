@@ -11,6 +11,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import assess_hyperfeed_capacity as capacity
 import test_hyperfeed_qualification as fixtures
+from test_arena_backing import metadata as arena_metadata, with_backing
 
 POLICY = {"minimum_duration_seconds": 11, "warmup_seconds": 1}
 
@@ -356,6 +357,49 @@ class MessageCapGuardrailTests(unittest.TestCase):
         result=self.coverage(evidence())
         self.assertEqual(set(result['differences']),{'seconds'})
         self.assertIsNone(result['nonbinding_message_cap_difference'])
+
+
+class ArenaCapacityTests(unittest.TestCase):
+    def test_observed_backing_and_filesystem_bind_short_guardrail(self):
+        for backing in ("file", "memfd"):
+            data = evidence()
+            with_backing(data["trial"], backing); with_backing(data["guardrail_trial"], backing)
+            self.assertTrue(capacity.assess_trial(data, POLICY)["conditional_capacity_passed"])
+            data["guardrail_trial"]["report"]["runs"][0]["arena_backing_metadata"]["filesystem_magic"] = "0x794c7630"
+            data["guardrail_trial"]["report"]["runs"][0]["arena_backing_metadata"]["filesystem_type"] = "other"
+            self.assertEqual(capacity.assess_trial(data, POLICY)["classification"], "invalid_evidence")
+
+    def test_repeat_groups_keep_observed_filesystems_and_backings_separate(self):
+        data = evidence(); with_backing(data["trial"], "file"); with_backing(data["guardrail_trial"], "file")
+        first = capacity.assess_trial(data, POLICY)
+        for backing, filesystem in (("memfd", "tmpfs"), ("file", "tmpfs")):
+            second = copy.deepcopy(first); second["config"].update(seed=999, arena_backing=backing)
+            second["arena_backing"]["metadata"] = arena_metadata(backing, filesystem=filesystem)
+            groups = capacity.summarize_capacity([first, second], POLICY)["configurations"]
+            self.assertEqual(len(groups), 2)
+            self.assertTrue(all(not row["capacity_lower_bound_established"] for row in groups))
+
+    def test_instance_identity_does_not_split_repeat_groups(self):
+        data = evidence(); with_backing(data["trial"], "memfd"); with_backing(data["guardrail_trial"], "memfd")
+        first = capacity.assess_trial(data, POLICY)
+        second = copy.deepcopy(first); second["config"]["seed"] = 999
+        first["arena_backing"]["metadata"].update(owner_pid=100, inode=10, path="/one")
+        second["arena_backing"]["metadata"].update(owner_pid=200, inode=20, path="/two")
+        groups = capacity.summarize_capacity([first, second], POLICY)["configurations"]
+        self.assertEqual(len(groups), 1)
+        self.assertTrue(groups[0]["capacity_lower_bound_established"])
+
+    def test_retry_exhaustion_requires_observed_placement_for_modern_configuration(self):
+        data = evidence(); with_backing(data["trial"], "memfd"); with_backing(data["guardrail_trial"], "memfd")
+        data["trial"].update(exit_code=2, error=None)
+        data["trial"]["report"].update(passed=False, error="after 128 retries: transaction conflict")
+        result = capacity.assess_trial(data, POLICY)
+        self.assertEqual(result["classification"], "operational_failure", result)
+        self.assertEqual(result["arena_backing"]["status"], "observed")
+        data["trial"]["report"]["runs"] = []
+        result = capacity.assess_trial(data, POLICY)
+        self.assertEqual(result["classification"], "invalid_evidence", result)
+        self.assertFalse(result["operational_capacity_failure"])
 
 
 class ReportLevelFailureTests(unittest.TestCase):

@@ -221,6 +221,11 @@ def guardrail_assessment(trial, campaign, guardrail_trial, guardrail_campaign, p
     if not (assessment["execution_valid"] and assessment["history_verified"] and assessment.get("useful_work_passed")):
         raise ValueError("short guardrail lacks a valid useful complete history")
     config, other = trial["config"], guardrail_trial["config"]
+    measured_arena = gate.trial_arena_assessment(trial)
+    if not measured_arena["passed"]:
+        raise ValueError("measurement lacks a valid arena observation: " + "; ".join(measured_arena["reasons"]))
+    if gate.arena_storage_identity(measured_arena) != gate.arena_storage_identity(assessment.get("arena_backing")):
+        raise ValueError("guardrail arena filesystem or storage lifetime differs from measurement")
     differences = {}
     for field in set(gate.match_fields(config)) | set(gate.match_fields(other)):
         a, b = gate.config_value(config, field), gate.config_value(other, field)
@@ -464,6 +469,7 @@ def assess_trial(evidence, policy=None):
             return result
         result["correctness_coverage"] = guardrail_assessment(trial, campaign, evidence["guardrail_trial"],
             evidence["guardrail_campaign"], policy, failure=category == "operational_failure")
+        result["arena_backing"] = gate.trial_arena_assessment(trial)
         if category == "operational_failure":
             result.update(classification=category, operational_capacity_failure=True, reasons=[reason])
             if partial:
@@ -482,6 +488,7 @@ def assess_trial(evidence, policy=None):
             "max_noop_fraction": 0, "outcome_tolerance": 0})
         result["structural_assessment"] = {key: check.get(key) for key in ("execution_valid", "continuous_timing_passed",
             "useful_work_passed", "history_verified", "global_maintenance_sweep_complete")}
+        result["arena_backing"] = check.get("arena_backing")
         if not all(check.get(key) is True for key in ("execution_valid", "continuous_timing_passed", "useful_work_passed", "global_maintenance_sweep_complete")):
             raise ValueError("execution/structural/useful-work checks failed: " + "; ".join(check["reasons"]))
         run = trial["report"]["runs"][0]
@@ -511,9 +518,10 @@ def summarize_capacity(assessments, policy=None):
         config = row["config"]
         base = {name: gate.config_value(config, name) for name in gate.match_fields(config)
                 if name not in ("arrival_rate", "seed")}
-        grouping = json.dumps([row["source_sha256"], row["binary_sha256"], base], sort_keys=True)
+        arena = gate.arena_storage_identity(row.get("arena_backing"))
+        grouping = json.dumps([row["source_sha256"], row["binary_sha256"], base, arena], sort_keys=True)
         group = groups.setdefault(grouping, {"configuration": base, "source_sha256": row["source_sha256"],
-            "binary_sha256": row["binary_sha256"], "rates": {}})
+            "binary_sha256": row["binary_sha256"], "arena_storage": arena, "rates": {}})
         group["rates"].setdefault(config["arrival_rate"], []).append(row)
     output = []
     for group in groups.values():

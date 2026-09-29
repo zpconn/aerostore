@@ -13,7 +13,7 @@ supported by the harness**.
 | Population | At most 1,024 configured logical identities. Calibrated initialization reserves two physical families per identity and 128 record slots per physical family: 256 slots per identity, including inactive slots. This is a fixture layout, not a realistic population estimate. |
 | Shared arena | CLI range 32–3,584 MiB. Rows, versions, indexes and the WAL ring share this budget. Successful initialization does not establish adequate headroom under sustained updates. |
 | Service messages | Each encoded request/reply is limited to 8 MiB. Transactions are limited to 100,000 operations and 60 seconds. Maintenance batch size limits writes, **not** the complete query result transmitted first. |
-| Offered corpus | Calibrated schedules admit at most 3.2 million foreground messages, with at most 100,000 scheduled jobs per worker and a maximum one-hour run. More duration or offered load can hit evidence limits before storage capacity. |
+| Offered corpus | Calibrated schedules bound the foreground corpus at 8 million messages; independent timer inputs are additional. Calibrated metrics runs may opt into at most 1 million scheduled inputs per worker through `--max-messages`; full-history runs retain the 100,000-input per-worker ceiling. Defaults are unchanged, and the run duration remains bounded to one hour. Per-worker limits can bind before the aggregate bound, depending on dispatch. These are evidence limits, not storage capacity. |
 
 These limits come from the [runner](../aerostore_core/benches/contention_crucible/runner.rs),
 [calibrated scheduler](../aerostore_core/benches/contention_crucible/calibrated.rs),

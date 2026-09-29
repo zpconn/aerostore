@@ -13,6 +13,8 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FrameSetup {
+    pub arena_backing: fixture::ArenaBacking,
+    pub arena_backing_metadata: fixture::ArenaBackingMetadata,
     pub version: u32,
     pub run_id: String,
     pub endpoint: service::Endpoint,
@@ -63,8 +65,19 @@ pub struct FrameSetup {
     pub max_seconds: u64,
 }
 
+impl FrameSetup {
+    pub fn validate_arena_backing(&self, requested: fixture::ArenaBacking) -> Result<(), String> {
+        if self.arena_backing != requested {
+            return Err("remote setup arena backing differs from requested backing".into());
+        }
+        self.arena_backing_metadata.validate_native(requested)
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FrameFinal {
+    pub arena_backing: fixture::ArenaBacking,
+    pub arena_backing_metadata: fixture::ArenaBackingMetadata,
     pub version: u32,
     pub run_id: String,
     pub passed: bool,
@@ -81,8 +94,21 @@ pub struct FrameFinal {
 }
 
 impl FrameFinal {
-    fn failed(run_id: &str, error: String) -> Self {
+    pub fn validate_arena_backing(&self, setup: &FrameSetup) -> Result<(), String> {
+        self.arena_backing_metadata
+            .validate_native(setup.arena_backing)?;
+        if self.arena_backing != setup.arena_backing
+            || self.arena_backing_metadata != setup.arena_backing_metadata
+        {
+            return Err("remote final arena backing differs from setup observation".into());
+        }
+        Ok(())
+    }
+
+    fn failed(run_id: &str, error: String, metadata: &fixture::ArenaBackingMetadata) -> Self {
         Self {
+            arena_backing: metadata.requested,
+            arena_backing_metadata: metadata.clone(),
             version: 1,
             run_id: run_id.into(),
             passed: false,
@@ -256,6 +282,7 @@ pub fn serve(
     expiry_index_origin: i64,
     expiry_index_width: u64,
     retry_diagnostics: bool,
+    arena_backing: fixture::ArenaBacking,
 ) -> Result<(), String> {
     if due_index_width == 0 {
         return Err("due index width must be positive".into());
@@ -347,8 +374,11 @@ pub fn serve(
     } else {
         model::sustained_initial_for(workload, families, seed)
     };
+    let mut arena_backing_metadata = fixture::ArenaBackingMetadata::pending(arena_backing, false);
+    let arena_metadata_path = output.with_extension("arena-backing.json");
+    write_json(&arena_metadata_path, &arena_backing_metadata)?;
     let result = (|| {
-        let shared = aerostore::Shared::create_with_publication_policies(
+        let shared = aerostore::Shared::create_with_arena_backing(
             &arena,
             shm_mib << 20,
             &initial,
@@ -359,7 +389,10 @@ pub fn serve(
             expiry_publication_policy,
             expiry_index_origin,
             expiry_index_width,
+            arena_backing,
         )?;
+        arena_backing_metadata = shared.arena_backing_metadata.clone();
+        write_json(&arena_metadata_path, &arena_backing_metadata)?;
         let mut children = Children::default();
         // All forks precede watchdog, vacuum and service executor threads.
         let writer = aerostore_core::spawn_wal_writer_daemon(shared.ring.clone(), &wal)
@@ -376,6 +409,7 @@ pub fn serve(
         let (cancel_watchdog, watchdog) = mpsc::channel::<()>();
         let watchdog_path = final_path.clone();
         let watchdog_id = run_id.clone();
+        let watchdog_metadata = arena_backing_metadata.clone();
         std::thread::Builder::new()
             .name("remote-deadline".into())
             .spawn(move || {
@@ -386,6 +420,7 @@ pub fn serve(
                     let failure = FrameFinal::failed(
                         &watchdog_id,
                         "remote owner hard deadline: shutdown/drain may be incomplete".into(),
+                        &watchdog_metadata,
                     );
                     let _ = write_json(&watchdog_path, &failure);
                     unsafe {
@@ -422,6 +457,8 @@ pub fn serve(
                 })
             })?;
         let setup = FrameSetup {
+            arena_backing,
+            arena_backing_metadata: arena_backing_metadata.clone(),
             version: 1,
             run_id: run_id.clone(),
             endpoint: server.endpoint(),
@@ -479,6 +516,8 @@ pub fn serve(
         }
         let after_drain = aerostore::retention(&shared)?;
         let final_frame = FrameFinal {
+            arena_backing,
+            arena_backing_metadata: arena_backing_metadata.clone(),
             version: 1,
             run_id: run_id.clone(),
             passed: completion.is_ok(),
@@ -508,8 +547,92 @@ pub fn serve(
     })();
     if let Err(error) = &result {
         if !final_path.exists() {
-            write_json(&final_path, &FrameFinal::failed(&run_id, error.clone()))?;
+            write_json(
+                &final_path,
+                &FrameFinal::failed(&run_id, error.clone(), &arena_backing_metadata),
+            )?;
         }
     }
     result
+}
+
+#[cfg(test)]
+mod arena_backing_remote_tests {
+    use super::*;
+
+    fn setup() -> FrameSetup {
+        serde_json::from_value(json!({
+            "version":1,"run_id":"test","endpoint":{"Tcp":"127.0.0.1:1234"},
+            "workload":"legacy","families":16,"seed":1,
+            "projection_interval_seconds":300,"housekeeping_interval_seconds":600,
+            "global_time_predicates":false,"initial_rows":[],"server_pid":123,"max_seconds":10,
+            "arena_backing":"memfd","arena_backing_metadata":{
+                "format":"arena-backing-v1","requested":"memfd","effective":"memfd",
+                "observed":true,"filesystem_type":"tmpfs","filesystem_magic":"0x1021994",
+                "lifetime":"new_attachments_require_live_owner_existing_mappings_survive",
+                "wal_placement":"case_directory_file"}
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn arena_backing_remote_frames_require_observations_and_match_client_request() {
+        let frame = setup();
+        frame
+            .validate_arena_backing(fixture::ArenaBacking::Memfd)
+            .unwrap();
+        assert!(frame
+            .validate_arena_backing(fixture::ArenaBacking::File)
+            .is_err());
+        let encoded = serde_json::to_value(&frame).unwrap();
+        let decoded: FrameSetup = serde_json::from_value(encoded.clone()).unwrap();
+        assert_eq!(decoded.arena_backing_metadata, frame.arena_backing_metadata);
+        for field in ["arena_backing", "arena_backing_metadata"] {
+            let mut missing = encoded.clone();
+            missing.as_object_mut().unwrap().remove(field);
+            assert!(serde_json::from_value::<FrameSetup>(missing).is_err());
+        }
+        let mut wrong = frame.clone();
+        wrong.arena_backing_metadata =
+            fixture::ArenaBackingMetadata::pending(fixture::ArenaBacking::Memfd, false);
+        assert!(wrong
+            .validate_arena_backing(fixture::ArenaBacking::Memfd)
+            .is_err());
+        let mut wrong = frame.clone();
+        wrong.arena_backing = fixture::ArenaBacking::File;
+        assert!(wrong
+            .validate_arena_backing(fixture::ArenaBacking::Memfd)
+            .is_err());
+    }
+
+    #[test]
+    fn arena_backing_remote_final_preserves_failure_observation_and_rejects_mismatch() {
+        let setup = setup();
+        let final_frame = FrameFinal::failed(
+            &setup.run_id,
+            "after mapping".into(),
+            &setup.arena_backing_metadata,
+        );
+        assert!(!final_frame.passed);
+        final_frame.validate_arena_backing(&setup).unwrap();
+        let decoded: FrameFinal =
+            serde_json::from_slice(&serde_json::to_vec(&final_frame).unwrap()).unwrap();
+        decoded.validate_arena_backing(&setup).unwrap();
+        let mut wrong = final_frame.clone();
+        wrong.arena_backing = fixture::ArenaBacking::File;
+        assert!(wrong.validate_arena_backing(&setup).is_err());
+        let mut wrong = final_frame.clone();
+        wrong.arena_backing_metadata.observed = false;
+        assert!(wrong.validate_arena_backing(&setup).is_err());
+        let failed_before_setup = FrameFinal::failed(
+            &setup.run_id,
+            "before mapping".into(),
+            &fixture::ArenaBackingMetadata::pending(fixture::ArenaBacking::Memfd, false),
+        );
+        assert_eq!(
+            failed_before_setup.arena_backing_metadata.effective,
+            "unobserved"
+        );
+        assert!(failed_before_setup.validate_arena_backing(&setup).is_err());
+    }
 }

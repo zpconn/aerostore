@@ -140,8 +140,12 @@ verified the control arena and WAL shared the original filesystem, while the
 memfd arena had tmpfs backing and the WAL remained on the original filesystem.
 The captured executable digest is `29f16a2ff50d9d36…`.
 
-The treatment is explicit: `AEROSTORE_CONTENTION_ARENA_BACKING=memfd` selects a
-benchmark fixture backed by an owner-held memfd. Its compatibility path refers
+The retained experiment selected its treatment with
+`AEROSTORE_CONTENTION_ARENA_BACKING=memfd`, using a benchmark fixture backed by an
+owner-held memfd. Current binaries require the explicit
+[`--arena-backing memfd` option](hyperfeed_qualification.md#arena-backing) and
+reject that former environment override; the captured experiment remains
+unchanged. Its compatibility path refers
 to that owner's open descriptor. Existing attached mappings survive owner
 death, but the original path cannot reopen the arena after owner death. This
 differs from a named file's lifetime. No persistent-arena recovery or equal
@@ -199,15 +203,14 @@ differences. Integer counts, structure and other values remain exact. Resource
 audits passed, peak owned memory stayed below 2.46 GiB, and all four owned jobs
 stopped. No new formal proof or long-term memory-retention result is claimed.
 
-The next step is to give arena backing an explicit CLI/configuration field and
-record both requested and effective backing with its lifetime contract. Then
-run an accelerated maintenance screen before repeated 905-second capacity
-boundary trials with normal maintenance cadence under the same WAL contract.
-The default should remain unchanged until that qualification is complete.
-The current environment treatment requires the explicit experiment harness;
-ordinary qualifier metadata alone does not describe it fully. This prevents a
-later comparison from silently treating different backing choices as the same
-configuration.
+The [follow-on capacity investigation](hyperfeed_arena_capacity.md) adds explicit
+CLI/configuration fields and records requested and observed backing with its
+lifetime contract. Its first 4,032/s sustained trial passed operational checks;
+6,400/s kept up but missed the 50 ms p99 requirement. Neither is a new qualified
+capacity point. The default remains file-backed. The historical environment
+treatment still requires its retained experiment harness; current binaries
+reject that override and bind storage observations through ordinary qualifier
+metadata.
 
 - [Storage experiment and four assessments](../target/hyperfeed-commit-phases-20260929-v1/arena-burst-4032/experiment.json), [source-bound placement analysis](../target/hyperfeed-commit-phases-20260929-v1/arena-burst-4032-analysis.json), and [captured executable/source](../target/hyperfeed-commit-phases-20260929-v1/arena-config/capture/capture.json).
 - [Placement harness](../target/hyperfeed-commit-phases-20260929-v1/arena_placement.py), [final analyzer](../target/hyperfeed-commit-phases-20260929-v1/analyze_arena_placement_v2.py), [26-test log](../target/hyperfeed-commit-phases-20260929-v1/analyze-arena-placement-tests-v2.log), and [preserved first-analysis refusal](../target/hyperfeed-commit-phases-20260929-v1/analyze-arena-placement-first-attempt.log).

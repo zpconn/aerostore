@@ -11,10 +11,11 @@ use aerostore_core::{
     TmpfsAttachMode, WalEncodingPolicy,
 };
 use serde::{Deserialize, Serialize};
-use std::ffi::OsString;
+use std::ffi::OsStr;
 use std::fs::{File, OpenOptions};
 use std::io::Read;
 use std::os::fd::{AsRawFd, FromRawFd};
+use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -29,24 +30,155 @@ const INDEX_KEYS: [fn(&Record) -> Option<IndexValue>; 5] = [
     |row| keys(row)[4].map(IndexValue::I64),
 ];
 
-// An explicit benchmark configuration experiment, not a production storage or
-// recovery policy. Only the arena moves; WAL and evidence paths are unchanged.
-const ARENA_BACKING_ENV: &str = "AEROSTORE_CONTENTION_ARENA_BACKING";
+// Only the arena moves; WAL and evidence paths remain in the case directory.
+pub const ARENA_BACKING_ENV: &str = "AEROSTORE_CONTENTION_ARENA_BACKING";
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum ArenaBacking {
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ArenaBacking {
+    #[default]
     File,
     Memfd,
 }
 
 impl ArenaBacking {
-    fn parse(value: Option<OsString>) -> Result<Self, String> {
-        match value.as_deref() {
-            None => Ok(Self::File),
-            Some(value) if value == "file" => Ok(Self::File),
-            Some(value) if value == "memfd" => Ok(Self::Memfd),
-            _ => Err(format!("{ARENA_BACKING_ENV} must be file or memfd")),
+    pub fn parse(value: &str) -> Result<Self, String> {
+        match value {
+            "file" => Ok(Self::File),
+            "memfd" => Ok(Self::Memfd),
+            _ => Err("--arena-backing must be file or memfd".into()),
         }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::File => "file",
+            Self::Memfd => "memfd",
+        }
+    }
+
+    fn lifetime(self) -> &'static str {
+        match self {
+            Self::File => "path_survives_owner_until_unlinked",
+            Self::Memfd => "new_attachments_require_live_owner_existing_mappings_survive",
+        }
+    }
+}
+
+pub fn reject_legacy_arena_environment(value: Option<&OsStr>) -> Result<(), String> {
+    if value.is_some() {
+        Err(format!("{ARENA_BACKING_ENV} is no longer supported; unset it and use --arena-backing file|memfd"))
+    } else {
+        Ok(())
+    }
+}
+
+/// Observations are obtained from the descriptor used to map the arena, before
+/// admission. A request alone never counts as an observed storage placement.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct ArenaBackingMetadata {
+    pub format: String,
+    pub requested: ArenaBacking,
+    pub effective: String,
+    pub observed: bool,
+    pub filesystem_type: Option<String>,
+    pub filesystem_magic: Option<String>,
+    pub lifetime: Option<String>,
+    pub wal_placement: String,
+}
+
+impl ArenaBackingMetadata {
+    pub fn pending(requested: ArenaBacking, postgres: bool) -> Self {
+        Self {
+            format: "arena-backing-v1".into(),
+            requested,
+            effective: if postgres {
+                "not_applicable"
+            } else {
+                "unobserved"
+            }
+            .into(),
+            observed: false,
+            filesystem_type: None,
+            filesystem_magic: None,
+            lifetime: None,
+            wal_placement: if postgres {
+                "postgres_managed"
+            } else {
+                "case_directory_file"
+            }
+            .into(),
+        }
+    }
+
+    fn observe(file: &File, requested: ArenaBacking) -> Result<Self, String> {
+        let mut stat = std::mem::MaybeUninit::<libc::statfs>::uninit();
+        // SAFETY: fstatfs initializes stat on success; file owns a live descriptor.
+        if unsafe { libc::fstatfs(file.as_raw_fd(), stat.as_mut_ptr()) } != 0 {
+            return Err(format!(
+                "observe arena filesystem: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+        let magic = unsafe { stat.assume_init() }.f_type as u64;
+        let target = std::fs::read_link(format!("/proc/self/fd/{}", file.as_raw_fd()))
+            .map_err(|error| format!("observe arena descriptor: {error}"))?;
+        let memfd = target
+            .as_os_str()
+            .as_encoded_bytes()
+            .starts_with(b"/memfd:");
+        if memfd != (requested == ArenaBacking::Memfd)
+            || (memfd && magic != libc::TMPFS_MAGIC as u64)
+        {
+            return Err("arena descriptor backing differs from requested backing".into());
+        }
+        let result = Self {
+            format: "arena-backing-v1".into(),
+            requested,
+            effective: requested.name().into(),
+            observed: true,
+            filesystem_type: Some(
+                match magic {
+                    0x0102_1994 => "tmpfs",
+                    0xef53 => "ext2/ext3/ext4",
+                    _ => "other",
+                }
+                .into(),
+            ),
+            filesystem_magic: Some(format!("0x{magic:x}")),
+            lifetime: Some(requested.lifetime().into()),
+            wal_placement: "case_directory_file".into(),
+        };
+        result.validate_native(requested)?;
+        Ok(result)
+    }
+
+    pub fn validate_native(&self, requested: ArenaBacking) -> Result<(), String> {
+        let magic = self
+            .filesystem_magic
+            .as_deref()
+            .and_then(|value| value.strip_prefix("0x"))
+            .and_then(|value| u64::from_str_radix(value, 16).ok());
+        let canonical_magic = magic.map(|magic| format!("0x{magic:x}"));
+        let expected_type = magic.map(|magic| match magic {
+            0x0102_1994 => "tmpfs",
+            0xef53 => "ext2/ext3/ext4",
+            _ => "other",
+        });
+        if self.format != "arena-backing-v1"
+            || self.requested != requested
+            || self.effective != requested.name()
+            || !self.observed
+            || magic.is_none()
+            || canonical_magic != self.filesystem_magic
+            || self.filesystem_type.as_deref() != expected_type
+            || self.lifetime.as_deref() != Some(requested.lifetime())
+            || self.wal_placement != "case_directory_file"
+            || (requested == ArenaBacking::Memfd && magic != Some(libc::TMPFS_MAGIC as u64))
+        {
+            return Err("arena backing metadata is absent, unobserved, or inconsistent with requested backing".into());
+        }
+        Ok(())
     }
 }
 
@@ -287,6 +419,8 @@ impl FixtureIdentity {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Attachment {
+    #[serde(default)]
+    pub arena_backing: ArenaBacking,
     pub path: PathBuf,
     pub bytes: usize,
     pub table_header: u32,
@@ -310,6 +444,7 @@ pub struct Attachment {
 }
 
 pub struct Shared {
+    pub arena_backing_metadata: ArenaBackingMetadata,
     pub arena: Arc<ShmArena>,
     pub table: Arc<OccTable<Record>>,
     pub indexes: Vec<SecondaryIndex<usize>>,
@@ -386,7 +521,11 @@ fn immutable_arena_prefix(arena: &ShmArena) -> [u8; 16] {
     prefix
 }
 
-fn attach_existing_arena(path: &Path, bytes: usize) -> Result<ShmArena, String> {
+fn attach_existing_arena(
+    path: &Path,
+    bytes: usize,
+    backing: ArenaBacking,
+) -> Result<(ShmArena, ArenaBackingMetadata), String> {
     // Do not let map_tmpfs_shared create, resize, or reinitialize a damaged
     // attachment. Opening an existing inode first also pins the file across a
     // rename/unlink: the mapper opens this exact descriptor through procfs.
@@ -395,6 +534,7 @@ fn attach_existing_arena(path: &Path, bytes: usize) -> Result<ShmArena, String> 
         .write(true)
         .open(path)
         .map_err(|error| format!("open existing arena {}: {error}", path.display()))?;
+    let backing_metadata = ArenaBackingMetadata::observe(&file, backing)?;
     let metadata = file.metadata().map_err(|error| error.to_string())?;
     if !metadata.is_file() || metadata.len() != bytes as u64 {
         return Err(format!("arena attachment requires an existing regular file of exactly {bytes} bytes; observed {}", metadata.len()));
@@ -417,7 +557,7 @@ fn attach_existing_arena(path: &Path, bytes: usize) -> Result<ShmArena, String> 
     if mapped.mode != TmpfsAttachMode::WarmStart || !mapped.arena.is_header_valid() {
         return Err("arena attachment did not preserve a valid warm mapping".into());
     }
-    Ok(mapped.arena)
+    Ok((mapped.arena, backing_metadata))
 }
 
 impl Shared {
@@ -477,7 +617,6 @@ impl Shared {
         expiry_index_origin: i64,
         expiry_index_width: u64,
     ) -> Result<Self, String> {
-        let backing = ArenaBacking::parse(std::env::var_os(ARENA_BACKING_ENV))?;
         Self::create_with_arena_backing(
             path,
             bytes,
@@ -489,11 +628,11 @@ impl Shared {
             expiry_publication_policy,
             expiry_index_origin,
             expiry_index_width,
-            backing,
+            ArenaBacking::File,
         )
     }
 
-    fn create_with_arena_backing(
+    pub fn create_with_arena_backing(
         path: &Path,
         bytes: usize,
         records: &[Record],
@@ -506,6 +645,7 @@ impl Shared {
         expiry_index_width: u64,
         backing: ArenaBacking,
     ) -> Result<Self, String> {
+        reject_legacy_arena_environment(std::env::var_os(ARENA_BACKING_ENV).as_deref())?;
         let due_publication =
             due_index_policy.publication_policy(due_index_origin, due_index_width)?;
         let expiry_publication = expiry_publication_policy
@@ -519,8 +659,22 @@ impl Shared {
             ArenaBacking::File => None,
             ArenaBacking::Memfd => Some(MemfdArenaOwner::create(path)?),
         };
+        // Creation never truncates a preexisting file or follows an unexpected
+        // replacement. Pin the descriptor before observing and mapping it.
+        let file = match backing {
+            ArenaBacking::File => OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create_new(true)
+                .mode(0o600)
+                .open(path),
+            ArenaBacking::Memfd => OpenOptions::new().read(true).write(true).open(path),
+        }
+        .map_err(|error| format!("create arena {}: {error}", path.display()))?;
+        let arena_backing_metadata = ArenaBackingMetadata::observe(&file, backing)?;
+        let descriptor_path = PathBuf::from(format!("/proc/self/fd/{}", file.as_raw_fd()));
         let arena = Arc::new(
-            map_tmpfs_shared(path, bytes)
+            map_tmpfs_shared(&descriptor_path, bytes)
                 .map_err(|e| e.to_string())?
                 .arena,
         );
@@ -565,6 +719,7 @@ impl Shared {
         let table = Arc::new(table);
         let ring = Ring::create(Arc::clone(&arena)).map_err(|e| e.to_string())?;
         let shared = Self {
+            arena_backing_metadata,
             arena,
             table,
             indexes,
@@ -620,6 +775,7 @@ impl Shared {
 
     pub fn attachment(&self, path: &Path) -> Attachment {
         Attachment {
+            arena_backing: self.arena_backing_metadata.requested,
             path: path.to_path_buf(),
             bytes: self.arena.len(),
             table_header: self.table.shared_header_offset(),
@@ -650,7 +806,9 @@ impl Shared {
         if a.indexes.len() != INDEX_NAMES.len() {
             return Err("invalid contention index attachment".into());
         }
-        let arena = Arc::new(attach_existing_arena(&a.path, a.bytes)?);
+        let (arena, arena_backing_metadata) =
+            attach_existing_arena(&a.path, a.bytes, a.arena_backing)?;
+        let arena = Arc::new(arena);
         let prefix = RelPtr::<FixtureIdentityPrefix>::from_offset(arena.boot_layout_offset());
         let prefix = prefix
             .as_ref(arena.mmap_base())
@@ -713,6 +871,7 @@ impl Shared {
         let table = Arc::new(table);
         let ring = Ring::from_existing(Arc::clone(&arena), RelPtr::from_offset(a.ring));
         Ok(Self {
+            arena_backing_metadata,
             arena,
             table,
             indexes,
@@ -801,7 +960,6 @@ impl Shared {
 #[cfg(all(test, target_os = "linux"))]
 mod arena_backing_tests {
     use super::*;
-    use std::os::unix::ffi::OsStringExt;
     use std::process::{Child, Command, Stdio};
     use std::time::{Duration, Instant};
 
@@ -829,19 +987,18 @@ mod arena_backing_tests {
 
     #[test]
     fn backing_selection_is_explicit_and_fails_closed() {
-        assert_eq!(ArenaBacking::parse(None).unwrap(), ArenaBacking::File);
-        assert_eq!(
-            ArenaBacking::parse(Some("file".into())).unwrap(),
-            ArenaBacking::File
-        );
-        assert_eq!(
-            ArenaBacking::parse(Some("memfd".into())).unwrap(),
-            ArenaBacking::Memfd
-        );
+        assert_eq!(ArenaBacking::default(), ArenaBacking::File);
+        assert_eq!(ArenaBacking::parse("file").unwrap(), ArenaBacking::File);
+        assert_eq!(ArenaBacking::parse("memfd").unwrap(), ArenaBacking::Memfd);
         for value in ["", "tmpfs", "MEMFD", " memfd", "memfd "] {
-            assert!(ArenaBacking::parse(Some(value.into())).is_err());
+            assert!(ArenaBacking::parse(value).is_err());
         }
-        assert!(ArenaBacking::parse(Some(OsString::from_vec(vec![0xff]))).is_err());
+        assert!(reject_legacy_arena_environment(None).is_ok());
+        for value in ["", "file", "memfd", "unknown"] {
+            assert!(reject_legacy_arena_environment(Some(OsStr::new(value)))
+                .unwrap_err()
+                .contains("unset it and use --arena-backing"));
+        }
     }
 
     #[test]
@@ -892,10 +1049,10 @@ mod arena_backing_tests {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("arena.mmap");
         let shared = create(&path, 16 << 20, ArenaBacking::File).unwrap();
-        assert!(std::fs::symlink_metadata(&path)
-            .unwrap()
-            .file_type()
-            .is_file());
+        let metadata = std::fs::symlink_metadata(&path).unwrap();
+        assert!(metadata.file_type().is_file());
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(metadata.permissions().mode() & 0o777, 0o600);
         let attachment = shared.attachment(&path);
         let rows = shared.snapshot().unwrap();
         drop(shared);
@@ -929,6 +1086,101 @@ mod arena_backing_tests {
         assert_eq!(std::fs::read(&path).unwrap(), b"replacement");
     }
 
+    #[test]
+    fn arena_backing_metadata_and_attachment_are_observed_and_fail_on_mismatch() {
+        let directory = tempfile::tempdir().unwrap();
+        for backing in [ArenaBacking::File, ArenaBacking::Memfd] {
+            let path = directory.path().join(backing.name());
+            let shared = create(&path, 16 << 20, backing).unwrap();
+            let metadata = &shared.arena_backing_metadata;
+            metadata.validate_native(backing).unwrap();
+            assert_eq!(metadata.requested, backing);
+            assert_eq!(metadata.effective, backing.name());
+            assert!(metadata.observed);
+            assert_eq!(metadata.wal_placement, "case_directory_file");
+            if backing == ArenaBacking::Memfd {
+                assert_eq!(metadata.filesystem_type.as_deref(), Some("tmpfs"));
+                assert_eq!(metadata.filesystem_magic.as_deref(), Some("0x1021994"));
+            }
+            let attachment = shared.attachment(&path);
+            let encoded = serde_json::to_vec(&attachment).unwrap();
+            let decoded: Attachment = serde_json::from_slice(&encoded).unwrap();
+            let attached = Shared::attach(&decoded).unwrap();
+            assert_eq!(attached.arena_backing_metadata, *metadata);
+            let mut mismatched = attachment;
+            mismatched.arena_backing = if backing == ArenaBacking::File {
+                ArenaBacking::Memfd
+            } else {
+                ArenaBacking::File
+            };
+            assert!(Shared::attach(&mismatched)
+                .err()
+                .unwrap()
+                .contains("backing differs"));
+            assert!(metadata.validate_native(mismatched.arena_backing).is_err());
+            for field in [
+                "format",
+                "effective",
+                "filesystem_type",
+                "filesystem_magic",
+                "lifetime",
+                "wal_placement",
+            ] {
+                let mut value = serde_json::to_value(metadata).unwrap();
+                value[field] = serde_json::json!("wrong");
+                let invalid: ArenaBackingMetadata = serde_json::from_value(value).unwrap();
+                assert!(
+                    invalid.validate_native(backing).is_err(),
+                    "accepted {field}"
+                );
+            }
+            let mut invalid = metadata.clone();
+            invalid.observed = false;
+            assert!(invalid.validate_native(backing).is_err());
+            let mut invalid = metadata.clone();
+            invalid.filesystem_magic = None;
+            assert!(invalid.validate_native(backing).is_err());
+        }
+    }
+
+    #[test]
+    fn arena_backing_pending_and_postgres_metadata_never_claim_observation() {
+        for backing in [ArenaBacking::File, ArenaBacking::Memfd] {
+            let pending = ArenaBackingMetadata::pending(backing, false);
+            assert_eq!(pending.effective, "unobserved");
+            assert!(!pending.observed);
+            assert!(pending.filesystem_type.is_none());
+            assert!(pending.filesystem_magic.is_none());
+            assert!(pending.lifetime.is_none());
+            assert!(pending.validate_native(backing).is_err());
+            let postgres = ArenaBackingMetadata::pending(backing, true);
+            assert_eq!(postgres.requested, backing);
+            assert_eq!(postgres.effective, "not_applicable");
+            assert_eq!(postgres.wal_placement, "postgres_managed");
+            assert!(!postgres.observed);
+            assert!(postgres.filesystem_type.is_none());
+            assert!(postgres.filesystem_magic.is_none());
+            assert!(postgres.lifetime.is_none());
+            assert!(postgres.validate_native(backing).is_err());
+        }
+    }
+
+    #[test]
+    fn file_arena_creation_preserves_existing_files_and_symlinks() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("arena.mmap");
+        std::fs::write(&path, b"prior arena").unwrap();
+        assert!(create(&path, 16 << 20, ArenaBacking::File).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), b"prior arena");
+        std::fs::remove_file(&path).unwrap();
+        let target = directory.path().join("target");
+        std::fs::write(&target, b"unrelated file").unwrap();
+        std::os::unix::fs::symlink(&target, &path).unwrap();
+        assert!(create(&path, 16 << 20, ArenaBacking::File).is_err());
+        assert_eq!(std::fs::read(&target).unwrap(), b"unrelated file");
+        assert_eq!(std::fs::read_link(&path).unwrap(), target);
+    }
+
     struct KillOnDrop(Child);
     impl Drop for KillOnDrop {
         fn drop(&mut self) {
@@ -943,9 +1195,8 @@ mod arena_backing_tests {
         if let Some(directory) = std::env::var_os(CHILD_DIRECTORY) {
             let directory = PathBuf::from(directory);
             let path = directory.join("arena.mmap");
-            // Exercise the public environment-selected path in an isolated
-            // process, without changing another parallel test's environment.
-            let shared = Shared::create(&path, 16 << 20, &[Record::default()]).unwrap();
+            // Exercise explicit backing in an isolated owner process.
+            let shared = create(&path, 16 << 20, ArenaBacking::Memfd).unwrap();
             std::fs::write(
                 directory.join("attachment.json"),
                 serde_json::to_vec(&shared.attachment(&path)).unwrap(),
@@ -958,9 +1209,8 @@ mod arena_backing_tests {
         }
         let directory = tempfile::tempdir().unwrap();
         let mut child = KillOnDrop(Command::new(std::env::current_exe().unwrap())
-            .args(["--exact", "fixture::arena_backing_tests::memfd_owner_death_leaves_existing_mapping_valid_but_no_reopenable_path", "--nocapture"])
+            .args(["--exact", &format!("{}::memfd_owner_death_leaves_existing_mapping_valid_but_no_reopenable_path", module_path!().split_once("::").unwrap().1), "--nocapture"])
             .env(CHILD_DIRECTORY, directory.path())
-            .env(ARENA_BACKING_ENV, "memfd")
             .stdin(Stdio::null()).stdout(Stdio::null())
             .spawn().unwrap());
         let deadline = Instant::now() + Duration::from_secs(20);

@@ -78,10 +78,11 @@ EXPIRY_PUBLICATION_DEFAULTS = {"expiry_publication_policy": "hashed",
 POSTGRES_STATISTICS_DEFAULTS = {"pg_analyze_after_seconds": 0}
 POSTGRES_CANDIDATE_DEFAULTS = {"pg_candidate_query": "or"}
 MAINTENANCE_SELECTION_DEFAULTS = {"maintenance_selection": "complete"}
+ARENA_DEFAULTS = {"arena_backing": "file"}
 EXPERIMENT_DEFAULTS = {"expiry_index_policy": "all-active", "retry_diagnostics": False,
                        **DUE_INDEX_DEFAULTS, **EXPIRY_PUBLICATION_DEFAULTS,
                        **POSTGRES_STATISTICS_DEFAULTS, **POSTGRES_CANDIDATE_DEFAULTS,
-                       **MAINTENANCE_SELECTION_DEFAULTS}
+                       **MAINTENANCE_SELECTION_DEFAULTS, **ARENA_DEFAULTS}
 EFFECT_FIELDS = ("created_views", "updated_views", "outputs", "claimed_events", "cancelled_events", "rescheduled_events", "expired_records", "expired_families")
 OUTCOME_FIELDS = EFFECT_FIELDS + ("missing_family", "allocation_deferred", "ignored_stale", "duplicate_messages")
 
@@ -966,6 +967,91 @@ def maintenance_selection_report_errors(run: dict, config: dict) -> list[str]:
     return errors
 
 
+def arena_backing_assessment(run: dict, config: dict) -> dict:
+    """Separate requested placement from observation; preserve legacy evidence.
+
+    Historic omission identifies the old file configuration for matching only.
+    It does not attest its filesystem, storage lifetime, or any memfd treatment.
+    Modern explicit configuration requires a successful runtime observation.
+    """
+    requested = config_value(config, "arena_backing")
+    native = config.get("engine") != "postgres"
+    result = {"requested": requested, "status": "invalid", "passed": False,
+              "observed": False, "metadata": run.get("arena_backing_metadata"), "reasons": []}
+    if type(requested) is not str or requested not in {"file", "memfd"}:
+        result["reasons"].append("invalid arena-backing configuration")
+        return result
+    if "arena_backing_metadata" not in run and "arena_backing" not in config:
+        result.update(passed=True, status="legacy_unobserved",
+                      scope="historical default file configuration; actual filesystem and lifetime were not observed")
+        return result
+    metadata = result["metadata"]
+    if not isinstance(metadata, dict):
+        result["reasons"].append("missing arena-backing observation metadata")
+        return result
+    expected = {"format": "arena-backing-v1", "requested": requested,
+                "effective": requested if native else "not_applicable",
+                "observed": native,
+                "wal_placement": "case_directory_file" if native else "postgres_managed",
+                "lifetime": ("path_survives_owner_until_unlinked" if requested == "file" else
+                             "new_attachments_require_live_owner_existing_mappings_survive") if native else None}
+    if any(type(metadata.get(field)) is not type(value) or metadata.get(field) != value
+           for field, value in expected.items()):
+        result["reasons"].append("arena-backing observation differs from configuration or storage contract")
+    if native:
+        filesystem, magic = metadata.get("filesystem_type"), metadata.get("filesystem_magic")
+        if (type(filesystem) is not str or filesystem not in {"tmpfs", "ext2/ext3/ext4", "other"}
+                or type(magic) is not str or re.fullmatch(r"0x[0-9a-f]{1,16}", magic) is None
+                or magic != hex(int(magic, 16))):
+            result["reasons"].append("native arena filesystem observation is missing or malformed")
+        elif filesystem != {"0x1021994": "tmpfs", "0xef53": "ext2/ext3/ext4"}.get(magic, "other"):
+            result["reasons"].append("native arena filesystem name and magic disagree")
+        if requested == "memfd" and (filesystem != "tmpfs" or magic != "0x1021994"):
+            result["reasons"].append("memfd arena was not observed on tmpfs")
+    elif any(field not in metadata or metadata[field] is not None
+             for field in ("filesystem_type", "filesystem_magic", "lifetime")):
+        result["reasons"].append("PostgreSQL must not claim a native arena observation")
+    if not result["reasons"]:
+        result.update(passed=True, status="observed" if native else "not_applicable", observed=native)
+    return result
+
+
+def arena_storage_identity(assessment: dict | None) -> dict:
+    """Storage binding for repeat groups; missing historic receipts stay unknown."""
+    if assessment is None or assessment.get("status") == "legacy_unobserved":
+        return {"status": "legacy_unobserved"}
+    metadata = assessment.get("metadata") or {}
+    return {"status": assessment.get("status"),
+            **{field: metadata.get(field) for field in ("effective", "filesystem_type", "filesystem_magic",
+                                                       "lifetime", "wal_placement")}}
+
+
+def trial_arena_assessment(trial: dict) -> dict:
+    """Also bind failures, whose observed placement can outlive their run report."""
+    config, report = trial.get("config", {}), trial.get("report", {})
+    if "arena_backing" in report.get("config", {}) and "arena_backing" not in config:
+        config = {**config, "arena_backing": config_value(config, "arena_backing")}
+    runs = report.get("runs", [])
+    containers = [report] + (runs if isinstance(runs, list) else [])
+    observations = [item["arena_backing_metadata"] for item in containers
+                    if isinstance(item, dict) and "arena_backing_metadata" in item]
+    result = arena_backing_assessment({"arena_backing_metadata": observations[0]} if observations else {}, config)
+    # Python equality treats True == 1 and False == 0. Validate every receipt
+    # independently before accepting duplicate observations as consistent.
+    for observation in observations[1:]:
+        duplicate = arena_backing_assessment({"arena_backing_metadata": observation}, config)
+        if not duplicate["passed"]:
+            result.update(passed=False, status="invalid")
+            result["reasons"].extend(duplicate["reasons"])
+    if "arena_backing" in report.get("config", {}) and report["config"]["arena_backing"] != config_value(config, "arena_backing"):
+        result.update(passed=False, status="invalid")
+        result["reasons"].append("reported arena-backing configuration differs from requested configuration")
+    if any(observation != observations[0] for observation in observations):
+        result.update(passed=False, status="invalid")
+        result["reasons"].append("arena-backing observations disagree within trial")
+    return result
+
+
 def postgres_candidate_query_report_errors(run: dict, config: dict) -> list[str]:
     """Require the selected candidate SQL treatment, including native no-ops.
 
@@ -1166,10 +1252,12 @@ def assess_trial(trial: dict, policy: dict, companion_keys: set[tuple] = frozens
     # An explicit default in the executable's report is also modern evidence;
     # dropping the driver's optional field must not erase its receipt obligation.
     experiment_config = config
-    for field in ("pg_candidate_query", "maintenance_selection"):
+    for field in ("pg_candidate_query", "maintenance_selection", "arena_backing"):
         if field in actual and field not in config:
             experiment_config = {**experiment_config, field: config_value(config, field)}
     reasons.extend(experiment_report_errors(run, experiment_config))
+    result["arena_backing"] = arena_backing_assessment(run, experiment_config)
+    reasons.extend(result["arena_backing"]["reasons"])
     if run.get("engine") != config.get("engine") or run.get("scenario") != "sustained-mixed":
         reasons.append("wrong engine or sustained scenario")
     if run.get("passed") is not True or run.get("execution_completed") is not True or run.get("error"):
@@ -1573,6 +1661,8 @@ def main(argv=None) -> int:
     parser.add_argument("--max-worker-budget", type=int, default=32)
     parser.add_argument("--cpu-budget", type=int, default=len(os.sched_getaffinity(0)))
     parser.add_argument("--shm-mib", type=int, default=256)
+    parser.add_argument("--arena-backing", choices=["file", "memfd"], default="file",
+                        help="native arena placement; WAL remains in the case directory; PostgreSQL records not_applicable")
     parser.add_argument("--pg-write-mode", choices=["buffered", "immediate"], default="buffered")
     parser.add_argument("--pg-analyze-after-seconds", type=int, default=0,
                         help="one additional owned-table ANALYZE during admission; 0 keeps initial-only analysis; recorded but inapplicable on native engines")
@@ -1586,6 +1676,8 @@ def main(argv=None) -> int:
     parser.add_argument("--minimum-drain-fraction", type=float, default=0.95)
     parser.add_argument("--outcome-tolerance", type=float, default=0.10)
     args = parser.parse_args(arguments)
+    if "AEROSTORE_CONTENTION_ARENA_BACKING" in os.environ:
+        parser.error("legacy AEROSTORE_CONTENTION_ARENA_BACKING override is unsupported; use --arena-backing")
     if not 0 <= args.pg_analyze_after_seconds < args.seconds:
         parser.error("PostgreSQL ANALYZE delay must be zero or positive and strictly less than --seconds")
     if not -(2**63) <= args.due_index_origin < 2**63 or not 1 <= args.due_index_width < 2**64:
@@ -1705,6 +1797,7 @@ def main(argv=None) -> int:
                           "pg_candidate_query": args.pg_candidate_query,
                           "maintenance_selection": args.maintenance_selection,
                           "global_time_predicates": False, "shm_mib": args.shm_mib,
+                          "arena_backing": args.arena_backing,
                           "max_backlog": args.max_backlog, "max_messages": args.max_messages,
                           "message_interval_us": 0, "expiry_index_policy": args.expiry_index_policy,
                           "retry_diagnostics": args.retry_diagnostics == "on",
@@ -1716,7 +1809,8 @@ def main(argv=None) -> int:
                 command = [str(binary), "--mode", "sustained", "--output", str(directory / "report.json")]
                 for field in ("engine", "workload", "evidence", "families", "hot_percent", "seed", "arrival_rate", "seconds", "workers", "pg_write_mode", "pg_analyze_after_seconds", "pg_candidate_query", "maintenance_selection", "rpc_delay_us"):
                     command += ["--" + field.replace("_", "-"), str(config[field])]
-                command += ["--max-backlog", str(args.max_backlog), "--max-messages", str(args.max_messages), "--shm-mib", str(args.shm_mib)]
+                command += ["--max-backlog", str(args.max_backlog), "--max-messages", str(args.max_messages), "--shm-mib", str(args.shm_mib),
+                            "--arena-backing", args.arena_backing]
                 if args.workload == "calibrated":
                     for name in CALIBRATED_FIELDS + tuple(CALIBRATED_DEFAULTS):
                         command += ["--" + name.replace("_", "-"), str(config[name])]

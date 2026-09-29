@@ -21,6 +21,8 @@ import sys
 import time
 import uuid
 
+from qualify_hyperfeed import arena_backing_assessment
+
 
 DISPATCH_DEFAULTS = {"dispatch": "identity", "affinity_ttl_ms": 0, "signature_pattern": "both"}
 MAINTENANCE_DEFAULTS = {"maintenance_mode": "batch", "projection_batch_size": 4,
@@ -54,6 +56,19 @@ def validate_dispatch_setup(setup: dict, expected: dict) -> None:
            or setup.get(field, default) != expected.get(field, default)
            for field, default in {**CALIBRATED_DEFAULTS, **EXPERIMENT_DEFAULTS}.items()):
         raise RuntimeError("server setup dispatch/signature/maintenance configuration differs from the client")
+    validate_arena_setup(setup, expected)
+
+
+def validate_arena_setup(setup: dict, expected: dict) -> None:
+    # A historical pair may omit placement entirely. Modern callers require
+    # the server's descriptor-backed observation, including the default file.
+    if "arena_backing" in setup or "arena_backing" in expected or "arena_backing_metadata" in setup:
+        requested = expected.get("arena_backing", "file")
+        if type(setup.get("arena_backing")) is not str or setup["arena_backing"] != requested:
+            raise RuntimeError("server setup arena backing differs from the client")
+        check = arena_backing_assessment(setup, {"engine": "service-tcp", "arena_backing": requested})
+        if not check["passed"]:
+            raise RuntimeError("server setup arena backing is not observed: " + "; ".join(check["reasons"]))
 
 
 # A remote owner can die while cooperative GC shutdown is blocked. This
@@ -262,9 +277,13 @@ def main() -> int:
     parser.add_argument("--max-backlog", type=int, default=1000)
     parser.add_argument("--max-messages", type=int, default=20000)
     parser.add_argument("--shm-mib", type=int, default=256)
+    parser.add_argument("--arena-backing", choices=["file", "memfd"], default="file",
+                        help="server native arena placement; server WAL remains in its case directory")
     parser.add_argument("--hot-percent", type=int, default=80)
     parser.add_argument("--query-plan", choices=["family", "global-time"], default="family")
     args = parser.parse_args()
+    if "AEROSTORE_CONTENTION_ARENA_BACKING" in os.environ:
+        parser.error("legacy AEROSTORE_CONTENTION_ARENA_BACKING override is unsupported; use --arena-backing")
     if not -(2**63) <= args.due_index_origin < 2**63 or not 1 <= args.due_index_width < 2**64:
         parser.error("due index origin must fit i64 and width must be a positive u64")
     if not -(2**63) <= args.expiry_index_origin < 2**63 or not 1 <= args.expiry_index_width < 2**64:
@@ -319,7 +338,7 @@ def main() -> int:
     server_final = str(Path(server_setup).with_suffix(".final.json"))
     bind = args.bind or ("0.0.0.0:0" if args.ssh_host else "127.0.0.1:0")
     common = ["--workload", args.workload, "--families", str(args.families),
-              "--seed", str(args.seed), "--shm-mib", str(args.shm_mib),
+              "--seed", str(args.seed), "--shm-mib", str(args.shm_mib), "--arena-backing", args.arena_backing,
               "--query-plan", args.query_plan, "--hot-percent", str(args.hot_percent),
               "--projection-interval-seconds", str(args.projection_interval_seconds),
               "--housekeeping-interval-seconds", str(args.housekeeping_interval_seconds),
@@ -351,6 +370,7 @@ def main() -> int:
                       "--max-backlog", str(args.max_backlog), "--max-messages", str(args.max_messages),
                       "--output", str(output / "client-report.json"), *common]
     manifest = {"passed": False, "completed": False, "topology": "ssh_external_host" if args.ssh_host else "tcp_loopback",
+                "requested_arena_backing": args.arena_backing,
                 "physical_hosts_independently_verified": False,
                 "architecture_promotion_eligible": False,
                 "binary_sha256": sha256(binary), "server_command": server_command,
@@ -378,6 +398,7 @@ def main() -> int:
                                min(deadline, time.monotonic()+60), [("server", server)])
             validate_dispatch_setup(setup, {**vars(args), "retry_diagnostics": args.retry_diagnostics == "on"})
             manifest["run_id"] = setup["run_id"]
+            manifest["arena_backing_metadata"] = setup["arena_backing_metadata"]
             if args.advertise_address:
                 endpoint = setup.get("endpoint", {}).get("Tcp")
                 if not isinstance(endpoint, str):
@@ -400,6 +421,9 @@ def main() -> int:
             status = server.wait(timeout=max(1, deadline-time.monotonic()))
             final = validate_final(read_setup(server_final, args.ssh_host), setup["run_id"])
             atomic_json(client_final, final)
+            validate_arena_setup(final, vars(args))
+            if final.get("arena_backing_metadata") != setup["arena_backing_metadata"]:
+                raise RuntimeError("server final arena observation differs from setup")
             manifest["server_resources_cleanly_drained"] = final.get("passed") is True and final.get("registrations_after_stop") == 0
             if status != 0:
                 raise RuntimeError(f"server exited {status}; final error: {final.get('error')}")

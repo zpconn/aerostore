@@ -65,6 +65,26 @@ class IterationTests(unittest.TestCase):
     def test_identical_binary_control(self):
         self.assertTrue(loop.compare_inputs(manifest(), manifest(), set())["identical_binary"])
 
+    def test_arena_option_is_shared_by_pair_and_propagates_to_expected_config(self):
+        for backing in ("file", "memfd"):
+            values = loop.qualifier_parameters(manifest(), Path("/output"), "burst", 4032, 29, backing)
+            command = loop.qualifier_command(manifest(), Path("/output"), "burst", 4032, 29, backing)
+            self.assertEqual(command[command.index("--arena-backing") + 1], backing)
+            self.assertEqual(loop.expected_config(values)["arena_backing"], backing)
+        command = ["screen", "--output", "/unused", "--baseline", "/baseline",
+                   "--candidate", "/candidate", "--arena-backing", "memfd"]
+        with patch.object(loop, "campaign_lock"), patch.object(loop, "screen", return_value=0) as screen, \
+             patch.object(loop.resource, "setrlimit"), patch.object(loop.signal, "signal"):
+            self.assertEqual(loop.main(command), 0)
+        self.assertEqual(screen.call_args.args[0].arena_backing, "memfd")
+
+    def test_fixture_change_still_cannot_be_declared_as_engine_optimization(self):
+        a, b = manifest(), manifest()
+        path = "aerostore_core/benches/contention_crucible/fixture.rs"
+        a["source"]["files"][path], b["source"]["files"][path] = "before", "after"
+        with self.assertRaisesRegex(ValueError, "workload/accounting/fixture"):
+            loop.compare_inputs(a, b, {path})
+
     def test_declared_transport_change_allowed(self):
         a, b = manifest(), manifest()
         path = "aerostore_core/benches/contention_crucible/service.rs"

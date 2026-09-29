@@ -76,6 +76,17 @@ changes to workload, arrival scheduling, accounting or fixture code; those need
 a separate experiment with a newly measured baseline. Compiler settings and the
 qualification driver must agree. Test-only changes are recorded separately.
 
+The screen command also accepts `--arena-backing file|memfd`, defaulting to
+`file`, and applies the same choice to both captures. Use `--arena-backing memfd`
+when iterating on implementations under that established configuration. Both
+captures must contain a qualifier and benchmark supporting the option. Paired
+screens require matching observed filesystems and storage lifetimes as well as
+matching requested backing. Changing backing itself requires a separately
+declared configuration experiment and fresh evidence; `--allow-change` still
+cannot admit fixture changes. See [arena backing](hyperfeed_qualification.md#arena-backing)
+for the memfd owner lifetime, unchanged WAL placement and rejected legacy
+environment override.
+
 If the signal is useful, run the maintenance lane with the same captures:
 
 ```sh

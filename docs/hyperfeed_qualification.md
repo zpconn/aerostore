@@ -46,6 +46,45 @@ separately.
 
 The [qualification driver](../scripts/qualify_hyperfeed.py) retains every cell of a declared engine/rate/worker/seed matrix, including failures. It records dirty source hashes, binary hash, compiler, host, configuration and PostgreSQL settings. Full-history companions must match the measured source, binary, configuration and exact input corpus. They do not prove an unrecorded measurement history.
 
+### Arena backing
+
+The benchmark, qualification driver and remote helper accept
+`--arena-backing file|memfd`. The default `file` creates the native arena in the
+case directory. Its actual filesystem depends on that directory; selecting
+`file` does not imply ext4 or tmpfs. Linux `memfd` instead uses an owner-held,
+memory-backed file. Both modes retain the configured arena size, transaction
+behavior and WAL settings. The native WAL file stays in the case directory.
+PostgreSQL accepts the common requested option and reports its effective value
+as `not_applicable`; its storage remains managed by PostgreSQL.
+
+Each run records `arena_backing_metadata`: requested and effective backing,
+whether the arena was observed, filesystem name and magic, attachment lifetime,
+and WAL placement. The retained `arena-backing.json` starts as unobserved and
+is updated after the arena is opened. Native success requires an observation
+from the descriptor used for mapping; requesting memfd alone is insufficient.
+An ordinary workload failure retains the observation reached before failure.
+Historical reports without these fields retain their default-file configuration
+identity but are labeled `legacy_unobserved`. They do not prove an ext4
+filesystem or qualify as observed memfd evidence.
+
+The memfd compatibility path refers to the owner's open descriptor. New
+attachments require that owner to remain alive with the descriptor open;
+existing mappings survive its exit. A named file can remain reopenable until
+unlinked. This lifetime difference is part of the experiment's contract, and
+neither mode selection nor a successful drain establishes persistent-arena
+recovery or equal crash durability. The earlier
+`AEROSTORE_CONTENTION_ARENA_BACKING` environment override is now rejected,
+including an empty or `file` value. Unset it and use the explicit CLI option.
+
+Capacity guardrails and repeat groups require matching captured source/binary
+and requested backing, and bind the observed filesystem and storage lifetime.
+A full-history file-backed run cannot serve as a memfd capacity guardrail.
+File-backed measurements on different filesystems are also kept separate.
+Changing backing therefore needs fresh evidence for that configuration; the
+existing workload, durability and resource limits still apply.
+
+### PostgreSQL experimental settings
+
 PostgreSQL statistics are an explicit experimental setting. The default
 `--pg-analyze-after-seconds 0` keeps the existing initialization-time `ANALYZE`
 and normal autovacuum behavior. A positive value requests one additional

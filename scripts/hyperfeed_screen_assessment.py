@@ -128,6 +128,7 @@ def assess_screen_trial(trial, envelope, lane_policy):
         result["structural_assessment"] = {name: check.get(name) for name in (
             "execution_valid", "continuous_timing_passed", "useful_work_passed",
             "foreground_ordering_passed", "history_verified", "global_maintenance_sweep_complete")}
+        result["arena_backing"] = check.get("arena_backing")
         required = ["execution_valid", "continuous_timing_passed", "useful_work_passed", "foreground_ordering_passed"]
         if policy["lane"] == "maintenance":
             required.append("global_maintenance_sweep_complete")
@@ -209,6 +210,8 @@ def compare_screens(rows, policy=None):
             configs = [{name: gate.config_value(row["config"], name) for name in gate.match_fields(row["config"]) + ("evidence",)} for row in (a, b)]
             if configs[0] != configs[1]:
                 raise ValueError("paired configurations differ")
+            if gate.arena_storage_identity(a.get("arena_backing")) != gate.arena_storage_identity(b.get("arena_backing")):
+                raise ValueError("paired arena filesystems or storage lifetimes differ")
             for variant, assessment in group.items():
                 binary = assessment.get("binary_sha256")
                 if not isinstance(binary, str) or len(binary) != 64:

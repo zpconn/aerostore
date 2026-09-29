@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import hyperfeed_screen_assessment as screen
 import test_hyperfeed_qualification as fixtures
 import test_hyperfeed_capacity as capacity_fixtures
+from test_arena_backing import metadata as arena_metadata, with_backing
 
 
 def evidence(lane="maintenance"):
@@ -64,6 +65,24 @@ def pairs(base=10, candidate=10, same_binary=False):
 
 
 class ScreenTests(unittest.TestCase):
+    def test_observed_backing_passes_and_pairs_reject_storage_configuration_changes(self):
+        trial, envelope, policy = evidence("burst")
+        with_backing(trial, "memfd")
+        result = screen.assess_screen_trial(trial, envelope, policy)
+        self.assertTrue(result["screen_requirements_met"], result)
+        self.assertEqual(result["arena_backing"]["status"], "observed")
+        for changed_backing in (False, True):
+            rows = pairs()
+            for row in rows:
+                assessment = row["assessment"]
+                backing = "memfd" if changed_backing and row["variant"] == "candidate" else "file"
+                fs = "tmpfs" if row["variant"] == "candidate" else "ext2/ext3/ext4"
+                assessment["config"]["arena_backing"] = backing
+                assessment["arena_backing"] = {"status": "observed", "metadata": arena_metadata(backing, filesystem=fs)}
+            result = screen.compare_screens(rows)
+            self.assertEqual(result["classification"], "inconclusive")
+            self.assertTrue(any("differ" in reason for reason in result["reasons"]), result)
+
     def test_preset_policies_are_fresh_and_do_not_mutate_sustained_policy(self):
         before = copy.deepcopy(screen.capacity.DEFAULT_POLICY)
         self.assertEqual(screen.lane_policy("foreground")["seconds"], 30)
