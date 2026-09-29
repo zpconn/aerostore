@@ -233,8 +233,10 @@ PostgreSQL (4.8×)** under a 50 ms end-to-end p99 budget, with queue, maintenanc
 resource and correctness guardrails. Higher tested rates fail the latency
 requirement. This is a bounded synthetic comparison with stated configuration
 and asynchronous-durability differences, not a 10× production HyperFeed claim.
-The next experiment targets measured worker/service communication overhead;
-selective family indexes and broader RPC batching remain deferred.
+Two [frame-writing experiments](docs/hyperfeed_frame_write_experiment.md) did
+not show a consistent gain, so the baseline remains unchanged. The next
+investigation targets bursts of CPU work in service-session threads; selective
+family indexes and broader RPC batching remain deferred pending attribution.
 
 The [fast iteration loop](docs/hyperfeed_iteration.md) compares preserved baseline
 and candidate executables with short, alternating workload screens. Full-history

@@ -222,6 +222,12 @@ will increase capacity. Judge any candidate by repeated sustained completed
 message throughput under the same correctness, latency, queue and maintenance
 requirements.
 
+The subsequent [frame-writing experiment](hyperfeed_frame_write_experiment.md)
+tested two small implementations with short paired screens. Neither showed a
+consistent gain; both remain preserved as experiments and the working baseline
+is unchanged. Review of the existing time-window profiles makes service-session
+CPU bursts the next attribution target.
+
 Raw results, original timeout evidence, source and executable receipts, profile
 analyses, and resumed checks remain under `target/sustained-capacity-20260928`.
 The [archive manifest](bench_data/sustained_capacity_2026-09-28-retry2/artifact-manifest.json)
