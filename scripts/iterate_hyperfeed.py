@@ -30,7 +30,7 @@ import hyperfeed_proof_impact as proof_impact
 ROOT = Path(__file__).resolve().parents[1]
 GIB = 1 << 30
 SEEDS = [20260929, 20260930]
-LANES = {"foreground": (30, 300), "maintenance": (40, 5)}
+LANES = {"foreground": (30, 300), "burst": (120, 300), "maintenance": (40, 5)}
 ADAPTERS = {"aerostore_core/benches/contention_crucible/" + name + ".rs"
             for name in ("service", "aerostore", "postgres")}
 SCOPE = ("Short synthetic screening only. No sustained capacity, full-history "

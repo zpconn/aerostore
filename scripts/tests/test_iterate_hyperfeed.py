@@ -31,6 +31,37 @@ class IterationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             loop.schedule("foreground", [10, 10])
 
+    def test_burst_lane_propagates_to_pairs_command_and_expected_config(self):
+        rows = loop.schedule("burst", [10, 20])
+        self.assertEqual([row["lane"] for row in rows], ["burst"] * 4)
+        self.assertEqual([(row["variant"], row["seed"]) for row in rows],
+                         [("baseline", 10), ("candidate", 10), ("candidate", 20), ("baseline", 20)])
+        command = loop.qualifier_command(manifest(), Path("/output"), "burst", 4032, 29)
+        fields = dict(zip(command[2::2], command[3::2]))
+        self.assertEqual(fields["--seconds"], "120")
+        self.assertEqual(fields["--projection-interval-seconds"], "300")
+        self.assertEqual(fields["--housekeeping-interval-seconds"], "300")
+        self.assertEqual(fields["--timeout-seconds"], "210")
+        foreground = loop.qualifier_parameters(manifest(), Path("/output"), "foreground", 4032, 29)
+        burst = loop.qualifier_parameters(manifest(), Path("/output"), "burst", 4032, 29)
+        self.assertEqual({key for key in foreground if foreground[key] != burst[key]},
+                         {"seconds", "timeout-seconds"})
+        expected = loop.expected_config(burst)
+        self.assertEqual(expected["seconds"], 120)
+        self.assertEqual(expected["arrival_rate"], 4032)
+        self.assertEqual(expected["seed"], 29)
+        self.assertEqual(expected["projection_interval_seconds"], 300)
+        self.assertEqual(expected["housekeeping_interval_seconds"], 300)
+
+    def test_cli_accepts_burst_without_changing_default_lane(self):
+        command = ["screen", "--output", "/unused", "--baseline", "/baseline",
+                   "--candidate", "/candidate"]
+        for extra, expected_lane in (([], "foreground"), (["--lane", "burst"], "burst")):
+            with patch.object(loop, "campaign_lock"), patch.object(loop, "screen", return_value=0) as screen, \
+                 patch.object(loop.resource, "setrlimit"), patch.object(loop.signal, "signal"):
+                self.assertEqual(loop.main(command + extra), 0)
+            self.assertEqual(screen.call_args.args[0].lane, expected_lane)
+
     def test_identical_binary_control(self):
         self.assertTrue(loop.compare_inputs(manifest(), manifest(), set())["identical_binary"])
 

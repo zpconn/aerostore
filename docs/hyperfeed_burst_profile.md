@@ -11,6 +11,8 @@ The accepted sustained comparison remains
 [3,072 messages/s versus PostgreSQL's 640/s (4.8×)](hyperfeed_sustained_capacity.md).
 This investigation follows the unsuccessful
 [frame-writing experiments](hyperfeed_frame_write_experiment.md).
+The [follow-on lock diagnostic](hyperfeed_predicate_lock_experiment.md) identifies
+the due index and records a completed, neutral yield-cadence experiment.
 
 ## Experiment and observations
 
@@ -165,6 +167,6 @@ python3 "$SESSION/profile_baseline_v2.py" --output "$SESSION/diagnostic-03"
 That output must be fresh. The launcher enforces the session resource budget and
 the captured workload; it is not a general candidate-comparison runner. Review
 the [disk runbook](disk-space.md) and current resources before another run.
-The next implementation work is the focused lock diagnostic described above,
-followed by the [fast comparison loop](hyperfeed_iteration.md), not an automatic
-repeat or queued capacity campaign.
+The focused lock diagnostic and a [fast paired comparison](hyperfeed_iteration.md)
+are now complete; see the [follow-on report](hyperfeed_predicate_lock_experiment.md)
+for findings and the next commit-phase investigation.

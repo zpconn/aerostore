@@ -8,11 +8,13 @@ another multi-hour capacity campaign or evidence upload.
 | --- | --- | --- |
 | Focused checks | Catch a broken change immediately | Relevant unit tests, affected implementation/proof checks, and a component benchmark when useful |
 | Foreground screen | Look for a useful performance signal | Four 30-second admissions: baseline/candidate for one seed, candidate/baseline for another |
+| Burst screen | Observe recurring service CPU and latency bursts | The same four-cell order with 120-second admissions and unchanged 300-second maintenance timers |
 | Maintenance screen | Reject regressions under overlapping background work | Four 40-second admissions with five-second projection and housekeeping timers |
 | Promotion | Establish a sustained result | Full-history guardrails and repeated 905-second runs with the original 300-second cadence, followed by evidence closeout |
 
-The short lanes have two minutes and two minutes forty seconds of admission, respectively;
-initialization, drain, structural audits, resource checks and result writing add
+The foreground and maintenance lanes have two minutes and two minutes forty
+seconds of admission, respectively; the burst lane has eight minutes.
+Initialization, drain, structural audits, resource checks and result writing add
 wall time. Expect roughly five to ten minutes for an ordinary paired screen,
 after compilation. Measure that cost on the actual machine. The first build of
 the shared development cache is slower; subsequent tweaks reuse dependencies.
@@ -120,6 +122,13 @@ maintenance lane deliberately accelerates timers to expose overlap; it is not
 a model of HyperFeed's actual five-to-ten-minute cadence. Both use the original
 50 ms foreground p99 requirement, with five seconds of queue warmup. Their
 policies are separate from the unchanged sustained-capacity acceptance policy.
+
+Use `--lane burst` for changes targeting the recurring approximately 33-second
+bursts identified by [stack profiling](hyperfeed_burst_profile.md). It extends
+each foreground admission to 120 seconds while retaining the same workload,
+50 ms p99 requirement, five-second queue warmup and 300-second maintenance
+timers. Four cells take eight minutes of admission plus setup and drain. This
+does not change the default 30-second lane or qualify sustained capacity.
 
 Results live in `screen.json`, with per-cell reports and resource receipts.
 Comparisons report `promising`, `neutral`, `regression` or `inconclusive` and

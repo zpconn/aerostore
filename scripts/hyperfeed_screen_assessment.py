@@ -18,6 +18,12 @@ LANES = {
                    "housekeeping_interval_seconds": 300, "warmup_seconds": 5,
                    "minimum_completed_maintenance_jobs": 0,
                    "minimum_positive_maintenance_jobs": 0},
+    # Observe several recurring CPU bursts without changing the foreground
+    # contract or implying that this screen establishes sustained capacity.
+    "burst": {"seconds": 120, "projection_interval_seconds": 300,
+              "housekeeping_interval_seconds": 300, "warmup_seconds": 5,
+              "minimum_completed_maintenance_jobs": 0,
+              "minimum_positive_maintenance_jobs": 0},
     "maintenance": {"seconds": 40, "projection_interval_seconds": 5,
                     "housekeeping_interval_seconds": 5, "warmup_seconds": 5,
                     "minimum_completed_maintenance_jobs": 3,
@@ -58,7 +64,7 @@ def screen_policy(value):
             raise ValueError("screen completion fraction must be in (0, 1]")
     if not isinstance(result.get("expected_config", {}), dict):
         raise ValueError("expected_config must be an object")
-    if lane == "foreground" and any(result[name] < result["seconds"] for name in gate.CALIBRATED_FIELDS):
+    if lane in {"foreground", "burst"} and any(result[name] < result["seconds"] for name in gate.CALIBRATED_FIELDS):
         raise ValueError("foreground screen must end before its first maintenance tick")
     if lane == "maintenance" and any((result["seconds"] - 1) // result[name] < 3 for name in gate.CALIBRATED_FIELDS):
         raise ValueError("maintenance screen requires at least three scheduled jobs per class")
@@ -144,7 +150,7 @@ def assess_screen_trial(trial, envelope, lane_policy):
         passed = not measured["reasons"]
         result.update(classification="screen_passed" if passed else "completed_policy_failure",
                       valid_measurement=True, screen_requirements_met=passed, reasons=measured["reasons"],
-                      maintenance_scope="not_observed_first_tick_after_screen" if policy["lane"] == "foreground"
+                      maintenance_scope="not_observed_first_tick_after_screen" if policy["lane"] in {"foreground", "burst"}
                       else "accelerated_stress_not_representative_cadence")
     except (KeyError, ValueError, TypeError, IndexError, ZeroDivisionError, OverflowError) as error:
         result.update(classification="invalid_evidence", valid_measurement=False,

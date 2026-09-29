@@ -14,8 +14,8 @@ import test_hyperfeed_capacity as capacity_fixtures
 def evidence(lane="maintenance"):
     data = capacity_fixtures.evidence()
     trial = data["trial"]
-    if lane == "foreground":
-        trial = fixtures.calibrated_trial(seconds=30, rate=6, workers=2, families=4,
+    if lane in {"foreground", "burst"}:
+        trial = fixtures.calibrated_trial(seconds=120 if lane == "burst" else 30, rate=6, workers=2, families=4,
             projection=300, housekeeping=300, evidence="metrics")
         config, run = trial["config"], trial["report"]["runs"][0]
         config.update(maintenance_mode="sweep", projection_batch_size=4,
@@ -38,7 +38,7 @@ def evidence(lane="maintenance"):
     trial["source_before_sha256"] = trial["source_after_sha256"] = "a" * 64
     trial["binary_before_sha256"] = trial["binary_after_sha256"] = "b" * 64
     envelope = {"result": data["envelope"], "readiness": data["readiness"], "samples": data["memory_samples"]}
-    policy = "foreground" if lane == "foreground" else {
+    policy = lane if lane in {"foreground", "burst"} else {
         "lane": "maintenance", "seconds": 11, "warmup_seconds": 1,
         "projection_interval_seconds": 1, "housekeeping_interval_seconds": 2}
     return trial, envelope, policy
@@ -78,6 +78,42 @@ class ScreenTests(unittest.TestCase):
         self.assertEqual(result["classification"], "screen_passed", result)
         self.assertTrue(result["screen_requirements_met"])
         self.assertEqual(result["metrics"]["maintenance"]["projection"]["offered"], 0)
+        self.assertFalse(result["sustained_capacity_established"])
+
+    def test_burst_only_extends_foreground_duration_and_remains_a_screen(self):
+        foreground, burst = screen.lane_policy("foreground"), screen.lane_policy("burst")
+        self.assertEqual({key for key in foreground if foreground[key] != burst[key]},
+                         {"lane", "seconds"})
+        self.assertEqual(burst["seconds"], 120)
+        self.assertEqual(burst["warmup_seconds"], 5)
+        self.assertEqual(burst["foreground_p99_ms"], 50)
+        result = screen.assess_screen_trial(*evidence("burst"))
+        self.assertEqual(result["classification"], "screen_passed", result)
+        self.assertEqual(result["metrics"]["completed_messages_per_second"], 6)
+        self.assertEqual(result["metrics"]["foreground_completed_including_drain"], 720)
+        self.assertEqual(result["metrics"]["maintenance"]["projection"]["offered"], 0)
+        self.assertEqual(result["maintenance_scope"], "not_observed_first_tick_after_screen")
+        self.assertTrue(result["screening_only"])
+        self.assertFalse(result["sustained_capacity_established"])
+
+    def test_burst_rejects_wrong_duration_and_accelerated_timers(self):
+        trial, envelope, _ = evidence("foreground")
+        result = screen.assess_screen_trial(trial, envelope, "burst")
+        self.assertEqual(result["classification"], "invalid_evidence")
+        self.assertIn("configuration differs", result["reasons"][0])
+        for field in ("projection_interval_seconds", "housekeeping_interval_seconds"):
+            with self.assertRaisesRegex(ValueError, "first maintenance tick"):
+                screen.lane_policy({"lane": "burst", field: 30})
+
+    def test_burst_retains_expected_config_binding_and_latency_failure(self):
+        trial, envelope, _ = evidence("burst")
+        result = screen.assess_screen_trial(trial, envelope,
+            {"lane": "burst", "expected_config": {"arrival_rate": 7}})
+        self.assertEqual(result["classification"], "invalid_evidence")
+        result = assessed(lane="burst", p99=51)["assessment"]
+        self.assertEqual(result["classification"], "completed_policy_failure", result)
+        self.assertTrue(result["valid_measurement"])
+        self.assertFalse(result["screen_requirements_met"])
         self.assertFalse(result["sustained_capacity_established"])
 
     def test_maintenance_requires_complete_useful_jobs(self):
