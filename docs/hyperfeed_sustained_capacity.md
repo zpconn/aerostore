@@ -230,8 +230,12 @@ CPU bursts the next attribution target.
 
 The subsequent [stack profile](hyperfeed_burst_profile.md) reproduced those
 bursts and narrowed elevated commit samples to index predicate-lock acquisition.
-The working baseline and accepted capacity endpoints remain unchanged. Identify
-the contended buckets and owner hold times before choosing a lock or index change.
+The [follow-on commit-phase and arena-placement experiment](hyperfeed_commit_phases.md)
+found a more immediate configuration target: memory-backing the benchmark arena
+reduced p99 by 40–53% and page-fault counts by about 95% in two short paired
+comparisons, while WAL stayed on disk. Completed throughput remained capped by
+the offered rate. Qualifying that configuration under normal maintenance is
+the next capacity step; the accepted endpoints above remain unchanged.
 
 Raw results, original timeout evidence, source and executable receipts, profile
 analyses, and resumed checks remain under `target/sustained-capacity-20260928`.

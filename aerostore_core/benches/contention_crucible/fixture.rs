@@ -11,9 +11,10 @@ use aerostore_core::{
     TmpfsAttachMode, WalEncodingPolicy,
 };
 use serde::{Deserialize, Serialize};
-use std::fs::OpenOptions;
+use std::ffi::OsString;
+use std::fs::{File, OpenOptions};
 use std::io::Read;
-use std::os::fd::AsRawFd;
+use std::os::fd::{AsRawFd, FromRawFd};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -27,6 +28,79 @@ const INDEX_KEYS: [fn(&Record) -> Option<IndexValue>; 5] = [
     |row| keys(row)[3].map(IndexValue::I64),
     |row| keys(row)[4].map(IndexValue::I64),
 ];
+
+// An explicit benchmark configuration experiment, not a production storage or
+// recovery policy. Only the arena moves; WAL and evidence paths are unchanged.
+const ARENA_BACKING_ENV: &str = "AEROSTORE_CONTENTION_ARENA_BACKING";
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ArenaBacking {
+    File,
+    Memfd,
+}
+
+impl ArenaBacking {
+    fn parse(value: Option<OsString>) -> Result<Self, String> {
+        match value.as_deref() {
+            None => Ok(Self::File),
+            Some(value) if value == "file" => Ok(Self::File),
+            Some(value) if value == "memfd" => Ok(Self::Memfd),
+            _ => Err(format!("{ARENA_BACKING_ENV} must be file or memfd")),
+        }
+    }
+}
+
+/// Keep the memfd reopenable through the fixture's existing attachment path.
+/// Existing mappings pin its pages independently; a new attachment requires
+/// this owner to remain alive. Unlike a named tmpfs arena, a killed process
+/// leaves no kernel storage after the last mapping/inherited descriptor closes.
+/// A SIGKILL can leave a dangling symlink in the retained case directory.
+struct MemfdArenaOwner {
+    _file: File,
+    path: PathBuf,
+    target: PathBuf,
+}
+
+impl MemfdArenaOwner {
+    fn create(path: &Path) -> Result<Self, String> {
+        // SAFETY: the static name is NUL-terminated. On success the descriptor
+        // is newly owned here and transferred exactly once into File.
+        let fd = unsafe {
+            libc::memfd_create(
+                b"aerostore-contention-arena\0".as_ptr().cast(),
+                libc::MFD_CLOEXEC,
+            )
+        };
+        if fd < 0 {
+            return Err(format!(
+                "create benchmark memfd: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+        // SAFETY: memfd_create returned a new owned descriptor above.
+        let file = unsafe { File::from_raw_fd(fd) };
+        let target = PathBuf::from(format!("/proc/{}/fd/{fd}", std::process::id()));
+        // symlink fails if any file or symlink already occupies this name. Never
+        // truncate or replace a prior arena, even when that symlink is dangling.
+        std::os::unix::fs::symlink(&target, path)
+            .map_err(|error| format!("create benchmark arena link {}: {error}", path.display()))?;
+        Ok(Self {
+            _file: file,
+            path: path.to_path_buf(),
+            target,
+        })
+    }
+}
+
+impl Drop for MemfdArenaOwner {
+    fn drop(&mut self) {
+        // The runner also unlinks its disposable arena after auditing. Do not
+        // delete an unrelated replacement or report a missing link as an error.
+        if std::fs::read_link(&self.path).ok().as_ref() == Some(&self.target) {
+            let _ = std::fs::remove_file(&self.path);
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -247,6 +321,7 @@ pub struct Shared {
     pub expiry_publication_policy: ExpiryPublicationPolicy,
     pub expiry_index_origin: i64,
     pub expiry_index_width: u64,
+    _arena_owner: Option<MemfdArenaOwner>,
 }
 
 fn keys(row: &Record) -> [Option<i64>; 5] {
@@ -402,6 +477,35 @@ impl Shared {
         expiry_index_origin: i64,
         expiry_index_width: u64,
     ) -> Result<Self, String> {
+        let backing = ArenaBacking::parse(std::env::var_os(ARENA_BACKING_ENV))?;
+        Self::create_with_arena_backing(
+            path,
+            bytes,
+            records,
+            expiry_index_policy,
+            due_index_policy,
+            due_index_origin,
+            due_index_width,
+            expiry_publication_policy,
+            expiry_index_origin,
+            expiry_index_width,
+            backing,
+        )
+    }
+
+    fn create_with_arena_backing(
+        path: &Path,
+        bytes: usize,
+        records: &[Record],
+        expiry_index_policy: ExpiryIndexPolicy,
+        due_index_policy: DueIndexPolicy,
+        due_index_origin: i64,
+        due_index_width: u64,
+        expiry_publication_policy: ExpiryPublicationPolicy,
+        expiry_index_origin: i64,
+        expiry_index_width: u64,
+        backing: ArenaBacking,
+    ) -> Result<Self, String> {
         let due_publication =
             due_index_policy.publication_policy(due_index_origin, due_index_width)?;
         let expiry_publication = expiry_publication_policy
@@ -411,6 +515,10 @@ impl Shared {
         if maximum > WAL_SLOT_BYTES {
             return Err(format!("fixture's maximum encoded transaction is {maximum} bytes, exceeding {WAL_SLOT_BYTES}-byte WAL slots"));
         }
+        let arena_owner = match backing {
+            ArenaBacking::File => None,
+            ArenaBacking::Memfd => Some(MemfdArenaOwner::create(path)?),
+        };
         let arena = Arc::new(
             map_tmpfs_shared(path, bytes)
                 .map_err(|e| e.to_string())?
@@ -468,6 +576,7 @@ impl Shared {
             expiry_publication_policy,
             expiry_index_origin,
             expiry_index_width,
+            _arena_owner: arena_owner,
         };
         let attachment = shared.attachment(path);
         let slot_bytes = attachment
@@ -615,6 +724,7 @@ impl Shared {
             expiry_publication_policy: a.expiry_publication_policy,
             expiry_index_origin: a.expiry_index_origin,
             expiry_index_width: a.expiry_index_width,
+            _arena_owner: None,
         })
     }
 
@@ -685,5 +795,201 @@ impl Shared {
         Ok(
             serde_json::json!({"indexes":audits,"arena_high_water_bytes":self.arena.chunked_arena().head_offset(),"expiry_index_policy":self.expiry_index_policy,"due_index_policy":self.due_index_policy,"due_index_origin":self.due_index_origin,"due_index_width":self.due_index_width,"expiry_publication_policy":self.expiry_publication_policy,"expiry_index_origin":self.expiry_index_origin,"expiry_index_width":self.expiry_index_width}),
         )
+    }
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod arena_backing_tests {
+    use super::*;
+    use std::os::unix::ffi::OsStringExt;
+    use std::process::{Child, Command, Stdio};
+    use std::time::{Duration, Instant};
+
+    fn create(path: &Path, bytes: usize, backing: ArenaBacking) -> Result<Shared, String> {
+        Shared::create_with_arena_backing(
+            path,
+            bytes,
+            &[Record {
+                id: 0,
+                active: true,
+                kind: FLIGHT,
+                family: 7,
+                ..Record::default()
+            }],
+            ExpiryIndexPolicy::AllActive,
+            DueIndexPolicy::Hashed,
+            default_due_index_origin(),
+            default_due_index_width(),
+            ExpiryPublicationPolicy::Hashed,
+            default_expiry_index_origin(),
+            default_expiry_index_width(),
+            backing,
+        )
+    }
+
+    #[test]
+    fn backing_selection_is_explicit_and_fails_closed() {
+        assert_eq!(ArenaBacking::parse(None).unwrap(), ArenaBacking::File);
+        assert_eq!(
+            ArenaBacking::parse(Some("file".into())).unwrap(),
+            ArenaBacking::File
+        );
+        assert_eq!(
+            ArenaBacking::parse(Some("memfd".into())).unwrap(),
+            ArenaBacking::Memfd
+        );
+        for value in ["", "tmpfs", "MEMFD", " memfd", "memfd "] {
+            assert!(ArenaBacking::parse(Some(value.into())).is_err());
+        }
+        assert!(ArenaBacking::parse(Some(OsString::from_vec(vec![0xff]))).is_err());
+    }
+
+    #[test]
+    fn memfd_is_tmpfs_and_warm_attachments_share_the_owner_mapping() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("arena.mmap");
+        let shared = create(&path, 16 << 20, ArenaBacking::Memfd).unwrap();
+        assert!(std::fs::symlink_metadata(&path)
+            .unwrap()
+            .file_type()
+            .is_symlink());
+        let file = File::open(&path).unwrap();
+        assert_eq!(file.metadata().unwrap().len(), 16 << 20);
+        let mut stat = std::mem::MaybeUninit::<libc::statfs>::uninit();
+        // SAFETY: fstatfs initializes stat on success and file is a live descriptor.
+        assert_eq!(
+            unsafe { libc::fstatfs(file.as_raw_fd(), stat.as_mut_ptr()) },
+            0
+        );
+        assert_eq!(unsafe { stat.assume_init() }.f_type, libc::TMPFS_MAGIC);
+        let pointer = shared.arena.chunked_arena().alloc(1234_u64).unwrap();
+        let attachment = shared.attachment(&path);
+        let attached = Shared::attach(&attachment).unwrap();
+        assert_eq!(attached.snapshot().unwrap(), shared.snapshot().unwrap());
+        assert_eq!(
+            attached.audit().unwrap()["indexes"],
+            shared.audit().unwrap()["indexes"]
+        );
+        let offset = pointer.load(Ordering::Acquire);
+        assert_eq!(
+            RelPtr::<u64>::from_offset(offset).as_ref(attached.arena.mmap_base()),
+            Some(&1234)
+        );
+        let expected_rows = attached.snapshot().unwrap();
+        drop(file);
+        drop(shared);
+        assert!(std::fs::symlink_metadata(&path).is_err());
+        assert!(Shared::attach(&attachment).is_err());
+        assert_eq!(attached.snapshot().unwrap(), expected_rows);
+        assert_eq!(
+            RelPtr::<u64>::from_offset(offset).as_ref(attached.arena.mmap_base()),
+            Some(&1234)
+        );
+    }
+
+    #[test]
+    fn file_backing_keeps_existing_path_lifetime() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("arena.mmap");
+        let shared = create(&path, 16 << 20, ArenaBacking::File).unwrap();
+        assert!(std::fs::symlink_metadata(&path)
+            .unwrap()
+            .file_type()
+            .is_file());
+        let attachment = shared.attachment(&path);
+        let rows = shared.snapshot().unwrap();
+        drop(shared);
+        assert_eq!(
+            Shared::attach(&attachment).unwrap().snapshot().unwrap(),
+            rows
+        );
+    }
+
+    #[test]
+    fn memfd_creation_preserves_collisions_and_cleans_failed_initialization() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("arena.mmap");
+        std::fs::write(&path, b"prior arena").unwrap();
+        assert!(MemfdArenaOwner::create(&path).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), b"prior arena");
+        std::fs::remove_file(&path).unwrap();
+        std::os::unix::fs::symlink("missing-target", &path).unwrap();
+        assert!(MemfdArenaOwner::create(&path).is_err());
+        assert_eq!(
+            std::fs::read_link(&path).unwrap(),
+            Path::new("missing-target")
+        );
+        std::fs::remove_file(&path).unwrap();
+        assert!(create(&path, 0, ArenaBacking::Memfd).is_err());
+        assert!(std::fs::symlink_metadata(&path).is_err());
+        let owner = MemfdArenaOwner::create(&path).unwrap();
+        std::fs::remove_file(&path).unwrap();
+        std::fs::write(&path, b"replacement").unwrap();
+        drop(owner);
+        assert_eq!(std::fs::read(&path).unwrap(), b"replacement");
+    }
+
+    struct KillOnDrop(Child);
+    impl Drop for KillOnDrop {
+        fn drop(&mut self) {
+            let _ = self.0.kill();
+            let _ = self.0.wait();
+        }
+    }
+
+    #[test]
+    fn memfd_owner_death_leaves_existing_mapping_valid_but_no_reopenable_path() {
+        const CHILD_DIRECTORY: &str = "AEROSTORE_MEMFD_FIXTURE_TEST_CHILD_DIRECTORY";
+        if let Some(directory) = std::env::var_os(CHILD_DIRECTORY) {
+            let directory = PathBuf::from(directory);
+            let path = directory.join("arena.mmap");
+            // Exercise the public environment-selected path in an isolated
+            // process, without changing another parallel test's environment.
+            let shared = Shared::create(&path, 16 << 20, &[Record::default()]).unwrap();
+            std::fs::write(
+                directory.join("attachment.json"),
+                serde_json::to_vec(&shared.attachment(&path)).unwrap(),
+            )
+            .unwrap();
+            std::fs::write(directory.join("ready"), b"ready").unwrap();
+            loop {
+                std::thread::park();
+            }
+        }
+        let directory = tempfile::tempdir().unwrap();
+        let mut child = KillOnDrop(Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "fixture::arena_backing_tests::memfd_owner_death_leaves_existing_mapping_valid_but_no_reopenable_path", "--nocapture"])
+            .env(CHILD_DIRECTORY, directory.path())
+            .env(ARENA_BACKING_ENV, "memfd")
+            .stdin(Stdio::null()).stdout(Stdio::null())
+            .spawn().unwrap());
+        let deadline = Instant::now() + Duration::from_secs(20);
+        while !directory.path().join("ready").exists() {
+            assert!(
+                child.0.try_wait().unwrap().is_none(),
+                "fixture child exited before readiness"
+            );
+            assert!(
+                Instant::now() < deadline,
+                "fixture child readiness timed out"
+            );
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        let attachment: Attachment = serde_json::from_slice(
+            &std::fs::read(directory.path().join("attachment.json")).unwrap(),
+        )
+        .unwrap();
+        let attached = Shared::attach(&attachment).unwrap();
+        let rows = attached.snapshot().unwrap();
+        child.0.kill().unwrap();
+        child.0.wait().unwrap();
+        assert!(std::fs::symlink_metadata(&attachment.path)
+            .unwrap()
+            .file_type()
+            .is_symlink());
+        assert!(!attachment.path.exists());
+        assert!(Shared::attach(&attachment).is_err());
+        assert_eq!(attached.snapshot().unwrap(), rows);
+        attached.audit().unwrap();
     }
 }

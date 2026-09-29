@@ -237,8 +237,12 @@ Two [frame-writing experiments](docs/hyperfeed_frame_write_experiment.md) did
 not show a consistent gain, so the baseline remains unchanged. Subsequent
 [stack profiling](docs/hyperfeed_burst_profile.md) identified elevated waiting
 in index predicate-lock acquisition during recurring service CPU bursts.
-The next diagnostic will identify the contended buckets and their hold times
-before choosing an optimization; no new capacity gain is claimed.
+The [commit-phase and arena-placement experiment](docs/hyperfeed_commit_phases.md)
+then found large recurring page-fault spikes. Moving only the benchmark arena
+to memory-backed storage reduced p99 by 40–53% in two short paired comparisons.
+WAL stayed on disk; completed throughput was capped by the offered rate.
+Sustained capacity with this configuration and normal maintenance remains to
+be qualified, so the accepted 4.8× comparison is unchanged.
 
 The [fast iteration loop](docs/hyperfeed_iteration.md) compares preserved baseline
 and candidate executables with short, alternating workload screens. Full-history

@@ -112,11 +112,13 @@ it passed again after restoration. No new formal proof was run. The retained
 120-second burst lane passed 44 focused Python checks and leaves the default
 30-second lane and sustained-capacity policy unchanged.
 
-The next diagnostic should split the fully held commit interval into partition
-lock acquisition, validation, index destination insertion, WAL publication,
-source removal, and transaction/stamp completion. Index insertion and removal
-can wait for a skiplist mutation lock also used by priority GC. That is a
-code-supported possibility, not a measured cause of the bursts. The run showed
+The follow-on [commit-phase diagnostic](hyperfeed_commit_phases.md) splits the
+interval after predicate acquisition into partition locking, validation, index
+insertion, WAL publication, source removal, row publication and completion.
+Index insertion, source removal and row publication account for about 90% of
+its sampled increase during CPU bursts. The causal mechanism remains unresolved.
+Index insertion and removal can wait for a skiplist mutation lock also used by
+priority GC; that remains a code-supported possibility. This earlier run showed
 no index allocation failures and at most 111 retired due nodes and 333 retired
 due postings; the 131,072-entry reclamation batch limits are not message timers.
 
@@ -154,4 +156,5 @@ python3 scripts/iterate_hyperfeed.py screen \
 ```
 
 Review the [disk runbook](disk-space.md) first. This is an optional repeat;
-the next prioritized work is the commit-phase diagnostic described above.
+the completed follow-on and next experiment are described in the
+[commit-phase report](hyperfeed_commit_phases.md).
