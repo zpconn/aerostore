@@ -85,6 +85,12 @@ did not install a profiler or launch that next trial. Obtain stack attribution
 before another implementation change. Further framing variants and expensive
 proof work on their implementation are deferred.
 
+The [subsequent profiling investigation](hyperfeed_burst_profile.md) installed
+a local profiler and collected user-space stacks with unchanged engine bytes.
+It narrowed the elevated commit samples to index predicate-lock acquisition;
+kernel stacks remain unavailable. That report supersedes the tooling status
+and next-step recommendation above.
+
 ## Retention and resources
 
 The [validation record](bench_data/hyperfeed_frame_write_2026-09-29/validation.json)

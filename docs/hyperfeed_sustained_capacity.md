@@ -228,6 +228,11 @@ consistent gain; both remain preserved as experiments and the working baseline
 is unchanged. Review of the existing time-window profiles makes service-session
 CPU bursts the next attribution target.
 
+The subsequent [stack profile](hyperfeed_burst_profile.md) reproduced those
+bursts and narrowed elevated commit samples to index predicate-lock acquisition.
+The working baseline and accepted capacity endpoints remain unchanged. Identify
+the contended buckets and owner hold times before choosing a lock or index change.
+
 Raw results, original timeout evidence, source and executable receipts, profile
 analyses, and resumed checks remain under `target/sustained-capacity-20260928`.
 The [archive manifest](bench_data/sustained_capacity_2026-09-28-retry2/artifact-manifest.json)

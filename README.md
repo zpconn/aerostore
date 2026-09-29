@@ -234,9 +234,11 @@ resource and correctness guardrails. Higher tested rates fail the latency
 requirement. This is a bounded synthetic comparison with stated configuration
 and asynchronous-durability differences, not a 10× production HyperFeed claim.
 Two [frame-writing experiments](docs/hyperfeed_frame_write_experiment.md) did
-not show a consistent gain, so the baseline remains unchanged. The next
-investigation targets bursts of CPU work in service-session threads; selective
-family indexes and broader RPC batching remain deferred pending attribution.
+not show a consistent gain, so the baseline remains unchanged. Subsequent
+[stack profiling](docs/hyperfeed_burst_profile.md) identified elevated waiting
+in index predicate-lock acquisition during recurring service CPU bursts.
+The next diagnostic will identify the contended buckets and their hold times
+before choosing an optimization; no new capacity gain is claimed.
 
 The [fast iteration loop](docs/hyperfeed_iteration.md) compares preserved baseline
 and candidate executables with short, alternating workload screens. Full-history
