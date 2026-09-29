@@ -1491,5 +1491,77 @@ class RetryDiagnosticGateTests(unittest.TestCase):
             self.assertFalse(gate.assess_trial(bad, POLICY)["execution_valid"], changes)
 
 
+class LargerMetricsCorpusTests(unittest.TestCase):
+    def config(self, **extra):
+        return dict(workload="calibrated", families=1024, workers=16, hot_percent=0,
+                    arrival_rate=8192, seconds=905, projection_interval_seconds=300,
+                    housekeeping_interval_seconds=300, **extra)
+
+    def test_larger_cap_does_not_change_full_or_other_workload_limits(self):
+        for workload in ("legacy", "lifecycle", "fleet", "calibrated"):
+            for evidence in ("full", "metrics"):
+                expected = 1_000_000 if (workload, evidence) == ("calibrated", "metrics") else 100_000
+                self.assertEqual(gate.message_cap_limit(workload, evidence), expected)
+
+    def test_endpoint_counts_are_exact_without_materializing_inputs(self):
+        corpus = gate.calibrated_corpus(self.config())
+        self.assertEqual(corpus["foreground"], 7_413_760)
+        self.assertEqual(sum(corpus["worker_counts"][:16]), 7_413_760)
+        self.assertEqual(corpus["worker_counts"][-2:], [3, 3])
+        self.assertLessEqual(max(corpus["worker_counts"]), 1_000_000)
+
+    def test_global_bound_rejects_before_affinity_router_is_materialized(self):
+        config = self.config(dispatch="signature-affinity", affinity_ttl_ms=600, signature_pattern="both")
+        config.update(arrival_rate=1_000_000, seconds=9)
+        with patch.object(gate, "calibrated_dispatch", side_effect=AssertionError("must reject first")) as route:
+            with self.assertRaisesRegex(ValueError, "corpus must remain bounded"):
+                gate.calibrated_corpus(config)
+            route.assert_not_called()
+        config.update(dispatch="identity", affinity_ttl_ms=0, seconds=8)
+        self.assertEqual(gate.calibrated_corpus(config)["foreground"], 8_000_000)
+
+    def test_cli_rejects_full_oversize_global_overflow_and_affinity_skew_before_launch(self):
+        cases = [
+            ["--evidence", "full", "--max-messages", "100001"],
+            ["--max-messages", "1000001"],
+            ["--rates", "1000000", "--seconds", "9", "--max-messages", "1000000"],
+            # The average is 50,000, but three active identities make actual
+            # ownership 66,667 / 33,333 under identity dispatch.
+            ["--families", "4", "--workers", "2", "--rates", "100000", "--seconds", "1", "--max-messages", "50000"],
+        ]
+        for flags in cases:
+            with self.subTest(flags=flags), tempfile.TemporaryDirectory() as directory:
+                with patch.object(gate, "run_process", side_effect=AssertionError("no launch")) as launch:
+                    with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:
+                        gate.main(["--binary", "/missing", "--output", directory,
+                            "--engines", "aerostore", "--workload", "calibrated", "--evidence", "metrics",
+                            "--families", "1024", "--workers", "16", "--hot-percent", "0",
+                            "--rates", "32", "--seconds", "5", "--slo-ms", "50", *flags])
+                    self.assertEqual(error.exception.code, 2)
+                    launch.assert_not_called()
+
+    def test_opt_in_is_forwarded_but_does_not_change_default_or_matching_keys(self):
+        for cap in (100_000, 1_000_000):
+            with self.subTest(cap=cap), tempfile.TemporaryDirectory() as directory:
+                binary = Path(directory) / "benchmark"; binary.write_bytes(b"never executed")
+                output = Path(directory) / "out"
+                flags = [] if cap == 100_000 else ["--max-messages", str(cap)]
+                with patch.object(gate, "snapshot_sources", return_value={"sha256":"source","files":{}}), \
+                     patch.object(gate, "host_info", return_value={}), \
+                     patch.object(gate.subprocess, "check_output", return_value="fixture metadata"), \
+                     patch.object(gate, "run_process", side_effect=RuntimeError("stop before execution")) as start:
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        self.assertEqual(gate.main(["--binary",str(binary),"--output",str(output),
+                            "--engines","aerostore","--workload","calibrated","--evidence","metrics",
+                            "--families","1024","--workers","16","--hot-percent","0",
+                            "--rates","32","--seconds","5","--seeds","11","--slo-ms","50",*flags]), 1)
+                    start.assert_called_once()
+                cell = json.loads((output / "campaign.json").read_text())["trials"][0]
+                self.assertEqual(cell["config"]["max_messages"], cap)
+                command = cell["command"]
+                self.assertEqual(command[command.index("--max-messages")+1], str(cap))
+                self.assertIn("max_messages", gate.match_fields(cell["config"]))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -266,7 +266,7 @@ fn malformed_or_unbounded_schedules_fail_before_arithmetic() {
         },
         Config {
             duration_ns: 3600 * NANOS_PER_SECOND,
-            foreground_rate: 1000,
+            foreground_rate: 3000,
             ..config()
         },
     ] {
@@ -2109,5 +2109,46 @@ fn rolling_message_ids_are_invertible_disjoint_and_keep_all_ring_slots_available
                 "global sequence strides must not collapse the position ring"
             );
         }
+    }
+}
+
+
+#[test]
+fn larger_metrics_corpus_bound_is_exact_and_ids_remain_disjoint() {
+    let limit = calibrated::MAX_FOREGROUND_INPUTS;
+    let exact = Config {
+        duration_ns: limit * 1000,
+        foreground_rate: 1_000_000,
+        ..config()
+    };
+    // Validation and ID arithmetic only: do not allocate an eight-million-input
+    // schedule in a unit test. One extra nanosecond admits one extra arrival.
+    calibrated::validate_config(&exact).unwrap();
+    assert!(calibrated::validate_config(&Config {
+        duration_ns: exact.duration_ns + 1,
+        ..exact.clone()
+    }).is_err());
+    assert!(limit <= u32::MAX as u64);
+    for families in [4, 16, 1024] {
+        let cfg = Config { families, ..exact.clone() };
+        assert_eq!(calibrated::foreground_sequence(&cfg,
+            calibrated::FOREGROUND_ID_START + limit - 1), Some(limit - 1));
+        assert_eq!(calibrated::foreground_sequence(&cfg,
+            calibrated::FOREGROUND_ID_START + limit), None);
+        let rolling = Config {
+            rolling_cycle_messages: 16,
+            rolling_retention_seconds: 1,
+            maintenance_mode: maintenance::Mode::Sweep,
+            ..cfg
+        };
+        calibrated::validate_config(&rolling).unwrap();
+        let active = families - (families / 4).max(1);
+        let id = |q: u64| calibrated::FOREGROUND_ID_START
+            + (q / active as u64) * calibrated::ROLLING_ID_STRIDE
+            + q % active as u64;
+        assert!(id(limit - 1) < maintenance::JOB_ID_START);
+        assert_eq!(calibrated::foreground_sequence(&rolling, id(limit - 1)), Some(limit - 1));
+        assert_eq!(calibrated::foreground_sequence(&rolling, id(limit)), None);
+        assert_eq!(calibrated::foreground_sequence(&rolling, maintenance::JOB_ID_START), None);
     }
 }

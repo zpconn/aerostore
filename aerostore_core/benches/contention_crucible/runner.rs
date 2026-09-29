@@ -1,6 +1,6 @@
 use super::measurement::{
-    calibrated_execution_summary, foreground_concurrency_report, ArrivalPlan, ExecutionSample,
-    FlightOrderAudit, ForegroundExecution,
+    calibrated_execution_summary, capacity, foreground_concurrency_report, ArrivalPlan,
+    ExecutionSample, FlightOrderAudit, ForegroundExecution,
 };
 use super::supervision::{
     invalidate_previous_report, private_json, report_path_from_arguments,
@@ -362,6 +362,7 @@ struct Completed {
     drain_confirmed_ns: u64,
     completed_by_worker: Vec<usize>,
     calibrated_samples: Vec<ExecutionSample>,
+    capacity_accounting: Value,
     job_kinds: Vec<String>,
     maintenance_jobs: Vec<Value>,
     pending_maintenance: Vec<PendingMaintenance>,
@@ -387,6 +388,19 @@ fn oldest_due_ages(
             })
             .collect::<Vec<_>>())
     })
+}
+
+fn capacity_plan(config: &Config, start_ns: u64) -> capacity::Plan {
+    capacity::Plan {
+        arrivals: ArrivalPlan {
+            start_ns,
+            duration_ns: config.seconds * 1_000_000_000,
+            rate_per_second: config.arrival_rate,
+            workers: config.workers,
+        },
+        projection_interval_ns: config.projection_interval_seconds * 1_000_000_000,
+        housekeeping_interval_ns: config.housekeeping_interval_seconds * 1_000_000_000,
+    }
 }
 
 fn exercise(
@@ -504,12 +518,7 @@ fn exercise(
         })
         .collect();
     if calibrated.is_some() {
-        if offered_by_worker
-            .iter()
-            .any(|offered| *offered > cfg.max_messages as u64)
-        {
-            return Err("calibrated offered corpus exceeds --max-messages for a worker; no jobs may be truncated".into());
-        }
+        super::corpus_limits::validate_offered(&offered_by_worker, cfg.max_messages)?;
         write_json(
             &case.directory.join("offered-schedule.json"),
             &json!({
@@ -559,6 +568,7 @@ fn exercise(
         drain_confirmed_ns: 0,
         completed_by_worker: vec![0; count],
         calibrated_samples: Vec::new(),
+        capacity_accounting: Value::Null,
         job_kinds: Vec::new(),
         maintenance_jobs: Vec::new(),
         pending_maintenance: vec![PendingMaintenance::default(); count],
@@ -581,110 +591,117 @@ fn exercise(
     let mut history = BufWriter::new(
         fs::File::create(case.directory.join("history.jsonl")).map_err(|e| e.to_string())?,
     );
-    while done.len() < count {
-        if let Some(control) = statistics.as_mut() {
-            control.check()?;
-        }
-        match receive.recv_timeout(Duration::from_millis(100)) {
-            Ok((id, event)) => {
-                if done.contains(&id) {
-                    return Err(format!("worker {id} emitted after Done"));
-                }
-                match event? {
-                    workers::Reply::FirstQuery { rows }
-                        if synchronise && first_queries.insert(id) =>
-                    {
-                        if rows != 0 {
-                            return Err(
-                                "competing creation did not observe an empty candidate query"
-                                    .into(),
-                            );
-                        }
-                        if first_queries.len() == count {
-                            for worker in &mut pool {
-                                worker.send(&workers::Request::Continue)?;
-                            }
-                        }
+    // Keep the partial logical-job accounting even when receipt validation,
+    // worker execution, statistics collection, or shutdown fails. Summaries are
+    // built once after collection ends, never by sorting inside the timed loop.
+    let collection = (|| -> Result<(), String> {
+        while done.len() < count {
+            if let Some(control) = statistics.as_mut() {
+                control.check()?;
+            }
+            match receive.recv_timeout(Duration::from_millis(100)) {
+                Ok((id, event)) => {
+                    if done.contains(&id) {
+                        return Err(format!("worker {id} emitted after Done"));
                     }
-                    workers::Reply::Observation {
-                        receipt,
-                        latency_ns,
-                        message_started_ns,
-                        scheduled_ns,
-                        retries,
-                    } => {
-                        let received_ns = workers::monotonic_ns();
-                        if message_started_ns < result.transaction_finished_by_worker[id] {
-                            return Err(
-                                "worker transaction intervals overlap or arrive out of order"
-                                    .into(),
-                            );
-                        }
-                        result.transaction_finished_by_worker[id] = receipt.finished;
-                        if message_started_ns > receipt.started
-                            || receipt.finished > received_ns
-                            || receipt.finished < message_started_ns
-                            || latency_ns != receipt.finished - message_started_ns
+                    match event? {
+                        workers::Reply::FirstQuery { rows }
+                            if synchronise && first_queries.insert(id) =>
                         {
-                            return Err("invalid message/receipt timestamps".into());
-                        }
-                        let sequence =
-                            result.completed_by_worker[id] as u64 * count as u64 + id as u64;
-                        let calibrated_event = calibrated
-                            .as_ref()
-                            .map(|plan| {
-                                plan.event(id, result.completed_by_worker[id] as u64)
-                                    .ok_or("worker returned more calibrated events than offered")
-                            })
-                            .transpose()?;
-                        let expected_scheduled = calibrated_event.as_ref().map_or_else(
-                            || {
-                                arrivals
-                                    .as_ref()
-                                    .and_then(|plan| plan.scheduled_ns(sequence))
-                            },
-                            |event| admission_start_ns.checked_add(event.offset_ns),
-                        );
-                        if scheduled_ns != expected_scheduled
-                            || scheduled_ns.is_some_and(|at| message_started_ns < at)
-                        {
-                            return Err(
-                                "message arrival differs from fixed offered schedule".into()
-                            );
-                        }
-                        let end_to_end_ns =
-                            received_ns - scheduled_ns.unwrap_or(message_started_ns);
-                        let mut job_completed = true;
-                        let mut batch_index = None;
-                        let mut maintenance_terminal = None;
-                        let job_ordinal = result.completed_by_worker[id] as u64;
-                        let job_id = calibrated_event
-                            .as_ref()
-                            .map_or(receipt.message.id, |event| event.message.id);
-                        if messages.is_some_and(|m| receipt.message != m[id]) {
-                            return Err("worker returned wrong scenario message".into());
-                        }
-                        if let Some(expected) = messages {
-                            if result.completed_by_worker[id] != 0 || expected.len() != count {
-                                return Err("duplicate scenario completion".into());
+                            if rows != 0 {
+                                return Err(
+                                    "competing creation did not observe an empty candidate query"
+                                        .into(),
+                                );
                             }
-                        } else if let Some(expected) = &calibrated_event {
-                            let sweep = cfg.maintenance_mode == maintenance::Mode::Sweep
-                                && expected.class != calibrated::EventClass::Foreground;
-                            let expected_message = if sweep {
-                                let index = result.pending_maintenance[id].batches;
-                                if index >= cfg.max_maintenance_batches {
-                                    return Err("maintenance worker exceeded its batch cap".into());
+                            if first_queries.len() == count {
+                                for worker in &mut pool {
+                                    worker.send(&workers::Request::Continue)?;
                                 }
-                                batch_index = Some(index);
-                                maintenance::batch_message(&expected.message, index)?
-                            } else {
-                                expected.message.clone()
-                            };
-                            if receipt.message != expected_message {
-                                return Err("calibrated event differs from independently reconstructed offered schedule or batch".into());
                             }
-                            match (expected.class, expected.logical_identity, expected.foreground_ordinal) {
+                        }
+                        workers::Reply::Observation {
+                            receipt,
+                            latency_ns,
+                            message_started_ns,
+                            scheduled_ns,
+                            retries,
+                        } => {
+                            let received_ns = workers::monotonic_ns();
+                            if message_started_ns < result.transaction_finished_by_worker[id] {
+                                return Err(
+                                    "worker transaction intervals overlap or arrive out of order"
+                                        .into(),
+                                );
+                            }
+                            result.transaction_finished_by_worker[id] = receipt.finished;
+                            if message_started_ns > receipt.started
+                                || receipt.finished > received_ns
+                                || receipt.finished < message_started_ns
+                                || latency_ns != receipt.finished - message_started_ns
+                            {
+                                return Err("invalid message/receipt timestamps".into());
+                            }
+                            let sequence =
+                                result.completed_by_worker[id] as u64 * count as u64 + id as u64;
+                            let calibrated_event = calibrated
+                                .as_ref()
+                                .map(|plan| {
+                                    plan.event(id, result.completed_by_worker[id] as u64).ok_or(
+                                        "worker returned more calibrated events than offered",
+                                    )
+                                })
+                                .transpose()?;
+                            let expected_scheduled = calibrated_event.as_ref().map_or_else(
+                                || {
+                                    arrivals
+                                        .as_ref()
+                                        .and_then(|plan| plan.scheduled_ns(sequence))
+                                },
+                                |event| admission_start_ns.checked_add(event.offset_ns),
+                            );
+                            if scheduled_ns != expected_scheduled
+                                || scheduled_ns.is_some_and(|at| message_started_ns < at)
+                            {
+                                return Err(
+                                    "message arrival differs from fixed offered schedule".into()
+                                );
+                            }
+                            let end_to_end_ns =
+                                received_ns - scheduled_ns.unwrap_or(message_started_ns);
+                            let mut job_completed = true;
+                            let mut batch_index = None;
+                            let mut maintenance_terminal = None;
+                            let job_ordinal = result.completed_by_worker[id] as u64;
+                            let job_id = calibrated_event
+                                .as_ref()
+                                .map_or(receipt.message.id, |event| event.message.id);
+                            if messages.is_some_and(|m| receipt.message != m[id]) {
+                                return Err("worker returned wrong scenario message".into());
+                            }
+                            if let Some(expected) = messages {
+                                if result.completed_by_worker[id] != 0 || expected.len() != count {
+                                    return Err("duplicate scenario completion".into());
+                                }
+                            } else if let Some(expected) = &calibrated_event {
+                                let sweep = cfg.maintenance_mode == maintenance::Mode::Sweep
+                                    && expected.class != calibrated::EventClass::Foreground;
+                                let expected_message = if sweep {
+                                    let index = result.pending_maintenance[id].batches;
+                                    if index >= cfg.max_maintenance_batches {
+                                        return Err(
+                                            "maintenance worker exceeded its batch cap".into()
+                                        );
+                                    }
+                                    batch_index = Some(index);
+                                    maintenance::batch_message(&expected.message, index)?
+                                } else {
+                                    expected.message.clone()
+                                };
+                                if receipt.message != expected_message {
+                                    return Err("calibrated event differs from independently reconstructed offered schedule or batch".into());
+                                }
+                                match (expected.class, expected.logical_identity, expected.foreground_ordinal) {
                                 (calibrated::EventClass::Foreground, Some(identity), Some(ordinal)) => {
                                     if cfg.dispatch == calibrated::Dispatch::Identity {
                                         result.flight_order.observe(identity, ordinal, message_started_ns, receipt.finished)?;
@@ -697,46 +714,46 @@ fn exercise(
                                 (calibrated::EventClass::Projection | calibrated::EventClass::Housekeeping, None, None) => (),
                                 _ => return Err("calibrated event has inconsistent foreground ordering metadata".into()),
                             }
-                            let mut sample_started = message_started_ns;
-                            let mut sample_retries = retries;
-                            let mut sample_positive = positive_effect(&receipt.body.outcome);
-                            if sweep {
-                                let processed = maintenance::processed(
-                                    &receipt.message,
-                                    &receipt.body.outcome,
-                                )?;
-                                let terminal = processed == 0;
-                                maintenance_terminal = Some(terminal);
-                                if terminal && cfg.evidence == "full" {
-                                    maintenance::validate_terminal(
+                                let mut sample_started = message_started_ns;
+                                let mut sample_retries = retries;
+                                let mut sample_positive = positive_effect(&receipt.body.outcome);
+                                if sweep {
+                                    let processed = maintenance::processed(
                                         &receipt.message,
-                                        &receipt.body,
+                                        &receipt.body.outcome,
                                     )?;
-                                }
-                                let pending = &mut result.pending_maintenance[id];
-                                if pending.batches == 0 {
-                                    pending.job_id = job_id;
-                                    pending.job_ordinal = job_ordinal;
-                                    pending.started_ns = message_started_ns;
-                                }
-                                pending.batches += 1;
-                                pending.finished_ns = receipt.finished;
-                                pending.retries += retries;
-                                pending.processed_rows += processed as u64;
-                                pending.positive_effect |= sample_positive;
-                                for (total, amount) in pending
-                                    .outcomes
-                                    .iter_mut()
-                                    .zip(outcome_totals(&receipt.body.outcome))
-                                {
-                                    *total += amount;
-                                }
-                                job_completed = terminal;
-                                if terminal {
-                                    sample_started = pending.started_ns;
-                                    sample_retries = pending.retries;
-                                    sample_positive = pending.positive_effect;
-                                    result.maintenance_jobs.push(json!({
+                                    let terminal = processed == 0;
+                                    maintenance_terminal = Some(terminal);
+                                    if terminal && cfg.evidence == "full" {
+                                        maintenance::validate_terminal(
+                                            &receipt.message,
+                                            &receipt.body,
+                                        )?;
+                                    }
+                                    let pending = &mut result.pending_maintenance[id];
+                                    if pending.batches == 0 {
+                                        pending.job_id = job_id;
+                                        pending.job_ordinal = job_ordinal;
+                                        pending.started_ns = message_started_ns;
+                                    }
+                                    pending.batches += 1;
+                                    pending.finished_ns = receipt.finished;
+                                    pending.retries += retries;
+                                    pending.processed_rows += processed as u64;
+                                    pending.positive_effect |= sample_positive;
+                                    for (total, amount) in pending
+                                        .outcomes
+                                        .iter_mut()
+                                        .zip(outcome_totals(&receipt.body.outcome))
+                                    {
+                                        *total += amount;
+                                    }
+                                    job_completed = terminal;
+                                    if terminal {
+                                        sample_started = pending.started_ns;
+                                        sample_retries = pending.retries;
+                                        sample_positive = pending.positive_effect;
+                                        result.maintenance_jobs.push(json!({
                                         "worker":id,"job_id":job_id,"job_ordinal":job_ordinal,
                                         "class":expected.class.name(),"scheduled_ns":scheduled_ns,
                                         "started_ns":pending.started_ns,"finished_ns":receipt.finished,
@@ -747,119 +764,135 @@ fn exercise(
                                         "first_transaction_id":maintenance::batch_message(&expected.message,0)?.id,
                                         "terminal_transaction_id":receipt.message.id
                                     }));
-                                    *pending = PendingMaintenance::default();
+                                        *pending = PendingMaintenance::default();
+                                    }
                                 }
-                            }
-                            if job_completed {
-                                result.calibrated_samples.push(ExecutionSample {
-                                    worker: id,
-                                    class: expected.class.name(),
-                                    scheduled_ns: scheduled_ns
-                                        .ok_or("calibrated event lacks scheduled time")?,
-                                    started_ns: sample_started,
-                                    finished_ns: receipt.finished,
-                                    received_ns,
-                                    retries: sample_retries,
-                                    positive_effect: sample_positive,
-                                });
-                                result.job_kinds.push(expected.message.kind.name().into());
-                            }
-                        } else {
-                            let sequence =
-                                result.completed_by_worker[id] as u64 * count as u64 + id as u64;
-                            let expected = model::sustained_message_for(
-                                &cfg.workload,
-                                sequence,
-                                id,
-                                count,
-                                cfg.families,
-                                cfg.seed,
-                                cfg.hot_percent,
-                            )
-                            .with_maintenance_selection(cfg.maintenance_selection);
-                            if receipt.message != expected {
-                                return Err(
+                                if job_completed {
+                                    result.calibrated_samples.push(ExecutionSample {
+                                        worker: id,
+                                        class: expected.class.name(),
+                                        ordinal: if expected.class
+                                            == calibrated::EventClass::Foreground
+                                        {
+                                            calibrated::foreground_sequence(
+                                                &calibrated_config(cfg),
+                                                expected.message.id,
+                                            )
+                                            .ok_or(
+                                                "foreground receipt lacks a logical input sequence",
+                                            )?
+                                        } else {
+                                            job_ordinal
+                                        },
+                                        scheduled_ns: scheduled_ns
+                                            .ok_or("calibrated event lacks scheduled time")?,
+                                        started_ns: sample_started,
+                                        finished_ns: receipt.finished,
+                                        received_ns,
+                                        retries: sample_retries,
+                                        positive_effect: sample_positive,
+                                    });
+                                    result.job_kinds.push(expected.message.kind.name().into());
+                                }
+                            } else {
+                                let sequence = result.completed_by_worker[id] as u64 * count as u64
+                                    + id as u64;
+                                let expected = model::sustained_message_for(
+                                    &cfg.workload,
+                                    sequence,
+                                    id,
+                                    count,
+                                    cfg.families,
+                                    cfg.seed,
+                                    cfg.hot_percent,
+                                )
+                                .with_maintenance_selection(cfg.maintenance_selection);
+                                if receipt.message != expected {
+                                    return Err(
                                     "sustained message stream differs from deterministic generator"
                                         .into(),
                                 );
+                                }
                             }
-                        }
-                        serde_json::to_writer(&mut history, &json!({"worker":id,"service_latency_ns":latency_ns,"end_to_end_latency_ns":end_to_end_ns,"message_started_ns":message_started_ns,"scheduled_ns":scheduled_ns,"received_ns":received_ns,"retries":retries,"receipt":receipt,
+                            serde_json::to_writer(&mut history, &json!({"worker":id,"service_latency_ns":latency_ns,"end_to_end_latency_ns":end_to_end_ns,"message_started_ns":message_started_ns,"scheduled_ns":scheduled_ns,"received_ns":received_ns,"retries":retries,"receipt":receipt,
                             "workload_class":calibrated_event.as_ref().map(|e|e.class.name()),
                             "logical_identity":calibrated_event.as_ref().and_then(|e|e.logical_identity),
                             "foreground_ordinal":calibrated_event.as_ref().and_then(|e|e.foreground_ordinal),
                             "job_id":job_id,"job_ordinal":job_ordinal,"batch_index":batch_index,
                             "job_completed":job_completed,"maintenance_terminal":maintenance_terminal}))
                             .map_err(|e| e.to_string())?;
-                        writeln!(history).map_err(|e| e.to_string())?;
-                        result.receipts.push(receipt);
-                        result.latencies.push(end_to_end_ns);
-                        result.service_latencies.push(latency_ns);
-                        result
-                            .queue_delays
-                            .push(scheduled_ns.map_or(0, |at| message_started_ns - at));
-                        result.retries += retries;
-                        result.message_retries.push(retries);
-                        if job_completed {
-                            result.completed_by_worker[id] += 1;
-                        }
-                    }
-                    workers::Reply::Done {
-                        metrics,
-                        retry_causes,
-                        diagnostics,
-                        retry_diagnostics,
-                        maximum_backlog,
-                        finished_ns,
-                        stop_reason,
-                    } if done.insert(id) => {
-                        if finished_ns > workers::monotonic_ns()
-                            || (stop_reason == "deadline" && finished_ns < deadline_ns)
-                        {
-                            return Err("invalid worker finish clock".into());
-                        }
-                        if messages.is_some() && stop_reason != "scenario_complete" {
-                            return Err("scenario worker stopped early".into());
-                        }
-                        if messages.is_none()
-                            && !["deadline", "message_cap", "arrival_corpus_drained"]
-                                .contains(&stop_reason.as_str())
-                        {
-                            return Err("invalid sustained stop reason".into());
-                        }
-                        if let Some(plan) = &arrivals {
-                            if stop_reason != "arrival_corpus_drained"
-                                || finished_ns < deadline_ns
-                                || result.completed_by_worker[id] as u64 != plan.worker_offered(id)
-                            {
-                                return Err("worker did not drain its entire offered corpus".into());
+                            writeln!(history).map_err(|e| e.to_string())?;
+                            result.receipts.push(receipt);
+                            result.latencies.push(end_to_end_ns);
+                            result.service_latencies.push(latency_ns);
+                            result
+                                .queue_delays
+                                .push(scheduled_ns.map_or(0, |at| message_started_ns - at));
+                            result.retries += retries;
+                            result.message_retries.push(retries);
+                            if job_completed {
+                                result.completed_by_worker[id] += 1;
                             }
                         }
-                        if calibrated.is_some()
-                            && (stop_reason != "arrival_corpus_drained"
-                                || finished_ns < deadline_ns
-                                || result.completed_by_worker[id] as u64
-                                    != result.offered_by_worker[id]
-                                || result.pending_maintenance[id].batches != 0)
-                        {
-                            return Err("calibrated worker did not drain every independently admitted event".into());
+                        workers::Reply::Done {
+                            metrics,
+                            retry_causes,
+                            diagnostics,
+                            retry_diagnostics,
+                            maximum_backlog,
+                            finished_ns,
+                            stop_reason,
+                        } if done.insert(id) => {
+                            if finished_ns > workers::monotonic_ns()
+                                || (stop_reason == "deadline" && finished_ns < deadline_ns)
+                            {
+                                return Err("invalid worker finish clock".into());
+                            }
+                            if messages.is_some() && stop_reason != "scenario_complete" {
+                                return Err("scenario worker stopped early".into());
+                            }
+                            if messages.is_none()
+                                && !["deadline", "message_cap", "arrival_corpus_drained"]
+                                    .contains(&stop_reason.as_str())
+                            {
+                                return Err("invalid sustained stop reason".into());
+                            }
+                            if let Some(plan) = &arrivals {
+                                if stop_reason != "arrival_corpus_drained"
+                                    || finished_ns < deadline_ns
+                                    || result.completed_by_worker[id] as u64
+                                        != plan.worker_offered(id)
+                                {
+                                    return Err(
+                                        "worker did not drain its entire offered corpus".into()
+                                    );
+                                }
+                            }
+                            if calibrated.is_some()
+                                && (stop_reason != "arrival_corpus_drained"
+                                    || finished_ns < deadline_ns
+                                    || result.completed_by_worker[id] as u64
+                                        != result.offered_by_worker[id]
+                                    || result.pending_maintenance[id].batches != 0)
+                            {
+                                return Err("calibrated worker did not drain every independently admitted event".into());
+                            }
+                            result.worker_retry_diagnostics[id] = json!(retry_diagnostics);
+                            result.worker_metrics_snapshots[id] = json!({"scope":"completed_worker_cumulative", "metrics":metrics,"retry_causes":retry_causes,"diagnostics":diagnostics});
+                            result.worker_stops[id] = json!({"finished_ns":finished_ns,"stop_reason":stop_reason,"maximum_backlog":maximum_backlog});
+                            for (name, value) in diagnostics {
+                                *result.diagnostics.entry(name).or_default() += value;
+                            }
+                            result.metrics.add(&metrics);
+                            for (cause, count) in retry_causes {
+                                *result.causes.entry(cause).or_default() += count;
+                            }
                         }
-                        result.worker_retry_diagnostics[id] = json!(retry_diagnostics);
-                        result.worker_metrics_snapshots[id] = json!({"scope":"completed_worker_cumulative", "metrics":metrics,"retry_causes":retry_causes,"diagnostics":diagnostics});
-                        result.worker_stops[id] = json!({"finished_ns":finished_ns,"stop_reason":stop_reason,"maximum_backlog":maximum_backlog});
-                        for (name, value) in diagnostics {
-                            *result.diagnostics.entry(name).or_default() += value;
-                        }
-                        result.metrics.add(&metrics);
-                        for (cause, count) in retry_causes {
-                            *result.causes.entry(cause).or_default() += count;
-                        }
-                    }
-                    workers::Reply::Error { message, evidence } => {
-                        history.flush().map_err(|e| e.to_string())?;
-                        write_json(
-                            &case.directory.join("failure-progress.json"),
-                            &json!({
+                        workers::Reply::Error { message, evidence } => {
+                            history.flush().map_err(|e| e.to_string())?;
+                            write_json(
+                                &case.directory.join("failure-progress.json"),
+                                &json!({
                             "passed":false,"execution_completed":false,"worker":id,"error":message,
                             "failure_evidence":evidence,"completed_worker_metrics_snapshots":result.worker_metrics_snapshots,
                             "worker_retry_diagnostics":result.worker_retry_diagnostics,
@@ -868,59 +901,120 @@ fn exercise(
                             "completed_messages":result.completed_by_worker.iter().sum::<usize>(),"completed_transactions":result.receipts.len(),"completed_message_retries":result.retries,"pending_maintenance":result.pending_maintenance,
                             "oldest_due_job_age_ns_by_worker":oldest_due_ages(calibrated.as_ref(), &result.completed_by_worker, workers::monotonic_ns().saturating_sub(admission_start_ns)),
                             "note":"Offered schedule remains authoritative; failed message retry count is retained in worker error. Uncompleted offered events are not dropped or called successful."}),
-                        )?;
-                        return Err(format!("worker {id}: {message}"));
+                            )?;
+                            return Err(format!("worker {id}: {message}"));
+                        }
+                        other => return Err(format!("unexpected worker event: {other:?}")),
                     }
-                    other => return Err(format!("unexpected worker event: {other:?}")),
+                    last_progress = Instant::now();
                 }
-                last_progress = Instant::now();
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    return Err("all worker streams closed before completion".into())
+                }
+                Err(mpsc::RecvTimeoutError::Timeout) => {}
             }
-            Err(mpsc::RecvTimeoutError::Disconnected) => {
-                return Err("all worker streams closed before completion".into())
-            }
-            Err(mpsc::RecvTimeoutError::Timeout) => {}
-        }
-        if last_sample.elapsed() >= Duration::from_secs(1) {
-            history.flush().map_err(|e| e.to_string())?;
-            let sample_start = workers::monotonic_ns();
-            let storage = sample()?;
-            let sample_end = workers::monotonic_ns();
-            result
+            if last_sample.elapsed() >= Duration::from_secs(1) {
+                history.flush().map_err(|e| e.to_string())?;
+                let sample_start = workers::monotonic_ns();
+                let storage = sample()?;
+                let sample_end = workers::monotonic_ns();
+                let capacity_observation = calibrated.as_ref().map(|_| {
+                    capacity::progress(
+                        &capacity_plan(cfg, admission_start_ns).arrivals,
+                        result
+                            .completed_by_worker
+                            .iter()
+                            .take(cfg.workers)
+                            .sum::<usize>() as u64,
+                        sample_end,
+                    )
+                });
+                result
                 .samples
                 .push(json!({"elapsed_seconds":started.elapsed().as_secs_f64(),
                 "sample_started_ns":sample_start,"sample_finished_ns":sample_end,
-                "completed_messages":result.completed_by_worker.iter().sum::<usize>(),"completed_transactions":result.receipts.len(),"storage":storage}));
-            write_json(
-                &case.directory.join("progress.json"),
-                &json!({"passed":false,"execution_completed":false,"completed_messages":result.completed_by_worker.iter().sum::<usize>(),"completed_transactions":result.receipts.len(),"pending_maintenance":result.pending_maintenance,"oldest_due_job_age_ns_by_worker":oldest_due_ages(calibrated.as_ref(), &result.completed_by_worker, workers::monotonic_ns().saturating_sub(admission_start_ns)),"completed_by_worker":result.completed_by_worker,"offered_by_worker":result.offered_by_worker,"retries":result.retries,"retention_samples":result.samples,
+                "completed_messages":result.completed_by_worker.iter().sum::<usize>(),"completed_transactions":result.receipts.len(),"storage":storage,
+                "capacity_observation":capacity_observation}));
+                write_json(
+                    &case.directory.join("progress.json"),
+                    &json!({"passed":false,"execution_completed":false,"completed_messages":result.completed_by_worker.iter().sum::<usize>(),"completed_transactions":result.receipts.len(),"pending_maintenance":result.pending_maintenance,"oldest_due_job_age_ns_by_worker":oldest_due_ages(calibrated.as_ref(), &result.completed_by_worker, workers::monotonic_ns().saturating_sub(admission_start_ns)),"completed_by_worker":result.completed_by_worker,"offered_by_worker":result.offered_by_worker,"retries":result.retries,"retention_samples":result.samples,
+                    "capacity_observation":capacity_observation,
                     "due_uncompleted_by_worker":calibrated.as_ref().map(|plan|(0..count).map(|worker|plan.backlog(worker,result.completed_by_worker[worker] as u64,workers::monotonic_ns().saturating_sub(admission_start_ns))).collect::<Vec<_>>())}),
-            )?;
-            last_sample = Instant::now();
+                )?;
+                last_sample = Instant::now();
+            }
+            if last_progress.elapsed() > Duration::from_secs(60) {
+                return Err("no worker progress for 60 seconds".into());
+            }
         }
-        if last_progress.elapsed() > Duration::from_secs(60) {
-            return Err("no worker progress for 60 seconds".into());
+        result.workload_completed_ns = workers::monotonic_ns();
+        result.elapsed = (result.workload_completed_ns - admission_start_ns) as f64 / 1e9;
+        history.flush().map_err(|e| e.to_string())?;
+        for worker in &mut pool {
+            worker.stop()?;
+        }
+        result.workers_stopped_ns = workers::monotonic_ns();
+        for id in 0..count {
+            let _ = fs::remove_file(case.directory.join(format!("worker-{id}.json")));
+        }
+        if result.receipts.is_empty()
+            || (calibrated.is_none() && result.completed_by_worker.contains(&0))
+        {
+            return Err("a worker completed zero messages".into());
+        }
+        if result.metrics.commits != result.receipts.len() as u64 {
+            return Err("receipt count differs from successful native commits".into());
+        }
+        if synchronise && first_queries.len() != count {
+            return Err("required simultaneous empty-search cut was not reached".into());
+        }
+        Ok(())
+    })();
+    if calibrated.is_some() && collection.is_err() {
+        let observed_until_ns = workers::monotonic_ns();
+        let accounting = capacity::summarize(
+            &capacity_plan(cfg, admission_start_ns),
+            &result.calibrated_samples,
+            &result.offered_by_worker,
+            observed_until_ns,
+            collection.is_ok(),
+        );
+        match accounting {
+            Ok(accounting) => {
+                write_json(
+                    &case.directory.join("capacity-accounting.json"),
+                    &accounting,
+                )?;
+                result.capacity_accounting = accounting;
+            }
+            Err(error) => {
+                write_json(
+                    &case.directory.join("capacity-accounting.json"),
+                    &json!({"format":"capacity-accounting-v1","valid":false,"error":error,
+                        "execution_completed":false,"observed_until_ns":observed_until_ns}),
+                )?;
+                return Err(format!(
+                    "capacity accounting failed: {error}; collection: {collection:?}"
+                ));
+            }
         }
     }
-    result.workload_completed_ns = workers::monotonic_ns();
-    result.elapsed = (result.workload_completed_ns - admission_start_ns) as f64 / 1e9;
-    history.flush().map_err(|e| e.to_string())?;
-    for worker in &mut pool {
-        worker.stop()?;
-    }
-    result.workers_stopped_ns = workers::monotonic_ns();
-    for id in 0..count {
-        let _ = fs::remove_file(case.directory.join(format!("worker-{id}.json")));
-    }
-    if result.receipts.is_empty()
-        || (calibrated.is_none() && result.completed_by_worker.contains(&0))
-    {
-        return Err("a worker completed zero messages".into());
-    }
-    if result.metrics.commits != result.receipts.len() as u64 {
-        return Err("receipt count differs from successful native commits".into());
-    }
-    if synchronise && first_queries.len() != count {
-        return Err("required simultaneous empty-search cut was not reached".into());
+    if let Err(error) = collection {
+        history
+            .flush()
+            .map_err(|e| format!("{error}; flush partial history: {e}"))?;
+        let path = case.directory.join("failure-progress.json");
+        let mut failure = if path.exists() {
+            serde_json::from_slice::<Value>(&fs::read(&path).map_err(|e| e.to_string())?)
+                .map_err(|e| e.to_string())?
+        } else {
+            json!({"passed":false,"execution_completed":false,"error":error,
+                "completed_by_worker":result.completed_by_worker,"offered_by_worker":result.offered_by_worker,
+                "completed_transactions":result.receipts.len(),"pending_maintenance":result.pending_maintenance})
+        };
+        failure["capacity_accounting"] = result.capacity_accounting;
+        write_json(&path, &failure)?;
+        return Err(error);
     }
     let _ = initial;
     Ok(result)
@@ -939,6 +1033,22 @@ fn summarize(
         && completed.workers_stopped_ns <= completed.drain_confirmed_ns)
     {
         return Err("invalid continuous admission-to-drain timestamps".into());
+    }
+    if case.scenario.is_none() && case.config.workload == "calibrated" {
+        // Admission/drain clocks are already fixed. Persist accounting before
+        // the potentially expensive serial-history oracle, which may fail or
+        // be interrupted without making the completed execution disappear.
+        completed.capacity_accounting = capacity::summarize(
+            &capacity_plan(&case.config, completed.admission_started_ns),
+            &completed.calibrated_samples,
+            &completed.offered_by_worker,
+            completed.drain_confirmed_ns,
+            true,
+        )?;
+        write_json(
+            &case.directory.join("capacity-accounting.json"),
+            &completed.capacity_accounting,
+        )?;
     }
     let elapsed_including_drain =
         (completed.drain_confirmed_ns - completed.admission_started_ns) as f64 / 1e9;
@@ -1087,6 +1197,7 @@ fn summarize(
         "performance_scope":"diagnostic instrumented workload; repeated matched trials, noise analysis and availability acceptance are required before architecture promotion",
         "worker_failure_availability_tested":false});
     if case.scenario.is_none() && case.config.workload == "calibrated" {
+        report["capacity_accounting"] = completed.capacity_accounting;
         let measured = calibrated_execution_summary(
             &completed.calibrated_samples,
             &completed.offered_by_worker,
@@ -1597,7 +1708,7 @@ fn parse() -> Result<Option<Config>, String> {
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         if arg == "--help" {
-            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--maintenance-selection complete|prefix (global maintenance query contract; default complete)\n--maintenance-mode batch|sweep --projection-batch-size 4 --housekeeping-batch-size 32 --max-maintenance-batches 4096 (calibrated only; terminal empty transaction counts toward cap)\n--rolling-cycle-messages 0 --rolling-retention-seconds 0 (calibrated sweep only; opt-in rate-dependent lifecycle stress)\n--expiry-index all-active|housekeeping (native fixture only; PostgreSQL already has a partial expiry index)\n--expiry-publication hashed|ordered --expiry-index-origin 1700000000000000000 --expiry-index-width 1000000000 (native expiry publication; fixed time window, no automatic rotation)\n--due-index hashed|ordered --due-index-origin 1700000000000000000 --due-index-width 1000000000 (native due publication buckets; explicit event-time units)\n--retry-diagnostics off|on (on requires retry-diagnostics build feature; bounded failed-attempt evidence)\n--pg-write-mode buffered|immediate --pg-candidate-query or|split (equivalent predicates; default or)\n--pg-analyze-after-seconds 0 (0=initial only; positive=one additional owned-table ANALYZE during sustained fixed arrivals)\n--rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
+            println!("HyperFeed contention Crucible\n--engine both|aerostore|postgres|service-unix|service-tcp|service-remote --mode all|scenarios|sustained|serve\n--workers 4 --families 16 --seconds 30 --max-messages 20000 (per worker; max100000, or1000000 for calibrated sustained metrics) --message-interval-us 0\n--workload legacy|lifecycle|fleet|calibrated --evidence full|metrics (metrics requires sustained)\n--arrival-rate 0 (0=closed loop; positive=fixed arrivals per second) --max-backlog 1000\n--projection-interval-seconds 300 --housekeeping-interval-seconds 600 (calibrated only; wall seconds; workers means foreground plus two maintenance processes)\n--dispatch identity|signature-affinity --affinity-ttl-ms N (positive explicit TTL required for affinity) --signature-pattern both|mixed (calibrated only)\n--maintenance-selection complete|prefix (global maintenance query contract; default complete)\n--maintenance-mode batch|sweep --projection-batch-size 4 --housekeeping-batch-size 32 --max-maintenance-batches 4096 (calibrated only; terminal empty transaction counts toward cap)\n--rolling-cycle-messages 0 --rolling-retention-seconds 0 (calibrated sweep only; opt-in rate-dependent lifecycle stress)\n--expiry-index all-active|housekeeping (native fixture only; PostgreSQL already has a partial expiry index)\n--expiry-publication hashed|ordered --expiry-index-origin 1700000000000000000 --expiry-index-width 1000000000 (native expiry publication; fixed time window, no automatic rotation)\n--due-index hashed|ordered --due-index-origin 1700000000000000000 --due-index-width 1000000000 (native due publication buckets; explicit event-time units)\n--retry-diagnostics off|on (on requires retry-diagnostics build feature; bounded failed-attempt evidence)\n--pg-write-mode buffered|immediate --pg-candidate-query or|split (equivalent predicates; default or)\n--pg-analyze-after-seconds 0 (0=initial only; positive=one additional owned-table ANALYZE during sustained fixed arrivals)\n--rpc-delay-us 0 (service sensitivity only)\n--service-bind 127.0.0.1:0 (serve mode) --remote-setup FILE --remote-final FILE (service-remote)\n--seed 20260924 --hot-percent 80 --shm-mib 256 --oracle-budget 2000000\n--query-plan family|global-time --pg-url URL --output target/contention-crucible.json\n\nNo declared write sets or application prelocks. Complete successful histories must\nhave a serial witness; exhausted oracle budgets are INCONCLUSIVE and fail the run.\nBoth engines use asynchronous WAL acknowledgement; crash durability is not equated.\n--pg-url is required for both/postgres; start and manage the comparison server explicitly.");
             return Ok(None);
         }
         if arg == "--bench" || arg == "--noplot" {
@@ -1836,7 +1947,9 @@ fn parse() -> Result<Option<Config>, String> {
         || config.rpc_delay_us > 1_000_000
         || (config.rpc_delay_us > 0 && !config.engine.starts_with("service-"))
         || !(1..=3600).contains(&config.seconds)
-        || !(1..=100_000).contains(&config.max_messages)
+        || !super::corpus_limits::message_cap_allowed(
+            &config.workload, &config.evidence, &config.mode, config.max_messages,
+        )
         || config.message_interval_us > 1_000_000
         || config.hot_percent > 100
         || !(32..=3584).contains(&config.shm_mib)

@@ -1,5 +1,6 @@
 pub mod aerostore;
 pub mod calibrated;
+mod corpus_limits;
 pub mod fixture;
 pub mod measurement;
 pub mod maintenance;

@@ -55,6 +55,13 @@ from urllib.parse import urlsplit, unquote
 ROOT = Path(__file__).resolve().parents[1]
 FORMAT = "hyperfeed-qualification-v1"
 ENGINES = ("aerostore", "service-unix", "service-tcp", "postgres")
+MAX_CALIBRATED_FOREGROUND = 8_000_000
+
+
+def message_cap_limit(workload, evidence):
+    """Only calibrated metrics trials may opt into larger receipt corpora."""
+    return 1_000_000 if workload == "calibrated" and evidence == "metrics" else 100_000
+
 CORPUS_FIELDS = ("workload", "families", "hot_percent", "seed", "arrival_rate", "seconds")
 MATCH_FIELDS = CORPUS_FIELDS + ("engine", "workers", "pg_write_mode", "rpc_delay_us", "global_time_predicates", "shm_mib", "max_backlog", "max_messages", "message_interval_us")
 CALIBRATED_FIELDS = ("projection_interval_seconds", "housekeeping_interval_seconds")
@@ -275,6 +282,8 @@ def calibrated_corpus(config: dict) -> dict:
     cycle, _ = rolling_config(config)
     projection, housekeeping = calibrated_timer_counts(config)
     foreground = rate * config["seconds"]
+    if foreground > MAX_CALIBRATED_FOREGROUND:
+        raise ValueError("calibrated foreground corpus must remain bounded")
     rounds, remainder = divmod(foreground, active)
     worker_counts = [0] * workers
     for identity in range(active):
@@ -1559,7 +1568,8 @@ def main(argv=None) -> int:
     parser.add_argument("--families", type=int, default=16)
     parser.add_argument("--hot-percent", type=int, default=80)
     parser.add_argument("--max-backlog", type=int, default=1000)
-    parser.add_argument("--max-messages", type=int, default=100000)
+    parser.add_argument("--max-messages", type=int, default=100000,
+                        help="per-worker cap; max100000, or1000000 for calibrated metrics; defaults unchanged")
     parser.add_argument("--max-worker-budget", type=int, default=32)
     parser.add_argument("--cpu-budget", type=int, default=len(os.sched_getaffinity(0)))
     parser.add_argument("--shm-mib", type=int, default=256)
@@ -1601,7 +1611,8 @@ def main(argv=None) -> int:
             or not 1 <= args.housekeeping_interval_seconds <= 3600
             or (args.workload != "calibrated" and (args.projection_interval_seconds != 300 or args.housekeeping_interval_seconds != 600))
             or not 0 <= args.hot_percent <= 100 or args.cpu_budget < 1
-            or not 1 <= args.max_backlog <= 100000 or not 1 <= args.max_messages <= 100000
+            or not 1 <= args.max_backlog <= 100000
+            or not 1 <= args.max_messages <= message_cap_limit(args.workload, args.evidence)
             or not 32 <= args.shm_mib <= 3584 or not 0 <= args.rpc_delay_us <= 1000000
             or (args.rpc_delay_us and any(not engine.startswith("service-") for engine in engines))
             or not finite_number(args.slo_ms) or args.slo_ms <= 0
@@ -1619,7 +1630,11 @@ def main(argv=None) -> int:
                       "projection_interval_seconds": args.projection_interval_seconds,
                       "housekeeping_interval_seconds": args.housekeeping_interval_seconds,
                       **{field: getattr(args, field) for field in CALIBRATED_DEFAULTS}}
-            if max(calibrated_corpus(config)["worker_counts"]) > args.max_messages:
+            try:
+                counts = calibrated_corpus(config)["worker_counts"]
+            except ValueError as error:
+                parser.error(str(error))
+            if max(counts) > args.max_messages:
                 parser.error("calibrated dispatch or timer corpus exceeds a per-process message cap")
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)

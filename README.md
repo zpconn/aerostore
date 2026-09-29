@@ -226,9 +226,15 @@ The [population-scaling checkpoint](docs/hyperfeed_population_scaling.md) reuses
 that engine at 256 and 1,024 synthetic flight identities. Larger sweeps reproduce
 native projection retry exhaustion; the existing ordered-due policy restores
 completion. A separate expiry-eligibility treatment leaves a substantial
-housekeeping latency gap. The next proposed experiment targets excess family
-query reads with a selective index, before changing the core prefix algorithm.
-These results remain diagnostic evidence, not a 10× capacity claim.
+housekeeping latency gap. The
+[sustained-capacity baseline](docs/hyperfeed_sustained_capacity.md) now records
+repeated passing rates of **3,072 incoming messages/s for AeroStore and 640/s for
+PostgreSQL (4.8×)** under a 50 ms end-to-end p99 budget, with queue, maintenance,
+resource and correctness guardrails. Higher tested rates fail the latency
+requirement. This is a bounded synthetic comparison with stated configuration
+and asynchronous-durability differences, not a 10× production HyperFeed claim.
+The next experiment targets measured worker/service communication overhead;
+selective family indexes and broader RPC batching remain deferred.
 
 ## Project layout
 

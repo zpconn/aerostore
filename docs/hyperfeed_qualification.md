@@ -32,6 +32,16 @@ The [complete-sweep checkpoint](bench_data/maintenance_2026-09-25/README.md) add
 
 ## Evidence modes and gate
 
+The [sustained-capacity campaign](hyperfeed_sustained_capacity.md) adds a separate
+assessment of the current synthetic configuration: completed incoming messages
+during arrivals, queue growth, retry-inclusive latency, maintenance deadlines,
+and resource health. This can establish repeatably passing tested rates without
+asserting that the fixture represents production HyperFeed. The existing
+replacement and architecture qualification gates below remain unchanged.
+Operational retry exhaustion and maintenance starvation count as configuration
+failures in that assessment; generator, resource and oracle limits are reported
+separately.
+
 `--evidence full` records every successful attempt's reads, complete query results, effects and outcomes. The independent serial oracle must find a complete witness; `Invalid` and `Inconclusive` fail. `--evidence metrics` runs the same handler with operation recording disabled. It retains outcome counts, retry stages, latency, commit counts and final structural checks, but explicitly reports `correctness_history_verified=false`.
 
 The [qualification driver](../scripts/qualify_hyperfeed.py) retains every cell of a declared engine/rate/worker/seed matrix, including failures. It records dirty source hashes, binary hash, compiler, host, configuration and PostgreSQL settings. Full-history companions must match the measured source, binary, configuration and exact input corpus. They do not prove an unrecorded measurement history.

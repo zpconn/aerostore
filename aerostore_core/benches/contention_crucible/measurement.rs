@@ -4,11 +4,17 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 
+#[path = "capacity.rs"]
+pub mod capacity;
+
 /// Observed execution intervals include retries/backoff, but exclude admission
 /// queueing. They measure occupied worker time, not CPU utilization.
 pub struct ExecutionSample {
     pub worker: usize,
     pub class: &'static str,
+    /// Global foreground arrival sequence, or ordinal within one timer class.
+    /// Never a retry, fork update, or maintenance batch ordinal.
+    pub ordinal: u64,
     pub scheduled_ns: u64,
     pub started_ns: u64,
     pub finished_ns: u64,
@@ -337,6 +343,7 @@ mod tests {
             ExecutionSample {
                 worker: 0,
                 class: "foreground",
+                ordinal: 0,
                 scheduled_ns: 1000,
                 started_ns: 3000,
                 finished_ns: 6000,
@@ -347,6 +354,7 @@ mod tests {
             ExecutionSample {
                 worker: 1,
                 class: "projection",
+                ordinal: 0,
                 scheduled_ns: 2000,
                 started_ns: 4000,
                 finished_ns: 5000,

@@ -1,3 +1,6 @@
 target/
 __pycache__/
 .lake/
+
+# Preserve the stopped first capacity archive locally; publish the validated retry.
+/docs/bench_data/sustained_capacity_2026-09-28/

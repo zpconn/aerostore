@@ -15,6 +15,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub const NANOS_PER_SECOND: u64 = 1_000_000_000;
+/// Compact u32 assignments and rolling IDs remain below their reserved ranges.
+/// Full-history runners retain the separate 100,000-message per-worker bound.
+pub const MAX_FOREGROUND_INPUTS: u64 = 8_000_000;
 pub const EVENT_EPOCH_NS: i64 = 1_700_000_000_000_000_000;
 pub const RECORD_RETENTION_SECONDS: i64 = 3600;
 pub const PROJECTION_BATCH_LIMIT: usize = 4;
@@ -309,7 +312,7 @@ struct DispatchAudit {
 pub struct Schedule {
     pub config: Config,
     /// Only affinity needs materialization. Each global foreground sequence is
-    /// stored exactly once as u32, bounded by the 3.2-million-input limit.
+    /// stored exactly once as u32, bounded by MAX_FOREGROUND_INPUTS.
     assignments: Option<Vec<Vec<u32>>>,
     audit: DispatchAudit,
 }
@@ -348,7 +351,7 @@ pub fn validate_config(config: &Config) -> Result<(), String> {
     {
         return Err("invalid bounded calibrated schedule configuration".into());
     }
-    if foreground_offered(config) > 3_200_000 {
+    if foreground_offered(config) > MAX_FOREGROUND_INPUTS {
         return Err("calibrated foreground corpus must remain bounded".into());
     }
     Ok(())

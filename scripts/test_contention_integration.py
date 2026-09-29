@@ -416,6 +416,45 @@ pid_t waitpid(pid_t pid, int *status, int options) {
         self.assertFalse(report["passed"])
         self.assertEqual(report["stage"], "configuration")
 
+    def test_larger_calibrated_metrics_cap_is_opt_in_without_inflating_inputs(self):
+        run = self.successful("calibrated-larger-metrics-cap", "--workload", "calibrated",
+                              "--families", "4", "--hot-percent", "0", "--workers", "1",
+                              "--arrival-rate", "1", "--max-messages", "1000000")
+        self.assertEqual(run["completed_messages"], 1)
+        self.assertEqual(run["offered_messages"], 1)
+        self.assertEqual(run["completed_by_worker"], [1, 0, 0])
+        self.assertFalse(run["history_checked"])
+        self.assertFalse(run["worker_message_cap_reached"])
+
+    def test_larger_metrics_cap_rejects_unsafe_modes_and_global_overflow(self):
+        changes = [
+            ("full", ("--evidence", "full", "--max-messages", "100001")),
+            ("legacy", ("--workload", "lifecycle", "--hot-percent", "80", "--max-messages", "100001")),
+            ("perworker", ("--max-messages", "1000001")),
+            ("global", ("--seconds", "9", "--arrival-rate", "1000000", "--workers", "16", "--max-messages", "1000000")),
+        ]
+        for name, options in changes:
+            with self.subTest(name=name):
+                receipt, report = self.run_case("calibrated-larger-cap-invalid-" + name,
+                    "--workload", "calibrated", "--families", "4", "--hot-percent", "0", *options)
+                self.assertNotEqual(receipt["exit_code"], 0)
+                self.assertFalse(report["passed"])
+                self.assertEqual(report["stage"], "configuration")
+
+    def test_calibrated_worker_skew_rejects_before_any_foreground_receipt(self):
+        # Three active identities over two workers produce [4,2], although
+        # ceil(total/workers)=3. The prelaunch check must use exact ownership.
+        receipt, report = self.run_case("calibrated-owner-cap-skew", "--workload", "calibrated",
+            "--families", "4", "--hot-percent", "0", "--workers", "2",
+            "--arrival-rate", "6", "--max-messages", "3")
+        self.assertNotEqual(receipt["exit_code"], 0)
+        self.assertFalse(report["passed"])
+        run = report["runs"][0]
+        self.assertFalse(run["execution_completed"])
+        self.assertIn("no jobs may be truncated", run["error"])
+        history = Path(run["evidence_directory"]) / "history.jsonl"
+        self.assertTrue(not history.exists() or history.stat().st_size == 0)
+
 
 if __name__ == "__main__":
     unittest.main()
