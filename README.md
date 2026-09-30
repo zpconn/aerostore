@@ -227,7 +227,7 @@ that engine at 256 and 1,024 synthetic flight identities. Larger sweeps reproduc
 native projection retry exhaustion; the existing ordered-due policy restores
 completion. A separate expiry-eligibility treatment leaves a substantial
 housekeeping latency gap. The
-[sustained-capacity baseline](docs/hyperfeed_sustained_capacity.md) now records
+[historical 16-worker sustained-capacity baseline](docs/hyperfeed_sustained_capacity.md) records
 repeated passing rates of **3,072 incoming messages/s for AeroStore and 640/s for
 PostgreSQL (4.8×)** under a 50 ms end-to-end p99 budget, with queue, maintenance,
 resource and correctness guardrails. Higher tested rates fail the latency
@@ -241,8 +241,22 @@ The [commit-phase and arena-placement experiment](docs/hyperfeed_commit_phases.m
 then found large recurring page-fault spikes. Moving only the benchmark arena
 to memory-backed storage reduced p99 by 40–53% in two short paired comparisons.
 WAL stayed on disk; completed throughput was capped by the offered rate.
-Sustained capacity with this configuration and normal maintenance remains to
-be qualified, so the accepted 4.8× comparison is unchanged.
+The subsequent [queue and worker-count investigation](docs/hyperfeed_queue_profile.md)
+qualified **6,400 incoming messages/s** with the unchanged executable, a memfd
+arena and 24 foreground workers under the same 24 logical CPU budget. Two
+905-second trials achieved 9.01 and 9.17 ms p99 and completed normal maintenance.
+A separate run of the same build at that rate passed the full-history correctness
+guard. This is a synthetic capacity lower bound with asynchronous durability
+limitations. Fresh 24-worker PostgreSQL trials twice sustained 704 offered/s
+with 41.83 and 42.43 ms p99 and normal maintenance; its correctness companion
+and final assessment also passed. These highest repeatably passing tested
+endpoints give **9.09×**, with about **6,399.97 versus 703.99 fully processed
+incoming messages/s while arrivals continue**. Neither maximum capacity nor
+the 10× target is established. Both instrumented correctness companions
+exceeded the latency requirement and serve only as correctness guards; the
+repeated metrics trials supply the capacity results. Durability, transport and
+conflict logging differences remain explicit. The historical 16-worker 4.8×
+comparison is unchanged.
 
 The [fast iteration loop](docs/hyperfeed_iteration.md) compares preserved baseline
 and candidate executables with short, alternating workload screens. Full-history
