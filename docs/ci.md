@@ -2,6 +2,8 @@
 
 The `CI` workflow builds every workspace target, tests the libraries and
 procedural macros, builds documentation, and runs the Python unit suites.
+It also checks the committed proof-input lock before setup: stale locks cannot
+pass required CI, while docs and benchmark edits need only this cheap check.
 It uses Rust 1.93.1, matching the existing verification toolchain. Formatting and
 clippy report problems without blocking until the planned formatting baseline
 is reviewed. Library tests run serially while the existing process-based tests

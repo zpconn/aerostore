@@ -38,6 +38,9 @@ jobs:
             !/docs/bench_data/
             !/docs/verification_data/
 
+      - name: Check committed proof-input lock consistency
+        run: python3 -I scripts/check_formal_coverage.py
+
       - name: Prepare fresh hosted-runner disk space
         run: |
           test "$RUNNER_ENVIRONMENT" = github-hosted
