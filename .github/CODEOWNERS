@@ -1,0 +1,21 @@
+# Enforce these reviews through branch protection after Checkpoint 1 approval.
+/.github/ @zpconn
+/AGENTS.md @zpconn
+/Cargo.toml @zpconn
+/Cargo.lock @zpconn
+/build.rs @zpconn
+/rust-toolchain* @zpconn
+/.cargo/ @zpconn
+/aerostore_*/Cargo.toml @zpconn
+/aerostore_*/Cargo.lock @zpconn
+/aerostore_*/build.rs @zpconn
+/aerostore_*/rust-toolchain* @zpconn
+/aerostore_*/.cargo/ @zpconn
+/aerostore_macros/src/ @zpconn
+/verification/ @zpconn
+/scripts/ @zpconn
+/aerostore_core/benches/ @zpconn
+/aerostore_core/tests/ @zpconn
+/aerostore_tcl/tests/ @zpconn
+/aerostore_macros/tests/ @zpconn
+/aerostore_verified/tests/ @zpconn

@@ -51,6 +51,7 @@ class FrozenBoundaryTests(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory(prefix="aerostore-formal-gate-")
         self.root = Path(self.directory.name)
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
         # Only copy the reviewed files, not build outputs or downloaded tools.
         required = set(coverage.frozen_paths(coverage.ROOT))
         claims = tomllib.loads((coverage.ROOT / "verification/claims.toml").read_text())
@@ -65,8 +66,12 @@ class FrozenBoundaryTests(unittest.TestCase):
         kernel = self.root / "aerostore_verified/src/lib.rs"
         kernel.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(coverage.ROOT / "aerostore_verified/src/lib.rs", kernel)
+        self.track(".")
         files = {name: coverage.digest(self.root / name) for name in coverage.frozen_paths(self.root)}
         (self.root / coverage.LOCK).write_text(json.dumps({"format_version": 1, "files": files}))
+
+    def track(self, name):
+        subprocess.run(["git", "add", "--", name], cwd=self.root, check=True)
 
     def tearDown(self):
         self.directory.cleanup()
@@ -85,6 +90,7 @@ class FrozenBoundaryTests(unittest.TestCase):
 
     def test_new_unproved_engine_module_fails(self):
         (self.root / "aerostore_core/src/unchecked_optimization.rs").write_text("pub fn bypass() {}\n")
+        self.track("aerostore_core/src/unchecked_optimization.rs")
         self.assertFalse(coverage.validate(self.root)["passed"])
 
     def test_changed_proof_runner_fails(self):
@@ -145,17 +151,19 @@ class FrozenBoundaryTests(unittest.TestCase):
 
     def test_extra_kernel_module_fails(self):
         (self.root / "aerostore_verified/src/escape.rs").write_text("pub fn bypass() {}\n")
+        self.track("aerostore_verified/src/escape.rs")
         self.assertFalse(coverage.validate(self.root)["passed"])
 
     def test_new_cargo_configuration_fails(self):
         (self.root / ".cargo").mkdir(exist_ok=True)
         (self.root / ".cargo/config.toml").write_text('[build]\nrustflags = ["--cfg", "skip_proof"]\n')
+        self.track(".cargo/config.toml")
         self.assertFalse(coverage.validate(self.root)["passed"])
 
-    def test_kernel_edit_still_needs_separate_live_proof(self):
-        (self.root / "aerostore_verified/src/lib.rs").write_text("// Candidate can change; proof runner must recheck.\n")
-        # This gate intentionally does not pretend to prove the editable kernel.
-        self.assertTrue(coverage.validate(self.root)["passed"])
+    def test_kernel_edit_requires_reviewed_boundary_and_live_proof(self):
+        (self.root / "aerostore_verified/src/lib.rs").write_text("// Changed production kernel.\n")
+        # Phase 1 tracks all engine sources; token-level refinement comes later.
+        self.assertFalse(coverage.validate(self.root)["passed"])
 
     def test_self_rebaseline_cannot_satisfy_independent_commit(self):
         def git(*arguments):

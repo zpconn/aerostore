@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_BUILD_JOBS: 2
+  CARGO_TERM_COLOR: always
+  RUSTUP_TOOLCHAIN: 1.93.1
+  RUST_TEST_THREADS: 1
+
+jobs:
+  ci:
+    name: ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+          filter: blob:none
+          persist-credentials: false
+          clean: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/docs/bench_data/
+            !/docs/verification_data/
+
+      - name: Check committed proof-input lock consistency
+        run: python3 -I scripts/check_formal_coverage.py
+
+      - name: Prepare fresh hosted-runner disk space
+        run: |
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          df -h .
+          for sdk in /usr/local/lib/android /usr/share/dotnet /opt/ghc; do
+            if [[ -d "$sdk" ]]; then
+              sudo du -sh "$sdk"
+              sudo rm -rf -- "$sdk"
+            fi
+          done
+          df -h .
+
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes tcl-dev clang libclang-dev pkg-config libssl-dev
+          rustup toolchain install 1.93.1 --profile minimal --component rustfmt --component clippy
+
+      - name: Cache Rust dependencies and compiler output
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/debug
+          key: ${{ runner.os }}-rust-1.93.1-ci-${{ hashFiles('Cargo.lock', '**/Cargo.toml') }}
+
+      - name: Check build disk budget
+        run: |
+          mkdir -p target
+          df -h .
+          du -xhd1 target
+          # Fresh hosted runner: allow 8 GiB additional output and keep 4 GiB free.
+          available=$(df --output=avail -B1 . | tail -n 1)
+          required=$((12 * 1024 * 1024 * 1024))
+          echo "Build budget: 8 GiB growth, 4 GiB reserve; available bytes: $available"
+          test "$available" -ge "$required"
+
+      - name: Restore the two small unit-test fixtures
+        run: |
+          mkdir -p docs/bench_data/transactional_indexes_2026-09-22/churn_128m
+          git show HEAD:docs/bench_data/transactional_indexes_2026-09-22/churn_128m/crucible_profile_2g_120s.log > docs/bench_data/transactional_indexes_2026-09-22/churn_128m/crucible_profile_2g_120s.log
+          git show HEAD:docs/bench_data/transactional_indexes_2026-09-22/aerostore_64f_16c_8w_128m.json > docs/bench_data/transactional_indexes_2026-09-22/aerostore_64f_16c_8w_128m.json
+
+      - name: Python unit tests
+        run: python3 scripts/run_python_unit_tests.py
+
+      - name: Compile Python tooling
+        run: python3 -m compileall -q scripts verification
+
+      - name: Build every workspace target
+        run: |
+          ulimit -c 0
+          cargo build --workspace --all-targets --locked
+
+      - name: Test workspace libraries
+        run: |
+          ulimit -c 0
+          cargo test --workspace --lib --locked
+
+      - name: Test procedural macros
+        run: |
+          ulimit -c 0
+          cargo test -p aerostore_macros --locked
+
+      - name: Build documentation
+        run: |
+          ulimit -c 0
+          cargo doc --workspace --no-deps --locked
+
+      - name: Formatting report
+        continue-on-error: true
+        run: cargo fmt --all -- --check
+
+      - name: Clippy report
+        continue-on-error: true
+        run: |
+          ulimit -c 0
+          cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Record final disk usage
+        if: always()
+        run: |
+          df -h .
+          if [[ -d target ]]; then du -xhd1 target; fi
