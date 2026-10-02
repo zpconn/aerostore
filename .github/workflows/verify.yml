@@ -321,8 +321,8 @@ jobs:
           done
           df -h .
           available=$(df --output=avail -B1 . | tail -n 1)
-          required=$((48 * 1024 * 1024 * 1024))
-          echo "Pilot budget: 10 GiB tool provisioning, 30 GiB isolated builds, 8 GiB reserve; available bytes: $available"
+          required=$((55 * 1024 * 1024 * 1024))
+          echo "Pilot budget: 17 GiB tool provisioning, 30 GiB isolated builds, 8 GiB reserve; available bytes: $available"
           test "$available" -ge "$required"
 
       - name: Install Java
@@ -343,6 +343,9 @@ jobs:
             target/verification-tools
             verification/lean/.lake
           key: ${{ runner.os }}-verify-tools-${{ hashFiles('verification/**/toolchain.json', 'verification/lean/lean-toolchain', 'verification/lean/lake-manifest.json', 'scripts/setup_verification.py', 'Cargo.lock') }}
+
+      - name: Validate the pinned model-checker download first
+        run: python3 scripts/setup_verification.py --only tla --skip-fetch
 
       - name: Provision pinned toolchains and dependencies
         run: python3 scripts/setup_verification.py

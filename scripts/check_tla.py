@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -19,10 +20,14 @@ import subprocess
 import sys
 import tempfile
 import time
-import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 MODELS = ROOT / "verification" / "tla"
+# The service protocol checker loads this runner by path, without scripts/ on
+# sys.path. Resolve the shared downloader from its exact sibling source too.
+_download_spec = importlib.util.spec_from_file_location("tlc_download", Path(__file__).with_name("tlc_download.py"))
+tlc_download = importlib.util.module_from_spec(_download_spec)
+_download_spec.loader.exec_module(tlc_download)
 
 
 def digest(path: Path) -> str:
@@ -110,23 +115,10 @@ def run_in_stage(args: argparse.Namespace, stage: Path) -> int:
     for name in blocked_environment:
         java_environment.pop(name, None)
     jar = args.jar.resolve() if args.jar else ROOT / toolchain["default_path"]
-    if not jar.exists():
-        if not args.download:
-            raise ValueError(f"missing TLC jar: {jar}; rerun with --download")
-        jar.parent.mkdir(parents=True, exist_ok=True)
-        temporary = jar.with_suffix(".download")
-        try:
-            with urllib.request.urlopen(toolchain["release_url"], timeout=60) as response:
-                temporary.write_bytes(response.read())
-            if digest(temporary) != toolchain["sha256"]:
-                raise ValueError("downloaded TLC SHA-256 differs from pinned artifact")
-            temporary.replace(jar)
-        finally:
-            temporary.unlink(missing_ok=True)
-    if digest(jar) != toolchain["sha256"]:
-        raise ValueError(f"TLC SHA-256 mismatch: {jar}")
+    tlc_download.ensure_tlc(toolchain, jar, allow_download=args.download)
     sources = [MODELS / (model + ".tla") for model in sorted({case["model"] for case in campaign["cases"]})]
-    sources += [MODELS / "campaign.json", MODELS / "toolchain.json", Path(__file__).resolve()]
+    sources += [MODELS / "campaign.json", MODELS / "toolchain.json", Path(__file__).resolve(),
+                Path(tlc_download.__file__).resolve()]
     report["source_sha256"] = {str(path.relative_to(ROOT)): digest(path) for path in sources}
     for source in sources:
         if source.suffix == ".tla":

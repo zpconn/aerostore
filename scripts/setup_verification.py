@@ -19,7 +19,7 @@ import shlex
 import shutil
 import subprocess
 import sys
-import urllib.request
+import tlc_download
 
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS = ROOT / "target/verification-tools"
@@ -116,20 +116,7 @@ def main() -> int:
                 raise RuntimeError("Java 21 is required for the recorded TLC configuration: " + java_version)
             pin = json.loads((ROOT / "verification/tla/toolchain.json").read_text())
             jar = ROOT / pin["default_path"]
-            if not jar.exists():
-                jar.parent.mkdir(parents=True, exist_ok=True)
-                temporary = jar.with_suffix(".download")
-                try:
-                    print("setup: downloading pinned TLC", flush=True)
-                    with urllib.request.urlopen(pin["release_url"], timeout=60) as response:
-                        temporary.write_bytes(response.read())
-                    if sha256(temporary) != pin["sha256"]:
-                        raise RuntimeError("downloaded TLC artifact checksum mismatch")
-                    temporary.replace(jar)
-                finally:
-                    temporary.unlink(missing_ok=True)
-            if sha256(jar) != pin["sha256"]:
-                raise RuntimeError("installed TLC artifact checksum mismatch")
+            tlc_download.ensure_tlc(pin, jar, allow_download=True)
             receipt["tlc_sha256"] = pin["sha256"]
             receipt["java_version"] = java_version.strip()
         changed = [name for name, expected in before.items() if sha256(manifests[name]) != expected]

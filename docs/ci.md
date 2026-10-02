@@ -88,3 +88,9 @@ These CI checks run in fresh hosted workspaces so rebuilding does not overwrite
 those historical bytes. See [the disk-space runbook](disk-space.md) before any
 local build or cleanup. Boundary and pilot logs and receipts are retained as
 workflow artifacts, including failed runs.
+
+TLC's upstream `v1.8.0` download is a rolling build. Setup retrieves the exact
+previously tested jar from the official publisher's dated extension package,
+checking both the package and jar hashes. This changes its download source, not
+its version or executable bytes. CI checks that download before building the
+remaining proof tools.
