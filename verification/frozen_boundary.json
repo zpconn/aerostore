@@ -1,7 +1,7 @@
 {
   "files": {
     ".github/CODEOWNERS": "83802a673c889fe5c6bfc596e6347abf61c0092f6acaae3a5f4cce0fef3dc2e3",
-    ".github/workflows/verify.yml": "d16344f2fc6f7c3db903fc4394d796f5ab8250cbdbe9ae12294b453235fda430",
+    ".github/workflows/verify.yml": "bba192fc0213f242fa0916f51e58c26fb031cae3e7575ef50c1825b07bfa6da0",
     "Cargo.lock": "6c0d2df18dbfba1408aaedf361cd480eb20ea629bdc6b185ce6b02fa9f31ab2d",
     "Cargo.toml": "8f8878e016d2781884975dc980c2e97372d003b077f7f266d2940631fef535d0",
     "aerostore_core/Cargo.toml": "576b2988775fcb3151d46cbf672e8f3c1d103166402e6a13091dfd7b13a7fbcb",

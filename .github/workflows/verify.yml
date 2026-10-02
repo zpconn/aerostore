@@ -153,7 +153,8 @@ concurrency:
 
 env:
   CARGO_BUILD_JOBS: 2
-  CARGO_TERM_COLOR: always
+  # Native receipts parse Cargo's executable paths from its plain-text log.
+  CARGO_TERM_COLOR: never
   FORMAL_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || inputs.baseline_ref }}
   FORMAL_MODE: ${{ (startsWith(github.head_ref, 'exp/') || contains(github.event.pull_request.labels.*.name, 'perf-experiment') || inputs.mode == 'experiment') && 'experiment' || 'review' }}
 
