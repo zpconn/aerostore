@@ -1,6 +1,6 @@
 # Checkpoint 2: archive and launch the smaller repository
 
-Status: **approved by the owner on October 2, 2026; publication qualification in progress**.
+Status: **approved by the owner on October 2, 2026; public launch qualification passed**.
 The original approved packet is retained in source commit `ab57181a` in the local
 backup and as rewritten commit `6c1e3417` in the new repository. Checkpoint 2
 approved the operations below and the exact packaging boundary; it did not
@@ -12,12 +12,32 @@ The original repository is now `zpconn/aerostore-archive` (ID `1167197125`), wit
 publishes master `6c1e3417`, whose tree matches the approved prepared source.
 The fresh public clone is 23.7 MB allocated; three canonical archive fetches
 verified 330 files, and five documented historical commits resolve in the archive.
-Fresh [CI](https://github.com/zpconn/aerostore/actions/runs/37047817537) passed.
-[Verify](https://github.com/zpconn/aerostore/actions/runs/37047821217) is running.
-Verify uses the approved mapped baseline `57b32d33`; these local checks do not
-replace its full hosted pilot.
+Fresh [CI](https://github.com/zpconn/aerostore/actions/runs/37047817537) and
+[Verify](https://github.com/zpconn/aerostore/actions/runs/37047821217) passed on
+the published master, using approved mapped baseline `57b32d33` for Verify.
+Both exact hosted ZIPs, totaling 8,919,051,206 bytes, were downloaded once and
+independently rehashed against GitHub's finalized digests. The audit of 873
+selected reports/logs confirms all 72 pilot checks, 577 committed source
+fingerprints, all 266 frozen inputs and 16 native log/executable bindings.
+P0's contract audit passed; 41 declared claim scopes have evidence and six
+engine obligations remain open. Full P1, whole-engine verification and automatic
+promotion eligibility remain false. The local audit retains the original ZIPs;
+it does not re-execute proofs or rehash their embedded native binaries.
 
-## Reviewed local result
+The working checkout now points to the new master. All 31,978 retained payload
+files (12,552,340,272 bytes) passed the post-migration path/hash/stat comparison.
+Only the four approved old local branches were deleted. Original Git objects,
+the archive tag and old remote-tracking refs remain until the separate 2.5.9
+approval. An independent supplement preserves 23 otherwise unbacked objects;
+the original mirror and existing evidence remain unchanged.
+
+Final hosted evidence is local-only under
+`runs/overhaul-phase2/2026-10-02/hosted-37047821217-attempt1/`, including the
+metadata binding, download/preservation receipts and `source-scope-audit.json`.
+The commit-map PR still needs owner merge approval. Cleanup/read-only archival
+and the local-only evidence releases remain separate checkpoints.
+
+## Approved packet: reviewed local result
 
 The preparation commit is `d0433540fa6f04ad66b48f9977d8ab2644a61281` on
 `overhaul/phase-2-externalization`. It has not been pushed to the current public
@@ -197,5 +217,7 @@ Local evidence, intentionally outside Git, is under
 - `checkpoint2/`: exact source head, proposed API bodies, resource record,
   README audit, operation list and resume commands.
 
-These local rehearsals do not qualify the future public archive. Phase 2 remains
-incomplete until the publication checks and remaining approval steps are handled.
+The rehearsals above preceded publication; the completed public qualification
+is recorded at the top of this packet and in the execution log. Phase 2 remains
+incomplete while the follow-up merge, cleanup/archive checkpoint and evidence
+release work are pending.
