@@ -258,7 +258,7 @@ Approach:
 - Rename the current GitHub repository to `zpconn/aerostore-archive`. Nothing is re-uploaded, so old hashes and all evidence stay resolvable there.
 - Push a rewritten, small history to a new `zpconn/aerostore`.
 
-Evidence entered history in `91d4afce` (2026-03-03). That commit and the 56 after it (57 of the 119 on `master`) change hashes; the 62 earlier commits keep theirs.
+Evidence entered history in `91d4afce` (2026-03-03). The dry run corrected the original hash-preservation estimate: all 62 earlier trees are unchanged, but only nine commit IDs survive. The filter removes signature headers, changing the first signed commit and its descendants. Of the 119 commits on the original `910dba90` master, 105 are rewritten and five evidence-only commits disappear. The prepared `d0433540` history has 128 commits: nine unchanged, 114 rewritten and five removed. Original commits and signatures remain in the archive; publish the measured map rather than assuming IDs survive.
 
 - [x] **2.1 Script the rewrite** in `tools/history/rewrite.py` (or `.sh`), documented in `tools/history/README.md`.
 
@@ -294,7 +294,7 @@ Evidence entered history in `91d4afce` (2026-03-03). That commit and the 56 afte
   - **Update `.gitignore`.** Move the two campaign-specific entries into `.git/info/exclude`, and add `/runs/` and `/.tools/`.
 
   **Done when:** the tree has no evidence payloads, the link check passes, and fetching works against the local source.
-- [ ] **2.3 Dry run.** Run the rewrite script on a scratch mirror and produce its report.
+- [x] **2.3 Dry run.** Run the rewrite script on a scratch mirror and produce its report.
 - [x] **2.4 Write README v1**, the launch README: at most 200 lines, following the outline in task 7.1.
   - Build it from existing content.
   - Include the results table with its caveats beside it, and a first "How it was built" section (D3).
@@ -305,7 +305,7 @@ Evidence entered history in `91d4afce` (2026-03-03). That commit and the 56 afte
 - README v1;
 - the exact list of GitHub operations in task 2.5.
 
-Then wait for approval.
+Then wait for approval. The prepared review packet is [Checkpoint 2](docs/overhaul_checkpoint_2.md); it distinguishes the tested source commit from the subsequent documentation-only checkpoint commit.
 
 - [ ] **2.5 Execute the rewrite.** These steps are sequential.
   1. **Back up.** Check disk space, then make a local mirror backup of the original repository outside the working tree, e.g. `~/aerostore-archive.git` (about 6.6 GiB).
@@ -314,7 +314,7 @@ Then wait for approval.
   4. **Rewrite.** Merge the externalization branch into local `master`. Run the rewrite script for real on a fresh clone of the local repository, and verify the invariant.
   5. **Create the new repository.** Create a new public `zpconn/aerostore` with `gh repo create`, and push only the rewritten `master`. Then configure it:
      - default branch;
-     - branch protection requiring `ci` and `verify`;
+     - branch protection requiring app-pinned `ci`, with the owner-approved interim procedure through Phase 6: manually require Verify when applicable, since its path filters skip docs-only PRs; owner approval is required for each protected merge and administrator bypass remains available;
      - read-only default permissions for Actions;
      - description and topics (text in task 7.7).
   6. **Publish the commit map.** Commit `evidence/history-commit-map.tsv` (old to new) in a follow-up PR.
@@ -846,7 +846,7 @@ Each item goes through Phase 6 as either an engine experiment or a judge PR. Thi
 - The largest campaign, `sustained_capacity_2026-09-28-retry2`, is 5.1 GB.
 
 **History**
-- 119 commits on `master`. Evidence was first added in `91d4afce` (2026-03-03). The rewrite changes 57 commits (those that touch evidence, plus their descendants), and the other 62 keep their hashes.
+- 119 commits on the original `910dba90` master. Evidence was first added in `91d4afce` (2026-03-03). The Phase 2 dry run corrected the initial prediction: nine IDs remain, 105 change and five evidence-only commits are pruned. All 62 pre-evidence trees remain identical, but signature-header removal changes 53 of their commit IDs. The complete original history and signatures remain preserved.
 - Authors: `Codex <codex@local>` 62, `Zach Conn` 41, `zpconn` 16.
 - The repository-level git config sets `user.name=Codex`.
 - Fully merged branches: `diagnose/index-insert-failures-crucible` and `wip/sustained-churn-pressure-fix`.
@@ -966,3 +966,4 @@ Each item goes through Phase 6 as either an engine experiment or a judge PR. Thi
 | 2026-10-02 | 1.1 complete; 1.2 docs-only trigger behavior observed | Master `c22acd411cba7910f3f4f031fe9e27606c98ec9a`; docs PR https://github.com/zpconn/aerostore-archive/pull/2 at `6c5c62cbfe5837cfd3504ced5ff154e3ae8e1522` | Master CI https://github.com/zpconn/aerostore-archive/actions/runs/37025735329; docs CI https://github.com/zpconn/aerostore-archive/actions/runs/37026545031; `runs/overhaul-phase1/2026-10-02/{master-ci-summary.json,docs-only-trigger-observation.json,master-anchor-37025975365/independent-review.json}` | Ordinary CI is green on PR and master. The separate docs-only PR changes only the plan and CI documentation, passes CI, and triggers no Verify run. The master boundary is independently anchored to the approved PR head with no changed proof inputs; full master pilot 37025975365 remains active. Task 1.2 and Phase 1 remain incomplete until the full master result passes and its evidence is retained. Hold this log update until that result to avoid redundant docs-CI reruns. |
 | 2026-10-02 | Phase 1 complete: 1.1, 1.2, 1.3 | Approved PR #1 merged as `c22acd411cba7910f3f4f031fe9e27606c98ec9a`; docs-only PR #2 remains unmerged | Master Verify https://github.com/zpconn/aerostore-archive/actions/runs/37025975365; `runs/overhaul-phase1/2026-10-02/{master-verify-37025975365-final.json,artifact-preservation-37025975365-receipt.json,provisional-members-37025975365-comparison.json,master-report-audit-37025975365.json,final-resources-master-37025975365.json}` | Master CI and Verify are green; separate docs-only CI passed without triggering Verify. All 72 pilot checks passed, source stable; 575 source fingerprints, 266 frozen inputs, and 16 native log/executable bindings match the exact merge. P0 contract audit complete; 41 declared claim scopes evidenced, six engine obligations open; full P1, whole-engine verification and promotion eligibility remain false. Exact ZIP digests match GitHub; 873 bounded reports/logs extracted; provisional reports match authenticated archive bytes. Phase 1 retained output 25.0 GiB within 32 GiB allowance; no local builds, compiler-tree extraction, evidence cleanup, or additional protected merge. Phase 2 preparation may now begin; outward actions remain at Checkpoint 2. |
 | 2026-10-02 | 2.1, 2.2, 2.4 prepared locally | `overhaul/phase-2-externalization`; history tool, evidence catalog/fetcher, link checker and launch README | `runs/overhaul-phase2/2026-10-02/{admission.json,local-validation.json,catalog-build/catalog-build.json,payload-preservation-after-untrack.json,fetch-tests/summary.json,link-rewrite/post-validation.json,readme-review/REVIEW.md}` | 39 archive campaigns/28,428 tracked files, plus 70 explicitly local-only inventory groups. All 31,978 local payloads (12,552,340,272 bytes) hash/stat-identical after index-only removal. Four summaries/fixtures copied byte-for-byte. Three real local file-URL campaign fetches verify 330 files; no public archive qualification claimed. 834 Python tests: 794 pass and 40 explicit native skips across 35 suites; 19 real tiny history fixtures included. Catalog, 346 local links, actionlint and whitespace checks pass. README under 200 lines, image and G4 paragraphs retained. Reviewed boundary changes only: fixture-step removal in Verify and three links in two protected docs. Engine, workload, assertions, contracts and tool pins unchanged. No original history rewrite, repository rename/create, tag/push, retained evidence deletion or local Cargo build. Full scratch rewrite and Checkpoint 2 review remain. |
+| 2026-10-02 | 2.3 complete; Checkpoint 2 prepared, awaiting owner approval | Prepared source `d0433540fa6f04ad66b48f9977d8ab2644a61281`; rehearsal master `57b32d33a92ccc0437b6152aa0639245e4cabb71` | `runs/overhaul-phase2/2026-10-02/{rewrite-dry-run-001/report.json,rewritten-clone-check/receipt.json,commit-map-review/audit/audit.json,checkpoint2/}`; [review packet](docs/overhaul_checkpoint_2.md) | Scratch rewrite passed; identical tree `788f88474c5811bd136662781fe039e472c54b0a`, source refs unchanged, removed roots absent throughout history. All-ref pack 3.58 MiB; independent master-only clone 23.7 MB allocated. Catalog, links, P0 and independent boundary review pass. Map covers 128 commits: 9 unchanged, 114 rewritten, 5 evidence-only commits removed. Signature stripping explains the corrected pre-evidence hash estimate; all 62 earlier trees remain identical. Original signatures, history and local evidence retained. README 147 lines with image, Tcl example and G4 paragraphs preserved. Only checkpoint/plan/history documentation changes after the tested preparation; publication must rewrite the final child and recheck equality. Proposed exact packaging-boundary approval binds d043 and lock `f86fb4df7b41d9945c135106f51eb5ded89ae7a03210703394184fc57bfbc6d3`; final child must have identical 266 inputs before anchored hosted Verify. No tag, repository rename/create, master push, source pruning, evidence removal or Phase 2 settings change executed. |

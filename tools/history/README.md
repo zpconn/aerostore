@@ -31,8 +31,10 @@ Before a real mirror run, follow [the disk-space runbook](../../docs/disk-space.
 measure allocated usage and Linux/Windows free space, record the source pack
 size and additional-storage allowance, and admit the batch with the campaign
 owner. A mirror plus temporary repacking can coexist, so budget for both.
-The Phase 2 campaign has a shared 20 GiB additional-output allowance, 30 GiB
-Linux/Windows reserves, and a 4 GiB available-memory reserve. Only one large
+The Phase 2 local rehearsal has a shared 20 GiB additional-output allowance,
+30 GiB Linux/Windows reserves, and a 4 GiB available-memory reserve. Publication
+requires a new admission that also budgets for the retained backup and hosted
+artifacts; see [Checkpoint 2](../../docs/overhaul_checkpoint_2.md). Only one large
 clone runs at a time. This tool does not replace that shared admission decision
 or silently delete an old attempt to obtain space.
 
@@ -89,6 +91,14 @@ commits. Do not use it to mutate historical receipts: old receipt hashes still
 refer to the original archive. Only rewritten `master` is intended for later
 publication, through the separately approved Phase 2.5 procedure. Do not mirror
 push the scratch repository.
+
+Commit IDs can change before the first removed file. The pinned filter strips
+commit signatures; the changed IDs then propagate through descendants. It also
+updates recognized abbreviated commit references in messages and prunes commits
+made empty by removal. The Phase 2 rehearsal kept all 62 pre-evidence trees
+identical but only nine of their commit IDs. Original signatures and messages
+remain in the source repository and planned archive. Review the actual map and
+report; do not infer unchanged IDs from unchanged file trees.
 
 Preflight refusals exit nonzero without creating the output. Failures after
 creation retain the scratch directory, logs, and a failing report. No output
