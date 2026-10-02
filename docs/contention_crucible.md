@@ -132,6 +132,6 @@ Retain verification as a guardrail for stable requirements: atomic transactions,
 
 ## First investigation
 
-The [2026-09-24 evidence](bench_data/contention_2026-09-24/README.md) records passing complete histories, two native broad-query retry-limit failures, PostgreSQL deadlock-timeout sensitivity, and two-minute controlled-rate retention runs. The overall workload campaign remains failed; component proofs and passing characterization tests do not override its progress or worker-availability failures.
+The [2026-09-24 evidence](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/contention_2026-09-24/README.md) records passing complete histories, two native broad-query retry-limit failures, PostgreSQL deadlock-timeout sensitivity, and two-minute controlled-rate retention runs. The overall workload campaign remains failed; component proofs and passing characterization tests do not override its progress or worker-availability failures.
 
 Cargo runs benchmark executables from the package directory. The commands above use absolute output paths so evidence lands in the repository's `target/`; a relative `--output` is relative to the executable's working directory.

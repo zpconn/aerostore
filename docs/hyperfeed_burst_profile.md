@@ -126,8 +126,8 @@ checks and accounting comparison. No Cargo build or engine modification was
 needed. Both owned envelopes, profilers and samplers stopped; retained source,
 binary and tool hashes were rechecked.
 
-The [compact evidence manifest](bench_data/hyperfeed_burst_profile_2026-09-29/artifact-manifest.json)
-and [archive validation](bench_data/hyperfeed_burst_profile_2026-09-29/archive-validation.json)
+The [compact evidence manifest](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_burst_profile_2026-09-29/artifact-manifest.json)
+and [archive validation](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_burst_profile_2026-09-29/archive-validation.json)
 include analyses, scripts, test receipts, disassembly and compressed decoded
 stacks. Raw perf recordings, histories, tools and executables remain at their
 original local paths. This is not a portable archive of every runtime dependency.

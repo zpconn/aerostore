@@ -239,8 +239,8 @@ the next capacity step; the accepted endpoints above remain unchanged.
 
 Raw results, original timeout evidence, source and executable receipts, profile
 analyses, and resumed checks remain under `target/sustained-capacity-20260928`.
-The [archive manifest](bench_data/sustained_capacity_2026-09-28-retry2/artifact-manifest.json)
-and [validation receipt](bench_data/sustained_capacity_2026-09-28-retry2/archive-validation.json)
+The [archive manifest](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/sustained_capacity_2026-09-28-retry2/artifact-manifest.json)
+and [validation receipt](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/sustained_capacity_2026-09-28-retry2/archive-validation.json)
 cover 2,236 logical files: 87.2 GB of original evidence stored in 5.1 GB of
 bounded compressed chunks. Executables and runtime dependencies remain at their
 original local paths; the archive records their hashes rather than embedding

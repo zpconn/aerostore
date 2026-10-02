@@ -11,7 +11,8 @@ are being separated into tiers.
 
 Both workflows use shallow, filtered, sparse checkouts. Bulk benchmark and
 verification evidence is excluded. Two small existing benchmark report fixtures
-are fetched unchanged because the performance-checker unit tests consume them.
+are retained byte-for-byte under `evidence/` for the performance-checker tests.
+Ordinary CI checks the catalog, manifests, retained copies and documentation links.
 Native integration tests that need an explicitly selected benchmark binary or
 PostgreSQL remain separate; their skips are reported.
 

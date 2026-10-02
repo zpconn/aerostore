@@ -30,7 +30,7 @@ def test_directories(paths: list[str]) -> list[str]:
         if not path.name.startswith("test_") or path.suffix != ".py":
             continue
         if path.parent in (Path("scripts"), Path("scripts/tests")) or (
-            path.parts and path.parts[0] == "verification"
+            path.parts and path.parts[0] in {"verification", "tools"}
         ):
             selected.add(str(path.parent))
     return sorted(selected)
@@ -64,7 +64,7 @@ def main() -> int:
     parser.add_argument("--list", action="store_true", help="list selected directories without running tests")
     args = parser.parse_args()
     root = args.root.resolve()
-    paths = subprocess.check_output(["git", "ls-files", "-z", "--", "scripts", "verification"],
+    paths = subprocess.check_output(["git", "ls-files", "-z", "--", "scripts", "verification", "tools"],
                                     cwd=root).decode().split("\0")
     directories = test_directories(paths)
     if not directories:

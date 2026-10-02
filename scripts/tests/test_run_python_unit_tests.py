@@ -11,6 +11,12 @@ SPEC.loader.exec_module(runner)
 
 
 class PythonUnitRunnerTests(unittest.TestCase):
+    def test_tools_suites_are_selected_but_run_artifacts_are_not(self):
+        paths = ["tools/history/test_rewrite.py", "tools/evidence/test_check_catalog.py",
+                 "tools/tests/test_check_links.py", "runs/history/test_rewrite.py"]
+        self.assertEqual(runner.test_directories(paths),
+                         ["tools/evidence", "tools/history", "tools/tests"])
+
     def test_campaigns_with_same_module_name_use_separate_processes(self):
         paths = ["verification/first/test_generate.py", "verification/second/test_generate.py",
                  "scripts/test_formal_gate.py", "scripts/tests/test_capture.py",

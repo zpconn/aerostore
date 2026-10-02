@@ -1,0 +1,11 @@
+{
+  "campaign_id": "hyperfeed_socket_write_2026-09-30",
+  "files": [
+    {
+      "bytes": 164,
+      "path": "archive-incomplete.json",
+      "sha256": "594a8474bc06bce6e5b2a3d3287513d8e5b9643ae97d195f829ad0289c9fa15d"
+    }
+  ],
+  "schema_version": 1
+}

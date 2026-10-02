@@ -1,0 +1,16 @@
+{
+  "campaign_id": "bench-root-files",
+  "files": [
+    {
+      "bytes": 2792,
+      "path": "aerostore_alloc_profile_2g_120s_2026-03-03.csv",
+      "sha256": "3c208d9bdf4f856fde6e4a4f0c0ca8df005e43331f5a64b788e8807ec470dad3"
+    },
+    {
+      "bytes": 2817,
+      "path": "fixture_cleanup_2026-09-25.json",
+      "sha256": "68f7a7adff008f01a5bcbd381e27659abb77aea7dfaad28cbb09fd73fd8fb64a"
+    }
+  ],
+  "schema_version": 1
+}

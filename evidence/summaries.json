@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "files": [
+    {
+      "path": "evidence/hyperfeed_queue_profile_2026-09-30/workers24-accepted-comparison01.json",
+      "source_path": "docs/bench_data/hyperfeed_queue_profile_2026-09-30/evidence/workers24-accepted-comparison01.json",
+      "archive_commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+      "sha256": "cd975c9a315a862ef114adc2feb3692a0094190a72686c23b232a37990f67138",
+      "bytes": 44069,
+      "scope": "Byte-identical summary or existing unit-test fixture; original local references remain unchanged."
+    },
+    {
+      "path": "evidence/transactional_indexes_2026-09-22/sustained-summary.json",
+      "source_path": "docs/bench_data/transactional_indexes_2026-09-22/sustained-summary.json",
+      "archive_commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+      "sha256": "5875dd29327d5d8c830d1a8132499d1c92428c2c73f29f392ff233e0bdf83954",
+      "bytes": 2082,
+      "scope": "Byte-identical summary or existing unit-test fixture; original local references remain unchanged."
+    },
+    {
+      "path": "evidence/transactional_indexes_2026-09-22/churn_128m/crucible_profile_2g_120s.log",
+      "source_path": "docs/bench_data/transactional_indexes_2026-09-22/churn_128m/crucible_profile_2g_120s.log",
+      "archive_commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+      "sha256": "6c4b1580330f26f5a73cd6e8443e48a1885103661974140f09c33a6291b04d14",
+      "bytes": 13076,
+      "scope": "Byte-identical summary or existing unit-test fixture; original local references remain unchanged."
+    },
+    {
+      "path": "evidence/transactional_indexes_2026-09-22/aerostore_64f_16c_8w_128m.json",
+      "source_path": "docs/bench_data/transactional_indexes_2026-09-22/aerostore_64f_16c_8w_128m.json",
+      "archive_commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+      "sha256": "f6294369870783b3b6fe2a4538b88f357fbd9e12246c7657be39d9d16777ca1a",
+      "bytes": 412346,
+      "scope": "Byte-identical summary or existing unit-test fixture; original local references remain unchanged."
+    }
+  ]
+}

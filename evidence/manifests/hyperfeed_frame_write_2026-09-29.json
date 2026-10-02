@@ -1,0 +1,106 @@
+{
+  "campaign_id": "hyperfeed_frame_write_2026-09-29",
+  "files": [
+    {
+      "bytes": 14514,
+      "path": "candidate-contiguous.patch",
+      "sha256": "2b4a634134bc08033b41d3ebab7e235c003977b425e4af097cd020b799c0fc4c"
+    },
+    {
+      "bytes": 13738,
+      "path": "candidate-vectored.patch",
+      "sha256": "5cd7448e840a9d973717695df95b970728c8680e4ea8cf104155857b2d9cc032"
+    },
+    {
+      "bytes": 796,
+      "path": "contiguous-foreground-4032-driver.json",
+      "sha256": "401b250c1275a0c192084716efd318a0fed2ed84305f36fb38951f66c90e1173"
+    },
+    {
+      "bytes": 40850,
+      "path": "contiguous-foreground-4032-screen.json",
+      "sha256": "b9700d6b9c5cf0574e0de36a7f7eeb0ebfdeaef15b7f1d380b4e85ca1f32fd7d"
+    },
+    {
+      "bytes": 19527,
+      "path": "contiguous-proof-impact.json",
+      "sha256": "4d666a9b11d3738cb8986183167c5f473714ea41ffb22fdc0ab6978bb7eedaf4"
+    },
+    {
+      "bytes": 6511,
+      "path": "decision.json",
+      "sha256": "eed77e9455c09d6fe368bd0747b2963856b033e5aea427e2143d4517e5a68af2"
+    },
+    {
+      "bytes": 12907,
+      "path": "final-audit.json",
+      "sha256": "abaf78db76236d8a1731a1ff6207ae8f17de7cfcfe6430c0de1eb4016711dee2"
+    },
+    {
+      "bytes": 131321,
+      "path": "focused-tests-contiguous-receipt.json",
+      "sha256": "07cb823b677ad37fcb4415f8ad53c4cb72a3bb28ad814013cdccd9652c87e19e"
+    },
+    {
+      "bytes": 4209,
+      "path": "focused-tests-contiguous.log",
+      "sha256": "b543f06c6ef0d59bad33bd083bc49a91c77d2c8447f6c4ce2461bdcada8d1c16"
+    },
+    {
+      "bytes": 131299,
+      "path": "focused-tests-receipt.json",
+      "sha256": "c42906ec5e9a84a63102d93c33598f7ef51f858777ed2636a4a91c4701ffbfbd"
+    },
+    {
+      "bytes": 4032,
+      "path": "focused-tests.log",
+      "sha256": "ec9bf01210ac69ab20738b38fd05ecacf69aebd3073ad0067010952751915a8e"
+    },
+    {
+      "bytes": 796,
+      "path": "foreground-3584-driver.json",
+      "sha256": "401b250c1275a0c192084716efd318a0fed2ed84305f36fb38951f66c90e1173"
+    },
+    {
+      "bytes": 40605,
+      "path": "foreground-3584-screen.json",
+      "sha256": "1db2f366568c0a39e8e3838d847e1558547c98ac598723c690c3e12a95cb4ff1"
+    },
+    {
+      "bytes": 796,
+      "path": "foreground-4032-driver.json",
+      "sha256": "401b250c1275a0c192084716efd318a0fed2ed84305f36fb38951f66c90e1173"
+    },
+    {
+      "bytes": 40561,
+      "path": "foreground-4032-screen.json",
+      "sha256": "30f2225d0b89b2a8d898e8afe16f9698853aaa3591964347b30fc3399adec32c"
+    },
+    {
+      "bytes": 1459,
+      "path": "plan.json",
+      "sha256": "46ca9b79f3116530449ce0410fc328a1815e9eaed9ae7ac801bb9a1db4e84809"
+    },
+    {
+      "bytes": 20794,
+      "path": "profile-window-review.json",
+      "sha256": "a8316c3943da9f64e74511e2990d9b49a98192ff611cb143f95091a09879b261"
+    },
+    {
+      "bytes": 9205,
+      "path": "reproduce-profile-review.py",
+      "sha256": "aee6b588c112bae80c6264ff7b51a1f20ebe200043ebd029b50e483e03d14dda"
+    },
+    {
+      "bytes": 44442,
+      "path": "validation.json",
+      "sha256": "5f9638a645bf5b224ba33150b385798c791ca233eca748b92d58358262a8bb25"
+    },
+    {
+      "bytes": 19527,
+      "path": "vectored-proof-impact.json",
+      "sha256": "ce72123fc6b2f63a09276039f7ed7e2f1bba57ce937863631b7874491f3c6762"
+    }
+  ],
+  "schema_version": 1
+}

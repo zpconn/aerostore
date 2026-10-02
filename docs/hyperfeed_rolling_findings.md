@@ -10,7 +10,7 @@ control: its longer full-history run exhausted housekeeping retries, while the
 direct and PostgreSQL runs completed. These findings do not establish a reason
 to replace the ownership design or a result against the project's 10× target.
 
-The [evidence archive](bench_data/rolling_2026-09-27/README.md) retains the
+The [evidence archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/rolling_2026-09-27/README.md) retains the
 successful controls, the earlier failed process run, diagnostics, and the longer
 pilot. The [workload guide](hyperfeed_rolling.md) defines the synthetic lifecycle;
 the [resource review](hyperfeed_capacity_resources.md) explains the remaining

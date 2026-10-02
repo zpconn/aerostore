@@ -1,0 +1,81 @@
+{
+  "campaign_id": "crucible_fixed_2026-09-22",
+  "files": [
+    {
+      "bytes": 4712,
+      "path": "128m/crucible_profile_2g_120s.csv",
+      "sha256": "b01ba83cd000a414bf5866d92a3333dcb37d2c35a485c647e2684f72bd3ad399"
+    },
+    {
+      "bytes": 13091,
+      "path": "128m/crucible_profile_2g_120s.log",
+      "sha256": "c7e6b3d4fb77fe7a1c5a4c1427abf7cee17211bf00dfbe3ca311b80f20bc5ce0"
+    },
+    {
+      "bytes": 8520,
+      "path": "128m/crucible_profile_2g_240s.csv",
+      "sha256": "ee3125fb52e3baaec56698fefb3f9352883c1e42d127973f86603f6979f46c59"
+    },
+    {
+      "bytes": 24050,
+      "path": "128m/crucible_profile_2g_240s.log",
+      "sha256": "c60e0ef3603f767ba09b66d348f7a8674f17d81ed1eaa81fe1ff7eb6b7cfc305"
+    },
+    {
+      "bytes": 299,
+      "path": "128m/gate-result.txt",
+      "sha256": "75b96227f023292816b3b5a0a7680d7a7c2e2b82557c982890cc082a619744ac"
+    },
+    {
+      "bytes": 4711,
+      "path": "2g/crucible_profile_2g_120s.csv",
+      "sha256": "f2ad38c6fa67518009f2e63b043a318b134bfa54c43a290795f94e07884de1bc"
+    },
+    {
+      "bytes": 17503,
+      "path": "2g/crucible_profile_2g_120s.log",
+      "sha256": "aca7b554124574ad761c480e948fbaa8612fa955ae484aa872ab2227b2afef8c"
+    },
+    {
+      "bytes": 8516,
+      "path": "2g/crucible_profile_2g_240s.csv",
+      "sha256": "a4f9aaa860cc84701bf151754e6b2cdf2d4cf601ab2de8292e60704ebb90539d"
+    },
+    {
+      "bytes": 28357,
+      "path": "2g/crucible_profile_2g_240s.log",
+      "sha256": "0ed9a2b2a36f7ce509d0f9ad420d6f61dc3796cd1d5937533f075919ff26f5b2"
+    },
+    {
+      "bytes": 297,
+      "path": "2g/gate-result.txt",
+      "sha256": "cf167110087e08be632e89dc1a64b98dfb2c57ce6c974e260c2ab565f0a5ead7"
+    },
+    {
+      "bytes": 2183,
+      "path": "README.md",
+      "sha256": "3286f5d7ce9e77eef8ad2eb81781c043f89dcf7c7da6d36ff78d643611b13324"
+    },
+    {
+      "bytes": 757,
+      "path": "loom-tests.log",
+      "sha256": "add0b1e6e910e7b347bff1dbe4bcc1dc43debbf630fddd5f8fec6a90824584bb"
+    },
+    {
+      "bytes": 6554,
+      "path": "results.json",
+      "sha256": "a61e536e3016a5faecd5ca2d96219eff99307fca41d87f3b7b1fb58484a138ef"
+    },
+    {
+      "bytes": 1195,
+      "path": "source-sha256.txt",
+      "sha256": "85fe35d02e1738975a3963c7adad1927cfe25e2590ece6c36e4c9129f05c701a"
+    },
+    {
+      "bytes": 35996,
+      "path": "workspace-tests.log",
+      "sha256": "adce16164467a8dedb9bd5b2a084baa12a66f3483ec258b05683584b426e400c"
+    }
+  ],
+  "schema_version": 1
+}

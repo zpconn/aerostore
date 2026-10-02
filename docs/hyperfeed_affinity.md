@@ -102,7 +102,7 @@ and known registration/session limits.
 
 ## Validation and next milestone
 
-The [affinity checkpoint](bench_data/affinity_2026-09-25/README.md) retains 36 passing
+The [affinity checkpoint](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/affinity_2026-09-25/README.md) retains 36 passing
 three-engine functional trials, local TCP validation, and the paused-worker
 regression that rejects stale fork updates as equivalent useful work. Its higher-load
 sensitivity retains six valid histories and six retry/backlog progress failures,
@@ -116,9 +116,9 @@ partial failure and finite expiry cohorts. The architect's subsequent recollecti
 supports batches of updates committed together; sizes remain configurable
 experimental parameters rather than assumed historical values. The [calibration ledger](hyperfeed_workload_calibration.md)
 records this guidance and the existing PostgreSQL prepared-statement reuse.
-The [complete-sweep checkpoint](bench_data/maintenance_2026-09-25/README.md)
+The [complete-sweep checkpoint](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/maintenance_2026-09-25/README.md)
 retains the resulting functional checks and higher-load failures. Use those results
 and precise retry attribution to guide performance changes. The earlier archive's
-[next-milestone review](bench_data/affinity_2026-09-25/next-milestone-review.md)
+[next-milestone review](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/affinity_2026-09-25/next-milestone-review.md)
 also lists the registration, admission, session, WAL and query-size constraints
 to resolve before 100/200/300-worker experiments.

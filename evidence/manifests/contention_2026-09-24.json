@@ -1,0 +1,1186 @@
+{
+  "campaign_id": "contention_2026-09-24",
+  "files": [
+    {
+      "bytes": 12986,
+      "path": "README.md",
+      "sha256": "8940f537d586f7b13acd31b0013f129af983a215dcf3f87c57d1be1570ccf327"
+    },
+    {
+      "bytes": 25292,
+      "path": "SHA256SUMS",
+      "sha256": "2d0565ebd0558394570456f557f40acdb9c6d40643d21558a0a509dc0200a21f"
+    },
+    {
+      "bytes": 72276,
+      "path": "archive-path-map.json",
+      "sha256": "15a15803e3af8202004aba5b2d09ee154032a3ee22cbbe602220ca83231fb796"
+    },
+    {
+      "bytes": 3887,
+      "path": "archive_evidence.py",
+      "sha256": "ed48f37b5d2b89bf117a91535d4c0f26e8d0a47c71ee54d08d5d5ce83fc1ca75"
+    },
+    {
+      "bytes": 205388,
+      "path": "baseline-audit.json",
+      "sha256": "250eae3529023f587e0f4781f84d2d4e5e3eb49a75157fb3718a5342c1d5a516"
+    },
+    {
+      "bytes": 22696,
+      "path": "broad-20260924.json",
+      "sha256": "1c3834a65bb2683d989a5b6d8aa527dba72e4fd82b3f1f81c3c53781e7da63be"
+    },
+    {
+      "bytes": 123,
+      "path": "broad-20260924.log",
+      "sha256": "54513fade9720b0a45da4ddf1b704bc23d4999c2a3d8dc6b9b15ec5c93abbc20"
+    },
+    {
+      "bytes": 20712,
+      "path": "broad-20260925.json",
+      "sha256": "186c1ea5d1004ea756f924cabaf724f46a8b24d9ada948894e2a3bac1ad2628f"
+    },
+    {
+      "bytes": 123,
+      "path": "broad-20260925.log",
+      "sha256": "1c0c66808bfca9b6114540b927e4314840c0605d69d9ec3d8c2ea35c92940136"
+    },
+    {
+      "bytes": 1783,
+      "path": "broad-20260926.json",
+      "sha256": "0351a8f26fafa05f8f996184447994067a085b04b0cfffbf4ed91abc7c7688d1"
+    },
+    {
+      "bytes": 338,
+      "path": "broad-20260926.log",
+      "sha256": "bf60db359361a5ae079df611c4e905c7deede0a1df6c734b2880922fac307baa"
+    },
+    {
+      "bytes": 802,
+      "path": "build.log",
+      "sha256": "22eb6db68b0a427853bc15c95f1fcde37e273d7506a2417b64fd40c194e2a18a"
+    },
+    {
+      "bytes": 40904,
+      "path": "campaign.json",
+      "sha256": "2cbfb29442d75c011896c58192e4a5b75a8063e637d5284b94caa714b0405ee6"
+    },
+    {
+      "bytes": 3709,
+      "path": "campaign_driver.py",
+      "sha256": "27d4f4ffb0b663c6a2baf536b30576e3f880376a86bfaf1000021cd5f6c5948b"
+    },
+    {
+      "bytes": 36381,
+      "path": "cases/broad-20260924/0-aerostore/final.json.gz",
+      "sha256": "c714e1597c7ddc8402dba72295dcbe70bc99eb9852ac1d0665650a0482176653"
+    },
+    {
+      "bytes": 3197760,
+      "path": "cases/broad-20260924/0-aerostore/history.jsonl.gz",
+      "sha256": "92c4e655be9626cc18be02a5de48021b0adac08f05338d16787807a3022a9421"
+    },
+    {
+      "bytes": 21710,
+      "path": "cases/broad-20260924/0-aerostore/initial.json.gz",
+      "sha256": "6258a55032011a6750b7dc2587aaa0d63d728a51212047fff9830c4d42e9033b"
+    },
+    {
+      "bytes": 994,
+      "path": "cases/broad-20260924/0-aerostore/progress.json.gz",
+      "sha256": "d9d5d23a0fc80dadca3677ea0adff039254b8992c1a0b624d2a485ea32e8379d"
+    },
+    {
+      "bytes": 2829,
+      "path": "cases/broad-20260924/0-aerostore/result.json.gz",
+      "sha256": "f3b8a61c8a582892594d942b2f52804acf983f026a9fff6ddd52a49091b92df7"
+    },
+    {
+      "bytes": 5636,
+      "path": "cases/broad-20260924/0-aerostore/serial-witness.json.gz",
+      "sha256": "da606f49728dbf909167895b50d6218a52cdbd4c73771b0a62bf2eed1d841eec"
+    },
+    {
+      "bytes": 36362,
+      "path": "cases/broad-20260925/0-aerostore/final.json.gz",
+      "sha256": "5e8cf272fe1c38899c82243f6771e6f3d4cf855996db79d59f10ea09d4c75270"
+    },
+    {
+      "bytes": 3294544,
+      "path": "cases/broad-20260925/0-aerostore/history.jsonl.gz",
+      "sha256": "70ba3484eb576540f1bc51097fb498390221dc677e3c5362a6f0b01da82bf414"
+    },
+    {
+      "bytes": 21719,
+      "path": "cases/broad-20260925/0-aerostore/initial.json.gz",
+      "sha256": "da3819f62ee3cddb9af70d0dfe45fb98386e97550cb51d1ff09e2c8d3f2e8c33"
+    },
+    {
+      "bytes": 908,
+      "path": "cases/broad-20260925/0-aerostore/progress.json.gz",
+      "sha256": "3ccd2c054a3cb882cf40a0f4a76532e87fb1296b3ba427fa317453e37767fe78"
+    },
+    {
+      "bytes": 2727,
+      "path": "cases/broad-20260925/0-aerostore/result.json.gz",
+      "sha256": "7ae9b189b8fb8b47e4b37c66196c444ef11a837fbfa769f858c45b61fdaff552"
+    },
+    {
+      "bytes": 5714,
+      "path": "cases/broad-20260925/0-aerostore/serial-witness.json.gz",
+      "sha256": "5615d81b25d3eb909c6b19efbc9a3082f1bbb272fc440132d7900cad842a3b00"
+    },
+    {
+      "bytes": 961213,
+      "path": "cases/broad-20260926/0-aerostore/history.jsonl.gz",
+      "sha256": "548c4e1bad6f8531d8d14168181d738b2e3ecd33ac653ad09400d5d4bd8812c5"
+    },
+    {
+      "bytes": 606,
+      "path": "cases/broad-20260926/0-aerostore/progress.json.gz",
+      "sha256": "8693a983b313ee1fb2f74213647ac3eacc58d7ad4a57d35c3131de50a4032480"
+    },
+    {
+      "bytes": 239,
+      "path": "cases/broad-20260926/0-aerostore/result.json.gz",
+      "sha256": "1a0154bf9dfb4159a3b4e484fc4e61efff92bde996c603d80cd7bdbcf8ae1491"
+    },
+    {
+      "bytes": 2542,
+      "path": "cases/final-smoke/0-aerostore/final.json.gz",
+      "sha256": "e2e59edaddc533172f2ed604a5abb46ae3e7118868437c81c4f7ff799448be7b"
+    },
+    {
+      "bytes": 1520,
+      "path": "cases/final-smoke/0-aerostore/history.jsonl.gz",
+      "sha256": "4b08f7109d82f206e5d05fabcf40e55984a8bfdee2a7002b4f194582b25abff4"
+    },
+    {
+      "bytes": 2140,
+      "path": "cases/final-smoke/0-aerostore/initial.json.gz",
+      "sha256": "2834732d1ce4b1cdf11ee08b8ca00c2ebc4ea366f3cbe0138f34b07b1514a322"
+    },
+    {
+      "bytes": 1883,
+      "path": "cases/final-smoke/0-aerostore/result.json.gz",
+      "sha256": "74be10bc5e0b4937421f800bec5eb8dd29c211f31755e6d9f558084b8db1f1b3"
+    },
+    {
+      "bytes": 183,
+      "path": "cases/final-smoke/0-aerostore/serial-witness.json.gz",
+      "sha256": "fc21d4466f33274d62b5fc118af1f8f3ae4c9a2edfa49c9586897774fb276295"
+    },
+    {
+      "bytes": 2936,
+      "path": "cases/final-smoke/1-aerostore/final.json.gz",
+      "sha256": "e2e351fa0f64a46cf40b453a9e09d44ed1fa0afb03b3bed78e9811772330480f"
+    },
+    {
+      "bytes": 3394,
+      "path": "cases/final-smoke/1-aerostore/history.jsonl.gz",
+      "sha256": "e284d9adf1a032ccf3f273f2cc91bc9232ce4d225d9faee26d72ee190da74788"
+    },
+    {
+      "bytes": 2574,
+      "path": "cases/final-smoke/1-aerostore/initial.json.gz",
+      "sha256": "50d50bc56d2c3755b55f3e2d79e695ce4995a0f598f7cdde9f84d0aecb463d15"
+    },
+    {
+      "bytes": 2038,
+      "path": "cases/final-smoke/1-aerostore/result.json.gz",
+      "sha256": "06c7800b2b6c21c783a354389112656d6feb3da3e28603dc62a8dd722f362774"
+    },
+    {
+      "bytes": 190,
+      "path": "cases/final-smoke/1-aerostore/serial-witness.json.gz",
+      "sha256": "ef1dc9d4a154cd1337de446c968b05928b9b665ec2acad877658c57f7c2ef125"
+    },
+    {
+      "bytes": 2873,
+      "path": "cases/final-smoke/2-aerostore/final.json.gz",
+      "sha256": "11a4b38dd9dc4078f9e59b74c316568f7652cb938e91ff4c41c729a574ae0a14"
+    },
+    {
+      "bytes": 2521,
+      "path": "cases/final-smoke/2-aerostore/history.jsonl.gz",
+      "sha256": "3a2687fdad66c8a1ddd6671e188a725a3d00d140bf380690482bbe84cb7d70d7"
+    },
+    {
+      "bytes": 2574,
+      "path": "cases/final-smoke/2-aerostore/initial.json.gz",
+      "sha256": "50d50bc56d2c3755b55f3e2d79e695ce4995a0f598f7cdde9f84d0aecb463d15"
+    },
+    {
+      "bytes": 1986,
+      "path": "cases/final-smoke/2-aerostore/result.json.gz",
+      "sha256": "0c24e5cfd6900bd04937c52d144a32d0c16bc1469e56d31867a85ea02f5326ce"
+    },
+    {
+      "bytes": 184,
+      "path": "cases/final-smoke/2-aerostore/serial-witness.json.gz",
+      "sha256": "5683a37e35f65b385d09985055acae5985d4aef8fbe38c0a3a2dae49ab2b8413"
+    },
+    {
+      "bytes": 39155,
+      "path": "cases/final-smoke/3-aerostore/final.json.gz",
+      "sha256": "3c2def4062a51462d61aff65da1fc406c8fe77d65e50d661312600ec09d7da74"
+    },
+    {
+      "bytes": 3151779,
+      "path": "cases/final-smoke/3-aerostore/history.jsonl.gz",
+      "sha256": "1bec0668501fa706bb9c3e5c5ac3e2e8764d7f83617888e3fb16d73483a7b7d8"
+    },
+    {
+      "bytes": 21710,
+      "path": "cases/final-smoke/3-aerostore/initial.json.gz",
+      "sha256": "5469c74c69875e253b6301f2847fea962a9d504a671de5ef361b5b9b092ab975"
+    },
+    {
+      "bytes": 597,
+      "path": "cases/final-smoke/3-aerostore/progress.json.gz",
+      "sha256": "5eb01f796e1fc6c93c2c6bc1f0f8e074494b46c5edae7134f7579e472670ac25"
+    },
+    {
+      "bytes": 2387,
+      "path": "cases/final-smoke/3-aerostore/result.json.gz",
+      "sha256": "e724f3d5cbe6d1e99e5fd8bcbb05989e836ed014f49ecc8198c567a64e911ff3"
+    },
+    {
+      "bytes": 8499,
+      "path": "cases/final-smoke/3-aerostore/serial-witness.json.gz",
+      "sha256": "0b997b0c864cc01c165d2a10edcba39e4d7dbba15e5b2834ec3dbce3e1c777ce"
+    },
+    {
+      "bytes": 2471,
+      "path": "cases/final-smoke/4-postgres/final.json.gz",
+      "sha256": "e41f9f0b190ac8570e4af6f56eb65db1d3d12f4c045349b97cfc1f44d461a039"
+    },
+    {
+      "bytes": 1307,
+      "path": "cases/final-smoke/4-postgres/history.jsonl.gz",
+      "sha256": "68e3f17c28a1bb6b585dea7f37f68948bec0d1d76c19d3c39882ef85d71cb5bc"
+    },
+    {
+      "bytes": 2140,
+      "path": "cases/final-smoke/4-postgres/initial.json.gz",
+      "sha256": "b8a5c4b50515a252d9a78cb33e42d48ac92654b64819c6affa2216461f1df1d6"
+    },
+    {
+      "bytes": 1696,
+      "path": "cases/final-smoke/4-postgres/result.json.gz",
+      "sha256": "af6dbe4feabad56f582e8583b347b3975fae364f124e15935ff851fb0d9ac4b6"
+    },
+    {
+      "bytes": 183,
+      "path": "cases/final-smoke/4-postgres/serial-witness.json.gz",
+      "sha256": "7f609025c101ac8d578d5954281ce93f9709a586d0fc6ce284476e170b6e6df9"
+    },
+    {
+      "bytes": 2752,
+      "path": "cases/final-smoke/5-postgres/final.json.gz",
+      "sha256": "8f927353460c54a2e23acce8277ff8013254cf3a7fea34fc70b953f37bcabcb8"
+    },
+    {
+      "bytes": 2584,
+      "path": "cases/final-smoke/5-postgres/history.jsonl.gz",
+      "sha256": "f076afe4dcaee7049c03aff9f306b7530ec1855c28a9399e914e33008776bb93"
+    },
+    {
+      "bytes": 2574,
+      "path": "cases/final-smoke/5-postgres/initial.json.gz",
+      "sha256": "410bfbd806cae7ade2be638ccd7e528d6a217ced419784804eedd7fd0650d9d2"
+    },
+    {
+      "bytes": 389,
+      "path": "cases/final-smoke/5-postgres/progress.json.gz",
+      "sha256": "2be7ed7738050979a2a653589bf811ef9970ac98db421d5b5bfe3a9e70b08f71"
+    },
+    {
+      "bytes": 1862,
+      "path": "cases/final-smoke/5-postgres/result.json.gz",
+      "sha256": "54781e086cfd8ee18ffcec2eb7ce048d53bbd14ae1ecd491d09d57e8e1b6902c"
+    },
+    {
+      "bytes": 190,
+      "path": "cases/final-smoke/5-postgres/serial-witness.json.gz",
+      "sha256": "e5652d2585c5c295685b367d47973db9162eae5a5fb2cedeefd80ca9b201f482"
+    },
+    {
+      "bytes": 2842,
+      "path": "cases/final-smoke/6-postgres/final.json.gz",
+      "sha256": "8be2472d5bbef203d3732a1ffd0034bdd5380dd8ad918d7e9c1d4eb04bed54d4"
+    },
+    {
+      "bytes": 2297,
+      "path": "cases/final-smoke/6-postgres/history.jsonl.gz",
+      "sha256": "cfa4d889e1cb3ebca3309257513d93e71476ed290a5db54077e6280747ec3aee"
+    },
+    {
+      "bytes": 2574,
+      "path": "cases/final-smoke/6-postgres/initial.json.gz",
+      "sha256": "410bfbd806cae7ade2be638ccd7e528d6a217ced419784804eedd7fd0650d9d2"
+    },
+    {
+      "bytes": 1729,
+      "path": "cases/final-smoke/6-postgres/result.json.gz",
+      "sha256": "25382de406d180b5141bc2afb5f0677444caf3cff32e6c7a9547ed2aac12b135"
+    },
+    {
+      "bytes": 184,
+      "path": "cases/final-smoke/6-postgres/serial-witness.json.gz",
+      "sha256": "e7802b02b042de7c042ebafac12525388662566c58da77f2cd2309e28437425a"
+    },
+    {
+      "bytes": 23814,
+      "path": "cases/final-smoke/7-postgres/final.json.gz",
+      "sha256": "9cebf5005ea33a87ce2b37a12dcb91711798853c86df26df403c42783dba7750"
+    },
+    {
+      "bytes": 45218,
+      "path": "cases/final-smoke/7-postgres/history.jsonl.gz",
+      "sha256": "d662911fc2b517d6e9522e1ec667e919d0681ad08466d3a74b018f2208aea4cf"
+    },
+    {
+      "bytes": 21710,
+      "path": "cases/final-smoke/7-postgres/initial.json.gz",
+      "sha256": "5469c74c69875e253b6301f2847fea962a9d504a671de5ef361b5b9b092ab975"
+    },
+    {
+      "bytes": 449,
+      "path": "cases/final-smoke/7-postgres/progress.json.gz",
+      "sha256": "3560c96e23dbcc31d98403a6fcce009614f2c34e8e5bcde0d7e624451508d69f"
+    },
+    {
+      "bytes": 2009,
+      "path": "cases/final-smoke/7-postgres/result.json.gz",
+      "sha256": "1cefdc9ea103a36b59071c80ca4b79566c8fe3a6a2dea0abae6870331159e94c"
+    },
+    {
+      "bytes": 340,
+      "path": "cases/final-smoke/7-postgres/serial-witness.json.gz",
+      "sha256": "365487d592d26534f9b4b79352316f2711c18649270f7bc9793cd6c876ca5390"
+    },
+    {
+      "bytes": 39103,
+      "path": "cases/fixed-family/0-aerostore/final.json.gz",
+      "sha256": "9e894199d40e31e6f724c0face34650b757ac4b290eb89b3ce9ea5ac1214e1c0"
+    },
+    {
+      "bytes": 5815334,
+      "path": "cases/fixed-family/0-aerostore/history.jsonl.gz",
+      "sha256": "f763035660dbdc73dcbc97e1a363d3394c54f4186db6d4fc867d2070ab636491"
+    },
+    {
+      "bytes": 21710,
+      "path": "cases/fixed-family/0-aerostore/initial.json.gz",
+      "sha256": "49ae418cf183694ab782077d888c17aae81d93371c780205b9e6a8d41590d441"
+    },
+    {
+      "bytes": 2263,
+      "path": "cases/fixed-family/0-aerostore/result.json.gz",
+      "sha256": "5f80454e60f51ae345278b73c4dc24e152683040978861afe08a246ea28cc005"
+    },
+    {
+      "bytes": 8788,
+      "path": "cases/fixed-family/0-aerostore/serial-witness.json.gz",
+      "sha256": "3002633179d84dc1f13ca877feebfbe8005eae31ceeb7b97ad3f79170e48d0a1"
+    },
+    {
+      "bytes": 1235426,
+      "path": "cases/fixed-global-time/0-aerostore/history.jsonl.gz",
+      "sha256": "2c432ad1f20e8fbf852b76e7c37ddef30ae66de2c95361d4c3e4476f5bf4f4dc"
+    },
+    {
+      "bytes": 595,
+      "path": "cases/fixed-global-time/0-aerostore/progress.json.gz",
+      "sha256": "328fc2d79691ab7906583d06a9bd83927e0e8d930066cdfd695b317527e41a9a"
+    },
+    {
+      "bytes": 238,
+      "path": "cases/fixed-global-time/0-aerostore/result.json.gz",
+      "sha256": "6629e4aaebafb243105d3f71e9ee052ea29568ffc68a7f0b8ef26301ee792b3b"
+    },
+    {
+      "bytes": 46109,
+      "path": "cases/load-20260924-aerostore/0-aerostore/final.json.gz",
+      "sha256": "624083faf935e3972f851fbf3596ad010e57963b9b366f6cb7b8acd562682bf1"
+    },
+    {
+      "bytes": 21710,
+      "path": "cases/load-20260924-aerostore/0-aerostore/initial.json.gz",
+      "sha256": "6258a55032011a6750b7dc2587aaa0d63d728a51212047fff9830c4d42e9033b"
+    },
+    {
+      "bytes": 1080,
+      "path": "cases/load-20260924-aerostore/0-aerostore/progress.json.gz",
+      "sha256": "f226babd2a2a062545f90330def3dc4b9baa4df3eaa83f8b157651bf916af84a"
+    },
+    {
+      "bytes": 2948,
+      "path": "cases/load-20260924-aerostore/0-aerostore/result.json.gz",
+      "sha256": "205c308dfa9e9718a883755b370435bbd47f3df3bea56a5119c229415b7260da"
+    },
+    {
+      "bytes": 140142,
+      "path": "cases/load-20260924-aerostore/0-aerostore/serial-witness.json.gz",
+      "sha256": "c75d9789d45ffd43d725c92a3c0163829d97c9d33bf40410ba310fc2c2b40597"
+    },
+    {
+      "bytes": 25786,
+      "path": "cases/load-20260924-postgres/0-postgres/final.json.gz",
+      "sha256": "108eca3db9f6dee54c0bd8d29ec68634ef3476749747d1c37357209bdf5771f1"
+    },
+    {
+      "bytes": 339030,
+      "path": "cases/load-20260924-postgres/0-postgres/history.jsonl.gz",
+      "sha256": "e3e09eaf6b7c22b952b8f1ccb809ed8b2e04109edd14c895840a67378e9f3d7c"
+    },
+    {
+      "bytes": 21710,
+      "path": "cases/load-20260924-postgres/0-postgres/initial.json.gz",
+      "sha256": "6258a55032011a6750b7dc2587aaa0d63d728a51212047fff9830c4d42e9033b"
+    },
+    {
+      "bytes": 551,
+      "path": "cases/load-20260924-postgres/0-postgres/progress.json.gz",
+      "sha256": "e2f081890f64cff1e11e2df78ee7cbd260b75f5c8077e82ae3554f6a1ba5dbdf"
+    },
+    {
+      "bytes": 2143,
+      "path": "cases/load-20260924-postgres/0-postgres/result.json.gz",
+      "sha256": "79fe7a4fa9ab9aeef6e2857b089b5ff22972724cc77268da57c726b121690c17"
+    },
+    {
+      "bytes": 623,
+      "path": "cases/load-20260924-postgres/0-postgres/serial-witness.json.gz",
+      "sha256": "c1d5f67803e174c4d7165b3d0f20b07a83324e20dff1c825f3090b8cf4fce2d5"
+    },
+    {
+      "bytes": 46105,
+      "path": "cases/load-20260925-aerostore/0-aerostore/final.json.gz",
+      "sha256": "1d3b7354df9097f69b9e87ee26fcd4bd3b5a330b92d4179858c8aefe45595003"
+    },
+    {
+      "bytes": 21719,
+      "path": "cases/load-20260925-aerostore/0-aerostore/initial.json.gz",
+      "sha256": "da3819f62ee3cddb9af70d0dfe45fb98386e97550cb51d1ff09e2c8d3f2e8c33"
+    },
+    {
+      "bytes": 1084,
+      "path": "cases/load-20260925-aerostore/0-aerostore/progress.json.gz",
+      "sha256": "324ec8d63a29a3d9e816aeccbb9e5543a7917573fe32c4ef444bc6b302868450"
+    },
+    {
+      "bytes": 2943,
+      "path": "cases/load-20260925-aerostore/0-aerostore/result.json.gz",
+      "sha256": "aa6e2de2e4ae3d039d16a756a7adabe09715c66935988fe177f5a9b243630cfd"
+    },
+    {
+      "bytes": 139834,
+      "path": "cases/load-20260925-aerostore/0-aerostore/serial-witness.json.gz",
+      "sha256": "dbe74985900cdc1ddbe7cf0498d6d7e7e38e1f91da2d80f7be794f91c6589a11"
+    },
+    {
+      "bytes": 25570,
+      "path": "cases/load-20260925-postgres/0-postgres/final.json.gz",
+      "sha256": "fec21e6c1faf3db1ee18a598231f87e1eddaa0e136d87405fad800e6b6668845"
+    },
+    {
+      "bytes": 242270,
+      "path": "cases/load-20260925-postgres/0-postgres/history.jsonl.gz",
+      "sha256": "7ad192fc31bf5421769476a0ba0e6716ad1f3d75c89c6b303fa05d47a4346357"
+    },
+    {
+      "bytes": 21719,
+      "path": "cases/load-20260925-postgres/0-postgres/initial.json.gz",
+      "sha256": "da3819f62ee3cddb9af70d0dfe45fb98386e97550cb51d1ff09e2c8d3f2e8c33"
+    },
+    {
+      "bytes": 640,
+      "path": "cases/load-20260925-postgres/0-postgres/progress.json.gz",
+      "sha256": "98785ec5b98b478f58dfaecc14b864e25da96f6e91ceb289053ff6520654767f"
+    },
+    {
+      "bytes": 2257,
+      "path": "cases/load-20260925-postgres/0-postgres/result.json.gz",
+      "sha256": "96e68ba388e221012c678df04010af4148ea0b9f88cd03e63b5a2d164dee3552"
+    },
+    {
+      "bytes": 490,
+      "path": "cases/load-20260925-postgres/0-postgres/serial-witness.json.gz",
+      "sha256": "c876bb0af0396ff9d5eac467d996f2610c41be9d49369f3df6013ae69c127aca"
+    },
+    {
+      "bytes": 45997,
+      "path": "cases/load-20260926-aerostore/0-aerostore/final.json.gz",
+      "sha256": "c8ed96fba6b0023841eebc66fe1728668070ca3e69ec4682a0f15f5d44d25fa6"
+    },
+    {
+      "bytes": 21731,
+      "path": "cases/load-20260926-aerostore/0-aerostore/initial.json.gz",
+      "sha256": "f35e526ecbe9070d94a990ac4f317f86ead0b9ff105ba1898aa3b7b27fd8f25e"
+    },
+    {
+      "bytes": 1089,
+      "path": "cases/load-20260926-aerostore/0-aerostore/progress.json.gz",
+      "sha256": "7c050514fb26ff975c7e51f5fe2bc60311b578c3df0c2d0f8cd8913608958d76"
+    },
+    {
+      "bytes": 2960,
+      "path": "cases/load-20260926-aerostore/0-aerostore/result.json.gz",
+      "sha256": "7fd8c8a6c27f39e8f61b3e0b622ffa7b42b2bc1e4b9a64096aa20e70e96bbf84"
+    },
+    {
+      "bytes": 138036,
+      "path": "cases/load-20260926-aerostore/0-aerostore/serial-witness.json.gz",
+      "sha256": "31268a4c279de8c18a5f3ffe23975f45ccc4b5954004e3bb7057cdae6ffe82de"
+    },
+    {
+      "bytes": 24747,
+      "path": "cases/load-20260926-postgres/0-postgres/final.json.gz",
+      "sha256": "03a420e3a2418e2f02916d274b03de1e7e42e136cd899557116ff5ac7f1168ab"
+    },
+    {
+      "bytes": 212173,
+      "path": "cases/load-20260926-postgres/0-postgres/history.jsonl.gz",
+      "sha256": "5e19b7d7d4d32f742bf86c6eec472b776cb07b24f59f2a831e6bfc439ae2b924"
+    },
+    {
+      "bytes": 21731,
+      "path": "cases/load-20260926-postgres/0-postgres/initial.json.gz",
+      "sha256": "f35e526ecbe9070d94a990ac4f317f86ead0b9ff105ba1898aa3b7b27fd8f25e"
+    },
+    {
+      "bytes": 673,
+      "path": "cases/load-20260926-postgres/0-postgres/progress.json.gz",
+      "sha256": "a3a4222a4243463c3b9d0c42c4c9a0d20c96535fb86d456413e228d28f210966"
+    },
+    {
+      "bytes": 2294,
+      "path": "cases/load-20260926-postgres/0-postgres/result.json.gz",
+      "sha256": "bb8c4b13ddf11f5b7d86384b5ddad7d64dbcf79dcd518c071159e01b6da99a2e"
+    },
+    {
+      "bytes": 468,
+      "path": "cases/load-20260926-postgres/0-postgres/serial-witness.json.gz",
+      "sha256": "7a0f9e97dd5b64be3bf126874e10543d1e95598f593c10d8962d635269aa770d"
+    },
+    {
+      "bytes": 30350,
+      "path": "cases/pg-10ms-20260924/0-postgres/final.json.gz",
+      "sha256": "8fc9de300bdc2076a39d52424c782659ad3e79eec6e1c95389051c7e5ac6253d"
+    },
+    {
+      "bytes": 1299077,
+      "path": "cases/pg-10ms-20260924/0-postgres/history.jsonl.gz",
+      "sha256": "34e01a9a8cc6dc2ba4f2a915a00b5694e163437ae878dd43d208c6bf75ce3515"
+    },
+    {
+      "bytes": 21710,
+      "path": "cases/pg-10ms-20260924/0-postgres/initial.json.gz",
+      "sha256": "49ae418cf183694ab782077d888c17aae81d93371c780205b9e6a8d41590d441"
+    },
+    {
+      "bytes": 581,
+      "path": "cases/pg-10ms-20260924/0-postgres/progress.json.gz",
+      "sha256": "c8a465b1c3ff6f96d1a7fffb297f3c0595066ad0482de1300f72be332fef0ac1"
+    },
+    {
+      "bytes": 2198,
+      "path": "cases/pg-10ms-20260924/0-postgres/result.json.gz",
+      "sha256": "b08e7e8e478a492112dd16333325f53d890fa15de527181ff52a09a29d1eca50"
+    },
+    {
+      "bytes": 1845,
+      "path": "cases/pg-10ms-20260924/0-postgres/serial-witness.json.gz",
+      "sha256": "d22ad3e40f80bc706aea37f6b410e7fb6863e5e0277122ba40748efd18b060fa"
+    },
+    {
+      "bytes": 30901,
+      "path": "cases/pg-10ms-20260925/0-postgres/final.json.gz",
+      "sha256": "75616980c90d13676eb5e170bf99744282375bb7d4a4bf5fef4ec45c9d545092"
+    },
+    {
+      "bytes": 1381210,
+      "path": "cases/pg-10ms-20260925/0-postgres/history.jsonl.gz",
+      "sha256": "2c71de7b349513eca8900ddeb57540b1443922fe64aaf5b1849f13b417452666"
+    },
+    {
+      "bytes": 21719,
+      "path": "cases/pg-10ms-20260925/0-postgres/initial.json.gz",
+      "sha256": "db1441e9ebd043f34b72da6f571b7d156902e05d826e684acd7d389b8873d3d6"
+    },
+    {
+      "bytes": 636,
+      "path": "cases/pg-10ms-20260925/0-postgres/progress.json.gz",
+      "sha256": "1a50fa648bd7864ef2f4a855f54478ec265917503410c0a4d000f1892fe08b23"
+    },
+    {
+      "bytes": 2261,
+      "path": "cases/pg-10ms-20260925/0-postgres/result.json.gz",
+      "sha256": "5bdf223b0f472538f7c80bc78767f3cf4286f6e6acf659fa67e9f1c33f3c1a24"
+    },
+    {
+      "bytes": 1954,
+      "path": "cases/pg-10ms-20260925/0-postgres/serial-witness.json.gz",
+      "sha256": "f3db165eed13b9bceaf5c2353751f0c68d6541d64fc1a5e26c0d4d7918531046"
+    },
+    {
+      "bytes": 30636,
+      "path": "cases/pg-10ms-20260926/0-postgres/final.json.gz",
+      "sha256": "8d81e1233050688f468474253a6f5c0acd80ac1a4092abe02238be71964f4a21"
+    },
+    {
+      "bytes": 1248916,
+      "path": "cases/pg-10ms-20260926/0-postgres/history.jsonl.gz",
+      "sha256": "d24d5e36e75bb57a76942de32e9c383fb244b53606c720172d2046047cf68c14"
+    },
+    {
+      "bytes": 21731,
+      "path": "cases/pg-10ms-20260926/0-postgres/initial.json.gz",
+      "sha256": "c0dc41971d6573ff11a0e4428b31340e41cfe783818aa708d7799bd569bc32ed"
+    },
+    {
+      "bytes": 639,
+      "path": "cases/pg-10ms-20260926/0-postgres/progress.json.gz",
+      "sha256": "477cc2c2518294e6b0fc88b17269c84ff92814342dc45bb186de61b3790171d8"
+    },
+    {
+      "bytes": 2270,
+      "path": "cases/pg-10ms-20260926/0-postgres/result.json.gz",
+      "sha256": "edf4b1bfe8c2b4751c4c715c193f640f2aba55acccc6da49db174bd61f28efdf"
+    },
+    {
+      "bytes": 1811,
+      "path": "cases/pg-10ms-20260926/0-postgres/serial-witness.json.gz",
+      "sha256": "f1c50e77bb953babc27ce99ca1e2f24a739127e8d2a40e3fd22fef0bcda2844d"
+    },
+    {
+      "bytes": 45722,
+      "path": "cases/retention-aerostore/0-aerostore/final.json.gz",
+      "sha256": "d86949e67a9581c5985d28a5dcfae1efb7e9a7ae2fa24897bcc30f114839226a"
+    },
+    {
+      "bytes": 21710,
+      "path": "cases/retention-aerostore/0-aerostore/initial.json.gz",
+      "sha256": "6258a55032011a6750b7dc2587aaa0d63d728a51212047fff9830c4d42e9033b"
+    },
+    {
+      "bytes": 10773,
+      "path": "cases/retention-aerostore/0-aerostore/progress.json.gz",
+      "sha256": "3ece215d26629316396480fc6fae2b30810dcf9864bc7e6c1a0b76aa2ac75c55"
+    },
+    {
+      "bytes": 12974,
+      "path": "cases/retention-aerostore/0-aerostore/result.json.gz",
+      "sha256": "f9342c4cbfa02e3d3c83946fa8a747fde74da519a6e4d4b388aadb68af501e7e"
+    },
+    {
+      "bytes": 106725,
+      "path": "cases/retention-aerostore/0-aerostore/serial-witness.json.gz",
+      "sha256": "d5f0be1574d1d7e2008015124801e195cc69d93901cc93bc36c7172a5ab82638"
+    },
+    {
+      "bytes": 37740,
+      "path": "cases/retention-postgres/0-postgres/final.json.gz",
+      "sha256": "bf361335dad407d585d2ca6d212d435698cb71a87c701f45daaef10b1898146c"
+    },
+    {
+      "bytes": 4678944,
+      "path": "cases/retention-postgres/0-postgres/history.jsonl.gz",
+      "sha256": "35a12b66c6450a8b047ccb0342fc1c5ee22dd67c2f0942937e21b3042e585d8d"
+    },
+    {
+      "bytes": 21710,
+      "path": "cases/retention-postgres/0-postgres/initial.json.gz",
+      "sha256": "6258a55032011a6750b7dc2587aaa0d63d728a51212047fff9830c4d42e9033b"
+    },
+    {
+      "bytes": 5226,
+      "path": "cases/retention-postgres/0-postgres/progress.json.gz",
+      "sha256": "c5fec7b83588bfee8649b7140ad3c4e9c4c47dbeba3ad3536b7909a3ca88aeb5"
+    },
+    {
+      "bytes": 7185,
+      "path": "cases/retention-postgres/0-postgres/result.json.gz",
+      "sha256": "5de1d122af3a6616dd41221c466a7b9fc0f073fbeffa1973b07e81cf48d3d814"
+    },
+    {
+      "bytes": 7065,
+      "path": "cases/retention-postgres/0-postgres/serial-witness.json.gz",
+      "sha256": "4c452d0e3c01fd091a5b89d8d193147c09dcd88b74685f58fda50e00b12b86ab"
+    },
+    {
+      "bytes": 2610,
+      "path": "cases/scenarios/0-aerostore/final.json.gz",
+      "sha256": "ac4366c141a993078c1533d4ed9fd1e793665b8827e12ab7a24443f428d8682f"
+    },
+    {
+      "bytes": 3195,
+      "path": "cases/scenarios/0-aerostore/history.jsonl.gz",
+      "sha256": "b00f28438da12895aa539cf83104bd53167df6b899fc29f6f4f00469eb46444f"
+    },
+    {
+      "bytes": 2140,
+      "path": "cases/scenarios/0-aerostore/initial.json.gz",
+      "sha256": "243947e957972893142f2760bcfe57966e1a3f220ef41fb66b79d05d1c341161"
+    },
+    {
+      "bytes": 1902,
+      "path": "cases/scenarios/0-aerostore/result.json.gz",
+      "sha256": "6ff708eb722af1fbbd863b6c2d5cf09a316122c27c6fbc0c18f3ebdb35cf2ecd"
+    },
+    {
+      "bytes": 183,
+      "path": "cases/scenarios/0-aerostore/serial-witness.json.gz",
+      "sha256": "44dc5c81270db64c0af398d657181dd7db132de5c3a284d37cc9c8ff70e7f6df"
+    },
+    {
+      "bytes": 2813,
+      "path": "cases/scenarios/1-aerostore/final.json.gz",
+      "sha256": "84473a1527e19107f3b4e143a632d20585fbbbcb4e18b87da222e65d4a9a5caf"
+    },
+    {
+      "bytes": 6692,
+      "path": "cases/scenarios/1-aerostore/history.jsonl.gz",
+      "sha256": "216a93010f18b69832ada1819914dbd7becd9d6acf0eaac2ef279e0a9250d4cf"
+    },
+    {
+      "bytes": 2574,
+      "path": "cases/scenarios/1-aerostore/initial.json.gz",
+      "sha256": "769e9d2a2f68c567e8e4d08eba69c07680504ff47f1bcf6954e70c20ed38fa6f"
+    },
+    {
+      "bytes": 2051,
+      "path": "cases/scenarios/1-aerostore/result.json.gz",
+      "sha256": "2d5db8b02e4c990e184b3bc17c034545d24df873bb9dcc889452a3f3ffccc920"
+    },
+    {
+      "bytes": 190,
+      "path": "cases/scenarios/1-aerostore/serial-witness.json.gz",
+      "sha256": "b21ae1e160c9dbdeccf91766be16c4be8300c8587a1b9b7947656005dc881ddb"
+    },
+    {
+      "bytes": 2860,
+      "path": "cases/scenarios/2-aerostore/final.json.gz",
+      "sha256": "2aaf786ee412e723f7de78539170f96e7edcc5e0356bde13bb326f1ec0ea5e30"
+    },
+    {
+      "bytes": 4888,
+      "path": "cases/scenarios/2-aerostore/history.jsonl.gz",
+      "sha256": "7600815f9997cbe23dbf850fb59293b7a8a4f44d93eeda7ec99c47a399985975"
+    },
+    {
+      "bytes": 2574,
+      "path": "cases/scenarios/2-aerostore/initial.json.gz",
+      "sha256": "769e9d2a2f68c567e8e4d08eba69c07680504ff47f1bcf6954e70c20ed38fa6f"
+    },
+    {
+      "bytes": 1983,
+      "path": "cases/scenarios/2-aerostore/result.json.gz",
+      "sha256": "35c685fa212a51a6cecb237d46c949ca89e8d31e6f40f57e2cd54a9f45e81c0e"
+    },
+    {
+      "bytes": 184,
+      "path": "cases/scenarios/2-aerostore/serial-witness.json.gz",
+      "sha256": "5fe30d1f37757e37a36af6a3bfcc52ee914b902fa9e8f48ba270f1147ffa21e1"
+    },
+    {
+      "bytes": 2471,
+      "path": "cases/scenarios/3-postgres/final.json.gz",
+      "sha256": "276470756cebf248456ca4d058f3d0c9188d906d3d42c4144610a7c92b63f299"
+    },
+    {
+      "bytes": 2051,
+      "path": "cases/scenarios/3-postgres/history.jsonl.gz",
+      "sha256": "9e871974f0de027fbd28b44ca79b93472dcce9c25bb703945ebf4e9cbfe7b986"
+    },
+    {
+      "bytes": 2140,
+      "path": "cases/scenarios/3-postgres/initial.json.gz",
+      "sha256": "243947e957972893142f2760bcfe57966e1a3f220ef41fb66b79d05d1c341161"
+    },
+    {
+      "bytes": 1696,
+      "path": "cases/scenarios/3-postgres/result.json.gz",
+      "sha256": "8de3fdd5d651f1400a607af7c7574b7f8fb212c7fa5a984f9a64a68f09d3b6f3"
+    },
+    {
+      "bytes": 183,
+      "path": "cases/scenarios/3-postgres/serial-witness.json.gz",
+      "sha256": "3468c6d8d1e21d76c0366118601425108aab3a18f9819743a096226ad2660e85"
+    },
+    {
+      "bytes": 2814,
+      "path": "cases/scenarios/4-postgres/final.json.gz",
+      "sha256": "f54853b685c4053aa413d8e571fad50b8f558d36263f0f8f42ed21c196af0d57"
+    },
+    {
+      "bytes": 5817,
+      "path": "cases/scenarios/4-postgres/history.jsonl.gz",
+      "sha256": "7d51e64f1107b159b87de66708d9c52dccb425ab9154b826a760835879320ead"
+    },
+    {
+      "bytes": 2574,
+      "path": "cases/scenarios/4-postgres/initial.json.gz",
+      "sha256": "769e9d2a2f68c567e8e4d08eba69c07680504ff47f1bcf6954e70c20ed38fa6f"
+    },
+    {
+      "bytes": 390,
+      "path": "cases/scenarios/4-postgres/progress.json.gz",
+      "sha256": "a0f8366dc0d16c869ba4580504a36a4d8b89123716e5acd37aeba70154eaeb27"
+    },
+    {
+      "bytes": 1858,
+      "path": "cases/scenarios/4-postgres/result.json.gz",
+      "sha256": "33e32d7760b92063b662c43234f6b706d4c66f2a90c5d9281352a6722426be2c"
+    },
+    {
+      "bytes": 190,
+      "path": "cases/scenarios/4-postgres/serial-witness.json.gz",
+      "sha256": "718553f17c3f11faa4d0dd2c49e5a091ac0d1074a20848c48e6f93079a90f69d"
+    },
+    {
+      "bytes": 2842,
+      "path": "cases/scenarios/5-postgres/final.json.gz",
+      "sha256": "fd6a189ef7b0b80ad912396896e866d6a807b451df33ff1abdc2a05c0e7f4c78"
+    },
+    {
+      "bytes": 4439,
+      "path": "cases/scenarios/5-postgres/history.jsonl.gz",
+      "sha256": "4447849c83e1c09c1634ef1a62d87c6835ff20a0a468e9dc837208b622560c95"
+    },
+    {
+      "bytes": 2574,
+      "path": "cases/scenarios/5-postgres/initial.json.gz",
+      "sha256": "769e9d2a2f68c567e8e4d08eba69c07680504ff47f1bcf6954e70c20ed38fa6f"
+    },
+    {
+      "bytes": 1734,
+      "path": "cases/scenarios/5-postgres/result.json.gz",
+      "sha256": "489f1e517bb6e46e4a322d6ee7365f567343a838012d3e78dfad3d9566d14db3"
+    },
+    {
+      "bytes": 184,
+      "path": "cases/scenarios/5-postgres/serial-witness.json.gz",
+      "sha256": "4c7c5c404850b664f8a465b6737530444bfbd60043b7c62dd6c31cd6e9cc4ff8"
+    },
+    {
+      "bytes": 1279,
+      "path": "container-cleanup.json",
+      "sha256": "9414a34ef36693d521272c78f69fd82532ede404d2cd9ee3b8672ae8b6b06987"
+    },
+    {
+      "bytes": 516,
+      "path": "container-cleanup.log",
+      "sha256": "03e00bdd523318cf02485a22bdd18bebda562f3ac58fd499aafbfc58f1dbd36f"
+    },
+    {
+      "bytes": 891,
+      "path": "environment.json",
+      "sha256": "505bd20514bd0a2b23a852f51e6c8c352ad1a6c84ddc8194f645a7d84fffda3a"
+    },
+    {
+      "bytes": 32668,
+      "path": "extended-baseline.json",
+      "sha256": "b35ee234678b66489e2c55b06c220ecaf39ab165dd8a99cfd53035fc44dc0d04"
+    },
+    {
+      "bytes": 4445,
+      "path": "extended-baseline.log",
+      "sha256": "213da28a80fc725ac40c0011ea0ddb4d1c011eeec491ab5230cd4605535a31ba"
+    },
+    {
+      "bytes": 802,
+      "path": "final-build.log",
+      "sha256": "2665d52c4aec9dec2b41fcee1967563792a3a0be4e2047b3c8ea013dbc65775e"
+    },
+    {
+      "bytes": 46515,
+      "path": "final-harness-source.tar.gz",
+      "sha256": "b3b6bdb1a8246bf6991ca403588dfe7c04b2a54259f8b8922e7f58016564fd11"
+    },
+    {
+      "bytes": 31473,
+      "path": "final-smoke-receipt.json",
+      "sha256": "ef9bfb76998eb33a3ec3337cf1aa61a081020913831245b7351a4d49f7431afd"
+    },
+    {
+      "bytes": 71188,
+      "path": "final-smoke.json",
+      "sha256": "d142b63984be2c014591f11fcc3443d8744a1df50b8dfb5bb26eae5e5245886c"
+    },
+    {
+      "bytes": 987,
+      "path": "final-smoke.log",
+      "sha256": "879efc88035c4eb6810c039a6eddfa9f6d4142d4811253a333f74c028ab162ce"
+    },
+    {
+      "bytes": 12805,
+      "path": "fixed-family.json",
+      "sha256": "4acce6449b0b851e8e9c385ac4c6d69435a28a57e6ae467ad1b54065d4c2fd54"
+    },
+    {
+      "bytes": 120,
+      "path": "fixed-family.log",
+      "sha256": "7c6235628c5ca89ba9abfa5ed2a0ab95213582a6d76e5fe5434a2fbc99351142"
+    },
+    {
+      "bytes": 1785,
+      "path": "fixed-global-time.json",
+      "sha256": "fcb94da19f38625df544011426fbd8f1dd60bbd4253d6cca2e1268d601c684ee"
+    },
+    {
+      "bytes": 341,
+      "path": "fixed-global-time.log",
+      "sha256": "df97f29f0cfe2dee3162595173cf5c0d633e95616f3d288155de9cb7c050da1f"
+    },
+    {
+      "bytes": 4411,
+      "path": "guardrails/README.md",
+      "sha256": "d9d84b7af6e25983bf0fbf041d4185acce6240bf4066d6f9e7bf3db009513647"
+    },
+    {
+      "bytes": 4161398,
+      "path": "guardrails/archive-path-map.json",
+      "sha256": "c2b9941975570afcead852083bcfbcec9e9b3156f85f1495d47ffe2cef96b7ff"
+    },
+    {
+      "bytes": 697,
+      "path": "guardrails/baseline-rejection-after-refresh.json",
+      "sha256": "6df6ffc0867cf912f386fca866607059ba4a009e7c6b53d8bb535e3b4483e676"
+    },
+    {
+      "bytes": 192373,
+      "path": "guardrails/failed-pilot-report.json",
+      "sha256": "5cfb06a1c1669c640a4cbf878678efe9060735c4ed9f6a295061e7847497ace9"
+    },
+    {
+      "bytes": 7405429,
+      "path": "guardrails/formal-evidence.tar.gz",
+      "sha256": "f3250857d906a9b077ed0651abe66fda17c10424bb175a7ed114d5e97d56408c"
+    },
+    {
+      "bytes": 65292,
+      "path": "guardrails/interrupted-pilot-report.json",
+      "sha256": "9916021257bd037133b5673c29f590a5c31f4e534b4ce49e7be6e20407694607"
+    },
+    {
+      "bytes": 382,
+      "path": "guardrails/local-boundary-check.json",
+      "sha256": "7422b2632ddd3456cd778a4ecaa3fc97fb98b68db150a708fa691db021e731a0"
+    },
+    {
+      "bytes": 1910455,
+      "path": "guardrails/manifest.json",
+      "sha256": "6547c810223c08d88d1c404ecb738b51705d58cbccd588948f2f15fcce745200"
+    },
+    {
+      "bytes": 192364,
+      "path": "guardrails/report.json",
+      "sha256": "028e7beb6185ef787769077a87f3748730422771c8a062c7ba69d8b1278e77d2"
+    },
+    {
+      "bytes": 47367,
+      "path": "guardrails/reviewed-boundary-audit.json",
+      "sha256": "5cca9e4d433b8066afbe0d71f838be05fa6f88dd4c0ca6021505a14f9a554bbb"
+    },
+    {
+      "bytes": 5163,
+      "path": "guardrails/wal-diagnosis.json",
+      "sha256": "bc573b4fc2dde2c57169a65847ac8cc53abd4f4dd85df02f89f0a220e56e1730"
+    },
+    {
+      "bytes": 4956,
+      "path": "guardrails/wal-test-repair.patch",
+      "sha256": "88d471be1208aa29ab216531ea19ed5610ce6315d665cfc9268f6c61714dfe7a"
+    },
+    {
+      "bytes": 22889,
+      "path": "load-20260924-aerostore.json",
+      "sha256": "3848bc29588bf20673820f8083f7b6a190a500c2a4971671ad00589a569bba0c"
+    },
+    {
+      "bytes": 122,
+      "path": "load-20260924-aerostore.log",
+      "sha256": "b9e85e28fef7f80fb9275cbf41211a2c49f9eda9fafcdaac1186fbc2187ef82f"
+    },
+    {
+      "bytes": 10489,
+      "path": "load-20260924-postgres.json",
+      "sha256": "ee32d80756d3902863ca9f1a364460370227b30afc3d36a814ac18ae7c3319c4"
+    },
+    {
+      "bytes": 120,
+      "path": "load-20260924-postgres.log",
+      "sha256": "c4a301d5c824e8c7c5e55a88701d8e025bfd15e1cbff6a56d92fee8a61e627e7"
+    },
+    {
+      "bytes": 22885,
+      "path": "load-20260925-aerostore.json",
+      "sha256": "373dadf6efd848e72080da3f633872f5265b533a852ff1d0ff46d223e8f91e7d"
+    },
+    {
+      "bytes": 122,
+      "path": "load-20260925-aerostore.log",
+      "sha256": "3de96e7080e815c7b7b5939f7c4f9e9df258c77f786c65e0b30fc3b4fa0aff1c"
+    },
+    {
+      "bytes": 11641,
+      "path": "load-20260925-postgres.json",
+      "sha256": "2f2d39f94779624bb68d9effbfd233e81971738125c84919fa6d2ba073074dd3"
+    },
+    {
+      "bytes": 120,
+      "path": "load-20260925-postgres.log",
+      "sha256": "587f17365fdf4aa4197a89e5a83c3b5b0563c6025a0c36be4e3f8ccfefc89e8b"
+    },
+    {
+      "bytes": 22885,
+      "path": "load-20260926-aerostore.json",
+      "sha256": "0afbed70843bc38d82f73506b1d79ee8364c43537c8226b33a8b6d71cc3f34df"
+    },
+    {
+      "bytes": 122,
+      "path": "load-20260926-aerostore.log",
+      "sha256": "f502e32c105bffdcdd1d47f3882a95882a4a8b065b284a6bb7e1daf24bd4d763"
+    },
+    {
+      "bytes": 12223,
+      "path": "load-20260926-postgres.json",
+      "sha256": "4a77d9db3f2a6544b031cdb86a4bf20cc3e8482c572119c1e7217e0f11e36ec9"
+    },
+    {
+      "bytes": 120,
+      "path": "load-20260926-postgres.log",
+      "sha256": "0743268341695142aeb8571530f5dac1b250330571ab798925bf8dd98b47cc66"
+    },
+    {
+      "bytes": 45921,
+      "path": "measured-harness-source.tar.gz",
+      "sha256": "38b8130673f3def55e29973e701d82556e9c6ca17d1ed40ad0c19d1ac98302f6"
+    },
+    {
+      "bytes": 8833,
+      "path": "model-tests.log",
+      "sha256": "a4719ad673a5c03ee75ba5cd3eefc1e558724f9abf07a6ea057919cba0de2cd5"
+    },
+    {
+      "bytes": 10518,
+      "path": "pg-10ms-20260924.json",
+      "sha256": "e383411a5d792d05b9847b8a7c5280d3d4fc295be93e9e0bd31e1941d3e4d607"
+    },
+    {
+      "bytes": 120,
+      "path": "pg-10ms-20260924.log",
+      "sha256": "3ecedbef096d9659433581752ed95f3f8119e36029ac4e32b25bef9acd8d88cd"
+    },
+    {
+      "bytes": 11101,
+      "path": "pg-10ms-20260925.json",
+      "sha256": "c8a2faadc0af99fb2eab89bd54422367b7a11337372a6e1ec85d19806e9fc27c"
+    },
+    {
+      "bytes": 120,
+      "path": "pg-10ms-20260925.log",
+      "sha256": "0a0f8a53fc9aa14704817f9d6d8fb3ce09ca2394b26e20691020210cbe474641"
+    },
+    {
+      "bytes": 11099,
+      "path": "pg-10ms-20260926.json",
+      "sha256": "317a832aadbb66168c3d6fc281ed49d41eae7392fc052aa28e5584a6147572c7"
+    },
+    {
+      "bytes": 120,
+      "path": "pg-10ms-20260926.log",
+      "sha256": "c11ad21b33ea1bf05f411f455195a2d9166c8263f3dffef7595559edb0651d43"
+    },
+    {
+      "bytes": 3843,
+      "path": "postgres-external-settings.json",
+      "sha256": "babd4a69bf687d8b9514828fce7ad411b537e265fdadb4d126c92b047e663ab4"
+    },
+    {
+      "bytes": 1029,
+      "path": "postgres-tests.log",
+      "sha256": "df2eba943b513d203866ea2601caf689a5a550717ad2a6bd55850454d015c3af"
+    },
+    {
+      "bytes": 1465,
+      "path": "postgres-tuned-settings.json",
+      "sha256": "3ada9a84b7d6d8e3dac91a2d74210d8a891d7849676e0f6444a38f2f616eb2b4"
+    },
+    {
+      "bytes": 1224,
+      "path": "regression-validation.json",
+      "sha256": "87afb26a44c3fd5c0367af607e06137f4bb6d845319e3bfa98fe03e0992bcf16"
+    },
+    {
+      "bytes": 250019,
+      "path": "retention-aerostore.json",
+      "sha256": "d22d5eb5426ca55cd32b9ff695bdc528e2c17a5fb11658637bde4b00d902d934"
+    },
+    {
+      "bytes": 120,
+      "path": "retention-aerostore.log",
+      "sha256": "d59bb8392b397e31fb708bce123a638da9670445af46e7142f3a729317bbe884"
+    },
+    {
+      "bytes": 75273,
+      "path": "retention-postgres.json",
+      "sha256": "6c15a77c86ed4084d6821ccde2958482554c720397bdb863e8856de9a840721e"
+    },
+    {
+      "bytes": 122,
+      "path": "retention-postgres.log",
+      "sha256": "9ef58276afa56ebda2b3c243d1b9fef94492dfe725e3a1ef80f494fffaedb271"
+    },
+    {
+      "bytes": 3361,
+      "path": "runner-tests-debug-stack-overflow.log",
+      "sha256": "80a63d1ca6c074395769317e9fc5a0ac96c4d6d930404af41ed3f76794c50e93"
+    },
+    {
+      "bytes": 50568,
+      "path": "scenarios.json",
+      "sha256": "1c6e77e9f5b69515b84753bf1968b7c0b5817fbc24b0a68108479aab29067207"
+    },
+    {
+      "bytes": 751,
+      "path": "scenarios.log",
+      "sha256": "8ff80178fe77ca58079b5b183573fc4b30a6dcb2fbf9f53c1ccbf066d1f78f4b"
+    },
+    {
+      "bytes": 19978,
+      "path": "sensitivity.json",
+      "sha256": "baa9d628f44e7d5a4389048a94a90d40320abc59e06139454c2cd5f20fcd4904"
+    },
+    {
+      "bytes": 2472,
+      "path": "sensitivity_driver.py",
+      "sha256": "98cfa753e6e03d672fe3d57e9ff406f4b84ca8b12400421817797af6613572ce"
+    },
+    {
+      "bytes": 3098,
+      "path": "summary.json",
+      "sha256": "b9503fab73a2ac8881d8c27b855b6cfe60c653defa8fecf9829ec734ae89d8e9"
+    },
+    {
+      "bytes": 1401,
+      "path": "supervision-debug.log",
+      "sha256": "aff5293f306bec91060a13929aafbe20c3b4c06d91df642f5755e881fab73aac"
+    },
+    {
+      "bytes": 1755,
+      "path": "supervision-extraction-audit.json",
+      "sha256": "36fb449e1760db972669d3c2ce4369018db966440a383cc5df7062066ddf9213"
+    },
+    {
+      "bytes": 6946,
+      "path": "supervision-release.log",
+      "sha256": "7071ec11c6c02c4fa795e10681b605dbc2e1efddd94fe78d5c3afbf3124e9325"
+    }
+  ],
+  "schema_version": 1
+}

@@ -93,7 +93,7 @@ and next-step recommendation above.
 
 ## Retention and resources
 
-The [validation record](bench_data/hyperfeed_frame_write_2026-09-29/validation.json)
+The [validation record](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_frame_write_2026-09-29/validation.json)
 contains original report copies, candidate patches, source/binary hashes and
 local evidence paths. Full source captures, executables, runtime dependencies,
 test logs, resource receipts and workload outputs remain at

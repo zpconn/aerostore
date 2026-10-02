@@ -351,11 +351,6 @@ jobs:
       - name: Provision pinned toolchains and dependencies
         run: python3 scripts/setup_verification.py
 
-      - name: Restore the two small unit-test fixtures
-        run: |
-          mkdir -p docs/bench_data/transactional_indexes_2026-09-22/churn_128m
-          git show HEAD:docs/bench_data/transactional_indexes_2026-09-22/churn_128m/crucible_profile_2g_120s.log > docs/bench_data/transactional_indexes_2026-09-22/churn_128m/crucible_profile_2g_120s.log
-          git show HEAD:docs/bench_data/transactional_indexes_2026-09-22/aerostore_64f_16c_8w_128m.json > docs/bench_data/transactional_indexes_2026-09-22/aerostore_64f_16c_8w_128m.json
 
       - name: Recheck the isolated-build budget
         run: |

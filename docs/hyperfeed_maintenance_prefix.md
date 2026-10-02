@@ -9,7 +9,7 @@ The PostgreSQL prefix treatment completes both 185-second runs at 512 offered
 inputs/second; the complete-query control reproduces its housekeeping failure.
 The AeroStore service prefix pair also passes. Its foreground p99 is lower at
 this operating point, while its whole-housekeeping-job p99 is higher.
-The [evidence archive](bench_data/maintenance_prefix_2026-09-28/artifact-manifest.json)
+The [evidence archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/maintenance_prefix_2026-09-28/artifact-manifest.json)
 binds the source, executables, histories, reports, and independent reviews.
 
 The [candidate-query investigation](hyperfeed_candidate_queries.md) corrected a

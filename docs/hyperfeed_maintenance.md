@@ -148,12 +148,12 @@ retry causes and memory retention rather than inferring them from duration.
 
 ## Evidence and remaining work
 
-The milestone's [evidence archive](bench_data/maintenance_2026-09-25/README.md)
+The milestone's [evidence archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/maintenance_2026-09-25/README.md)
 records 42 passing short functional trials, local TCP validation, real-process
 regressions and two 601-second runs with useful complete sweeps at both five-minute
 deadlines. It also retains eight higher-load progress failures alongside four
 valid histories. These results do not establish a speedup or sustainable capacity. The earlier
-[affinity evidence](bench_data/affinity_2026-09-25/README.md) remains unchanged.
+[affinity evidence](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/affinity_2026-09-25/README.md) remains unchanged.
 
 Complete batched sweeps remove one workload simplification. Fixed population,
 seven-view provenance, synthetic input distribution, existing worker limits,

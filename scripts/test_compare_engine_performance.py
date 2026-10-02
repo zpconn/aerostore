@@ -13,7 +13,7 @@ import compare_engine_performance as gate
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EVIDENCE = ROOT / "docs/bench_data/transactional_indexes_2026-09-22"
+EVIDENCE = ROOT / "evidence/transactional_indexes_2026-09-22"
 
 
 class ComparisonGateTests(unittest.TestCase):

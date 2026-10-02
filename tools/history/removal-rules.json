@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "remove_paths": [
+    "docs/bench_data",
+    "docs/verification_data",
+    "docs/worker_failure_data"
+  ],
+  "largest_blobs": 20
+}

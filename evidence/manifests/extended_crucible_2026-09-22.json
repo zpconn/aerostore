@@ -1,0 +1,81 @@
+{
+  "campaign_id": "extended_crucible_2026-09-22",
+  "files": [
+    {
+      "bytes": 5999,
+      "path": "README.md",
+      "sha256": "13c5392710ea348276847c7ec767b22690fdf83492d469dafa8700a9946947a4"
+    },
+    {
+      "bytes": 409506,
+      "path": "aerostore_64f_16c_8w_128m.json",
+      "sha256": "4d4aafb03dc42127b04913d7463cf415a7af31a139b04266f7787a72456198f5"
+    },
+    {
+      "bytes": 7929,
+      "path": "aerostore_64f_16c_8w_128m.log",
+      "sha256": "917b26b0e9831757494b2a785b9648c7acb0fb390eb3f049e0b32191f4f2f152"
+    },
+    {
+      "bytes": 212300,
+      "path": "both_32f_4c_8w.json",
+      "sha256": "e73f78514fd88a2c405c4b5d14c371965dfc21bb0b2efb2df859bc706cc1e452"
+    },
+    {
+      "bytes": 9729,
+      "path": "both_32f_4c_8w.log",
+      "sha256": "295bc3a3304ce027608404ffe78a44da28c4ca4f25a9f30dd5c689858e0b8ae0"
+    },
+    {
+      "bytes": 1447,
+      "path": "failure-path-validation.json",
+      "sha256": "065cc21dc9d5a8e074679345c1add9b3ecd93cb729ca915c62ce26441e80fd6c"
+    },
+    {
+      "bytes": 2075,
+      "path": "killed_worker_failure.json",
+      "sha256": "f451c37306138924831666a831de0e54a939c3899dfdf398ef69b7cfed3c5eaf"
+    },
+    {
+      "bytes": 615,
+      "path": "killed_worker_failure.log",
+      "sha256": "32b195f25003a13cf0695ec46992d3d044b8af872e195400c50aaf64f3d031a0"
+    },
+    {
+      "bytes": 2018,
+      "path": "model-tests.log",
+      "sha256": "a5705a1c05711e56b2d44db85b998bec9a74074e876f4c3b2381f46356f4655f"
+    },
+    {
+      "bytes": 4891,
+      "path": "original_crucible_30s.log",
+      "sha256": "22727ef84c890aa95d2ff774602becab562807e07743ccfded92137cd86d6961"
+    },
+    {
+      "bytes": 1402,
+      "path": "source-sha256.txt",
+      "sha256": "acfaf22d8441be4f8504bc122d25d42c55cdc92e9d0642cc5756f9caca73a6ce"
+    },
+    {
+      "bytes": 2026,
+      "path": "undersized_arena_failure.json",
+      "sha256": "d889485f49a54f9b860959530e600d794febd9ac5e3a4c8a1c5fe8a55ed11e48"
+    },
+    {
+      "bytes": 668,
+      "path": "undersized_arena_failure.log",
+      "sha256": "18b226ce500533e900a298a731b8b8a637cb440c4dcc817d0f95431e1fe634c9"
+    },
+    {
+      "bytes": 2312,
+      "path": "validation.json",
+      "sha256": "a4132d6b783421d992f00f1453713f5ab7d1eecddd6e1b4f4b071e752ab06c78"
+    },
+    {
+      "bytes": 38098,
+      "path": "workspace-tests.log",
+      "sha256": "27583af00183832f428b50e59c131839876f1daac5b18713abdb8a655971faa8"
+    }
+  ],
+  "schema_version": 1
+}

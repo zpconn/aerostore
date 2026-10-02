@@ -1,0 +1,51 @@
+{
+  "campaign_id": "hyperfeed_iteration_2026-09-29",
+  "files": [
+    {
+      "bytes": 9500,
+      "path": "final-audit.json",
+      "sha256": "bcd9cb3e7e276e9867e5e109ef052933c1db078e47074241bd918485e511209b"
+    },
+    {
+      "bytes": 697,
+      "path": "foreground-driver.json",
+      "sha256": "80faf84a93374356610e5084065023d8487956147b2509c3c1bb3b07355ea6cb"
+    },
+    {
+      "bytes": 40204,
+      "path": "foreground-screen.json",
+      "sha256": "9a70d5bb0f15c0c0956203088475237f6bf94766a349cb4c806d56133ed27b65"
+    },
+    {
+      "bytes": 796,
+      "path": "maintenance-driver.json",
+      "sha256": "e87fcbe255ec5a3f579ff0d9a604fdf4713b914d965c12704716ede6ff2d3a2f"
+    },
+    {
+      "bytes": 40222,
+      "path": "maintenance-screen.json",
+      "sha256": "db5bc1c723535c68b3c14b09c7316821ddc0255d12f52fcac77f6779e8115b37"
+    },
+    {
+      "bytes": 18404,
+      "path": "proof-impact.json",
+      "sha256": "89fc6b11e919636894f02873ad791dc66de67692922bcf6740e7a46cba4cc23d"
+    },
+    {
+      "bytes": 1936,
+      "path": "resource-baseline.json",
+      "sha256": "ce7a2310462915aa27067a1ae0e95114a5a8ded59b0df5482ea1b1e7d3d3baa3"
+    },
+    {
+      "bytes": 410,
+      "path": "unit-tests-final.log",
+      "sha256": "dbe0c1bd64f41d4b15b934a43f7b821a67d4a2c4665e558c40454e2a5e456552"
+    },
+    {
+      "bytes": 11613,
+      "path": "validation.json",
+      "sha256": "6ffbf26b492d0592f1857f3dceee11a35f41a425efa130b946a1a1f0b3dcfa5d"
+    }
+  ],
+  "schema_version": 1
+}

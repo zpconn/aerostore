@@ -1,0 +1,8 @@
+{
+  "project": "git-filter-repo",
+  "release": "v2.47.0",
+  "upstream_commit": "6f79afc8c90c592a3052e6cc53c2ca8907515bca",
+  "source_url": "https://raw.githubusercontent.com/newren/git-filter-repo/6f79afc8c90c592a3052e6cc53c2ca8907515bca/git-filter-repo",
+  "sha256": "67447413e273fc76809289111748870b6f6072f08b17efe94863a92d810b7d94",
+  "version_output": "a40bce548d2c"
+}

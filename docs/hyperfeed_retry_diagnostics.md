@@ -3,7 +3,7 @@
 The subsequent [ordered due-range experiment](hyperfeed_ordered_range.md) adds
 `--due-index hashed|ordered` and explicit origin/width settings. It keeps these
 diagnostic and expiry-eligibility controls separate. The
-[66-trial checkpoint](bench_data/ordered_range_2026-09-27/README.md) reports both
+[66-trial checkpoint](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/ordered_range_2026-09-27/README.md) reports both
 latency improvements and the remaining expiry/stale-work limitations.
 
 The contention Crucible can record native rejection branches and compare two

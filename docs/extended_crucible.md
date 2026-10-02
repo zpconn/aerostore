@@ -88,9 +88,9 @@ This coordination is part of the measured adapter contract. It tests concurrent 
 | Multirow table snapshot visibility | PASS | PASS | PASS |
 | Concrete row-read dependency/write-skew rejection | PASS | PASS | PASS |
 
-PostgreSQL has counterpart probes for all six contracts. Consult the generated JSON for the results of a particular revision. The [initial retained validation](bench_data/extended_crucible_2026-09-22/README.md) preserves the failing baseline; its successful bounded replays did not override the three native failures. Regression tests now additionally exercise a reader paused inside native publication, multi-index allocation failure, independent process attachment, and vacuum while older snapshots remain active.
+PostgreSQL has counterpart probes for all six contracts. Consult the generated JSON for the results of a particular revision. The [initial retained validation](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/extended_crucible_2026-09-22/README.md) preserves the failing baseline; its successful bounded replays did not override the three native failures. Regression tests now additionally exercise a reader paused inside native publication, multi-index allocation failure, independent process attachment, and vacuum while older snapshots remain active.
 
-The [repaired validation](bench_data/transactional_indexes_2026-09-22/README.md) passes the complete gate on both engines with 3,840 deliveries each, and another 30,720-delivery Aerostore run. It includes the exact commands, reports, test logs, and source fingerprints.
+The [repaired validation](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/transactional_indexes_2026-09-22/README.md) passes the complete gate on both engines with 3,840 deliveries each, and another 30,720-delivery Aerostore run. It includes the exact commands, reports, test logs, and source fingerprints.
 
 ## Reading the report
 

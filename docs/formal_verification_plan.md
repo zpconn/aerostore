@@ -8,9 +8,9 @@ The program has two goals: establish the database's correctness, and create a ve
 
 Current priority, 2026-09-25: preserve the working engine and component checks while evaluating the [architecture qualification harness](hyperfeed_qualification.md). The target is at least 10× PostgreSQL's sustainable complete-message throughput for both single-machine HyperFeed and workers connecting to one central database host, with survivor continuity after a worker dies. Lifecycle churn, global background work, fixed arrivals and a measured interactive service prototype must guide changes to ownership, predicate conflict tracking or historical indexing. Keep checking atomic transactions, complete query results, safe reclamation and recovery ordering; defer expensive implementation-specific refinements of components this investigation may replace. The [service protocol model](../verification/service_protocol/README.md) is separate finite abstract evidence, without a Rust refinement claim. Existing P1 obligations remain open.
 
-The [2026-09-25 investigation](bench_data/architecture_2026-09-25/README.md) preserves populated-fleet measurements, selected client-kill containment tests, corrected continuous-drain timing and a passing 71-check component pilot. The demanding synthetic workload exposes a substantial native concurrency penalty. Subsequent operator calibration specifies projection and housekeeping each every 5–10 minutes and normally ordered messages for one flight. The separate [cadence and ordering profile](hyperfeed_calibrated.md) now implements those scheduling properties, retaining the existing frequent-maintenance/reordered profile as stress coverage. The optional [temporary signature dispatcher](hyperfeed_affinity.md) now preserves the architect-confirmed routing policy, retaining permanent identity routing as a comparison control and serial-history checks for valid reordering. Optional [complete maintenance sweeps](hyperfeed_maintenance.md) now use bounded batch transactions through a terminal empty query, with logical-job accounting and whole-job latency. Model and process tests check this benchmark contract; the existing component proof scope does not automatically prove the new scheduler. Fixed population, finite seeded expiry cohorts and uncalibrated turnover/mix remain explicit workload limitations. Use those results, controlled expiry-index schema comparisons and precise retry/historical-read diagnostics to choose the next engine experiment. The [two-host runbook](hyperfeed_two_host.md) prepares later MMHF trials; local transport validation does not establish physical multi-host performance. Keep stable correctness checks active throughout. The 10× target and production availability requirement remain unqualified. The subsequent [90-trial retry investigation](bench_data/retry_2026-09-26/README.md) identifies due-range stamp rejection in instrumented projection failures. The subsequent [ordered due-range experiment](hyperfeed_ordered_range.md) implements that bounded comparison with complete-query and reclamation guardrails. Its finite native coverage checks do not prove the new mapping universally; hashed publication remains the default. Use the [measured latency and failure results](bench_data/ordered_range_2026-09-27/README.md) to choose the next change before expanding implementation-specific proofs. Optional diagnostic statements are erased only for the default-build component proofs; exact guards, placements and source-normalizer freshness are checked, and feature-enabled observation code has separate native tests.
+The [2026-09-25 investigation](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/architecture_2026-09-25/README.md) preserves populated-fleet measurements, selected client-kill containment tests, corrected continuous-drain timing and a passing 71-check component pilot. The demanding synthetic workload exposes a substantial native concurrency penalty. Subsequent operator calibration specifies projection and housekeeping each every 5–10 minutes and normally ordered messages for one flight. The separate [cadence and ordering profile](hyperfeed_calibrated.md) now implements those scheduling properties, retaining the existing frequent-maintenance/reordered profile as stress coverage. The optional [temporary signature dispatcher](hyperfeed_affinity.md) now preserves the architect-confirmed routing policy, retaining permanent identity routing as a comparison control and serial-history checks for valid reordering. Optional [complete maintenance sweeps](hyperfeed_maintenance.md) now use bounded batch transactions through a terminal empty query, with logical-job accounting and whole-job latency. Model and process tests check this benchmark contract; the existing component proof scope does not automatically prove the new scheduler. Fixed population, finite seeded expiry cohorts and uncalibrated turnover/mix remain explicit workload limitations. Use those results, controlled expiry-index schema comparisons and precise retry/historical-read diagnostics to choose the next engine experiment. The [two-host runbook](hyperfeed_two_host.md) prepares later MMHF trials; local transport validation does not establish physical multi-host performance. Keep stable correctness checks active throughout. The 10× target and production availability requirement remain unqualified. The subsequent [90-trial retry investigation](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/retry_2026-09-26/README.md) identifies due-range stamp rejection in instrumented projection failures. The subsequent [ordered due-range experiment](hyperfeed_ordered_range.md) implements that bounded comparison with complete-query and reclamation guardrails. Its finite native coverage checks do not prove the new mapping universally; hashed publication remains the default. Use the [measured latency and failure results](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/ordered_range_2026-09-27/README.md) to choose the next change before expanding implementation-specific proofs. Optional diagnostic statements are erased only for the default-build component proofs; exact guards, placements and source-normalizer freshness are checked, and feature-enabled observation code has separate native tests.
 
-The [prior-prefix capture experiment](hyperfeed_capture_prefix.md) then removed repeated searches of dependencies appended by the current query. Existing capture proofs now express the saved-prefix bound and prove that unique requested buckets cannot match that skipped suffix; default standard-library canonicalization remains a trusted boundary. Its final microbenchmark avoids the repeated-query regression found in the rejected first candidate. The [90-cell concurrent results](bench_data/capture_prefix_2026-09-27/README.md) support adopting the narrow engine change as a performance baseline, while retaining the optional ordered policy’s projection-latency tradeoff. Next, prioritize longer useful-work capacity runs at larger worker/population settings and realistic maintenance cadence before another index redesign or expensive implementation-specific proof campaign. The 10× throughput and survivor-continuity requirements remain unqualified.
+The [prior-prefix capture experiment](hyperfeed_capture_prefix.md) then removed repeated searches of dependencies appended by the current query. Existing capture proofs now express the saved-prefix bound and prove that unique requested buckets cannot match that skipped suffix; default standard-library canonicalization remains a trusted boundary. Its final microbenchmark avoids the repeated-query regression found in the rejected first candidate. The [90-cell concurrent results](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/capture_prefix_2026-09-27/README.md) support adopting the narrow engine change as a performance baseline, while retaining the optional ordered policy’s projection-latency tradeoff. Next, prioritize longer useful-work capacity runs at larger worker/population settings and realistic maintenance cadence before another index redesign or expensive implementation-specific proof campaign. The 10× throughput and survivor-continuity requirements remain unqualified.
 
 Worker failure has an explicit requirement: **other workers must keep running**. The [current characterization](worker_failure_contract.md) demonstrates violations at abandoned guard and registration cutpoints. A passing characterization test records that failure; it does not establish availability. Compare recovery/ownership alternatives against this requirement and measured workload behavior. A database-owned mutation path is an option to investigate, not a demonstrated speed improvement. No architecture promotion follows from a component proof or a single instrumented benchmark run.
 
@@ -44,11 +44,11 @@ Physical identity between projected
 views and acquired-state lifecycle framing remain enumerated assumptions. P1
 permits explicit low-level primitive/storage contracts; its exit does not
 require completing P2 arbitrary-history or P3 pointer-ownership proofs first.
-The [planning/admission evidence archive](verification_data/planned_commit_2026-09-23/README.md)
+The [planning/admission evidence archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/verification_data/planned_commit_2026-09-23/README.md)
 retains the passing 71-check pilot against 488 stable inputs, 16 new proof roots
 and 36 semantic controls, native planning regressions, API audit and exact
 runtime byte comparison.
-The preceding [publication/completion archive](verification_data/commit_completion_2026-09-23/README.md)
+The preceding [publication/completion archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/verification_data/commit_completion_2026-09-23/README.md)
 retains the passing 63-check pilot, 19 new proof roots and 31 semantic controls,
 native scenario evidence, API audit and exact runtime byte comparison.
 
@@ -76,7 +76,7 @@ load-to-image correspondence, allocator ownership, acquisition/registration
 ownership and weak memory remain open. Later work must generalize the history
 and prefix invariant beyond the selected layout and connect its ownership to
 actual allocator operations. These later obligations remain distinct from P1.
-The [storage evidence archive](verification_data/row_retention_2026-09-23/README.md)
+The [storage evidence archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/verification_data/row_retention_2026-09-23/README.md)
 retains the 55-check final pilot, bug reproduction, fixed and deliberately broken
 regressions, exact runtime-change audit, and all source-bound proof evidence.
 
@@ -103,7 +103,7 @@ test-only: no additional runtime locks, atomics or proof bookkeeping. The comple
 TLC campaign has 136 cases, and Lean audits 34 required roots and rejects 20
 semantic controls in addition to forged-proof rejection and kernel replay.
 
-The [indexed-read evidence archive](verification_data/indexed_lookup_2026-09-23/README.md)
+The [indexed-read evidence archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/verification_data/indexed_lookup_2026-09-23/README.md)
 retains the successful 45-check pilot against 414 stable source fingerprints,
 264 core regression tests, all three Extended Crucible configurations, and
 the explicit remaining assumptions. Production execution paths are unchanged.
@@ -155,7 +155,7 @@ Implementation checkpoint, 2026-09-23: the workspace now contains both productio
 
 This does **not** close P1's actual concurrent-operation/slice-refinement obligation, the parameterized transaction-history invariant, or the complete-engine milestones. Later resource and durability modeling has begun in parallel; its abstract results do not prove or repair the corresponding Rust implementations. The initial source baseline is explicitly unanchored until independently reviewed and committed. No candidate has been promoted, and the full verification gate remains closed.
 
-The [initial evidence archive](bench_data/verification_pilot_2026-09-23/README.md) retains the successful composed run, proof/model diagnostics, integration matrix, and timing/allocation results.
+The [initial evidence archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/verification_pilot_2026-09-23/README.md) retains the successful composed run, proof/model diagnostics, integration matrix, and timing/allocation results.
 
 The next implementation phase uses `a382ce3` as its performance baseline. It adds a source-bound, conditional Verus proof of the existing commit driver and callback cleanup, with explicit native primitive obligations. Durability-model schedules have now reproduced real WAL-publication and checkpoint-cut bugs; the [native durability contract](../verification/contracts/durability.md) describes the implemented repairs and one-stream boundary. A separate checkpoint model checks active-at-cut replay while allowing new transactions to start. The broader cross-process suite also exposed a primary-key duplicate-insertion race; deterministic regressions and a searched-head CAS repair now accompany its finite model. The complete model campaign has 49 cases. Matched whole-engine performance comparisons replace reliance on helper microbenchmarks for these changes. This is a reviewed-boundary change proposal, not approval of an optimization against the old frozen engine; P1 and the full gate remain open.
 
@@ -170,7 +170,7 @@ error/unwind cleanup. The original Crucible's coarse, mislabeled latency bins
 also required a measurement repair: exact integer quantile intervals, identical
 instrumentation patches on both engines, and conservative comparison gates.
 All original failures and captures are preserved in the
-[native-engine evidence archive](bench_data/verified_engine_2026-09-23/README.md).
+[native-engine evidence archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/verified_engine_2026-09-23/README.md).
 These changes illustrate the required loop: reject a measured regression,
 reduce unnecessary lock duration, reverify, and measure again.
 
@@ -204,7 +204,7 @@ control tests support the native invariant argument; the skiplist implementation
 refinement remains open. Its first three-pair, 30-second diagnostic improved
 median throughput by 6.52%, but candidate p99 spread was 11.50%, above the fixed
 10% noise limit. That result is inconclusive and does not approve adoption.
-The [performance-repair archive](bench_data/performance_repair_2026-09-23/remove-window/README.md)
+The [performance-repair archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/performance_repair_2026-09-23/remove-window/README.md)
 preserves the original source and evidence. The subsequent fresh 19-component
 pilot passed with stable sources, as did 441 native release tests (two existing
 stress/benchmark tests remain ignored). The prospectively declared longer study
@@ -226,7 +226,7 @@ decision accepts the tested removal-window optimization and reproducible seed
 fixture while preserving the original automatic gate's inconclusive result.
 It does not establish the cause of the observed p99 stability improvement,
 close native refinement, or grant whole-engine verification. The
-[engineering decision](bench_data/performance_repair_2026-09-23/README.md#engineering-acceptance)
+[engineering decision](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/performance_repair_2026-09-23/README.md#engineering-acceptance)
 is recorded separately from the immutable experimental and proof receipts.
 
 ## 1. Recommended architecture
@@ -320,7 +320,7 @@ Asynchronous commit permits recent loss, not an inconsistent recovered database.
 
 ## 3. Obligations grounded in the current code
 
-The engine obligations below remain **open** unless an exact implementation theorem is listed in the claim ledger. Existing tests and finite models are supporting evidence. The [transactional-index guide](transactional_indexes.md) describes the repaired protocol; the [current validation archive](bench_data/transactional_indexes_2026-09-22/README.md) supplies the regression/performance baseline.
+The engine obligations below remain **open** unless an exact implementation theorem is listed in the claim ledger. Existing tests and finite models are supporting evidence. The [transactional-index guide](transactional_indexes.md) describes the repaired protocol; the [current validation archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/transactional_indexes_2026-09-22/README.md) supplies the regression/performance baseline.
 
 | ID | Obligation and source | Principal proof/test target |
 | --- | --- | --- |

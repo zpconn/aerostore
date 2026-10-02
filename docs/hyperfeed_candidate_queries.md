@@ -7,7 +7,7 @@ instrumented and uninstrumented runs. This checkpoint narrows the next experimen
 it does not establish AeroStore's 10× throughput target.
 
 This follows the [statistics checkpoint](hyperfeed_statistics.md). The
-[evidence archive](bench_data/pg_candidate_2026-09-28/artifact-manifest.json)
+[evidence archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/pg_candidate_2026-09-28/artifact-manifest.json)
 retains source snapshots, executable/runtime bindings, full and partial histories, executed
 plans, failure reports, resource accounting, and independent reviews.
 

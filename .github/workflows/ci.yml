@@ -79,17 +79,17 @@ jobs:
           echo "Build budget: 8 GiB growth, 4 GiB reserve; available bytes: $available"
           test "$available" -ge "$required"
 
-      - name: Restore the two small unit-test fixtures
+
+      - name: Check evidence catalog and documentation links
         run: |
-          mkdir -p docs/bench_data/transactional_indexes_2026-09-22/churn_128m
-          git show HEAD:docs/bench_data/transactional_indexes_2026-09-22/churn_128m/crucible_profile_2g_120s.log > docs/bench_data/transactional_indexes_2026-09-22/churn_128m/crucible_profile_2g_120s.log
-          git show HEAD:docs/bench_data/transactional_indexes_2026-09-22/aerostore_64f_16c_8w_128m.json > docs/bench_data/transactional_indexes_2026-09-22/aerostore_64f_16c_8w_128m.json
+          python3 tools/evidence/check_catalog.py
+          python3 tools/check_links.py
 
       - name: Python unit tests
         run: python3 scripts/run_python_unit_tests.py
 
       - name: Compile Python tooling
-        run: python3 -m compileall -q scripts verification
+        run: python3 -m compileall -q scripts verification tools
 
       - name: Build every workspace target
         run: |

@@ -1,7 +1,7 @@
 {
   "files": {
     ".github/CODEOWNERS": "83802a673c889fe5c6bfc596e6347abf61c0092f6acaae3a5f4cce0fef3dc2e3",
-    ".github/workflows/verify.yml": "bba192fc0213f242fa0916f51e58c26fb031cae3e7575ef50c1825b07bfa6da0",
+    ".github/workflows/verify.yml": "0f66bb27b9d11f89e98fcd32e7e4233331f08bde6e03e328f6ec71d93576a9fc",
     "Cargo.lock": "6c0d2df18dbfba1408aaedf361cd480eb20ea629bdc6b185ce6b02fa9f31ab2d",
     "Cargo.toml": "8f8878e016d2781884975dc980c2e97372d003b077f7f266d2940631fef535d0",
     "aerostore_core/Cargo.toml": "576b2988775fcb3151d46cbf672e8f3c1d103166402e6a13091dfd7b13a7fbcb",
@@ -90,7 +90,7 @@
     "verification/commit_data/ordinary_generate.py": "f95c7edbed4469a72c96d5ea91bfc56cc68a62c0e988a6e1bd4a552d3b08e133",
     "verification/commit_data/run.py": "998092f5d6233d5f69c879e678c42e0670fde11cb587c8ff75cc95a8ca36ccbd",
     "verification/commit_data/test_generate.py": "f7a7612d8b536bc406f8ce0bc2cdc51f8f19ee82b4cefef95554009edc887e4f",
-    "verification/concurrent/README.md": "105bfeae5b6159e273df05555cae0d65e79823c19dd8fc83979d0ee7687b165b",
+    "verification/concurrent/README.md": "a35fd63c4dcf1be182cc99c28d9f46a266d61f8762e425ab69a7602085ce37ca",
     "verification/concurrent/contracts.rs": "064d9230322bd011b738037749e35fbce82bd70e277c1be5c452c306ecb5a716",
     "verification/concurrent/generate.py": "55dac4597460477d6034b1b0c77f8478c50c74ebef617705071fefb3fb7d7a8d",
     "verification/concurrent/run.py": "8f99d0006856009c741f05d2bb188175a53924b17b8dd4d880404450432e1530",
@@ -98,7 +98,7 @@
     "verification/contracts/bucket_set.md": "c9b853fc77e895d826825632366a9b24b7ab01b54b436d1443ddd09b68217536",
     "verification/contracts/durability.md": "66d2880f88be8718290651a86fe5bcd4805947e91ec134ce3c0d5be1b3942f5a",
     "verification/contracts/lock_models.md": "0d08386de9c6a1cbff67ad2dfe1c8d1f31e634fc0d34081f13cff173e1a98348",
-    "verification/contracts/p0_audit.md": "71f29cdfba92d8044400f1106a26dbcd64ee809bb3a86419757ee3c0f886b6c5",
+    "verification/contracts/p0_audit.md": "84b59704349b0504a32dc956b828648298ed84696817ca72d2e3a5a5f4bf35d5",
     "verification/contracts/p0_inventory.json": "14492fd02bfd7fcde30e2945a0c0e580e47572ecb7482b7bbafad75af5d4c226",
     "verification/contracts/transactions.md": "3bfd83df681bec060c1f3394e28f283810fea4681f1040b9b81ecabcd3d987ab",
     "verification/experiments/profiles/bucket_sets.toml": "e16acb91ad139632f6ed91b4632f1cfa9476ffec2987a89a5b93e40f882decc3",

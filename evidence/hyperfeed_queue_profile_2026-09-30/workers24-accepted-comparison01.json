@@ -1,0 +1,1128 @@
+{
+  "complete": true,
+  "correctness_scope": "Accepted source/configuration-bound short full-history companions plus repeated long metrics audits. Companions do not prove the unrecorded long histories.",
+  "durability": {
+    "equivalence_established": false,
+    "native": "Volatile memfd arena with file WAL, asynchronous acknowledgment; writer requests fdatasync every10s and on final drain.",
+    "postgres": "PostgreSQL16.13, fsync/full_page_writes on, synchronous_commit off, wal_writer_delay10s; final drain required.",
+    "remaining_mismatches": "Acknowledged crash-loss windows, volatile-arena recovery/attachment, dependent-transaction recovery and durable exactly-once delivery are not equated. Engine index maintenance/logging and transport differ."
+  },
+  "format": "hyperfeed-accepted-workers24-comparison-v1",
+  "historical_16worker": {
+    "included_in_this_comparison": false,
+    "scope": "Earlier16-worker results remain separate historical evidence; no mixed-worker ratio is computed."
+  },
+  "input_bindings": [
+    {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/compare_accepted_workers24.py",
+      "sha256": "77d35718d9351372527dc88f401f6d123504040e0ce0a69ec7fd708d2ddb98f0"
+    },
+    {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/workers24-capacity-accepted01/binding.json",
+      "sha256": "42ed480b4a5b260e781bb171870736474d8965a8091e9968104aeb11823117fb"
+    },
+    {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/assess_workers24_capacity.py",
+      "sha256": "e643e7a262a2d87f7128cb6735995a3768c5645184cc001ecd1b9cce2d7fe162"
+    },
+    {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/workers24-capacity-accepted01/input.json",
+      "sha256": "b58a9e44324542e8bba06aec1542872bef46115d8f0af782fdfe747c8543fe5d"
+    },
+    {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/workers24-capacity-accepted01/assessment.json",
+      "sha256": "a80e31778d7f24b0a935d0acad2a06817baa21c85244e86b83d1afd333ede540"
+    },
+    {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/workers24-long-s29/qualification/campaign.json",
+      "sha256": "e499ecf3f610d63ed2630473f27c8d2ba187c11a01fb408d10c73d7c43276178"
+    },
+    {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/workers24-long-s30/qualification/campaign.json",
+      "sha256": "f51a5e673cb37cb4e0691c2e0320a5ce41181d70beba266053b1b9f3c1f14761"
+    },
+    {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/pg24-capacity-accepted02/binding.json",
+      "sha256": "33b25a640b8d9effc536780e1653068eab1e3a07c964cdf9879dd2d5df21c49e"
+    },
+    {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/assess_pg24_capacity_v3.py",
+      "sha256": "5efd0e4999a6d8127e430fd6a19622ea1c868a33f70e33ba94df5003611d5ac9"
+    },
+    {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/pg24-capacity-accepted02/input.json",
+      "sha256": "4dd8a4a4f435d074d5cd70a908ffffbdd3841d7af03de4616d72bfcc3ca346db"
+    },
+    {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/pg24-capacity-accepted02/assessment.json",
+      "sha256": "918a96be9750562eed0b7568da72cb022c29da6724123ae583d8436aa2de43bb"
+    },
+    {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/pg24-long-r704-s29/qualification/campaign.json",
+      "sha256": "c3621bc15fcfaddbef60242de4739fc081050aef3b4f2d968c2710868e705b22"
+    },
+    {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/pg24-long-r704-s30/qualification/campaign.json",
+      "sha256": "aeb0fc57fd4b3192465a21f30b2b684a2a2bf45ed8d563f3ec38793cede0ace8"
+    },
+    {
+      "path": "/home/zpconn/code/aerostore/scripts/assess_hyperfeed_capacity.py",
+      "sha256": "dfe07efbda6c485c8e800e2fd0fec3da8b499558fa766b2c55fa2f7464f850b2"
+    },
+    {
+      "path": "/home/zpconn/code/aerostore/docs/hyperfeed_sustained_capacity.md",
+      "sha256": "9d4714ff0c06d1a8122f2742c9b63461024f1c7412acf3b4b6e5bf5b51c060cf"
+    }
+  ],
+  "matched_configuration_except_engine": {
+    "affinity_ttl_ms": 600,
+    "arena_backing": "memfd",
+    "dispatch": "signature-affinity",
+    "due_index_origin": 1700000000000000000,
+    "due_index_policy": "ordered",
+    "due_index_width": 1000000000,
+    "expiry_index_origin": 1700000000000000000,
+    "expiry_index_policy": "housekeeping",
+    "expiry_index_width": 1000000000,
+    "expiry_publication_policy": "ordered",
+    "families": 1024,
+    "global_time_predicates": false,
+    "hot_percent": 0,
+    "housekeeping_batch_size": 32,
+    "housekeeping_interval_seconds": 300,
+    "maintenance_mode": "sweep",
+    "maintenance_selection": "prefix",
+    "max_backlog": 10000,
+    "max_maintenance_batches": 4096,
+    "max_messages": 1000000,
+    "message_interval_us": 0,
+    "pg_analyze_after_seconds": 5,
+    "pg_candidate_query": "split",
+    "pg_write_mode": "buffered",
+    "projection_batch_size": 4,
+    "projection_interval_seconds": 300,
+    "retry_diagnostics": false,
+    "rolling_cycle_messages": 0,
+    "rolling_retention_seconds": 0,
+    "rpc_delay_us": 0,
+    "seconds": 905,
+    "shm_mib": 2048,
+    "signature_pattern": "both",
+    "workers": 24,
+    "workload": "calibrated"
+  },
+  "maximum_capacity_established": false,
+  "native": {
+    "assessment": {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/workers24-capacity-accepted01/assessment.json",
+      "sha256": "a80e31778d7f24b0a935d0acad2a06817baa21c85244e86b83d1afd333ede540"
+    },
+    "attempts": [
+      {
+        "admission_seconds": 905,
+        "all_transaction_retries": 5459001,
+        "arena_backing": {
+          "metadata": {
+            "effective": "memfd",
+            "filesystem_magic": "0x1021994",
+            "filesystem_type": "tmpfs",
+            "format": "arena-backing-v1",
+            "lifetime": "new_attachments_require_live_owner_existing_mappings_survive",
+            "observed": true,
+            "requested": "memfd",
+            "wal_placement": "case_directory_file"
+          },
+          "observed": true,
+          "passed": true,
+          "reasons": [],
+          "requested": "memfd",
+          "status": "observed"
+        },
+        "campaign": {
+          "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/workers24-long-s29/qualification/campaign.json",
+          "sha256": "e499ecf3f610d63ed2630473f27c8d2ba187c11a01fb408d10c73d7c43276178"
+        },
+        "classification": "passed",
+        "completed_incoming_messages_per_real_second": 6399.972375690608,
+        "completion_fraction": 0.9999956837016575,
+        "conditional_capacity_passed": true,
+        "count_scope": "Foreground incoming messages counted once; fork writes, transactions, retries and maintenance excluded.",
+        "early_failure_scope": "Partial failure counts are retained, but no full-admission throughput is calculated for an early/incomplete execution.",
+        "end_to_end_p99_ms_including_retries": 9.014991,
+        "final_third": {
+          "completions": 1926401,
+          "duration_seconds": 301.0,
+          "fraction": 1.00000051910299,
+          "offered": 1926400,
+          "start_offset_seconds": 604.0
+        },
+        "id": "workers24-long-s29",
+        "incoming_messages_completed_during_admission": 5791975,
+        "incoming_messages_completed_including_drain": 5792000,
+        "incoming_messages_offered": 5792000,
+        "maintenance": {
+          "housekeeping": {
+            "completed": 3,
+            "late_completed": 0,
+            "offered": 3,
+            "positive": 3,
+            "unfinished_past_deadline": 0
+          },
+          "projection": {
+            "completed": 3,
+            "late_completed": 0,
+            "offered": 3,
+            "positive": 3,
+            "unfinished_past_deadline": 0
+          }
+        },
+        "offered_rate": 6400,
+        "postgres_configuration": null,
+        "queue": {
+          "late_minus_early_mean": 0.17081850533807952,
+          "sampled_maximum": 172,
+          "sampled_oldest_age_seconds": 0.03015625,
+          "scope": "one-second receipt-based observations after warmup; not an exact continuous maximum",
+          "trend": {
+            "elapsed_seconds": 844.0,
+            "first": 26,
+            "last": 25,
+            "maximum": 172,
+            "maximum_sample_gap_seconds": 1.0,
+            "minimum": 21,
+            "samples": 845,
+            "slope_per_second": 0.0006011035579531015
+          }
+        },
+        "reasons": [],
+        "resources": {
+          "flat_memory_required": false,
+          "minimum_host_available_bytes": 43135807488,
+          "passed": true,
+          "peak_bytes": 24586358784,
+          "reasons": [],
+          "trend_scope": "whole owned envelope, including setup, teardown, checking and coordinator retention; not isolated database RSS",
+          "trends": {
+            "anon": {
+              "elapsed_seconds": 941.5174401529998,
+              "first": 7954432,
+              "last": 0,
+              "maximum": 5315457024,
+              "maximum_sample_gap_seconds": 1.031449572999918,
+              "minimum": 0,
+              "samples": 937,
+              "slope_per_second": 5139038.811393979
+            },
+            "current": {
+              "elapsed_seconds": 941.5174401529998,
+              "first": 8163328,
+              "last": 10357125120,
+              "maximum": 24447586304,
+              "maximum_sample_gap_seconds": 1.031449572999918,
+              "minimum": 8163328,
+              "samples": 937,
+              "slope_per_second": 26018630.634470988
+            },
+            "file": {
+              "elapsed_seconds": 941.5174401529998,
+              "first": 4096,
+              "last": 10058952704,
+              "maximum": 18743672832,
+              "maximum_sample_gap_seconds": 1.031449572999918,
+              "minimum": 4096,
+              "samples": 937,
+              "slope_per_second": 20265714.27217532
+            },
+            "shmem": {
+              "elapsed_seconds": 941.5174401529998,
+              "first": 0,
+              "last": 0,
+              "maximum": 77860864,
+              "maximum_sample_gap_seconds": 1.031449572999918,
+              "minimum": 0,
+              "samples": 937,
+              "slope_per_second": 13484.625510417853
+            }
+          }
+        },
+        "retry_causes": {
+          "candidate_lookup:serialization_failure": 14942,
+          "commit:serialization_failure": 5444014,
+          "family_lookup:serialization_failure": 7,
+          "global_expiry_lookup:serialization_failure": 26,
+          "history_lookup:serialization_failure": 12
+        },
+        "retry_scope": "Reported whole-run transaction retry counters; may include maintenance, so not counted as incoming messages.",
+        "seed": 20260929,
+        "storage": {
+          "passed": true,
+          "reasons": [],
+          "retired_backlog_is_automatic_failure": false,
+          "retired_backlog_observed_after_drain": false,
+          "retired_postings_after_drain": 0,
+          "retired_postings_trend": {
+            "elapsed_seconds": 904.196481349,
+            "first": 0,
+            "last": 948,
+            "maximum": 1966,
+            "maximum_sample_gap_seconds": 1.0161820599998919,
+            "minimum": 0,
+            "samples": 900,
+            "slope_per_second": 0.06056863527183342
+          },
+          "scope": "native arena high-water/reuse/retired counters; not RSS",
+          "trends": {
+            "arena_high_water_bytes": {
+              "elapsed_seconds": 904.196481349,
+              "first": 66007648,
+              "last": 77860296,
+              "maximum": 77860296,
+              "maximum_sample_gap_seconds": 1.0161820599998919,
+              "minimum": 66007648,
+              "samples": 900,
+              "slope_per_second": 313.17916667183084
+            },
+            "row_fresh_allocations": {
+              "elapsed_seconds": 904.196481349,
+              "first": 262144,
+              "last": 295019,
+              "maximum": 295019,
+              "maximum_sample_gap_seconds": 1.0161820599998919,
+              "minimum": 262144,
+              "samples": 900,
+              "slope_per_second": 0.24144200035105232
+            },
+            "row_recycled": {
+              "elapsed_seconds": 904.196481349,
+              "first": 0,
+              "last": 187879731,
+              "maximum": 187879731,
+              "maximum_sample_gap_seconds": 1.0161820599998919,
+              "minimum": 0,
+              "samples": 900,
+              "slope_per_second": 207729.59029063134
+            },
+            "row_reuse_allocations": {
+              "elapsed_seconds": 904.196481349,
+              "first": 0,
+              "last": 187854861,
+              "maximum": 187854861,
+              "maximum_sample_gap_seconds": 1.0161820599998919,
+              "minimum": 0,
+              "samples": 900,
+              "slope_per_second": 207731.36808778232
+            }
+          }
+        }
+      },
+      {
+        "admission_seconds": 905,
+        "all_transaction_retries": 5441040,
+        "arena_backing": {
+          "metadata": {
+            "effective": "memfd",
+            "filesystem_magic": "0x1021994",
+            "filesystem_type": "tmpfs",
+            "format": "arena-backing-v1",
+            "lifetime": "new_attachments_require_live_owner_existing_mappings_survive",
+            "observed": true,
+            "requested": "memfd",
+            "wal_placement": "case_directory_file"
+          },
+          "observed": true,
+          "passed": true,
+          "reasons": [],
+          "requested": "memfd",
+          "status": "observed"
+        },
+        "campaign": {
+          "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/workers24-long-s30/qualification/campaign.json",
+          "sha256": "f51a5e673cb37cb4e0691c2e0320a5ce41181d70beba266053b1b9f3c1f14761"
+        },
+        "classification": "passed",
+        "completed_incoming_messages_per_real_second": 6399.967955801105,
+        "completion_fraction": 0.9999949930939227,
+        "conditional_capacity_passed": true,
+        "count_scope": "Foreground incoming messages counted once; fork writes, transactions, retries and maintenance excluded.",
+        "early_failure_scope": "Partial failure counts are retained, but no full-admission throughput is calculated for an early/incomplete execution.",
+        "end_to_end_p99_ms_including_retries": 9.174309,
+        "final_third": {
+          "completions": 1926397,
+          "duration_seconds": 301.0,
+          "fraction": 0.9999984426910299,
+          "offered": 1926400,
+          "start_offset_seconds": 604.0
+        },
+        "id": "workers24-long-s30",
+        "incoming_messages_completed_during_admission": 5791971,
+        "incoming_messages_completed_including_drain": 5792000,
+        "incoming_messages_offered": 5792000,
+        "maintenance": {
+          "housekeeping": {
+            "completed": 3,
+            "late_completed": 0,
+            "offered": 3,
+            "positive": 3,
+            "unfinished_past_deadline": 0
+          },
+          "projection": {
+            "completed": 3,
+            "late_completed": 0,
+            "offered": 3,
+            "positive": 3,
+            "unfinished_past_deadline": 0
+          }
+        },
+        "offered_rate": 6400,
+        "postgres_configuration": null,
+        "queue": {
+          "late_minus_early_mean": 0.679715302491104,
+          "sampled_maximum": 146,
+          "sampled_oldest_age_seconds": 0.03484375,
+          "scope": "one-second receipt-based observations after warmup; not an exact continuous maximum",
+          "trend": {
+            "elapsed_seconds": 844.0,
+            "first": 27,
+            "last": 29,
+            "maximum": 146,
+            "maximum_sample_gap_seconds": 1.0,
+            "minimum": 21,
+            "samples": 845,
+            "slope_per_second": 0.0008865894617634055
+          }
+        },
+        "reasons": [],
+        "resources": {
+          "flat_memory_required": false,
+          "minimum_host_available_bytes": 43020746752,
+          "passed": true,
+          "peak_bytes": 24584531968,
+          "reasons": [],
+          "trend_scope": "whole owned envelope, including setup, teardown, checking and coordinator retention; not isolated database RSS",
+          "trends": {
+            "anon": {
+              "elapsed_seconds": 944.6224603700002,
+              "first": 7958528,
+              "last": 0,
+              "maximum": 5363531776,
+              "maximum_sample_gap_seconds": 1.0186506619998,
+              "minimum": 0,
+              "samples": 940,
+              "slope_per_second": 5141038.166772725
+            },
+            "current": {
+              "elapsed_seconds": 944.6224603700002,
+              "first": 8163328,
+              "last": 10353459200,
+              "maximum": 24491528192,
+              "maximum_sample_gap_seconds": 1.0186506619998,
+              "minimum": 8163328,
+              "samples": 940,
+              "slope_per_second": 25974799.19343998
+            },
+            "file": {
+              "elapsed_seconds": 944.6224603700002,
+              "first": 4096,
+              "last": 10055278592,
+              "maximum": 18741039104,
+              "maximum_sample_gap_seconds": 1.0186506619998,
+              "minimum": 4096,
+              "samples": 940,
+              "slope_per_second": 20221138.112361964
+            },
+            "shmem": {
+              "elapsed_seconds": 944.6224603700002,
+              "first": 0,
+              "last": 0,
+              "maximum": 78909440,
+              "maximum_sample_gap_seconds": 1.0186506619998,
+              "minimum": 0,
+              "samples": 940,
+              "slope_per_second": 15454.519463484152
+            }
+          }
+        },
+        "retry_causes": {
+          "candidate_lookup:serialization_failure": 15645,
+          "commit:serialization_failure": 5425364,
+          "family_lookup:serialization_failure": 1,
+          "global_expiry_lookup:serialization_failure": 22,
+          "history_lookup:serialization_failure": 8
+        },
+        "retry_scope": "Reported whole-run transaction retry counters; may include maintenance, so not counted as incoming messages.",
+        "seed": 20260930,
+        "storage": {
+          "passed": true,
+          "reasons": [],
+          "retired_backlog_is_automatic_failure": false,
+          "retired_backlog_observed_after_drain": false,
+          "retired_postings_after_drain": 0,
+          "retired_postings_trend": {
+            "elapsed_seconds": 904.164609769,
+            "first": 0,
+            "last": 572,
+            "maximum": 3890,
+            "maximum_sample_gap_seconds": 1.019706276000079,
+            "minimum": 0,
+            "samples": 900,
+            "slope_per_second": -0.03804796143913789
+          },
+          "scope": "native arena high-water/reuse/retired counters; not RSS",
+          "trends": {
+            "arena_high_water_bytes": {
+              "elapsed_seconds": 904.164609769,
+              "first": 66007648,
+              "last": 78908664,
+              "maximum": 78908664,
+              "maximum_sample_gap_seconds": 1.019706276000079,
+              "minimum": 66007648,
+              "samples": 900,
+              "slope_per_second": 835.5079354159919
+            },
+            "row_fresh_allocations": {
+              "elapsed_seconds": 904.164609769,
+              "first": 262144,
+              "last": 299591,
+              "maximum": 299591,
+              "maximum_sample_gap_seconds": 1.019706276000079,
+              "minimum": 262144,
+              "samples": 900,
+              "slope_per_second": 2.816325605416482
+            },
+            "row_recycled": {
+              "elapsed_seconds": 904.164609769,
+              "first": 0,
+              "last": 187563622,
+              "maximum": 187563622,
+              "maximum_sample_gap_seconds": 1.019706276000079,
+              "minimum": 0,
+              "samples": 900,
+              "slope_per_second": 207872.19866952472
+            },
+            "row_reuse_allocations": {
+              "elapsed_seconds": 904.164609769,
+              "first": 0,
+              "last": 187532493,
+              "maximum": 187532493,
+              "maximum_sample_gap_seconds": 1.019706276000079,
+              "minimum": 0,
+              "samples": 900,
+              "slope_per_second": 207870.35369099106
+            }
+          }
+        }
+      }
+    ],
+    "binary_sha256": "62a98297d18e68f5843e702e7b2ae28c570ec703ab15cd15d5e99caec9acd149",
+    "binding": {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/workers24-capacity-accepted01/binding.json",
+      "sha256": "42ed480b4a5b260e781bb171870736474d8965a8091e9968104aeb11823117fb"
+    },
+    "configuration": {
+      "affinity_ttl_ms": 600,
+      "arena_backing": "memfd",
+      "dispatch": "signature-affinity",
+      "due_index_origin": 1700000000000000000,
+      "due_index_policy": "ordered",
+      "due_index_width": 1000000000,
+      "engine": "service-unix",
+      "expiry_index_origin": 1700000000000000000,
+      "expiry_index_policy": "housekeeping",
+      "expiry_index_width": 1000000000,
+      "expiry_publication_policy": "ordered",
+      "families": 1024,
+      "global_time_predicates": false,
+      "hot_percent": 0,
+      "housekeeping_batch_size": 32,
+      "housekeeping_interval_seconds": 300,
+      "maintenance_mode": "sweep",
+      "maintenance_selection": "prefix",
+      "max_backlog": 10000,
+      "max_maintenance_batches": 4096,
+      "max_messages": 1000000,
+      "message_interval_us": 0,
+      "pg_analyze_after_seconds": 5,
+      "pg_candidate_query": "split",
+      "pg_write_mode": "buffered",
+      "projection_batch_size": 4,
+      "projection_interval_seconds": 300,
+      "retry_diagnostics": false,
+      "rolling_cycle_messages": 0,
+      "rolling_retention_seconds": 0,
+      "rpc_delay_us": 0,
+      "seconds": 905,
+      "shm_mib": 2048,
+      "signature_pattern": "both",
+      "workers": 24,
+      "workload": "calibrated"
+    },
+    "endpoint_completed_messages_per_second": [
+      6399.972375690608,
+      6399.967955801105
+    ],
+    "input": {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/workers24-capacity-accepted01/input.json",
+      "sha256": "b58a9e44324542e8bba06aec1542872bef46115d8f0af782fdfe747c8543fe5d"
+    },
+    "rate_summary": [
+      {
+        "attempts": 2,
+        "classifications": [
+          "passed",
+          "passed"
+        ],
+        "distinct_seeds": [
+          20260929,
+          20260930
+        ],
+        "offered_rate": 6400,
+        "repeated_failure": false,
+        "repeated_pass": true,
+        "variation_scope": "seeds change synthetic coordinates, not deterministic arrival/dispatch order"
+      }
+    ],
+    "source_sha256": "a4e898c32e0b0722fdebad931c8b9959abf736dd751a72054ad1886b4f78e2af",
+    "tested_passing_offered_endpoint": 6400
+  },
+  "policy": {
+    "foreground_p99_ms": 50,
+    "host_reserve_bytes": 4294967296,
+    "max_oldest_foreground_age_seconds": 1,
+    "max_queue_growth_seconds": 0.05,
+    "max_queue_seconds": 1,
+    "memory_limit_bytes": 38654705664,
+    "minimum_completed_fraction": 0.99,
+    "minimum_completed_maintenance_jobs": 3,
+    "minimum_duration_seconds": 905,
+    "minimum_final_third_completed_fraction": 0.99,
+    "minimum_positive_maintenance_jobs": 2,
+    "required_repeats": 2,
+    "warmup_seconds": 60
+  },
+  "postgres": {
+    "assessment": {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/pg24-capacity-accepted02/assessment.json",
+      "sha256": "918a96be9750562eed0b7568da72cb022c29da6724123ae583d8436aa2de43bb"
+    },
+    "attempts": [
+      {
+        "admission_seconds": 905,
+        "all_transaction_retries": 3019846,
+        "arena_backing": {
+          "metadata": {
+            "effective": "not_applicable",
+            "filesystem_magic": null,
+            "filesystem_type": null,
+            "format": "arena-backing-v1",
+            "lifetime": null,
+            "observed": false,
+            "requested": "memfd",
+            "wal_placement": "postgres_managed"
+          },
+          "observed": false,
+          "passed": true,
+          "reasons": [],
+          "requested": "memfd",
+          "status": "not_applicable"
+        },
+        "campaign": {
+          "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/pg24-long-r704-s29/qualification/campaign.json",
+          "sha256": "c3621bc15fcfaddbef60242de4739fc081050aef3b4f2d968c2710868e705b22"
+        },
+        "classification": "passed",
+        "completed_incoming_messages_per_real_second": 703.9911602209945,
+        "completion_fraction": 0.9999874434957308,
+        "conditional_capacity_passed": true,
+        "count_scope": "Foreground incoming messages counted once; fork writes, transactions, retries and maintenance excluded.",
+        "early_failure_scope": "Partial failure counts are retained, but no full-admission throughput is calculated for an early/incomplete execution.",
+        "end_to_end_p99_ms_including_retries": 41.827283,
+        "final_third": {
+          "completions": 211903,
+          "duration_seconds": 301.0,
+          "fraction": 0.9999952808819088,
+          "offered": 211904,
+          "start_offset_seconds": 604.0
+        },
+        "id": "pg24-long-r704-s29",
+        "incoming_messages_completed_during_admission": 637112,
+        "incoming_messages_completed_including_drain": 637120,
+        "incoming_messages_offered": 637120,
+        "maintenance": {
+          "housekeeping": {
+            "completed": 3,
+            "late_completed": 0,
+            "offered": 3,
+            "positive": 3,
+            "unfinished_past_deadline": 0
+          },
+          "projection": {
+            "completed": 3,
+            "late_completed": 0,
+            "offered": 3,
+            "positive": 3,
+            "unfinished_past_deadline": 0
+          }
+        },
+        "offered_rate": 704,
+        "postgres_configuration": {
+          "application_prelocks": false,
+          "autovacuum": "on",
+          "autovacuum_analyze_scale_factor": "0.1",
+          "autovacuum_analyze_threshold": "50",
+          "autovacuum_naptime": "1min",
+          "autovacuum_vacuum_scale_factor": "0.2",
+          "autovacuum_vacuum_threshold": "50",
+          "buffered_commit_locks": "discovered row IDs in ascending order, after business queries",
+          "checkpoint_timeout": "5min",
+          "deadlock_timeout": "10ms",
+          "default_statistics_target": "100",
+          "effective_cache_size": "4GB",
+          "fsync": "on",
+          "full_page_writes": "on",
+          "lock_timeout": "0",
+          "max_connections": "100",
+          "max_pred_locks_per_page": "2",
+          "max_pred_locks_per_relation": "-2",
+          "max_pred_locks_per_transaction": "64",
+          "max_wal_size": "1GB",
+          "plan_cache_mode": "auto",
+          "predeclared_write_sets": false,
+          "random_page_cost": "4",
+          "seq_page_cost": "1",
+          "server_version": "16.13",
+          "shared_buffers": "128MB",
+          "snapshot_established": "first business query",
+          "statement_timeout": "1min",
+          "synchronous_commit": "off",
+          "track_counts": "on",
+          "transaction_isolation": "serializable",
+          "wal_level": "replica",
+          "wal_writer_delay": "10s",
+          "work_mem": "4MB",
+          "write_mode": "chosen explicitly by worker configuration"
+        },
+        "queue": {
+          "late_minus_early_mean": 0.1637010676156585,
+          "sampled_maximum": 83,
+          "sampled_oldest_age_seconds": 0.524147728,
+          "scope": "one-second receipt-based observations after warmup; not an exact continuous maximum",
+          "trend": {
+            "elapsed_seconds": 844.0,
+            "first": 4,
+            "last": 8,
+            "maximum": 83,
+            "maximum_sample_gap_seconds": 1.0,
+            "minimum": 0,
+            "samples": 845,
+            "slope_per_second": 0.0008640155101941778
+          }
+        },
+        "reasons": [],
+        "resources": {
+          "flat_memory_required": false,
+          "minimum_host_available_bytes": 47377801216,
+          "passed": true,
+          "peak_bytes": 6604128256,
+          "reasons": [],
+          "trend_scope": "whole owned envelope, including setup, teardown, checking and coordinator retention; not isolated database RSS",
+          "trends": {
+            "anon": {
+              "elapsed_seconds": 939.6836621910006,
+              "first": 7954432,
+              "last": 0,
+              "maximum": 944062464,
+              "maximum_sample_gap_seconds": 1.0125557410010515,
+              "minimum": 0,
+              "samples": 936,
+              "slope_per_second": 593403.2530739356
+            },
+            "current": {
+              "elapsed_seconds": 939.6836621910006,
+              "first": 8159232,
+              "last": 5315321856,
+              "maximum": 6315245568,
+              "maximum_sample_gap_seconds": 1.0125557410010515,
+              "minimum": 8159232,
+              "samples": 936,
+              "slope_per_second": 6306047.600705927
+            },
+            "file": {
+              "elapsed_seconds": 939.6836621910006,
+              "first": 4096,
+              "last": 5161775104,
+              "maximum": 5215264768,
+              "maximum_sample_gap_seconds": 1.0125557410010515,
+              "minimum": 4096,
+              "samples": 936,
+              "slope_per_second": 5541897.140132461
+            },
+            "shmem": {
+              "elapsed_seconds": 939.6836621910006,
+              "first": 0,
+              "last": 0,
+              "maximum": 147447808,
+              "maximum_sample_gap_seconds": 1.0125557410010515,
+              "minimum": 0,
+              "samples": 936,
+              "slope_per_second": 43166.89917087243
+            }
+          }
+        },
+        "retry_causes": {
+          "batch_write:40001": 2888518,
+          "commit:40001": 131325,
+          "query:40001": 3
+        },
+        "retry_scope": "Reported whole-run transaction retry counters; may include maintenance, so not counted as incoming messages.",
+        "seed": 20260929,
+        "storage": {
+          "passed": true,
+          "reasons": [],
+          "scope": "PostgreSQL relation bytes and estimated dead tuples; not RSS",
+          "trends": {
+            "estimated_dead_tuples": {
+              "elapsed_seconds": 904.463811628,
+              "first": 0,
+              "last": 598108,
+              "maximum": 1034652,
+              "maximum_sample_gap_seconds": 1.01720284299995,
+              "minimum": 0,
+              "samples": 896,
+              "slope_per_second": 69.7422304994201
+            },
+            "index_bytes": {
+              "elapsed_seconds": 904.463811628,
+              "first": 8790016,
+              "last": 58998784,
+              "maximum": 58998784,
+              "maximum_sample_gap_seconds": 1.01720284299995,
+              "minimum": 8790016,
+              "samples": 896,
+              "slope_per_second": 18951.770219712263
+            },
+            "table_bytes": {
+              "elapsed_seconds": 904.463811628,
+              "first": 52412416,
+              "last": 73891840,
+              "maximum": 73891840,
+              "maximum_sample_gap_seconds": 1.01720284299995,
+              "minimum": 52412416,
+              "samples": 896,
+              "slope_per_second": 5992.008099286526
+            },
+            "total_bytes": {
+              "elapsed_seconds": 904.463811628,
+              "first": 61202432,
+              "last": 132890624,
+              "maximum": 132890624,
+              "maximum_sample_gap_seconds": 1.01720284299995,
+              "minimum": 61202432,
+              "samples": 896,
+              "slope_per_second": 24943.77831899879
+            }
+          }
+        }
+      },
+      {
+        "admission_seconds": 905,
+        "all_transaction_retries": 3033844,
+        "arena_backing": {
+          "metadata": {
+            "effective": "not_applicable",
+            "filesystem_magic": null,
+            "filesystem_type": null,
+            "format": "arena-backing-v1",
+            "lifetime": null,
+            "observed": false,
+            "requested": "memfd",
+            "wal_placement": "postgres_managed"
+          },
+          "observed": false,
+          "passed": true,
+          "reasons": [],
+          "requested": "memfd",
+          "status": "not_applicable"
+        },
+        "campaign": {
+          "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/pg24-long-r704-s30/qualification/campaign.json",
+          "sha256": "aeb0fc57fd4b3192465a21f30b2b684a2a2bf45ed8d563f3ec38793cede0ace8"
+        },
+        "classification": "passed",
+        "completed_incoming_messages_per_real_second": 703.9922651933701,
+        "completion_fraction": 0.9999890130587644,
+        "conditional_capacity_passed": true,
+        "count_scope": "Foreground incoming messages counted once; fork writes, transactions, retries and maintenance excluded.",
+        "early_failure_scope": "Partial failure counts are retained, but no full-admission throughput is calculated for an early/incomplete execution.",
+        "end_to_end_p99_ms_including_retries": 42.431067000000006,
+        "final_third": {
+          "completions": 211904,
+          "duration_seconds": 301.0,
+          "fraction": 1.0,
+          "offered": 211904,
+          "start_offset_seconds": 604.0
+        },
+        "id": "pg24-long-r704-s30",
+        "incoming_messages_completed_during_admission": 637113,
+        "incoming_messages_completed_including_drain": 637120,
+        "incoming_messages_offered": 637120,
+        "maintenance": {
+          "housekeeping": {
+            "completed": 3,
+            "late_completed": 0,
+            "offered": 3,
+            "positive": 3,
+            "unfinished_past_deadline": 0
+          },
+          "projection": {
+            "completed": 3,
+            "late_completed": 0,
+            "offered": 3,
+            "positive": 3,
+            "unfinished_past_deadline": 0
+          }
+        },
+        "offered_rate": 704,
+        "postgres_configuration": {
+          "application_prelocks": false,
+          "autovacuum": "on",
+          "autovacuum_analyze_scale_factor": "0.1",
+          "autovacuum_analyze_threshold": "50",
+          "autovacuum_naptime": "1min",
+          "autovacuum_vacuum_scale_factor": "0.2",
+          "autovacuum_vacuum_threshold": "50",
+          "buffered_commit_locks": "discovered row IDs in ascending order, after business queries",
+          "checkpoint_timeout": "5min",
+          "deadlock_timeout": "10ms",
+          "default_statistics_target": "100",
+          "effective_cache_size": "4GB",
+          "fsync": "on",
+          "full_page_writes": "on",
+          "lock_timeout": "0",
+          "max_connections": "100",
+          "max_pred_locks_per_page": "2",
+          "max_pred_locks_per_relation": "-2",
+          "max_pred_locks_per_transaction": "64",
+          "max_wal_size": "1GB",
+          "plan_cache_mode": "auto",
+          "predeclared_write_sets": false,
+          "random_page_cost": "4",
+          "seq_page_cost": "1",
+          "server_version": "16.13",
+          "shared_buffers": "128MB",
+          "snapshot_established": "first business query",
+          "statement_timeout": "1min",
+          "synchronous_commit": "off",
+          "track_counts": "on",
+          "transaction_isolation": "serializable",
+          "wal_level": "replica",
+          "wal_writer_delay": "10s",
+          "work_mem": "4MB",
+          "write_mode": "chosen explicitly by worker configuration"
+        },
+        "queue": {
+          "late_minus_early_mean": 0.33451957295373624,
+          "sampled_maximum": 92,
+          "sampled_oldest_age_seconds": 0.465909091,
+          "scope": "one-second receipt-based observations after warmup; not an exact continuous maximum",
+          "trend": {
+            "elapsed_seconds": 844.0,
+            "first": 8,
+            "last": 7,
+            "maximum": 92,
+            "maximum_sample_gap_seconds": 1.0,
+            "minimum": 0,
+            "samples": 845,
+            "slope_per_second": 0.0011107378619265745
+          }
+        },
+        "reasons": [],
+        "resources": {
+          "flat_memory_required": false,
+          "minimum_host_available_bytes": 47459741696,
+          "passed": true,
+          "peak_bytes": 6606602240,
+          "reasons": [],
+          "trend_scope": "whole owned envelope, including setup, teardown, checking and coordinator retention; not isolated database RSS",
+          "trends": {
+            "anon": {
+              "elapsed_seconds": 939.7452782769997,
+              "first": 7954432,
+              "last": 0,
+              "maximum": 885858304,
+              "maximum_sample_gap_seconds": 1.014101495000432,
+              "minimum": 0,
+              "samples": 936,
+              "slope_per_second": 578630.709784806
+            },
+            "current": {
+              "elapsed_seconds": 939.7452782769997,
+              "first": 8134656,
+              "last": 5333504000,
+              "maximum": 6276104192,
+              "maximum_sample_gap_seconds": 1.014101495000432,
+              "minimum": 8134656,
+              "samples": 936,
+              "slope_per_second": 6303430.883387145
+            },
+            "file": {
+              "elapsed_seconds": 939.7452782769997,
+              "first": 4096,
+              "last": 5179482112,
+              "maximum": 5327048704,
+              "maximum_sample_gap_seconds": 1.014101495000432,
+              "minimum": 4096,
+              "samples": 936,
+              "slope_per_second": 5554042.3972934475
+            },
+            "shmem": {
+              "elapsed_seconds": 939.7452782769997,
+              "first": 0,
+              "last": 0,
+              "maximum": 147451904,
+              "maximum_sample_gap_seconds": 1.014101495000432,
+              "minimum": 0,
+              "samples": 936,
+              "slope_per_second": 43790.41798253883
+            }
+          }
+        },
+        "retry_causes": {
+          "batch_write:40001": 2901677,
+          "commit:40001": 132164,
+          "query:40001": 3
+        },
+        "retry_scope": "Reported whole-run transaction retry counters; may include maintenance, so not counted as incoming messages.",
+        "seed": 20260930,
+        "storage": {
+          "passed": true,
+          "reasons": [],
+          "scope": "PostgreSQL relation bytes and estimated dead tuples; not RSS",
+          "trends": {
+            "estimated_dead_tuples": {
+              "elapsed_seconds": 904.443641576,
+              "first": 0,
+              "last": 596465,
+              "maximum": 1038287,
+              "maximum_sample_gap_seconds": 1.0171729429999914,
+              "minimum": 0,
+              "samples": 896,
+              "slope_per_second": 65.21175861238794
+            },
+            "index_bytes": {
+              "elapsed_seconds": 904.443641576,
+              "first": 8790016,
+              "last": 59056128,
+              "maximum": 59056128,
+              "maximum_sample_gap_seconds": 1.0171729429999914,
+              "minimum": 8790016,
+              "samples": 896,
+              "slope_per_second": 18524.53082347271
+            },
+            "table_bytes": {
+              "elapsed_seconds": 904.443641576,
+              "first": 52412416,
+              "last": 74055680,
+              "maximum": 74055680,
+              "maximum_sample_gap_seconds": 1.0171729429999914,
+              "minimum": 52412416,
+              "samples": 896,
+              "slope_per_second": 5977.428984489448
+            },
+            "total_bytes": {
+              "elapsed_seconds": 904.443641576,
+              "first": 61202432,
+              "last": 133111808,
+              "maximum": 133111808,
+              "maximum_sample_gap_seconds": 1.0171729429999914,
+              "minimum": 61202432,
+              "samples": 896,
+              "slope_per_second": 24501.959807962157
+            }
+          }
+        }
+      }
+    ],
+    "binary_sha256": "62a98297d18e68f5843e702e7b2ae28c570ec703ab15cd15d5e99caec9acd149",
+    "binding": {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/pg24-capacity-accepted02/binding.json",
+      "sha256": "33b25a640b8d9effc536780e1653068eab1e3a07c964cdf9879dd2d5df21c49e"
+    },
+    "configuration": {
+      "affinity_ttl_ms": 600,
+      "arena_backing": "memfd",
+      "dispatch": "signature-affinity",
+      "due_index_origin": 1700000000000000000,
+      "due_index_policy": "ordered",
+      "due_index_width": 1000000000,
+      "engine": "postgres",
+      "expiry_index_origin": 1700000000000000000,
+      "expiry_index_policy": "housekeeping",
+      "expiry_index_width": 1000000000,
+      "expiry_publication_policy": "ordered",
+      "families": 1024,
+      "global_time_predicates": false,
+      "hot_percent": 0,
+      "housekeeping_batch_size": 32,
+      "housekeeping_interval_seconds": 300,
+      "maintenance_mode": "sweep",
+      "maintenance_selection": "prefix",
+      "max_backlog": 10000,
+      "max_maintenance_batches": 4096,
+      "max_messages": 1000000,
+      "message_interval_us": 0,
+      "pg_analyze_after_seconds": 5,
+      "pg_candidate_query": "split",
+      "pg_write_mode": "buffered",
+      "projection_batch_size": 4,
+      "projection_interval_seconds": 300,
+      "retry_diagnostics": false,
+      "rolling_cycle_messages": 0,
+      "rolling_retention_seconds": 0,
+      "rpc_delay_us": 0,
+      "seconds": 905,
+      "shm_mib": 2048,
+      "signature_pattern": "both",
+      "workers": 24,
+      "workload": "calibrated"
+    },
+    "endpoint_completed_messages_per_second": [
+      703.9911602209945,
+      703.9922651933701
+    ],
+    "input": {
+      "path": "/home/zpconn/code/aerostore/target/hyperfeed-queue-profile-20260930-v1/pg24-capacity-accepted02/input.json",
+      "sha256": "4dd8a4a4f435d074d5cd70a908ffffbdd3841d7af03de4616d72bfcc3ca346db"
+    },
+    "rate_summary": [
+      {
+        "attempts": 2,
+        "classifications": [
+          "passed",
+          "passed"
+        ],
+        "distinct_seeds": [
+          20260929,
+          20260930
+        ],
+        "offered_rate": 704,
+        "repeated_failure": false,
+        "repeated_pass": true,
+        "variation_scope": "seeds change synthetic coordinates, not deterministic arrival/dispatch order"
+      }
+    ],
+    "source_sha256": "a4e898c32e0b0722fdebad931c8b9959abf736dd751a72054ad1886b4f78e2af",
+    "tested_passing_offered_endpoint": 704
+  },
+  "ratio_of_maximum_capacities_established": false,
+  "ratio_scope": "Arithmetic ratio of tested repeatably passing offered endpoints only. Both are lower bounds, not established maxima or a ratio of maximum sustainable capacities.",
+  "real_world_10x_claim": false,
+  "resource_budget": {
+    "accepted_swap_bytes": 0,
+    "cpu_count": 24,
+    "host_memory_reserve_bytes": 4294967296,
+    "owned_memory_bytes": 38654705664
+  },
+  "synthetic_limits": "Fixed population and synthetic calibrated message model; no production HyperFeed or physical two-host qualification, no optimal-PostgreSQL claim.",
+  "tested_offered_endpoint_ratio": 9.090909090909092,
+  "transaction_contract": "Same captured query-discovered calibrated workload and transaction boundaries, buffered PostgreSQL writes, serializable transactions, signature affinity,1024identities/seven-fork profile,905s admissions and300s batched maintenance."
+}

@@ -7,9 +7,9 @@ Capture time-series allocator/reclaimer signals during a long `hyperfeed_crucibl
 
 ## Instrumentation Added
 Code changes used for this capture:
-- [aerostore_core/src/shm.rs](/home/zpconn/code/aerostore/aerostore_core/src/shm.rs)
+- aerostore_core/src/shm.rs — `/home/zpconn/code/aerostore/aerostore_core/src/shm.rs` (local-only evidence)
   - Added `ShmArena::free_list_depth_estimate(max_nodes) -> (depth, truncated)`.
-- [aerostore_core/benches/hyperfeed_crucible.rs](/home/zpconn/code/aerostore/aerostore_core/benches/hyperfeed_crucible.rs)
+- aerostore_core/benches/hyperfeed_crucible.rs — `/home/zpconn/code/aerostore/aerostore_core/benches/hyperfeed_crucible.rs` (local-only evidence)
   - Added optional allocator telemetry recorder (disabled by default).
   - Recorder writes low-frequency CSV samples using existing atomic counters.
 
@@ -28,7 +28,7 @@ cargo bench -p aerostore_core --bench hyperfeed_crucible -- --noplot
 
 Output file:
 - `/tmp/aerostore_alloc_profile_2g_120s.csv`
-- Committed snapshot: [docs/bench_data/aerostore_alloc_profile_2g_120s_2026-03-03.csv](/home/zpconn/code/aerostore/docs/bench_data/aerostore_alloc_profile_2g_120s_2026-03-03.csv)
+- Committed snapshot: docs/bench_data/aerostore_alloc_profile_2g_120s_2026-03-03.csv — `/home/zpconn/code/aerostore/docs/bench_data/aerostore_alloc_profile_2g_120s_2026-03-03.csv` (local-only evidence)
 
 ## Crucible Result For This Capture
 - Aerostore TPS: `538,236.15`

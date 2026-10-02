@@ -74,7 +74,7 @@ The accepted cached removal-window change is inside that source-removal
 primitive boundary. Its [storage contract](../contracts/transactions.md#storage-and-progress)
 requires uninterrupted mutation exclusion, attached predecessors, all-lane
 detachment or a complete fallback search, and unchanged pinned-reader lifetime.
-[Native evidence](../../docs/bench_data/performance_repair_2026-09-23/remove-window/README.md)
+[Native evidence](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/performance_repair_2026-09-23/remove-window/README.md)
 covers maximum-height removal, partial postings, pinned retirement, shorter
 reuse, fallback failures, and an upper-lane omission mutant. Separate test-only
 instrumentation confirms one ordinary removal search instead of two. The

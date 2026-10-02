@@ -2,7 +2,7 @@
 
 **AeroStore's direct shared-memory worker mode does not currently satisfy the requirement that surviving workers keep processing all affected work after another worker is killed, without restarting the engine.** The probes below preserve the working implementation and measure this limitation. Their Rust tests pass when they reproduce the current behavior; the separate availability result is explicitly **false**. The database-owned prototype tested later in this document has a different ownership boundary.
 
-The evidence is [the survivor report](worker_failure_data/2026-09-24/survivor_availability.json), [test log](worker_failure_data/2026-09-24/test.log), and [source/environment manifest](worker_failure_data/2026-09-24/manifest.json). These observations are against the production sources recorded in that manifest, with a new integration test and no engine changes.
+The evidence is [the survivor report](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/worker_failure_data/2026-09-24/survivor_availability.json), [test log](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/worker_failure_data/2026-09-24/test.log), and [source/environment manifest](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/worker_failure_data/2026-09-24/manifest.json). These observations are against the production sources recorded in that manifest, with a new integration test and no engine changes.
 
 ## Required behavior
 
@@ -45,7 +45,7 @@ The archived run uses disposable 16 MiB `MAP_SHARED` file mappings and release b
 - Supervisor `SIGKILL` plus reap took approximately **1.1 ms**, including its 1 ms polling interval.
 - Idle-worker death required no recovery; the supervisor's first verified update completed in **0.014 ms**.
 - Exclusive warm attach took approximately **0.02 ms**, but left abandoned row/index guards unusable.
-- Creating a fresh arena/table, restoring deterministic bootstrap values, replaying one durable transaction with two writes, rebuilding/binding the index, and committing/querying the first replacement message took **1.86 ms**. [Recovery observation](worker_failure_data/2026-09-24/native_commit_before_wal_acceptance.json)
+- Creating a fresh arena/table, restoring deterministic bootstrap values, replaying one durable transaction with two writes, rebuilding/binding the index, and committing/querying the first replacement message took **1.86 ms**. [Recovery observation](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/worker_failure_data/2026-09-24/native_commit_before_wal_acceptance.json)
 
 The recovery measurement excludes failure detection, stopping other workers, realistic checkpoint/WAL sizes, remote output reconciliation, and process restart. It is one small observed run, not an SLA or a claim that production interruption would take two milliseconds. The intact WAL is replayed into entirely new lock/allocator/index state. The failed mapping is never repaired in place.
 
@@ -80,7 +80,7 @@ has its own executor. The coordinator still owns the native WAL and collector
 processes. This changes the ownership boundary without changing production
 engine source or placing the matching algorithm inside the database.
 
-The [retained service evidence](bench_data/architecture_2026-09-25/service-availability/README.md)
+The [retained service evidence](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/architecture_2026-09-25/service-availability/README.md)
 passes selected application-client SIGKILL tests in debug and release builds.
 A separate survivor process establishes its session before each death and
 keeps that session while subsequently committing same-row and disjoint-family

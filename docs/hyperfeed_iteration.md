@@ -43,7 +43,7 @@ measurements, ideally a focused component benchmark before a longer trial.
 All eight workload cells passed their screen requirements. Each maintenance
 cell completed seven projection and seven housekeeping jobs on time, with at
 least two jobs in each class doing positive work. The 112 focused Python tests
-passed. See the [validation record](bench_data/hyperfeed_iteration_2026-09-29/validation.json)
+passed. See the [validation record](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_iteration_2026-09-29/validation.json)
 for hashes, timing, resource checks and local evidence paths. The original
 capacity baseline and engine implementation are unchanged.
 

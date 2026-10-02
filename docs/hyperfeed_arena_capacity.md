@@ -50,14 +50,14 @@ limit is not an allowance for accepted results: any owned swap invalidates a
 measurement. Builds and trials run one at a time. The original 20 GiB development
 and screen growth budget remains in force. The sustained trials used a
 qualification-only 40 GiB addendum; a later, unused
-[64 GiB qualification ceiling](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/qualification-budget64.json)
+[64 GiB qualification ceiling](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/qualification-budget64.json)
 allows subsequent stages to preserve all earlier evidence. Both count all
 growth from the same original baseline, including retained histories, and
 require fresh admission checks. No trial used the 64 GiB tier in this campaign.
 Both Linux and the Windows volume hosting WSL retain a 30 GiB disk reserve.
 These declarations and stage admissions are in the
-[plan](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/plan.json) and
-[qualification budget](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/qualification-budget.json).
+[plan](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/plan.json) and
+[qualification budget](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/qualification-budget.json).
 
 ## Completed observations
 
@@ -69,12 +69,12 @@ retains messages that finish in the final drain. All rows use seed 20260929.
 
 | Cell | Admission / timer cadence | Offered/s | Completed/s during admission | Foreground p99 | Status |
 | --- | --- | ---: | ---: | ---: | --- |
-| [Burst 4,032](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/burst4032-s29/cell.json) | 120 s / 300 s | 4,032 | 4,031.80 | 12.80 ms | Screen passed; no timer jobs |
-| [Burst 6,400](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/burst6400-s29/cell.json) | 120 s / 300 s | 6,400 | 6,399.63 | 19.37 ms | Screen passed; no timer jobs |
-| [Maintenance stress](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/maintenance4032-s29/cell.json) | 40 s / 5 s | 4,032 | 4,031.33 | 14.28 ms | Seven jobs per class completed on time |
-| [First sustained trial](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/long4032-s29/cell.json) | 905 s / 300 s | 4,032 | 4,031.97 | 12.95 ms | Operational pass; guard and repeat pending |
-| [Maintenance stress 6,400](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/maintenance6400-s29/cell.json) | 40 s / 5 s | 6,400 | 6,399.00 | 54.28 ms | Failed foreground p99; seven jobs per class completed on time |
-| [Sustained 6,400](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/long6400-s29/cell.json) | 905 s / 300 s | 6,400 | 6,399.96 | 50.92 ms | Failed foreground p99; three positive jobs per class completed on time |
+| [Burst 4,032](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/burst4032-s29/cell.json) | 120 s / 300 s | 4,032 | 4,031.80 | 12.80 ms | Screen passed; no timer jobs |
+| [Burst 6,400](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/burst6400-s29/cell.json) | 120 s / 300 s | 6,400 | 6,399.63 | 19.37 ms | Screen passed; no timer jobs |
+| [Maintenance stress](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/maintenance4032-s29/cell.json) | 40 s / 5 s | 4,032 | 4,031.33 | 14.28 ms | Seven jobs per class completed on time |
+| [First sustained trial](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/long4032-s29/cell.json) | 905 s / 300 s | 4,032 | 4,031.97 | 12.95 ms | Operational pass; guard and repeat pending |
+| [Maintenance stress 6,400](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/maintenance6400-s29/cell.json) | 40 s / 5 s | 6,400 | 6,399.00 | 54.28 ms | Failed foreground p99; seven jobs per class completed on time |
+| [Sustained 6,400](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/long6400-s29/cell.json) | 905 s / 300 s | 6,400 | 6,399.96 | 50.92 ms | Failed foreground p99; three positive jobs per class completed on time |
 
 The 4,032/s sustained trial received 3,648,934 foreground completions during admission
 and drained all 3,648,960 offered messages. Each maintenance class completed all
@@ -100,7 +100,7 @@ discarded when budgeting the campaign. At 6,400/s, arena high-water reached
 74,441,872 bytes while the owned cgroup peaked at 22.88 GiB. Both sustained
 resource assessments passed.
 
-The [latency-window analysis](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/latency-window-analysis.json)
+The [latency-window analysis](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/latency-window-analysis.json)
 explains why the short 6,400/s pass was insufficient. The 905-second run had
 40 one-second arrival cohorts with p99 above 50 ms, versus only the startup
 second in its 120-second screen and none in the 4,032/s sustained run. The worst
@@ -120,15 +120,15 @@ below 50 ms can still contain individual slower inputs. The run-level 1.658-seco
 maximum includes maintenance and equals a housekeeping job's latency; it is not
 a measured foreground maximum.
 
-The analysis preserves [threshold windows](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/latency-over-50ms.csv),
-[30-second summaries](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/latency-timeline-30s.csv)
-and [maintenance intervals](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/latency-maintenance-jobs.csv).
+The analysis preserves [threshold windows](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/latency-over-50ms.csv),
+[30-second summaries](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/latency-timeline-30s.csv)
+and [maintenance intervals](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/latency-maintenance-jobs.csv).
 It reads no raw operation history. Resource receipts show no major faults,
 reclaim scans or owned swap in either sustained run. They lack an absolute
 monotonic controller anchor, and realtime-minus-relative-monotonic offsets
 changed during execution, so this evidence cannot precisely align file writeback
 or minor faults with the latency cohorts. A separate
-[clock-step analysis](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/resource-clock-step-analysis.json)
+[clock-step analysis](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/resource-clock-step-analysis.json)
 finds discrete positive offset changes approximately every 30 seconds, not
 smooth drift: 32 changes above 1 ms in the 6,400/s envelope, totaling 6.719 seconds;
 the largest adjacent change was 228.267 ms. The 4,032/s envelope had 31 such
@@ -140,9 +140,9 @@ with admission anchors before attributing stalls to clock adjustments.
 
 ## Evidence boundary and next decision
 
-The [capture](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/candidate-02/capture/capture.json)
+The [capture](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/candidate-02/capture/capture.json)
 binds source `a4e898c32e0b0722…` and executable `62a98297d18e68f5…`.
-The [historical source comparison](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/source-comparison.json)
+The [historical source comparison](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/source-comparison.json)
 finds unchanged hashes for production engine code, PostgreSQL/native/service
 adapters, workload/model, calibrated scheduling, workers/accounting, Cargo inputs
 and verification sources. Changes are in arena fixture/configuration, metadata,
@@ -150,9 +150,9 @@ harness and tests. The executable and harness differ from the historical
 PostgreSQL measurement, so a ratio to its 640/s result is a historical reference,
 pending a fresh matched PostgreSQL comparison.
 
-[Focused Rust checks](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/focused-checks/tests/receipt.json.gz)
+[Focused Rust checks](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/focused-checks/tests/receipt.json.gz)
 passed 66 test executions. The
-[final checks](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/final-checks-02.json)
+[final checks](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/final-checks-02.json)
 passed 198 Python tests and the existing default-source verification guard,
 covering attachment lifetime, metadata rejection, accounting and configuration
 matching. The earlier final-check invocation's import error remains preserved.
@@ -160,7 +160,7 @@ The source guard checks the reviewed source relationship; this work adds no
 whole-engine proof. Metrics runs passed structural, ordering and useful-work
 checks, but their unrecorded transaction histories are not exhaustively verified.
 
-The [4,032/s full-history checker](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/full4032/guard.json)
+The [4,032/s full-history checker](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/full4032/guard.json)
 was deliberately interrupted to prioritize investigating 6,400/s; its incomplete
 evidence is preserved and supplies no correctness pass. Both 6,400/s policy
 failures remain evidence. All campaign jobs are stopped. A roughly five-minute
@@ -172,8 +172,8 @@ and resource receipts. A fresh PostgreSQL comparison remains outstanding.
 Population turnover, production message distributions, larger worker counts and
 unavailable HyperFeed code remain workload limitations.
 
-The [final evidence audit](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/final-audit.json) checked **1,687 referenced files** and confirmed all ten owned resource envelopes stopped. The [compact archive](bench_data/hyperfeed_arena_capacity_2026-09-29/artifact-manifest.json) preserves 1.57 MiB of receipts, helpers, summaries and tables; full histories, captured sources and executables remain at their original local paths. No new conditional capacity point was accepted.
+The [final evidence audit](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/final-audit.json) checked **1,687 referenced files** and confirmed all ten owned resource envelopes stopped. The [compact archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/artifact-manifest.json) preserves 1.57 MiB of receipts, helpers, summaries and tables; full histories, captured sources and executables remain at their original local paths. No new conditional capacity point was accepted.
 
 Campaign growth was 23.58 GiB against the 40 GiB ceiling. Closeout left approximately 478.9 GiB free inside Linux, 214.2 GiB on Windows C:, and 45.4 GiB available RAM. Builds reused the normal development cache; no isolated compiler trees were created or removed. No evidence was deleted, and zero Linux or Windows space reclaimed is claimed.
 
-The [saved checkpoint](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/checkpoint.json) records evidence paths, resource checks and capture-validation commands. The [next diagnostic specification](bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/next-diagnostic-plan.json) calls for 300 seconds at 6,400/s with a 1M per-worker message cap and profiling from seconds 5–285. Its new launcher and analyzer still need implementation and validation; the saved plan is not an executable profiling result.
+The [saved checkpoint](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/checkpoint.json) records evidence paths, resource checks and capture-validation commands. The [next diagnostic specification](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_arena_capacity_2026-09-29/evidence/next-diagnostic-plan.json) calls for 300 seconds at 6,400/s with a 1M per-worker message cap and profiling from seconds 5–285. Its new launcher and analyzer still need implementation and validation; the saved plan is not an executable profiling result.

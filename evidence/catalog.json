@@ -1,0 +1,2105 @@
+{
+  "archive_commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+  "campaigns": [
+    {
+      "availability": "archive",
+      "bytes": 69589535,
+      "cited_by": [
+        "docs/hyperfeed_affinity.md",
+        "docs/hyperfeed_calibrated.md",
+        "docs/hyperfeed_maintenance.md",
+        "docs/hyperfeed_qualification.md"
+      ],
+      "claims": [],
+      "date": "2026-09-25",
+      "files": 729,
+      "id": "affinity_2026-09-25",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/affinity_2026-09-25.json",
+        "sha256": "0e545e03ed07a11f729ae6d341e2063ad2f4144474af568ab41766d9c9830e70"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/affinity_2026-09-25",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 228185124,
+      "cited_by": [
+        "README.md",
+        "docs/formal_verification_plan.md",
+        "docs/hyperfeed_qualification.md",
+        "docs/hyperfeed_two_host.md",
+        "docs/worker_failure_contract.md"
+      ],
+      "claims": [],
+      "date": "2026-09-25",
+      "files": 294,
+      "id": "architecture_2026-09-25",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/architecture_2026-09-25.json",
+        "sha256": "c8c0c1e89aba52773be2ff25e6f268122a3d230f3ce52c1e6e4164dc64ec575f"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/architecture_2026-09-25",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 5609,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 2,
+      "id": "bench-root-files",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/bench-root-files.json",
+        "sha256": "fce4452b77fad6e98795d9c34fe138c055d759a466b788bd495e2ec076562f96"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive",
+        "selection": "direct-files"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 57639015,
+      "cited_by": [
+        "README.md",
+        "docs/hyperfeed_calibrated.md",
+        "docs/hyperfeed_qualification.md",
+        "docs/hyperfeed_workload_calibration.md"
+      ],
+      "claims": [],
+      "date": "2026-09-25",
+      "files": 438,
+      "id": "calibrated_2026-09-25",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/calibrated_2026-09-25.json",
+        "sha256": "0ab6f7c4b34f926f9a2049d00f69355009ee1db704ad205ea6eda838215bf0c4"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/calibrated_2026-09-25",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 419985721,
+      "cited_by": [
+        "README.md",
+        "docs/formal_verification_plan.md"
+      ],
+      "claims": [],
+      "date": "2026-09-27",
+      "files": 3048,
+      "id": "capture_prefix_2026-09-27",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/capture_prefix_2026-09-27.json",
+        "sha256": "2ff23640fb2208404110745734d16c2916e02bd6967a3f55988f375dd0e49703"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/capture_prefix_2026-09-27",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 28089043,
+      "cited_by": [
+        "README.md",
+        "docs/formal_verification_plan.md"
+      ],
+      "claims": [],
+      "date": "2026-09-23",
+      "files": 2124,
+      "id": "commit_completion_2026-09-23",
+      "kind": "verification",
+      "manifest": {
+        "path": "evidence/manifests/commit_completion_2026-09-23.json",
+        "sha256": "0dc9f7d8b16d8e8d1fc6cb955a3734bc7927c5eb58e8204b88b3ce6e74393a96"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/verification_data/commit_completion_2026-09-23",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 44015271,
+      "cited_by": [
+        "README.md",
+        "docs/contention_crucible.md"
+      ],
+      "claims": [],
+      "date": "2026-09-24",
+      "files": 236,
+      "id": "contention_2026-09-24",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/contention_2026-09-24.json",
+        "sha256": "5e80c51629ea70cb34a202df0676c828e54fa8189205ce683884d8804cb20ec5"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/contention_2026-09-24",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 156741,
+      "cited_by": [
+        "README.md",
+        "docs/sustained_churn_correctness.md"
+      ],
+      "claims": [],
+      "date": "2026-09-22",
+      "files": 15,
+      "id": "crucible_fixed_2026-09-22",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/crucible_fixed_2026-09-22.json",
+        "sha256": "07e094bb4b22ba1456bae61eab76be3f0378a3040ea7eab198117bfdc3189f36"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/crucible_fixed_2026-09-22",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 343574730,
+      "cited_by": [
+        "docs/hyperfeed_expiry_resume.md"
+      ],
+      "claims": [],
+      "date": "2026-09-28",
+      "files": 595,
+      "id": "expiry_range_2026-09-28",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/expiry_range_2026-09-28.json",
+        "sha256": "d18180e3c0b41c999280498635d7191439c7d61d43853fd1d5aac82b7d1fa2ab"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/expiry_range_2026-09-28",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 228256370,
+      "cited_by": [
+        "docs/hyperfeed_expiry_resume.md"
+      ],
+      "claims": [],
+      "date": "2026-09-28",
+      "files": 427,
+      "id": "expiry_resume_2026-09-28",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/expiry_resume_2026-09-28.json",
+        "sha256": "61eaa68527c4830edf1e5a7d2813069846b628ecac7e3b778c974d58ef925419"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/expiry_resume_2026-09-28",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 701015,
+      "cited_by": [
+        "docs/extended_crucible.md"
+      ],
+      "claims": [],
+      "date": "2026-09-22",
+      "files": 15,
+      "id": "extended_crucible_2026-09-22",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/extended_crucible_2026-09-22.json",
+        "sha256": "5a783da158682f9a7e9bdcf447314740b54f549ba39b2d6a21f9778e1d4356d9"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/extended_crucible_2026-09-22",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 1758149,
+      "cited_by": [
+        "docs/hyperfeed_arena_capacity.md"
+      ],
+      "claims": [],
+      "date": "2026-09-29",
+      "files": 178,
+      "id": "hyperfeed_arena_capacity_2026-09-29",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/hyperfeed_arena_capacity_2026-09-29.json",
+        "sha256": "d7c3a375c65b4a38e6cca1b61b7c65fffd0304f41eadf52172ec73e048561936"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/hyperfeed_arena_capacity_2026-09-29",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 7405412,
+      "cited_by": [
+        "docs/hyperfeed_burst_profile.md"
+      ],
+      "claims": [],
+      "date": "2026-09-29",
+      "files": 134,
+      "id": "hyperfeed_burst_profile_2026-09-29",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/hyperfeed_burst_profile_2026-09-29.json",
+        "sha256": "6be3a1fd0fde4e7490a9d833d8f2858b6a1aebfa0fa4e0786a23a2a7eea4498c"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/hyperfeed_burst_profile_2026-09-29",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 1327427,
+      "cited_by": [
+        "docs/hyperfeed_commit_phases.md"
+      ],
+      "claims": [],
+      "date": "2026-09-29",
+      "files": 119,
+      "id": "hyperfeed_commit_phases_2026-09-29",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/hyperfeed_commit_phases_2026-09-29.json",
+        "sha256": "cbfc28e9f9b03cc127b255e421abc735e85dfd2c333dfdb4672bc0a3814f54d0"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/hyperfeed_commit_phases_2026-09-29",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 557889,
+      "cited_by": [
+        "docs/hyperfeed_frame_write_experiment.md"
+      ],
+      "claims": [],
+      "date": "2026-09-29",
+      "files": 20,
+      "id": "hyperfeed_frame_write_2026-09-29",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/hyperfeed_frame_write_2026-09-29.json",
+        "sha256": "7f683ad11bcb32ba914aae686ee24024b746933212f251c4fff7c485f010f143"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/hyperfeed_frame_write_2026-09-29",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 123782,
+      "cited_by": [
+        "docs/hyperfeed_iteration.md"
+      ],
+      "claims": [],
+      "date": "2026-09-29",
+      "files": 9,
+      "id": "hyperfeed_iteration_2026-09-29",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/hyperfeed_iteration_2026-09-29.json",
+        "sha256": "e5b6e6ebe4a93cfb54db1b37d1a37d82e09c8ae45d20c4ba0155782f73d04632"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/hyperfeed_iteration_2026-09-29",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 1599547,
+      "cited_by": [
+        "docs/hyperfeed_predicate_lock_experiment.md"
+      ],
+      "claims": [],
+      "date": "2026-09-29",
+      "files": 96,
+      "id": "hyperfeed_predicate_locks_2026-09-29",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/hyperfeed_predicate_locks_2026-09-29.json",
+        "sha256": "b6588ed214351e01d521d30d7064c39287714e309df3b153823b600cbdc0b60a"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/hyperfeed_predicate_locks_2026-09-29",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 4200258,
+      "cited_by": [
+        "docs/hyperfeed_queue_profile.md"
+      ],
+      "claims": [
+        "current-6400-vs-704-9.09x"
+      ],
+      "date": "2026-09-30",
+      "files": 276,
+      "id": "hyperfeed_queue_profile_2026-09-30",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/hyperfeed_queue_profile_2026-09-30.json",
+        "sha256": "842692c7e8b4fe492f6c2f1c95445c263fab5e679c9391d7c5e8617b631c4e90"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/hyperfeed_queue_profile_2026-09-30",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "current"
+    },
+    {
+      "availability": "archive",
+      "bytes": 164,
+      "cited_by": [
+        "docs/hyperfeed_queue_profile.md"
+      ],
+      "claims": [],
+      "date": "2026-09-30",
+      "files": 1,
+      "id": "hyperfeed_socket_write_2026-09-30",
+      "kind": "benchmark",
+      "local_supplement": {
+        "availability": "local-only",
+        "bytes": 10463637,
+        "files": 553,
+        "note": "Untracked payloads remain at their original paths and are not included in this archive manifest."
+      },
+      "manifest": {
+        "path": "evidence/manifests/hyperfeed_socket_write_2026-09-30.json",
+        "sha256": "aaa1d4d26d4bb9432ab45ef068e56534defec0ec5ea795d5543f56b977af5dc1"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/hyperfeed_socket_write_2026-09-30",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "failed"
+    },
+    {
+      "availability": "archive",
+      "bytes": 11949524,
+      "cited_by": [
+        "docs/hyperfeed_queue_profile.md"
+      ],
+      "claims": [
+        "current-6400-vs-704-9.09x"
+      ],
+      "date": "2026-09-30",
+      "files": 744,
+      "id": "hyperfeed_socket_write_2026-09-30-v2",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/hyperfeed_socket_write_2026-09-30-v2.json",
+        "sha256": "35af82c3e18db2fb283ebf8d1dffc17c275da0cd356f05c9f5a290488fa9d32a"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/hyperfeed_socket_write_2026-09-30-v2",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "current"
+    },
+    {
+      "availability": "archive",
+      "bytes": 10357361,
+      "cited_by": [
+        "README.md",
+        "docs/formal_verification_plan.md"
+      ],
+      "claims": [],
+      "date": "2026-09-23",
+      "files": 1360,
+      "id": "indexed_lookup_2026-09-23",
+      "kind": "verification",
+      "manifest": {
+        "path": "evidence/manifests/indexed_lookup_2026-09-23.json",
+        "sha256": "8cc6ae5a0d6e51794aa712cdb31cd07ed2b9b725eba22a9183f0e2cc435f5414"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/verification_data/indexed_lookup_2026-09-23",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 5284685,
+      "cited_by": [],
+      "claims": [],
+      "date": "2026-09-23",
+      "files": 1044,
+      "id": "lifecycle_publication_2026-09-23",
+      "kind": "verification",
+      "manifest": {
+        "path": "evidence/manifests/lifecycle_publication_2026-09-23.json",
+        "sha256": "ba47c490fe535cd6cfad5887a06805834deeaab72b8b85c7ad76a613f0c99dab"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/verification_data/lifecycle_publication_2026-09-23",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 10391560,
+      "cited_by": [
+        "README.md",
+        "docs/archive/README-2026-09-22.md",
+        "docs/contention_crucible.md",
+        "docs/hyperfeed_commit_phases.md",
+        "docs/hyperfeed_predicate_lock_experiment.md",
+        "docs/hyperfeed_rolling.md",
+        "docs/hyperfeed_two_host.md",
+        "docs/sustained_capacity_pause_checkpoint_2026-09-28.md",
+        "docs/worker_failure_contract.md"
+      ],
+      "claims": [
+        "worker-failure-characterization-and-unmet-availability"
+      ],
+      "date": null,
+      "files": 32,
+      "id": "local-aerostore_core-target",
+      "kind": "local-inventory",
+      "local_path": "aerostore_core/target",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 3511852002,
+      "cited_by": [
+        "docs/hyperfeed_sustained_capacity.md"
+      ],
+      "claims": [
+        "historical-16-worker-3072-vs-640-4.8x"
+      ],
+      "date": "2026-09-28",
+      "files": 2995,
+      "id": "local-docs-bench_data-sustained_capacity_2026-09-28",
+      "kind": "local-inventory",
+      "local_path": "docs/bench_data/sustained_capacity_2026-09-28",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 0,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 0,
+      "id": "local-docs-verification_data-root-files",
+      "kind": "local-inventory",
+      "local_path": "docs/verification_data/[root-files]",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 0,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 0,
+      "id": "local-docs-worker_failure_data-root-files",
+      "kind": "local-inventory",
+      "local_path": "docs/worker_failure_data/[root-files]",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 334707,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 4,
+      "id": "local-target-aerostore-lean-2wmposlj",
+      "kind": "local-inventory",
+      "local_path": "target/aerostore-lean-2wmposlj",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 3841221257,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 6392,
+      "id": "local-target-affinity-final-validation",
+      "kind": "local-inventory",
+      "local_path": "target/affinity-final-validation",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 893403088,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 633,
+      "id": "local-target-affinity-validation",
+      "kind": "local-inventory",
+      "local_path": "target/affinity-validation",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 12278801219,
+      "cited_by": [],
+      "claims": [],
+      "date": "2026-09-25",
+      "files": 3044,
+      "id": "local-target-architecture-qualification-2026-09-25",
+      "kind": "local-inventory",
+      "local_path": "target/architecture-qualification-2026-09-25",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 1378596593,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 5486,
+      "id": "local-target-architecture-validation",
+      "kind": "local-inventory",
+      "local_path": "target/architecture-validation",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 8784077,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 625,
+      "id": "local-target-architecture-validation-before-continuous-timing",
+      "kind": "local-inventory",
+      "local_path": "target/architecture-validation-before-continuous-timing",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 186644,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 10,
+      "id": "local-target-architecture-validation-before-fleet",
+      "kind": "local-inventory",
+      "local_path": "target/architecture-validation-before-fleet",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 184494,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 10,
+      "id": "local-target-architecture-validation-before-reply-deadline",
+      "kind": "local-inventory",
+      "local_path": "target/architecture-validation-before-reply-deadline",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 3941000987,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 6201,
+      "id": "local-target-calibrated-validation",
+      "kind": "local-inventory",
+      "local_path": "target/calibrated-validation",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 714263720,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 21,
+      "id": "local-target-contention-diagnostic-both.2-data",
+      "kind": "local-inventory",
+      "local_path": "target/contention-diagnostic-both.2-data",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 1403053,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 16,
+      "id": "local-target-contention-diagnostic-pg.25999-data",
+      "kind": "local-inventory",
+      "local_path": "target/contention-diagnostic-pg.25999-data",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 674558067,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 75,
+      "id": "local-target-contention-integration",
+      "kind": "local-inventory",
+      "local_path": "target/contention-integration",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 1398686427,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 13032,
+      "id": "local-target-contention-tuned-validation",
+      "kind": "local-inventory",
+      "local_path": "target/contention-tuned-validation",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 3804212373,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 11095,
+      "id": "local-target-contention-validation",
+      "kind": "local-inventory",
+      "local_path": "target/contention-validation",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 3241115,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 501,
+      "id": "local-target-criterion",
+      "kind": "local-inventory",
+      "local_path": "target/criterion",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 8121199752,
+      "cited_by": [
+        "docs/archive/README-2026-09-22.md"
+      ],
+      "claims": [],
+      "date": null,
+      "files": 530,
+      "id": "local-target-debug",
+      "kind": "local-inventory",
+      "local_path": "target/debug",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 3057,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 1,
+      "id": "local-target-expiry-index-development",
+      "kind": "local-inventory",
+      "local_path": "target/expiry-index-development",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 9219100130,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 690,
+      "id": "local-target-expiry-range-20260928",
+      "kind": "local-inventory",
+      "local_path": "target/expiry-range-20260928",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 6220482034,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 406,
+      "id": "local-target-expiry-resume-20260928",
+      "kind": "local-inventory",
+      "local_path": "target/expiry-resume-20260928",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 25307431802,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 1929,
+      "id": "local-target-hyperfeed-arena-capacity-20260929-v1",
+      "kind": "local-inventory",
+      "local_path": "target/hyperfeed-arena-capacity-20260929-v1",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 5402448870,
+      "cited_by": [
+        "docs/hyperfeed_burst_profile.md"
+      ],
+      "claims": [],
+      "date": null,
+      "files": 153,
+      "id": "local-target-hyperfeed-burst-profile-20260929-v1",
+      "kind": "local-inventory",
+      "local_path": "target/hyperfeed-burst-profile-20260929-v1",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 5690476689,
+      "cited_by": [
+        "docs/hyperfeed_commit_phases.md"
+      ],
+      "claims": [],
+      "date": null,
+      "files": 2963,
+      "id": "local-target-hyperfeed-commit-phases-20260929-v1",
+      "kind": "local-inventory",
+      "local_path": "target/hyperfeed-commit-phases-20260929-v1",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 5020356882,
+      "cited_by": [
+        "docs/hyperfeed_burst_profile.md",
+        "docs/hyperfeed_frame_write_experiment.md"
+      ],
+      "claims": [],
+      "date": null,
+      "files": 2074,
+      "id": "local-target-hyperfeed-frame-write-20260929-v1",
+      "kind": "local-inventory",
+      "local_path": "target/hyperfeed-frame-write-20260929-v1",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 3488025673,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 1879,
+      "id": "local-target-hyperfeed-iteration-20260929-v1",
+      "kind": "local-inventory",
+      "local_path": "target/hyperfeed-iteration-20260929-v1",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 5983030817,
+      "cited_by": [
+        "docs/hyperfeed_predicate_lock_experiment.md"
+      ],
+      "claims": [],
+      "date": null,
+      "files": 3518,
+      "id": "local-target-hyperfeed-predicate-locks-20260929-v1",
+      "kind": "local-inventory",
+      "local_path": "target/hyperfeed-predicate-locks-20260929-v1",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 61942393810,
+      "cited_by": [
+        "docs/hyperfeed_queue_profile.md"
+      ],
+      "claims": [
+        "current-6400-vs-704-9.09x"
+      ],
+      "date": null,
+      "files": 3262,
+      "id": "local-target-hyperfeed-queue-profile-20260930-v1",
+      "kind": "local-inventory",
+      "local_path": "target/hyperfeed-queue-profile-20260930-v1",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 87280,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 4,
+      "id": "local-target-lookup-record-review",
+      "kind": "local-inventory",
+      "local_path": "target/lookup-record-review",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 738560338,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 228,
+      "id": "local-target-maintenance-development",
+      "kind": "local-inventory",
+      "local_path": "target/maintenance-development",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 5455810034,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 6479,
+      "id": "local-target-maintenance-final-validation",
+      "kind": "local-inventory",
+      "local_path": "target/maintenance-final-validation",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 7788210082,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 719,
+      "id": "local-target-maintenance-prefix-20260928",
+      "kind": "local-inventory",
+      "local_path": "target/maintenance-prefix-20260928",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 14321523175,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 7212,
+      "id": "local-target-ordered-range-validation",
+      "kind": "local-inventory",
+      "local_path": "target/ordered-range-validation",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 2564800355,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 13241,
+      "id": "local-target-performance-repair",
+      "kind": "local-inventory",
+      "local_path": "target/performance-repair",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 9451543482,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 691,
+      "id": "local-target-pg-candidate-20260928",
+      "kind": "local-inventory",
+      "local_path": "target/pg-candidate-20260928",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 8423515289,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 629,
+      "id": "local-target-pg-statistics-20260928",
+      "kind": "local-inventory",
+      "local_path": "target/pg-statistics-20260928",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 16715305046,
+      "cited_by": [
+        "docs/hyperfeed_population_scaling.md"
+      ],
+      "claims": [],
+      "date": null,
+      "files": 562,
+      "id": "local-target-population-saturation-20260928",
+      "kind": "local-inventory",
+      "local_path": "target/population-saturation-20260928",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 13305187279,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 7181,
+      "id": "local-target-prior-prefix-final-validation",
+      "kind": "local-inventory",
+      "local_path": "target/prior-prefix-final-validation",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 1435737143,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 6025,
+      "id": "local-target-prior-prefix-runner-validation",
+      "kind": "local-inventory",
+      "local_path": "target/prior-prefix-runner-validation",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 1669034433,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 4069,
+      "id": "local-target-prior-prefix-validation",
+      "kind": "local-inventory",
+      "local_path": "target/prior-prefix-validation",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 24767622,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 20,
+      "id": "local-target-profiling-tools",
+      "kind": "local-inventory",
+      "local_path": "target/profiling-tools",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 1985153830,
+      "cited_by": [
+        "README.md",
+        "docs/formal_verification_plan.md",
+        "docs/hyperfeed_two_host.md",
+        "verification/README.md",
+        "verification/lookup/README.md"
+      ],
+      "claims": [],
+      "date": null,
+      "files": 3267,
+      "id": "local-target-release",
+      "kind": "local-inventory",
+      "local_path": "target/release",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 4359,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 1,
+      "id": "local-target-retry-diagnostics-validation",
+      "kind": "local-inventory",
+      "local_path": "target/retry-diagnostics-validation",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 12413874558,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 7423,
+      "id": "local-target-retry-final-validation",
+      "kind": "local-inventory",
+      "local_path": "target/retry-final-validation",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 6283681608,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 833,
+      "id": "local-target-rolling-capacity-20260927",
+      "kind": "local-inventory",
+      "local_path": "target/rolling-capacity-20260927",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 171,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 1,
+      "id": "local-target-rolling-validation",
+      "kind": "local-inventory",
+      "local_path": "target/rolling-validation",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 284903,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 20,
+      "id": "local-target-root-files",
+      "kind": "local-inventory",
+      "local_path": "target/[root-files]",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 41977581,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 30,
+      "id": "local-target-row-logs",
+      "kind": "local-inventory",
+      "local_path": "target/row-logs",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 326260,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 36,
+      "id": "local-target-service-prototype",
+      "kind": "local-inventory",
+      "local_path": "target/service-prototype",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 88187458269,
+      "cited_by": [
+        "docs/hyperfeed_sustained_capacity.md",
+        "docs/sustained_capacity_pause_checkpoint_2026-09-28.md"
+      ],
+      "claims": [
+        "historical-16-worker-3072-vs-640-4.8x"
+      ],
+      "date": null,
+      "files": 2571,
+      "id": "local-target-sustained-capacity-20260928",
+      "kind": "local-inventory",
+      "local_path": "target/sustained-capacity-20260928",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 72985198,
+      "cited_by": [
+        "docs/formal_verification_plan.md",
+        "docs/hyperfeed_arena_capacity.md",
+        "docs/hyperfeed_commit_phases.md",
+        "docs/hyperfeed_expiry_range.md",
+        "docs/hyperfeed_predicate_lock_experiment.md",
+        "docs/hyperfeed_qualification.md",
+        "docs/hyperfeed_queue_profile.md",
+        "docs/worker_failure_contract.md",
+        "verification/contracts/lock_models.md",
+        "verification/retry_diagnostics/README.md",
+        "verification/tla/README.md"
+      ],
+      "claims": [],
+      "date": null,
+      "files": 23,
+      "id": "local-target-tests",
+      "kind": "local-inventory",
+      "local_path": "target/tests",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 0,
+      "cited_by": [
+        "docs/crucible_allocator_telemetry_2026-03-03.md",
+        "docs/nightly_perf.md",
+        "docs/sustained_churn_correctness.md",
+        "verification/README.md"
+      ],
+      "claims": [],
+      "date": null,
+      "files": 0,
+      "id": "local-target-tmp",
+      "kind": "local-inventory",
+      "local_path": "target/tmp",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 1727102115,
+      "cited_by": [
+        "README.md",
+        "docs/contention_crucible.md",
+        "docs/disk-space.md",
+        "docs/formal_verification_plan.md",
+        "docs/hyperfeed_capture_prefix.md",
+        "docs/hyperfeed_ordered_range.md",
+        "docs/hyperfeed_qualification.md",
+        "docs/hyperfeed_retry_diagnostics.md",
+        "docs/hyperfeed_two_host.md",
+        "docs/sustained_capacity_pause_checkpoint_2026-09-28.md",
+        "docs/worker_failure_contract.md",
+        "verification/README.md",
+        "verification/commit_completion/README.md",
+        "verification/commit_data/README.md",
+        "verification/concurrent/README.md",
+        "verification/contracts/lock_models.md",
+        "verification/guard_ownership/README.md",
+        "verification/lean/README.md",
+        "verification/lifecycle/README.md",
+        "verification/lifecycle_native/README.md",
+        "verification/lifecycle_scenario/README.md",
+        "verification/lookup_native/README.md",
+        "verification/ordered_range/README.md",
+        "verification/p1_native/README.md",
+        "verification/planned_commit/README.md",
+        "verification/planning_native/README.md",
+        "verification/postings/README.md",
+        "verification/predicate/README.md",
+        "verification/retention_native/README.md",
+        "verification/retry_diagnostics/README.md",
+        "verification/row_publication/README.md",
+        "verification/row_retention/README.md",
+        "verification/skiplist_detach/README.md",
+        "verification/storage_slice/README.md",
+        "verification/tla/README.md",
+        "verification/verus/README.md",
+        "verification/write_admission/README.md",
+        "verification/write_plan/README.md"
+      ],
+      "claims": [],
+      "date": null,
+      "files": 4717,
+      "id": "local-target-verification",
+      "kind": "local-inventory",
+      "local_path": "target/verification",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 5511419,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 182,
+      "id": "local-target-verification-commit",
+      "kind": "local-inventory",
+      "local_path": "target/verification-commit",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 2538933,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 219,
+      "id": "local-target-verification-indexed",
+      "kind": "local-inventory",
+      "local_path": "target/verification-indexed",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 556573267,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 1617,
+      "id": "local-target-verification-lifecycle",
+      "kind": "local-inventory",
+      "local_path": "target/verification-lifecycle",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 152493318,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 1140,
+      "id": "local-target-verification-lookup",
+      "kind": "local-inventory",
+      "local_path": "target/verification-lookup",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 773208118,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 1531,
+      "id": "local-target-verification-lookup-native",
+      "kind": "local-inventory",
+      "local_path": "target/verification-lookup-native",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 3645370396,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 5375,
+      "id": "local-target-verification-next",
+      "kind": "local-inventory",
+      "local_path": "target/verification-next",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 709451290,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 904,
+      "id": "local-target-verification-p1",
+      "kind": "local-inventory",
+      "local_path": "target/verification-p1",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 1499450338,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 4740,
+      "id": "local-target-verification-p1-completion",
+      "kind": "local-inventory",
+      "local_path": "target/verification-p1-completion",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 1704464156,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 6672,
+      "id": "local-target-verification-planning",
+      "kind": "local-inventory",
+      "local_path": "target/verification-planning",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 4640085,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 152,
+      "id": "local-target-verification-row-retention",
+      "kind": "local-inventory",
+      "local_path": "target/verification-row-retention",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 1283556910,
+      "cited_by": [
+        "verification/retention_native/README.md"
+      ],
+      "claims": [],
+      "date": null,
+      "files": 4695,
+      "id": "local-target-verification-storage",
+      "kind": "local-inventory",
+      "local_path": "target/verification-storage",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 9696283363,
+      "cited_by": [
+        "README.md",
+        "docs/disk-space.md",
+        "docs/hyperfeed_qualification.md",
+        "docs/hyperfeed_retry_diagnostics.md",
+        "docs/hyperfeed_two_host.md",
+        "docs/sustained_capacity_pause_checkpoint_2026-09-28.md",
+        "verification/README.md",
+        "verification/lean/README.md",
+        "verification/ordered_range/README.md",
+        "verification/p1_native/README.md",
+        "verification/planning_native/README.md",
+        "verification/retry_diagnostics/README.md",
+        "verification/verus/README.md"
+      ],
+      "claims": [],
+      "date": null,
+      "files": 56325,
+      "id": "local-target-verification-tools",
+      "kind": "local-inventory",
+      "local_path": "target/verification-tools",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 3782570,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 90,
+      "id": "local-target-verification-write-admission",
+      "kind": "local-inventory",
+      "local_path": "target/verification-write-admission",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 1552288,
+      "cited_by": [],
+      "claims": [],
+      "date": null,
+      "files": 35,
+      "id": "local-target-verification-write-planning",
+      "kind": "local-inventory",
+      "local_path": "target/verification-write-planning",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "local-only",
+      "bytes": 16943,
+      "cited_by": [
+        "docs/worker_failure_contract.md"
+      ],
+      "claims": [
+        "worker-failure-characterization-and-unmet-availability"
+      ],
+      "date": null,
+      "files": 8,
+      "id": "local-target-worker-failure-contract",
+      "kind": "local-inventory",
+      "local_path": "target/worker-failure-contract",
+      "note": "Phase 0 inventory observation, not a self-contained or file-hash-verified publication. Includes retained build/tool roots where named. No public fetch source is available; original local paths are preserved.",
+      "observed_date": "2026-10-02",
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 109491160,
+      "cited_by": [
+        "docs/hyperfeed_affinity.md",
+        "docs/hyperfeed_calibrated.md",
+        "docs/hyperfeed_maintenance.md",
+        "docs/hyperfeed_qualification.md"
+      ],
+      "claims": [],
+      "date": "2026-09-25",
+      "files": 859,
+      "id": "maintenance_2026-09-25",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/maintenance_2026-09-25.json",
+        "sha256": "4db246ce11c673ee209e3c82dfc802d15f8d54b15464a9673873be6f26d1ce3d"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/maintenance_2026-09-25",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 308878171,
+      "cited_by": [
+        "docs/hyperfeed_maintenance_prefix.md"
+      ],
+      "claims": [],
+      "date": "2026-09-28",
+      "files": 758,
+      "id": "maintenance_prefix_2026-09-28",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/maintenance_prefix_2026-09-28.json",
+        "sha256": "b7132a3fc40ab968b8e08dbd13485919b794e11fcc4e42623626cef28243232a"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/maintenance_prefix_2026-09-28",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 2307879,
+      "cited_by": [],
+      "claims": [],
+      "date": "2026-09-23",
+      "files": 245,
+      "id": "native_predicates_2026-09-23",
+      "kind": "verification",
+      "manifest": {
+        "path": "evidence/manifests/native_predicates_2026-09-23.json",
+        "sha256": "2bb27021c8cdd05cfa3ab29f93155e6ffe41e3128b1a55af28ec1754c505c5f9"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/verification_data/native_predicates_2026-09-23",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 287255853,
+      "cited_by": [
+        "README.md",
+        "docs/formal_verification_plan.md",
+        "docs/hyperfeed_qualification.md",
+        "docs/hyperfeed_retry_diagnostics.md"
+      ],
+      "claims": [],
+      "date": "2026-09-27",
+      "files": 1167,
+      "id": "ordered_range_2026-09-27",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/ordered_range_2026-09-27.json",
+        "sha256": "b43e8b59e804f5a039dccece1fb332af4de91ff14682cc2157a5b637d047fdda"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/ordered_range_2026-09-27",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 32026090,
+      "cited_by": [
+        "README.md",
+        "docs/formal_verification_plan.md",
+        "verification/concurrent/README.md"
+      ],
+      "claims": [],
+      "date": "2026-09-23",
+      "files": 400,
+      "id": "performance_repair_2026-09-23",
+      "kind": "benchmark",
+      "local_supplement": {
+        "availability": "local-only",
+        "bytes": 16041,
+        "files": 1,
+        "note": "Untracked payloads remain at their original paths and are not included in this archive manifest."
+      },
+      "manifest": {
+        "path": "evidence/manifests/performance_repair_2026-09-23.json",
+        "sha256": "7d5aa07dcd65521f4d7a120094a6ecba76b2646ff00b6237c458054a9990675a"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/performance_repair_2026-09-23",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 353354070,
+      "cited_by": [
+        "docs/hyperfeed_candidate_queries.md"
+      ],
+      "claims": [],
+      "date": "2026-09-28",
+      "files": 767,
+      "id": "pg_candidate_2026-09-28",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/pg_candidate_2026-09-28.json",
+        "sha256": "6787bc71ea6ddcab0afa526050222585078f785e3adc470ffdc330ba38463ab2"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/pg_candidate_2026-09-28",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 331697332,
+      "cited_by": [
+        "docs/hyperfeed_statistics.md"
+      ],
+      "claims": [],
+      "date": "2026-09-28",
+      "files": 674,
+      "id": "pg_statistics_2026-09-28",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/pg_statistics_2026-09-28.json",
+        "sha256": "b1305f052f9b8bc2952bf94fafcf069ff00f75232c3ae105333d7470e49144c6"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/pg_statistics_2026-09-28",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 34494979,
+      "cited_by": [
+        "README.md",
+        "docs/formal_verification_plan.md"
+      ],
+      "claims": [],
+      "date": "2026-09-23",
+      "files": 2274,
+      "id": "planned_commit_2026-09-23",
+      "kind": "verification",
+      "manifest": {
+        "path": "evidence/manifests/planned_commit_2026-09-23.json",
+        "sha256": "431cc42fb70432d85ce92cd15fe8aa9510543f100e7a7bb1fdff9d4371b72975"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/verification_data/planned_commit_2026-09-23",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 483899996,
+      "cited_by": [
+        "docs/hyperfeed_population_scaling.md"
+      ],
+      "claims": [],
+      "date": "2026-09-28",
+      "files": 665,
+      "id": "population_saturation_2026-09-28",
+      "kind": "benchmark",
+      "local_supplement": {
+        "availability": "local-only",
+        "bytes": 15125,
+        "files": 1,
+        "note": "Untracked payloads remain at their original paths and are not included in this archive manifest."
+      },
+      "manifest": {
+        "path": "evidence/manifests/population_saturation_2026-09-28.json",
+        "sha256": "3f7952f9ceb357386abb5218865ec4f77320bf3d5cf95a0a58732458926b3cdb"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/population_saturation_2026-09-28",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 207644357,
+      "cited_by": [
+        "README.md",
+        "docs/formal_verification_plan.md",
+        "docs/hyperfeed_qualification.md"
+      ],
+      "claims": [],
+      "date": "2026-09-26",
+      "files": 1416,
+      "id": "retry_2026-09-26",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/retry_2026-09-26.json",
+        "sha256": "ba24f2b5f7d4f78aae2298f6fa5c14ff90342d97c470248c7acdfd23a0594d79"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/retry_2026-09-26",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 244852182,
+      "cited_by": [
+        "docs/hyperfeed_rolling.md",
+        "docs/hyperfeed_rolling_findings.md"
+      ],
+      "claims": [],
+      "date": "2026-09-27",
+      "files": 815,
+      "id": "rolling_2026-09-27",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/rolling_2026-09-27.json",
+        "sha256": "396f38284dbb247701e54bcdca5d773afc06d7b0035f55c6ea70e2f9d7214ed3"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/rolling_2026-09-27",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 22729506,
+      "cited_by": [
+        "README.md",
+        "docs/formal_verification_plan.md"
+      ],
+      "claims": [],
+      "date": "2026-09-23",
+      "files": 2013,
+      "id": "row_retention_2026-09-23",
+      "kind": "verification",
+      "manifest": {
+        "path": "evidence/manifests/row_retention_2026-09-23.json",
+        "sha256": "8d787aba2de86730a98bd12f626959dee3dfdde707ca712bee95fb7436a04026"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/verification_data/row_retention_2026-09-23",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 5084984186,
+      "cited_by": [
+        "docs/hyperfeed_sustained_capacity.md"
+      ],
+      "claims": [
+        "historical-16-worker-3072-vs-640-4.8x"
+      ],
+      "date": "2026-09-28",
+      "files": 3468,
+      "id": "sustained_capacity_2026-09-28-retry2",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/sustained_capacity_2026-09-28-retry2.json",
+        "sha256": "9fab609e76ff3b725c1e920d2bd821d3aea44e41265f2b8b382c3b20276cf877"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/sustained_capacity_2026-09-28-retry2",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 1104602,
+      "cited_by": [
+        "README.md",
+        "docs/extended_crucible.md",
+        "docs/formal_verification_plan.md",
+        "verification/contracts/p0_audit.md"
+      ],
+      "claims": [
+        "sustained-crucible-6.18x-6.12x-and-six-contracts"
+      ],
+      "date": "2026-09-22",
+      "files": 46,
+      "id": "transactional_indexes_2026-09-22",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/transactional_indexes_2026-09-22.json",
+        "sha256": "4ff5042d01fab58290f76e1e4a2266f615f4276f97c1225194e4b6ed1dbc05c1"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/transactional_indexes_2026-09-22",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 558197,
+      "cited_by": [
+        "README.md",
+        "docs/formal_verification_plan.md"
+      ],
+      "claims": [],
+      "date": "2026-09-23",
+      "files": 111,
+      "id": "verification_pilot_2026-09-23",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/verification_pilot_2026-09-23.json",
+        "sha256": "647b716c011645a09f353a5749f91db456164732be1e1fb2b575ba094d6effd2"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/verification_pilot_2026-09-23",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 59935592,
+      "cited_by": [
+        "README.md",
+        "docs/formal_verification_plan.md",
+        "verification/contracts/p0_audit.md"
+      ],
+      "claims": [],
+      "date": "2026-09-23",
+      "files": 838,
+      "id": "verified_engine_2026-09-23",
+      "kind": "benchmark",
+      "manifest": {
+        "path": "evidence/manifests/verified_engine_2026-09-23.json",
+        "sha256": "c7b154175513a2863681ca9864a0660edc469ac503c193a6f34028ae95fe740e"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/bench_data/verified_engine_2026-09-23",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    },
+    {
+      "availability": "archive",
+      "bytes": 16943,
+      "cited_by": [
+        "docs/worker_failure_contract.md"
+      ],
+      "claims": [
+        "worker-failure-characterization-and-unmet-availability"
+      ],
+      "date": "2026-09-24",
+      "files": 8,
+      "id": "worker-failure-2026-09-24",
+      "kind": "worker-failure",
+      "manifest": {
+        "path": "evidence/manifests/worker-failure-2026-09-24.json",
+        "sha256": "0e0bf4644453c4beb5f06084018955b6613742b327552e35a63eeb3ba50607a1"
+      },
+      "note": "Exact tracked archive payload. Diagnostic/current status does not classify every enclosed trial as passing. Local-only executable and history references may require the separately approved publication packages.",
+      "source": {
+        "commit": "c22acd411cba7910f3f4f031fe9e27606c98ec9a",
+        "path": "docs/worker_failure_data/2026-09-24",
+        "ref": "archive/pre-rewrite",
+        "repo": "zpconn/aerostore-archive"
+      },
+      "status": "diagnostic"
+    }
+  ],
+  "inventory_provenance": {
+    "date": "2026-10-02",
+    "scope": "Phase 0 inventory; manifests below freshly bind tracked archive payloads.",
+    "sha256": "9358b61fea3f54c48178c064c315c5b33675bc3ca531ad37de9d95e20ba9a577"
+  },
+  "publication_status": "planned-pending-checkpoint-2",
+  "schema_version": 1
+}

@@ -8,7 +8,7 @@ HEAD is `512db389abd4c317b8dc716de2dd338c050e220c`.
 The campaign root, abbreviated `CAP` below, is
 `/home/zpconn/code/aerostore/target/sustained-capacity-20260928`.
 Machine-readable state is in
-[`pause-20260928/checkpoint.json`](../target/sustained-capacity-20260928/pause-20260928/checkpoint.json).
+`pause-20260928/checkpoint.json` — `../target/sustained-capacity-20260928/pause-20260928/checkpoint.json` (local-only evidence).
 The pause audit was recorded after 2026-09-29 02:58 UTC, September 28 in Chicago.
 
 ## Safe stopping point and process confirmation
@@ -36,7 +36,7 @@ The checkpoint audit confirms:
 - No artifacts were deleted, moved, stripped, or overwritten for this pause.
 
 The authoritative audit is
-[`quiescence-and-resources-v2.json`](../target/sustained-capacity-20260928/pause-20260928/quiescence-and-resources-v2.json).
+`quiescence-and-resources-v2.json` — `../target/sustained-capacity-20260928/pause-20260928/quiescence-and-resources-v2.json` (local-only evidence).
 The initial audit is also retained; it falsely matched its own audit shell.
 Version 2 explicitly excludes the audit's ancestor processes and confirms an
 empty campaign process set. `git-status.txt` and `tracked-work.patch` preserve

@@ -63,7 +63,7 @@ covered. See the [ordered-range boundary](../ordered_range/README.md).
 | Lock graph | Inventory `lock_nodes`, `lock_edges`, and `lock_paths`; reviewed relationships below |
 | Durability modes | [durability.md](durability.md), including stream binding, acknowledgements, checkpoint/replay and indeterminate outcomes |
 | Assumed platform and primitive boundaries | [assumptions.toml](../assumptions.toml) and contract preconditions |
-| Regressions and performance baseline retained | [Initial transactional-index archive](../../docs/bench_data/transactional_indexes_2026-09-22/README.md), [accepted engine experiment](../../docs/bench_data/verified_engine_2026-09-23/README.md), subsequent verification archives under `docs/verification_data` |
+| Regressions and performance baseline retained | [Initial transactional-index archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/transactional_indexes_2026-09-22/README.md), [accepted engine experiment](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/verified_engine_2026-09-23/README.md), subsequent verification archives under `docs/verification_data` |
 | Defined success/error contract for every covered public path | 432 explicit public function/trait declarations across all 33 core source modules, each assigned a reviewed contract or an explicit exclusion; public data and implicit traits addressed separately |
 
 The P0 exit is a contract/coverage audit. An arbitrary-history theorem, native

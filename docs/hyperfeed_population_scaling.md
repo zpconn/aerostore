@@ -411,10 +411,10 @@ Calibrated capacity qualification, architecture promotion, and the real-world
 ceilings also remain below a demonstrated production HyperFeed population and
 the reported 100–300 workers across single- and multi-machine deployments.
 
-The [portable evidence archive](bench_data/population_saturation_2026-09-28/artifact-manifest.json)
+The [portable evidence archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/population_saturation_2026-09-28/artifact-manifest.json)
 preserves 496 logical files in 660 stored members, including the failed attempts.
-Its [independent check](bench_data/population_saturation_2026-09-28/archive-validation-independent.json)
-and [completion receipt](bench_data/population_saturation_2026-09-28/archive-validation-completion.json)
+Its [independent check](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/population_saturation_2026-09-28/archive-validation-independent.json)
+and [completion receipt](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/population_saturation_2026-09-28/archive-validation-completion.json)
 record successful source, provenance, and reference-closure verification.
 The local retention audit separately checked the original bytes of 2,304 retained
 artifacts and five aliases, with no missing or changed files. No compiler build
@@ -423,8 +423,8 @@ or space reclaimed. After archival, Linux had 619.64GiB free and the Windows C:
 host volume had 378.36GiB free, each above the 30GiB reserve. Accounting for
 archive and Git copies uses 12.82GiB of the campaign's 60GiB growth budget.
 
-The archived [implementation experiment notes](bench_data/population_saturation_2026-09-28/ordered_prefix_next_step.md)
+The archived [implementation experiment notes](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/population_saturation_2026-09-28/ordered_prefix_next_step.md)
 describe the selective-index, batching, and bounded-prefix requirements. The
-separate [arrival-order design](bench_data/population_saturation_2026-09-28/arrival_permutation_design.md)
+separate [arrival-order design](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/population_saturation_2026-09-28/arrival_permutation_design.md)
 preserves the existing stress profile while proposing a way to test its regular
 collision pattern. These are proposed follow-ups, not implemented changes.

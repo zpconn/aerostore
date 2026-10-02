@@ -9,7 +9,7 @@ results identify the next investigation; they do not establish a capacity ratio
 or the project's 10× target.
 
 This follows the [external statistics control](hyperfeed_expiry_resume.md).
-The new [evidence archive](bench_data/pg_statistics_2026-09-28/artifact-manifest.json)
+The new [evidence archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/pg_statistics_2026-09-28/artifact-manifest.json)
 retains successful and failed attempts, source snapshots, logs, histories,
 resource accounting, and independent checks. No production engine algorithm,
 default index policy, or formal proof changed in this checkpoint.

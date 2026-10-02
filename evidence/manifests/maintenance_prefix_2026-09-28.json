@@ -1,0 +1,3796 @@
+{
+  "campaign_id": "maintenance_prefix_2026-09-28",
+  "files": [
+    {
+      "bytes": 3425,
+      "path": "archive-control-plan.json",
+      "sha256": "24c405e16467e895805af0c2794f26dbcaac042dd875885925db8e924649278a"
+    },
+    {
+      "bytes": 1709,
+      "path": "archive-helper-tests.json",
+      "sha256": "0183ccc9cc1e16d0e0ac191eb5247951db6a8223d74d9d2ec40162d2b9b9fbfd"
+    },
+    {
+      "bytes": 1969,
+      "path": "archive-helper-tests.log",
+      "sha256": "3bb157ad5671abb68d4e4fb9f1c37b007e89f8f7809379ac1c2f42dad156699e"
+    },
+    {
+      "bytes": 1637,
+      "path": "archive-validation-independent.json",
+      "sha256": "39fa5adf77dcdea153c6131befd0dc11c59a3d48e800a7c46304609f6ebb0c08"
+    },
+    {
+      "bytes": 1313,
+      "path": "archive-validation-resources.json",
+      "sha256": "2e0b91879c72fe7a1592231a0e5ec35df210571225548c4de6a88a4a37f4dc99"
+    },
+    {
+      "bytes": 1930,
+      "path": "archive-validation.json",
+      "sha256": "5a255f3d06c8f449b3de74ad330891a178a2940e950bc0882e37e08421be740a"
+    },
+    {
+      "bytes": 23046,
+      "path": "archive_campaign.py",
+      "sha256": "023df6c07bf96e072d2e10b7f478e6ac0f50a1752c29c541e2bdbd88be200dd7"
+    },
+    {
+      "bytes": 1135257,
+      "path": "artifact-manifest.json",
+      "sha256": "a0e34b4d29bf7422db22309c8b71098625d1eb5ce271074c96c5e42069ad25df"
+    },
+    {
+      "bytes": 1165,
+      "path": "batch-budgets/after-builds.json",
+      "sha256": "2305bdb2953edd5cd0f7b69ae514a40e04e79184580fe782cdb6bc59d00dd9ba"
+    },
+    {
+      "bytes": 1181,
+      "path": "batch-budgets/after-cleanup-before-archive.json",
+      "sha256": "1380e0e72d6e8888785f5dcdbfe22be33c85d9502938414b08a0a81ff4cdb737"
+    },
+    {
+      "bytes": 1167,
+      "path": "batch-budgets/before-cleanup.json",
+      "sha256": "c71012384a79d0e1348e0a0424286a406aaae57cf0c6eaaddf319694e49d9804"
+    },
+    {
+      "bytes": 1184,
+      "path": "batch-budgets/before-executable-wrapper-build.json",
+      "sha256": "562570def17e049134d315dcbe176345c81f39277b2ef2d83e97ca5bef854bf2"
+    },
+    {
+      "bytes": 1175,
+      "path": "batch-budgets/before-pg-complete-512.json",
+      "sha256": "640aeee6d076e846d3e0283de2e8fefd6263b68f2d11148a0b2e026f44cd93fe"
+    },
+    {
+      "bytes": 1174,
+      "path": "batch-budgets/before-pg-prefix-512.json",
+      "sha256": "d7dcda608ccb2ab1aaed2355ed98324cc6356abe121dafa4e8f3b6cff539d12d"
+    },
+    {
+      "bytes": 1179,
+      "path": "batch-budgets/before-service-prefix-512.json",
+      "sha256": "9b8943d10733af7797a85c24d07125ff45c4827d198dd086332c206e25b3c90c"
+    },
+    {
+      "bytes": 1165,
+      "path": "batch-budgets/before-smoke.json",
+      "sha256": "6356ca44c4b4f8d2c6f9292b1a45d51f8f3ce2de355c3a30b7225aa6abb4ee93"
+    },
+    {
+      "bytes": 3037,
+      "path": "build-control-plan.json",
+      "sha256": "da1f00ad7060e369af6255e65262a50ff8dbab77050fc8524ea0abfa16906300"
+    },
+    {
+      "bytes": 232,
+      "path": "build-envelope-executable-wrapper/child-ready.json",
+      "sha256": "925420f2b28cca7325e97c206a241748d76875a68fae6e1154ea30d5f83de6bc"
+    },
+    {
+      "bytes": 104,
+      "path": "build-envelope-executable-wrapper/child-result.json",
+      "sha256": "9914c9dc42536589233c22bf1ad29c40bc513329879bb97d707fe1c7e4d156b1"
+    },
+    {
+      "bytes": 320,
+      "path": "build-envelope-executable-wrapper/child.log",
+      "sha256": "e9364513e4f90350c7034611bf9d0e86f661aee998608b6729ff822d9d0bf191"
+    },
+    {
+      "bytes": 660,
+      "path": "build-envelope-executable-wrapper/command.json",
+      "sha256": "df8c29a5a504ca00d28cd7515cc1e379a0804069badc8c3953bf0c63a6e9d752"
+    },
+    {
+      "bytes": 166,
+      "path": "build-envelope-executable-wrapper/controller.json",
+      "sha256": "c1aa450b64256c971660f305486b900de49b6b391939b71bb5ea61bdbfcd9f05"
+    },
+    {
+      "bytes": 2737,
+      "path": "build-envelope-executable-wrapper/launch.json",
+      "sha256": "0c7db6a16384cf29ca8c656fffbfb76b81d2aa01e719b98c06755a0cf5bb2f3a"
+    },
+    {
+      "bytes": 2795,
+      "path": "build-envelope-executable-wrapper/readiness.json",
+      "sha256": "926a66d872d9849975b401d9a20a5d10a150e96ac3cfb10e217ec9856b214141"
+    },
+    {
+      "bytes": 186,
+      "path": "build-envelope-executable-wrapper/release.json",
+      "sha256": "fc0543b8675014f8bb2c8bdc20f8227b296993edb0c71a1db3e499068bb06817"
+    },
+    {
+      "bytes": 3413,
+      "path": "build-envelope-executable-wrapper/result.json",
+      "sha256": "77d3dcad811cd87f8d08c2628564ea2d2999545238fa966abdce1b4f1c95d0bc"
+    },
+    {
+      "bytes": 55189,
+      "path": "build-envelope-executable-wrapper/samples.jsonl",
+      "sha256": "4f0a20efacfd3cd91b5ecb52991cabc0ce2206ddd7899d8b2dbf6170cdf9f402"
+    },
+    {
+      "bytes": 232,
+      "path": "build-envelope-primary/child-ready.json",
+      "sha256": "6166d925c745866df5fe8008386e3586af5d7a195518ff6466168a8b22eabd27"
+    },
+    {
+      "bytes": 105,
+      "path": "build-envelope-primary/child-result.json",
+      "sha256": "1d8a318801587555603d7736c66cb1a2956aa8ba136cb9c80607f1239347b3b5"
+    },
+    {
+      "bytes": 333,
+      "path": "build-envelope-primary/child.log",
+      "sha256": "805bac62ed55663887aeda725065c0127f3462b3910487fee5c0bf2aae56e0cc"
+    },
+    {
+      "bytes": 638,
+      "path": "build-envelope-primary/command.json",
+      "sha256": "c010ef6b7dbdac323619b166163c4e8911ef34a7e606c962004a549fdfe3c9f2"
+    },
+    {
+      "bytes": 167,
+      "path": "build-envelope-primary/controller.json",
+      "sha256": "807cbadd4c6daebe77c8212fd9d84acf7b0b56d63043621baa7a9d35e469dab8"
+    },
+    {
+      "bytes": 2704,
+      "path": "build-envelope-primary/launch.json",
+      "sha256": "87e68746ff57b765a3a606a66fc3256f29920ddd9b8da244824cbd96801f0426"
+    },
+    {
+      "bytes": 2796,
+      "path": "build-envelope-primary/readiness.json",
+      "sha256": "1344b0d59defab94d42a06458eb01187e96c4928865b4f09798874620e3f060b"
+    },
+    {
+      "bytes": 186,
+      "path": "build-envelope-primary/release.json",
+      "sha256": "82e817f16f3be30198ab81546a9608c921398e75255fe90bc84e7f1519b0f0d9"
+    },
+    {
+      "bytes": 3443,
+      "path": "build-envelope-primary/result.json",
+      "sha256": "113dabf21980d40ab58419dbf1c9fbdca61b0bb7f548bab411f394d849cb70e6"
+    },
+    {
+      "bytes": 18779,
+      "path": "build-envelope-primary/samples.jsonl",
+      "sha256": "dee662843147a96eeb467fc3735bf38fdda7e8a27ea118741ad2ff5616ff2a61"
+    },
+    {
+      "bytes": 10216,
+      "path": "build.py",
+      "sha256": "900a5c4268d840bab25aa0834161fddf721217252db6a952028ca4b4e037881a"
+    },
+    {
+      "bytes": 10420,
+      "path": "build_tests.py",
+      "sha256": "143e2091db14e694285c615a8706c34a92c15a469c0b0bb76ef0edbf34968e39"
+    },
+    {
+      "bytes": 192063,
+      "path": "builds/executable_wrapper/build-default.jsonl",
+      "sha256": "47d9a96543c2687031d1573b9b3730542ed41cf51f1c80d971aebf196cf9b597"
+    },
+    {
+      "bytes": 5704,
+      "path": "builds/executable_wrapper/build-default.log",
+      "sha256": "5f277a8d361dbfd0aeb024838f86ed391c9f387b3471a05fabbbdf027833e898"
+    },
+    {
+      "bytes": 10216,
+      "path": "builds/executable_wrapper/build-helper.py",
+      "sha256": "900a5c4268d840bab25aa0834161fddf721217252db6a952028ca4b4e037881a"
+    },
+    {
+      "bytes": 138957,
+      "path": "builds/executable_wrapper/build-provenance-default.json",
+      "sha256": "b717811eba664b47048e65625916a14e6004de4377db374ec1eee250e178d559"
+    },
+    {
+      "bytes": 2795,
+      "path": "builds/executable_wrapper/rustc-wrapper.py",
+      "sha256": "ff5d0f28115ba33ce40881f8ae918917b453b9b5bdfa2cc4c74c7f8f25a280c9"
+    },
+    {
+      "bytes": 1465982,
+      "path": "builds/executable_wrapper/source-inputs.tar.gz",
+      "sha256": "6c0d9921464ad1b633fe94ff2b7983a5b5f35061f2e33d1506f3fcc87e58a890"
+    },
+    {
+      "bytes": 0,
+      "path": "builds/primary/build-default.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 308,
+      "path": "builds/primary/build-default.log",
+      "sha256": "33b308643ead99fa2ceff34c3c2f3db32c4c48877460391e71ead888c0ecbe3e"
+    },
+    {
+      "bytes": 10216,
+      "path": "builds/primary/build-helper.py",
+      "sha256": "900a5c4268d840bab25aa0834161fddf721217252db6a952028ca4b4e037881a"
+    },
+    {
+      "bytes": 135491,
+      "path": "builds/primary/build-provenance-default.json",
+      "sha256": "d0e06a7eb4b01fef45a07823efbfdb68902990a3f584ba1f7bc25c2e97c1a249"
+    },
+    {
+      "bytes": 2795,
+      "path": "builds/primary/rustc-wrapper.py",
+      "sha256": "ff5d0f28115ba33ce40881f8ae918917b453b9b5bdfa2cc4c74c7f8f25a280c9"
+    },
+    {
+      "bytes": 1465982,
+      "path": "builds/primary/source-inputs.tar.gz",
+      "sha256": "fdb9145e414a0c5e61baf13b6712922f68cb7c6786e6e520d522ea18c7407272"
+    },
+    {
+      "bytes": 1058,
+      "path": "campaign-helper-review-primary/check.log",
+      "sha256": "fbf1fe45b8da6c8834fa69fe8ec789c47813044a6514c3130979788e542f5b15"
+    },
+    {
+      "bytes": 1379,
+      "path": "campaign-helper-review-primary/receipt.json",
+      "sha256": "21f8577b751dbed5f3fca912f092b1433a2e2fef716b482853db2175fe583f7b"
+    },
+    {
+      "bytes": 2639,
+      "path": "capture_reused_module.py",
+      "sha256": "91cf249f33c3b1004e293bc8754db0c21046ec281b83f6e689f94ba1e5490426"
+    },
+    {
+      "bytes": 6838,
+      "path": "capture_tool_runtime.py",
+      "sha256": "9e170d6605596bed4a1d706edd23dd8c657e24e3a3ee1d327c05a7c90f7eccb7"
+    },
+    {
+      "bytes": 3922,
+      "path": "check_batch_budget.py",
+      "sha256": "6ac52c6987258ba3e8602d78b82e4df94c57eff3dc8e15ff8e90b54be0cbc65d"
+    },
+    {
+      "bytes": 552765,
+      "path": "cleanup-final-retained.json",
+      "sha256": "90e07765bdeaf647fb950ac0181ce0216cf764f83d1d5456684afdbba3275ee5"
+    },
+    {
+      "bytes": 211696,
+      "path": "cleanup-plan-result.json",
+      "sha256": "f6529c508b93782ed53a2f7c6ed85b8aa06a6d0249ceda122d44b27ed9b5ceb8"
+    },
+    {
+      "bytes": 989436,
+      "path": "cleanup-plan.json",
+      "sha256": "57fff20289d6664a225dccba0d1b1cee6c4470e46807bdda6a51c7743ac0618b"
+    },
+    {
+      "bytes": 4007,
+      "path": "cleanup-supplement-before.json",
+      "sha256": "0ace93014e2ec5b960c59aa460ae7e4878167d2db2ba01254b4285a63576b100"
+    },
+    {
+      "bytes": 11129,
+      "path": "cleanup_intermediates.py",
+      "sha256": "8370a23ff7b29132b5016041a0bc1e5786b48d348378fb1060b3f8859418b8d1"
+    },
+    {
+      "bytes": 7819,
+      "path": "closeout-plan-template.json",
+      "sha256": "99b8aa5ee309d39d6dc5332b90a94c4fce8768f21d96a990680c8e4aa2550d9b"
+    },
+    {
+      "bytes": 8446,
+      "path": "closeout-plan.json",
+      "sha256": "6a14a629f6224bd1ba55bf967022ce50e0e4478a6c366a67072862d14ec2435a"
+    },
+    {
+      "bytes": 3496,
+      "path": "documentation-outline.md",
+      "sha256": "8a60cba288d6d06f001038f4d0b2444ebc2e11c7a5d8ebb6a7b26b2056df7d26"
+    },
+    {
+      "bytes": 556395,
+      "path": "experiment-closeout.json",
+      "sha256": "032c4fb7aa97735ace94f85eedfe8057dd22cb862b853f1df236a7fc8cfe8505"
+    },
+    {
+      "bytes": 1906,
+      "path": "experiment-plan.json",
+      "sha256": "f4e50c340259faa2304c8cbb9deab74427f516be90f0e5449d7e52fb45fe4edf"
+    },
+    {
+      "bytes": 1098,
+      "path": "failed-review-helper-primary/check.log",
+      "sha256": "9131aeae07b5889ac7941d6574d0c999fd46160fb7c241a02c3294c4bf756a0c"
+    },
+    {
+      "bytes": 1694,
+      "path": "failed-review-helper-primary/receipt.json",
+      "sha256": "165d123de2069ef05f687d077f2d85f13059e25387cd7ce20186bd2c9383c5fe"
+    },
+    {
+      "bytes": 6949,
+      "path": "finalize_cleanup.py",
+      "sha256": "e9b326508f2580841913e8604e83ad50af65283cf235d4580c32cf888ed8598b"
+    },
+    {
+      "bytes": 788,
+      "path": "helper-preflight-tests.json",
+      "sha256": "dcc44a6e734da5829957d29e7003a92f2f2dfb1893c3926167ec32e8aca82276"
+    },
+    {
+      "bytes": 1428,
+      "path": "helper-preflight-tests.log",
+      "sha256": "9d18e375eb2aa9ae7b2451f700444265dd323e0344c0bc2ca9664014f1d8cade"
+    },
+    {
+      "bytes": 333223,
+      "path": "normal-target-paths-before.json",
+      "sha256": "d1eed9c7e75da4d73cbf178ca1906f4733093694a5358cb9f572d9f9ae0fe4fc"
+    },
+    {
+      "bytes": 232,
+      "path": "pg-complete-512-envelope-primary/child-ready.json",
+      "sha256": "b49fd94852ee3c0a6f29b80f8021c13b4fbcade1cf57efbf729ee20e67bf70a5"
+    },
+    {
+      "bytes": 105,
+      "path": "pg-complete-512-envelope-primary/child-result.json",
+      "sha256": "992a2b767d0e165dfb9929e847d16b40b8b4d250c51338bfad9ac1d71c298b04"
+    },
+    {
+      "bytes": 221,
+      "path": "pg-complete-512-envelope-primary/child.log",
+      "sha256": "585e4e944986aafae5f718516c0a9790a1009118b645c48885c1e4be0f2a77e7"
+    },
+    {
+      "bytes": 807,
+      "path": "pg-complete-512-envelope-primary/command.json",
+      "sha256": "74fc684e635fdc859434538fc63f66ddaf72ab6aecc3edf22df7cf62fe5b81d2"
+    },
+    {
+      "bytes": 167,
+      "path": "pg-complete-512-envelope-primary/controller.json",
+      "sha256": "922bfa82750ff129652fb832793a4981bb411380a7c5ac4c3a6b0e908fc8f928"
+    },
+    {
+      "bytes": 2733,
+      "path": "pg-complete-512-envelope-primary/launch.json",
+      "sha256": "0a80928db8fd42b2d968bfaf37fa04dcf9a8a58eca66c90bbb2c5e8acc569fe3"
+    },
+    {
+      "bytes": 2795,
+      "path": "pg-complete-512-envelope-primary/readiness.json",
+      "sha256": "f81a276e647f5b214d5fd1a36ecb8d761b7b19177e86a9170ea465fc9f726dda"
+    },
+    {
+      "bytes": 186,
+      "path": "pg-complete-512-envelope-primary/release.json",
+      "sha256": "0e407451b098b79d68b055fe3404472fe9166b510741b3498f72938747a82c08"
+    },
+    {
+      "bytes": 3431,
+      "path": "pg-complete-512-envelope-primary/result.json",
+      "sha256": "c0392395935e4488196052a096a9ae53da8694a0eb43e44fb667bbc2f2c2f079"
+    },
+    {
+      "bytes": 177868,
+      "path": "pg-complete-512-envelope-primary/samples.jsonl",
+      "sha256": "d3a7ce44ea81034f16805e829fb286d6ff9d64175d7d8e8ee80e8fc5b556dcef"
+    },
+    {
+      "bytes": 111765,
+      "path": "pg-complete-512-review.json",
+      "sha256": "72d96621a958058aed89925d26bcb66bb36db27244c6be59799bfc26911fb587"
+    },
+    {
+      "bytes": 95,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/driver.log",
+      "sha256": "74642c98ba415c79edbefcd94bbf7a97e40f91b54fd76e19d2ad459def093e0a"
+    },
+    {
+      "bytes": 148240,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/campaign.json",
+      "sha256": "dba6f959f40995d0da974b7ba1bb3c53c7d70ba583c754c839f83d7b80b8a807"
+    },
+    {
+      "bytes": 9517,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/failure-progress.json",
+      "sha256": "e64298db7f9446e7bfc04bca6b6e0510404289d1bd1965e6ec967f76375cdb58"
+    },
+    {
+      "bytes": 2272932,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00000.gz",
+      "sha256": "0a2f8c80066a1e7feb99d13366bc2f2bbb0686ed2d752ca1ec82233fc7c31cb9"
+    },
+    {
+      "bytes": 2300985,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00001.gz",
+      "sha256": "e7f018b7be3b5d1bcb5f391ec0303da55d445abee5e354cb73ef8d695c22f51c"
+    },
+    {
+      "bytes": 2287633,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00002.gz",
+      "sha256": "d2a38b34db764cb75e1ea3992d784c106261fd365cfe08d690f4fb7c97a10c7b"
+    },
+    {
+      "bytes": 2284759,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00003.gz",
+      "sha256": "ec037f80a9af8620bd1724c032d09a76cf9207ddf5a7606b981f4e1cc92cc45b"
+    },
+    {
+      "bytes": 2330185,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00004.gz",
+      "sha256": "5df325f7b63b2ea1689ecd583c951dbd3a4745d6981b5f7565dad72e2cb97c78"
+    },
+    {
+      "bytes": 2319096,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00005.gz",
+      "sha256": "dbd4005944960c1edf916440c78a80442cceb350ff8297b71839e1fada3fdc49"
+    },
+    {
+      "bytes": 2317428,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00006.gz",
+      "sha256": "45c645312f1485717e2746d1dcb311ce1f2b46c9719478fd3c72cf7e95f31b84"
+    },
+    {
+      "bytes": 2325693,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00007.gz",
+      "sha256": "4ae5b19b181ca60e689c185a9a9af844cc2ae00364635bd14a0dcda4872f2d0b"
+    },
+    {
+      "bytes": 2338394,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00008.gz",
+      "sha256": "ab48d6358f0fdb67f61d63455550914e5455fe8526bce1fb36bcfb082087b96a"
+    },
+    {
+      "bytes": 2271997,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00009.gz",
+      "sha256": "54b9576904ca7c6e48ddeb248a88ed3e8522f98f1bbfcf6401ef8c2b9e7039c9"
+    },
+    {
+      "bytes": 2272831,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00010.gz",
+      "sha256": "0887368a18726d20af893c9ef7a352b123fc6dc02dc8f3f8142668d01dcf43ba"
+    },
+    {
+      "bytes": 2304132,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00011.gz",
+      "sha256": "451d53ad2f0ca8e3b2c88723d9d357c2a074a1006fc81890f2f3b8ef3f25051a"
+    },
+    {
+      "bytes": 2264979,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00012.gz",
+      "sha256": "a9a93edd3e31988db2a4a15d3cd89a44b638b94743658d4fef40835e9f505a54"
+    },
+    {
+      "bytes": 2281245,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00013.gz",
+      "sha256": "438344602d367c0189b97547af39f67c5b9520fa84bca3747307ba2ecfabfc6e"
+    },
+    {
+      "bytes": 2275659,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00014.gz",
+      "sha256": "91f6680fd5c8aa713474611b99420b367ba259334a28fe6c962f493f539662d9"
+    },
+    {
+      "bytes": 2322144,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00015.gz",
+      "sha256": "d025c541bf1e62572870309b0a7c71c47bb2b23a0770d2d97fbc406e8fe717cc"
+    },
+    {
+      "bytes": 2318833,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00016.gz",
+      "sha256": "06eced3d66b4ee561275e3bd54cab2121922c2a9e8a2b1ace485c3327752be0a"
+    },
+    {
+      "bytes": 2286087,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00017.gz",
+      "sha256": "9dbb984819913b1cc65b164f78f708792c07e4d4326e11640cdd2ad2fb433eec"
+    },
+    {
+      "bytes": 2284114,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00018.gz",
+      "sha256": "54d9d699a03bccb45873e261b4a483c26d8c657a74f35513a24bb4fa9e81c451"
+    },
+    {
+      "bytes": 2289306,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00019.gz",
+      "sha256": "2dee9e78c31d5ce7d6863e6530b0487fc6d0c64076c34bdc149a82534d5930a6"
+    },
+    {
+      "bytes": 2373870,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00020.gz",
+      "sha256": "27a8dcb5cc359f001bba03f6f94f60d021f6fe1d803be13b57f2e07aef27b53a"
+    },
+    {
+      "bytes": 1079844,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/history.jsonl.parts/part-00021.gz",
+      "sha256": "4b2b72de462bb8af20e010fde0b93482e3671736219be63acda3ab6b5c8c38d1"
+    },
+    {
+      "bytes": 949,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/offered-schedule.json",
+      "sha256": "6da0912d64ea73286661f5ce628578442e08432c44dcfc1f1f48147a502cc220"
+    },
+    {
+      "bytes": 1150,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/postgres-statistics.json",
+      "sha256": "f01b54d06d7c6ab718dc95faa4d7464b12b46b04d449eebe8c827f43314fbd3b"
+    },
+    {
+      "bytes": 201592,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/progress.json",
+      "sha256": "88ccb0e65abc006c973918dca6e5b946db649a857056da3f75fbe6cd9fe1d95b"
+    },
+    {
+      "bytes": 15492,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/query-plan-audit.json",
+      "sha256": "7fcfe22ef0e2172b92bc96dbe27cb00adddfc2325354c21e1bb7f447a5268557"
+    },
+    {
+      "bytes": 426,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/contention-crucible-FB9jVl/postgres-0/result.json",
+      "sha256": "3079cc61daeb538d79da2dd253a3e519e963a883bac4f4e7aabed17583dec508"
+    },
+    {
+      "bytes": 3267,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/report.json",
+      "sha256": "e991403f6197262a3860d03ece58d257b5efd494c0237f9675941286025e595c"
+    },
+    {
+      "bytes": 442,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/run.log",
+      "sha256": "83297bd5d609f76a68d6f60236f3df172985c6fc4bb3fce9e6510a3df5737d40"
+    },
+    {
+      "bytes": 9680,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/qualification/postgres-r512-w16-s20260929-z785h5kj/trial.json",
+      "sha256": "f5190e487b82765267e430d801b713d0c7eaf23b8c9f4b8d05fad37108a56c20"
+    },
+    {
+      "bytes": 10769,
+      "path": "pg-complete-512/primary/01-postgres-complete-full/trial.json",
+      "sha256": "4ae49d37e6f2700e7ac15555fac3b1f055fa83ae2ee3c3b854b8e816a2b4c96e"
+    },
+    {
+      "bytes": 148527,
+      "path": "pg-complete-512/primary/campaign.json",
+      "sha256": "5b6264ea7a051c6259bcf790d7e654b90f2631b3004657d7b9a02900e94a44b8"
+    },
+    {
+      "bytes": 222,
+      "path": "pg-complete-512/primary/postgres-cleanup.json",
+      "sha256": "03a2431a2e457ac6ce080103aa955a513693f05aed5617a9f701de1d09d9d0ad"
+    },
+    {
+      "bytes": 1318,
+      "path": "pg-complete-512/primary/postgres-start.json",
+      "sha256": "b56167d7fa53a560ea0c12b441bbf32537ea590689d51365ae08ba11c694d174"
+    },
+    {
+      "bytes": 1020901,
+      "path": "pg-complete-512/primary/postgres.log.gz",
+      "sha256": "ca3b0da0891150588c15cbf31572c9e4b7740ebde3886addaa2016483f165790"
+    },
+    {
+      "bytes": 232,
+      "path": "pg-prefix-512-envelope-primary/child-ready.json",
+      "sha256": "482c59252d85ebae8e68894877486d93352ea803ae6ebd7f3d0f8e7c209f9b5f"
+    },
+    {
+      "bytes": 105,
+      "path": "pg-prefix-512-envelope-primary/child-result.json",
+      "sha256": "a7587f1e6bf4e777a328d7af5a9179a0932fb829a3a2006c19e6f87015a4b12a"
+    },
+    {
+      "bytes": 276,
+      "path": "pg-prefix-512-envelope-primary/child.log",
+      "sha256": "7308e1a699828eaf61862174ce9c193b310afd9c7b45df898d8c094196c93135"
+    },
+    {
+      "bytes": 804,
+      "path": "pg-prefix-512-envelope-primary/command.json",
+      "sha256": "dbb8df8dbe518a37480c29e3cfc41c5af312028559675a37e34ddd31533f92fe"
+    },
+    {
+      "bytes": 166,
+      "path": "pg-prefix-512-envelope-primary/controller.json",
+      "sha256": "6bcb6f481b34a7b820d83a1afce90f503afd2256a62731b2fbdfc40391f0cc9a"
+    },
+    {
+      "bytes": 2728,
+      "path": "pg-prefix-512-envelope-primary/launch.json",
+      "sha256": "1e4d74b422d5033f2b93ff5e806c9b2b7e28aef768619de374b90138e21e15bd"
+    },
+    {
+      "bytes": 2794,
+      "path": "pg-prefix-512-envelope-primary/readiness.json",
+      "sha256": "1117392c5518c135c8722b91fc999404e43291ebfbe563ebbea5c7f600ec4bc1"
+    },
+    {
+      "bytes": 186,
+      "path": "pg-prefix-512-envelope-primary/release.json",
+      "sha256": "9da5374684d75320e8c5b195e3cc666eea9e86c887344893503ed461df98e04c"
+    },
+    {
+      "bytes": 3395,
+      "path": "pg-prefix-512-envelope-primary/result.json",
+      "sha256": "0666479db8c433c599c1d645df5232b01600ad99352c7295b8ddf299032c7360"
+    },
+    {
+      "bytes": 652171,
+      "path": "pg-prefix-512-envelope-primary/samples.jsonl",
+      "sha256": "117e977aeaef475d070601d85241c6ae68d97b539c056da09a9eca8ee4d60357"
+    },
+    {
+      "bytes": 2545,
+      "path": "pg-prefix-512-review.json",
+      "sha256": "6c7994d884fb166862d6ea648293b1041ec58cebe859aede034057c76ef6694c"
+    },
+    {
+      "bytes": 94,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/driver.log",
+      "sha256": "59abb9bc22c09ffeef99ede8ce0f48359a3ba73d362ab440a35bf1f2214a8c44"
+    },
+    {
+      "bytes": 785937,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/campaign.json",
+      "sha256": "c4c9d4a4c8d4aa8a98079418b04f37900e69b3ccb60931ce5b137ecb7c20e2ef"
+    },
+    {
+      "bytes": 118562,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/final.json.gz",
+      "sha256": "ef8f14e4af8399e56314a8d6d21fa85d179dcb41c81021b5aef3108201e0ae82"
+    },
+    {
+      "bytes": 2274133,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00000.gz",
+      "sha256": "f6a5d003f036ba0a0ac5e9c254910082185fa3db142e814e08540b04790da2ce"
+    },
+    {
+      "bytes": 2280218,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00001.gz",
+      "sha256": "1cf1a54ca25a2c5f91b79915b8aa6c0b3765d5a2a6d2c9acd1f0b2dc00d003d6"
+    },
+    {
+      "bytes": 2288859,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00002.gz",
+      "sha256": "d102a82a417ee1762742043ce480b3a820cb0dd8814d8efe2dece0575813dd13"
+    },
+    {
+      "bytes": 2292688,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00003.gz",
+      "sha256": "94c8511a76c43afe0f5832a65e183b58cd5f8d989c3cbed8d1a4d2a69689bbfe"
+    },
+    {
+      "bytes": 2314372,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00004.gz",
+      "sha256": "3e90fb12948942f3498db5d2cd360481e120dc961b65255ba7f9d18c8811a5d6"
+    },
+    {
+      "bytes": 2319520,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00005.gz",
+      "sha256": "56df85d864cc079fcc4e166520438d827ff5195d24feaf8feba15241388c7794"
+    },
+    {
+      "bytes": 2397419,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00006.gz",
+      "sha256": "3bf442900dd9fe71688fe0a7903e5417bcc22c853f3a26b0f3ec9e9f865e683d"
+    },
+    {
+      "bytes": 2343426,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00007.gz",
+      "sha256": "04e8ef1f8f974d25077d1de4393a0ea980c951f8b5ec9fa5727d0c548075607e"
+    },
+    {
+      "bytes": 2313965,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00008.gz",
+      "sha256": "d3837df25ec3a5266e52a5f6b1207bbf3434ded3ba2a810d0cb80f8005de176f"
+    },
+    {
+      "bytes": 2311261,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00009.gz",
+      "sha256": "72134814a76565997030903173eb7753f2eabbc53a71c50b98c39190e4321c1f"
+    },
+    {
+      "bytes": 2272742,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00010.gz",
+      "sha256": "626118370ba5209d369a286e11d4ed44c47bf1c4e4a748cf03a7d98e5618573f"
+    },
+    {
+      "bytes": 2292260,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00011.gz",
+      "sha256": "81912b76af15fab025c4d19579cbf6e015283225c74882f76ab84bdaf851d4b5"
+    },
+    {
+      "bytes": 2275581,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00012.gz",
+      "sha256": "eebf162f9af7b217d05e76a7cf4aeb4da9bfa5b2f40eaf5e6ec3634027510a8f"
+    },
+    {
+      "bytes": 2344760,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00013.gz",
+      "sha256": "6aab0a1f4f602bc8001bf46cfcabffd3c9e475128e6589dad1c60dc21b40d616"
+    },
+    {
+      "bytes": 2277237,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00014.gz",
+      "sha256": "2c10a1cf26e68d9c98d8d0170464e7b4d746cc939f3b06efc81ff107d9713919"
+    },
+    {
+      "bytes": 2279059,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00015.gz",
+      "sha256": "e0bb6ae2f90a2f4b3e19413489f91f101abd4cc2ef70110dee01d9edca9e5e13"
+    },
+    {
+      "bytes": 2324193,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00016.gz",
+      "sha256": "1490f41235ca30bd464d3da531d1a34d0c11fa0dd5deb7b699defa79007eacdc"
+    },
+    {
+      "bytes": 2265390,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00017.gz",
+      "sha256": "65fe6f8d33b14bc7681e247d6f2aca344d8f233a3662294b51538d6dbbc37f5e"
+    },
+    {
+      "bytes": 2285740,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00018.gz",
+      "sha256": "243a9d76db07742b981b15c80b2db4bd8f567fe05aacb6090e50e598e52c635e"
+    },
+    {
+      "bytes": 2273693,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00019.gz",
+      "sha256": "e4679885668d040f90130050ecf678d0baa4b3816e3df1ae1bbb617539226ad4"
+    },
+    {
+      "bytes": 2282399,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00020.gz",
+      "sha256": "2022de8e16379aa84ddd2734c25531c25a78685328c24f78df7aca5ad45cfffd"
+    },
+    {
+      "bytes": 2418272,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00021.gz",
+      "sha256": "741729be2b48d04244b046af5ed82263b7f7b6316feff09d061dd088173c91bf"
+    },
+    {
+      "bytes": 2330682,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00022.gz",
+      "sha256": "de9a0e8698e9d7b739e0fd114d4f0f1dc2d9a276ffdf27f30cf38df8b4909284"
+    },
+    {
+      "bytes": 2330845,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00023.gz",
+      "sha256": "10a6a84895f7dbb56681635606614694718fe59508a3adc8c4900bb6c0c98ec3"
+    },
+    {
+      "bytes": 2340351,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00024.gz",
+      "sha256": "ac6d0418623f1fc363711d85c42853166312df33fcbcbfd97d17d0cda96a2bee"
+    },
+    {
+      "bytes": 2337798,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00025.gz",
+      "sha256": "87a05d69e9dfa4b1a7cf89d1a1735cfa611a85b3daf73ccd1530c9ca6a2ab1dc"
+    },
+    {
+      "bytes": 2298320,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00026.gz",
+      "sha256": "cc9542560ba856217a80fc094ee709947d6a9155b6db89d8b7e23a9dc7ea180b"
+    },
+    {
+      "bytes": 2294246,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00027.gz",
+      "sha256": "7a1b4c6f5bb01b75a444f1923afd61021e1d8ed0ba49284c697c8f6971856373"
+    },
+    {
+      "bytes": 2300941,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00028.gz",
+      "sha256": "5ce0224afa45ca96ce3113951f9fdb91773f7ff1038064f259b505812dbd932e"
+    },
+    {
+      "bytes": 2315039,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00029.gz",
+      "sha256": "cc37c46c0c0fbb1ae7dede081cfa84e1cc1e541dd3fe6a663f128f8603f78cc6"
+    },
+    {
+      "bytes": 2347006,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00030.gz",
+      "sha256": "25104363cf353d62a9bf7e572bcb095b8c655d198532f90c8dc9fa5da7de7985"
+    },
+    {
+      "bytes": 2351339,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00031.gz",
+      "sha256": "ce4a05b03273852e0c28cc2a358950c87c5da77b6ba7280f5091519fc2da23de"
+    },
+    {
+      "bytes": 2360192,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00032.gz",
+      "sha256": "943281485d1da8ce874c14fd00c58fe226aa87f40e610cddbbc64c64b5439913"
+    },
+    {
+      "bytes": 2353719,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00033.gz",
+      "sha256": "d2878783eaa539e343f1ee5e66b188e65dbed36837f9fde1d84b4019d8235bfa"
+    },
+    {
+      "bytes": 2462158,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00034.gz",
+      "sha256": "0a8809748c26dc96333d78083c03b28cccab0743b6261a5e452ac396b5d56bcb"
+    },
+    {
+      "bytes": 2341340,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00035.gz",
+      "sha256": "5ab958f31f0ea4aa799e46dac615b1bdc3e16bbde1dec7d0723c5ad5c8a8d846"
+    },
+    {
+      "bytes": 2351616,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00036.gz",
+      "sha256": "938f0e343e61f5b42a6fb0991786d9c54861fd98e05e9d9661c653a83110fb2e"
+    },
+    {
+      "bytes": 2353022,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00037.gz",
+      "sha256": "113437fad6f58921b74e5754023eb6951e4e331fc010e2f4676c42dcaf4b8973"
+    },
+    {
+      "bytes": 2361216,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00038.gz",
+      "sha256": "a495b48f2089f620247453b75d415c31b7b924732d74f4fd80d889ee4e86a35c"
+    },
+    {
+      "bytes": 885568,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/history.jsonl.parts/part-00039.gz",
+      "sha256": "26f6b107aaf4a91f6f2929d743065a81efb4e202ea6629e31d3b5eab22324335"
+    },
+    {
+      "bytes": 31131,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/initial.json.gz",
+      "sha256": "4bf11a7693136c6ded58cdc2f9eb23d90821e753d3b09c61e133dd447eca5756"
+    },
+    {
+      "bytes": 988,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/offered-schedule.json",
+      "sha256": "9a87c59ca81f70e9d9b311fa260097d9c8320fab8cb34e4e7b47c9ec5b44b81c"
+    },
+    {
+      "bytes": 1151,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/postgres-statistics.json",
+      "sha256": "6a51a501afea72df3d0cb5a6afd934aa6cc6a71f8cfe6df95f0d12b16fdb9991"
+    },
+    {
+      "bytes": 361583,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/progress.json",
+      "sha256": "4b02dbc741916fab1e466186ffb09e93aaf1613b5eb53f9d8daf0c6a27bfb4f1"
+    },
+    {
+      "bytes": 18194,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/query-plan-audit.json",
+      "sha256": "56b273dc4c899a7829f9d11258dae9d3d2f6b86eda5939a58bcb16185cc09057"
+    },
+    {
+      "bytes": 469282,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/result.json",
+      "sha256": "d4cad08a1d8b9b812fd857d347a082952a13eec9844647289b02147da7b6f457"
+    },
+    {
+      "bytes": 179981,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/contention-crucible-WyZaAP/postgres-0/serial-witness.json.gz",
+      "sha256": "950ed75aa34995a9a85f02156d6a624ce0219808de0d5957ed750e84abb19eb2"
+    },
+    {
+      "bytes": 533143,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/report.json",
+      "sha256": "f96a2d54250df4b3e69f5a0cc4f36a209290ccd6cc1940d46e4a22fa78dcfd5f"
+    },
+    {
+      "bytes": 121,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/run.log",
+      "sha256": "a60fcfd4c6264659a28f1fd9a42c3644ab623167c49440474f024c88f1494d96"
+    },
+    {
+      "bytes": 577103,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/qualification/postgres-r512-w16-s20260929-x5wo4prt/trial.json",
+      "sha256": "16598da05a979262d302c98aad844d207f8ff92a12d60b8c2916b3cd82f9ff24"
+    },
+    {
+      "bytes": 18340,
+      "path": "pg-prefix-512/primary/01-postgres-prefix-full/trial.json",
+      "sha256": "5f55191ab8b426d22e677a9441a3b04359e2a49268d8eac813221a4046f3f30f"
+    },
+    {
+      "bytes": 94,
+      "path": "pg-prefix-512/primary/02-postgres-prefix-metrics/driver.log",
+      "sha256": "59abb9bc22c09ffeef99ede8ce0f48359a3ba73d362ab440a35bf1f2214a8c44"
+    },
+    {
+      "bytes": 786412,
+      "path": "pg-prefix-512/primary/02-postgres-prefix-metrics/qualification/campaign.json",
+      "sha256": "c2e692f14a2805236a892a9113b3152babffdbd8abe4333f4be32284d566fbe8"
+    },
+    {
+      "bytes": 118562,
+      "path": "pg-prefix-512/primary/02-postgres-prefix-metrics/qualification/postgres-r512-w16-s20260929-2md5a8dy/contention-crucible-XIGVDI/postgres-0/final.json.gz",
+      "sha256": "ef8f14e4af8399e56314a8d6d21fa85d179dcb41c81021b5aef3108201e0ae82"
+    },
+    {
+      "bytes": 5180495,
+      "path": "pg-prefix-512/primary/02-postgres-prefix-metrics/qualification/postgres-r512-w16-s20260929-2md5a8dy/contention-crucible-XIGVDI/postgres-0/history.jsonl.parts/part-00000.gz",
+      "sha256": "3a23b000c1d849e1fd3e0e3152dbdb8a81183f0be818d922af8f4d6db9ef43c4"
+    },
+    {
+      "bytes": 5161745,
+      "path": "pg-prefix-512/primary/02-postgres-prefix-metrics/qualification/postgres-r512-w16-s20260929-2md5a8dy/contention-crucible-XIGVDI/postgres-0/history.jsonl.parts/part-00001.gz",
+      "sha256": "42c37e7fd8e01abdd180c3885dacebbbe7cc60c714a793c7e1a5352e4ab0287c"
+    },
+    {
+      "bytes": 2017153,
+      "path": "pg-prefix-512/primary/02-postgres-prefix-metrics/qualification/postgres-r512-w16-s20260929-2md5a8dy/contention-crucible-XIGVDI/postgres-0/history.jsonl.parts/part-00002.gz",
+      "sha256": "c3f441447e60c87b885cf46d15666999a581f56ce6fccc0009f59f90436b637c"
+    },
+    {
+      "bytes": 31131,
+      "path": "pg-prefix-512/primary/02-postgres-prefix-metrics/qualification/postgres-r512-w16-s20260929-2md5a8dy/contention-crucible-XIGVDI/postgres-0/initial.json.gz",
+      "sha256": "4bf11a7693136c6ded58cdc2f9eb23d90821e753d3b09c61e133dd447eca5756"
+    },
+    {
+      "bytes": 988,
+      "path": "pg-prefix-512/primary/02-postgres-prefix-metrics/qualification/postgres-r512-w16-s20260929-2md5a8dy/contention-crucible-XIGVDI/postgres-0/offered-schedule.json",
+      "sha256": "6595ad19ff0f6c95a6de07951bc77d84fb2e5ee563e067fd828991fd433ed326"
+    },
+    {
+      "bytes": 1150,
+      "path": "pg-prefix-512/primary/02-postgres-prefix-metrics/qualification/postgres-r512-w16-s20260929-2md5a8dy/contention-crucible-XIGVDI/postgres-0/postgres-statistics.json",
+      "sha256": "dfdb0ba21665e5c25ed026f7734e1e240dd9006ee3f31f8d943ef9e6a46437da"
+    },
+    {
+      "bytes": 361768,
+      "path": "pg-prefix-512/primary/02-postgres-prefix-metrics/qualification/postgres-r512-w16-s20260929-2md5a8dy/contention-crucible-XIGVDI/postgres-0/progress.json",
+      "sha256": "fa2eb29a3a06423600a210e83962647e3cd4f95dbd85d0a57e7fce2f879b6964"
+    },
+    {
+      "bytes": 18194,
+      "path": "pg-prefix-512/primary/02-postgres-prefix-metrics/qualification/postgres-r512-w16-s20260929-2md5a8dy/contention-crucible-XIGVDI/postgres-0/query-plan-audit.json",
+      "sha256": "dc6c035d611ee5dc6efcb3e4e08d0d4590d9623d4874817644ba39398937d69f"
+    },
+    {
+      "bytes": 469487,
+      "path": "pg-prefix-512/primary/02-postgres-prefix-metrics/qualification/postgres-r512-w16-s20260929-2md5a8dy/contention-crucible-XIGVDI/postgres-0/result.json",
+      "sha256": "94d5e013753b27eb4424f9750f5322ab16954d1b14f5705c71c766a0b1f49cc1"
+    },
+    {
+      "bytes": 164,
+      "path": "pg-prefix-512/primary/02-postgres-prefix-metrics/qualification/postgres-r512-w16-s20260929-2md5a8dy/contention-crucible-XIGVDI/postgres-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 533354,
+      "path": "pg-prefix-512/primary/02-postgres-prefix-metrics/qualification/postgres-r512-w16-s20260929-2md5a8dy/report.json",
+      "sha256": "89fb4d235b0b614030dbb9f25406b229e6c94e91ff562afdd63fafb83a0f0ea4"
+    },
+    {
+      "bytes": 121,
+      "path": "pg-prefix-512/primary/02-postgres-prefix-metrics/qualification/postgres-r512-w16-s20260929-2md5a8dy/run.log",
+      "sha256": "1bf8e03af89a4f85b1c90618da3fe83d1595afb5a64d60c9b3517a38892e7285"
+    },
+    {
+      "bytes": 577320,
+      "path": "pg-prefix-512/primary/02-postgres-prefix-metrics/qualification/postgres-r512-w16-s20260929-2md5a8dy/trial.json",
+      "sha256": "90eb0a48b659037b00fd989a3befb8e009dc1de360041a9cb0aa535c99085201"
+    },
+    {
+      "bytes": 18722,
+      "path": "pg-prefix-512/primary/02-postgres-prefix-metrics/trial.json",
+      "sha256": "921069c61e74e08d2724f2e69efb65d8c34f96817f842b45b9bebb5e56b46bc6"
+    },
+    {
+      "bytes": 178774,
+      "path": "pg-prefix-512/primary/campaign.json",
+      "sha256": "9d36c21e4edaa479d9c65915c65f2d84972e54362cb30bfd074da732be799c2b"
+    },
+    {
+      "bytes": 222,
+      "path": "pg-prefix-512/primary/postgres-cleanup.json",
+      "sha256": "96e500e037a30c2219794b751294f96a1f16ff36281ab0b54a45d33b1c488cc1"
+    },
+    {
+      "bytes": 1318,
+      "path": "pg-prefix-512/primary/postgres-start.json",
+      "sha256": "1ce0a657d034bc4d55eb1bd14ee0eb1b42bd5a20b17d48ce24195eed46499264"
+    },
+    {
+      "bytes": 1149238,
+      "path": "pg-prefix-512/primary/postgres.log.parts/part-00000.gz",
+      "sha256": "6e27b998c72ca16001e1af778c289621411040826034f24e4675c7954c216fa7"
+    },
+    {
+      "bytes": 1125537,
+      "path": "pg-prefix-512/primary/postgres.log.parts/part-00001.gz",
+      "sha256": "354d0d59f081b773ca66226d971a8f37c1fc939867e5b4fa738c47239c6af99a"
+    },
+    {
+      "bytes": 73542,
+      "path": "pg-prefix-512/primary/postgres.log.parts/part-00002.gz",
+      "sha256": "d7c7d84c181830fb1b209c98ee8396c94c4ce6c4eb629773a8b8bd1fb942b7b1"
+    },
+    {
+      "bytes": 9056,
+      "path": "preflight-resources.json",
+      "sha256": "3673d88e26f00faab6e266db6f2d476e985f36ce628f061be3a1227564388d9f"
+    },
+    {
+      "bytes": 8165,
+      "path": "prepare_closeout.py",
+      "sha256": "f5f130d827fc8b069acd022585fdba3ee5a222852c2bd72284e86d6761661793"
+    },
+    {
+      "bytes": 4664,
+      "path": "python-preflight/receipt.json",
+      "sha256": "8bb37033de3cf1593e87c03a93375ddb91ed09665fb1b7fcff70e9dd051c3f61"
+    },
+    {
+      "bytes": 15097,
+      "path": "python-preflight/test_hyperfeed_qualification.log",
+      "sha256": "b6108f15160a4d1a78191739e187de4b8f151818ca69dbeb67d7700cd4f0e553"
+    },
+    {
+      "bytes": 1634,
+      "path": "python-preflight/test_maintenance_selection.log",
+      "sha256": "3d8edb66df9cf46a327f4bcc32e6649dcaf4b502e3e555cded89b139ede3951d"
+    },
+    {
+      "bytes": 1496,
+      "path": "python-preflight/test_postgres_candidate_query.log",
+      "sha256": "1788d28a73efcbdc3bbc6a6cbed0e32ec5026d4841120b8aed867548c0cc42c8"
+    },
+    {
+      "bytes": 1348,
+      "path": "python-preflight/test_postgres_statistics.log",
+      "sha256": "f658bed81d55e5307a2b7e33bab4226e945c3f7d556de85cf3d42ea7e9f2b57b"
+    },
+    {
+      "bytes": 3379,
+      "path": "python-preflight/test_run_remote_contention.log",
+      "sha256": "126fbc31c8f611b1d9db4dd66cfa5d3d82f3b73fdf9a831e4e6c6f927df12543"
+    },
+    {
+      "bytes": 12477,
+      "path": "regression-review-v2.json",
+      "sha256": "eee460a0b7ae517ccba2a5984ec98b3c79b62c9374a916a01573990620ac5477"
+    },
+    {
+      "bytes": 306,
+      "path": "regression-review.json",
+      "sha256": "d58b70ecd16451ec02ecec7226c947cd79fb88b6f68e04ce47cfb447cb190600"
+    },
+    {
+      "bytes": 14020,
+      "path": "required-tool-runtime/runtime-dependencies-before.json",
+      "sha256": "1d9b8310e33e9328e7a22ecaf6dbbf37eaf245e796691901fd0c519e58bbcb07"
+    },
+    {
+      "bytes": 9131,
+      "path": "resource_budget.py",
+      "sha256": "ea24ff649177c3bb19da1414294fccf2c3e1e64203fce0fe886c12823aaa20f9"
+    },
+    {
+      "bytes": 200056,
+      "path": "retained-artifacts-before.json.gz",
+      "sha256": "c995aa1d284ff92ca6c24d324ae5aae6ff3ded2e3c78ea91616469ff6f79e35f"
+    },
+    {
+      "bytes": 6063,
+      "path": "review-summary.json",
+      "sha256": "fde136ddf426aa8a7a65ee409ef0bcba9d90ebf35908690b5bc4a5224ec46cb1"
+    },
+    {
+      "bytes": 10001,
+      "path": "review_campaign.py",
+      "sha256": "2996da2d7e3e216a117cfeb2b6e321faa58dfc9923d1b8bb191ba12dfe560b7a"
+    },
+    {
+      "bytes": 23487,
+      "path": "review_failed_maintenance_control.py",
+      "sha256": "9c61a2e5ff1defe184af332a73011461b80f701719ae14ea5f48990688c5a9ca"
+    },
+    {
+      "bytes": 9098,
+      "path": "review_regressions.py",
+      "sha256": "86c46fbb2e95fd3280bd3aca0e231ef150d5b053c3b5176e26c58dea8befcc9d"
+    },
+    {
+      "bytes": 9169,
+      "path": "review_regressions_v2.py",
+      "sha256": "d6f88fbcd37d438b89ef21b34b9edb1f6fe9e7f376eb579e8a091a5b75cdd4ec"
+    },
+    {
+      "bytes": 27891,
+      "path": "run_campaign.py",
+      "sha256": "20d93032be923f6ba9a8e62d0b3c4952e3c91f4b6c59e0297d34dc3ed1806e23"
+    },
+    {
+      "bytes": 10355,
+      "path": "run_tests.py",
+      "sha256": "d90cc3744be5b5bc4a6f918ca2d7a697424887140e3319901cd1cbe83230027e"
+    },
+    {
+      "bytes": 4032,
+      "path": "runtime-dependencies-before.json",
+      "sha256": "e7eaf377f688d7af84315b32c83a46ebba14471478e41e6acdad4041b46e6059"
+    },
+    {
+      "bytes": 2795,
+      "path": "rustc_preserve.py",
+      "sha256": "ff5d0f28115ba33ce40881f8ae918917b453b9b5bdfa2cc4c74c7f8f25a280c9"
+    },
+    {
+      "bytes": 232,
+      "path": "service-prefix-512-envelope-primary/child-ready.json",
+      "sha256": "9820274de3fa15b87e9b07bc79307f5f651903a99dbe37c844059bc4076c502e"
+    },
+    {
+      "bytes": 105,
+      "path": "service-prefix-512-envelope-primary/child-result.json",
+      "sha256": "4562aee7cd868275130b1d9e5d9f5681135f50130e8cb1991e612f3c19c46673"
+    },
+    {
+      "bytes": 299,
+      "path": "service-prefix-512-envelope-primary/child.log",
+      "sha256": "d86643873ece1f4d2d2b8ce0ba904294137d9a237faf160e3e163425ff8069e1"
+    },
+    {
+      "bytes": 814,
+      "path": "service-prefix-512-envelope-primary/command.json",
+      "sha256": "97d6d5cd94e31d743cd15876720c5d8993dfc14788802e6e72b454ed72f2dfde"
+    },
+    {
+      "bytes": 167,
+      "path": "service-prefix-512-envelope-primary/controller.json",
+      "sha256": "86e2f82f50d5ee06f2c628876bba04c62e3ca9035ce1213515e0ebb8a5ea8391"
+    },
+    {
+      "bytes": 2743,
+      "path": "service-prefix-512-envelope-primary/launch.json",
+      "sha256": "c722ab5f0d56366c91f72f30bdfec4a89a0ff93491d2b36a12c6bad85dc9a485"
+    },
+    {
+      "bytes": 2796,
+      "path": "service-prefix-512-envelope-primary/readiness.json",
+      "sha256": "117925dc6a6f1129f0226765afa05698f09f3902f9ae531f2fd9393c0319ab5c"
+    },
+    {
+      "bytes": 186,
+      "path": "service-prefix-512-envelope-primary/release.json",
+      "sha256": "6e5de047e632f8546795103e9cc3d9c41dfc56f3836c3f6fd9b965f5dc9b1d6b"
+    },
+    {
+      "bytes": 3389,
+      "path": "service-prefix-512-envelope-primary/result.json",
+      "sha256": "3e3f8098e0ca757660016eab9d01694f71cb5da97d88a8a7fbe1ac95d9ed7c21"
+    },
+    {
+      "bytes": 649221,
+      "path": "service-prefix-512-envelope-primary/samples.jsonl",
+      "sha256": "dcee536e1ec389abac16c93c455ec8e13301676185520b5da45a3943f93a27d1"
+    },
+    {
+      "bytes": 2549,
+      "path": "service-prefix-512-review.json",
+      "sha256": "0eb268d18c11cf301acedc4b69f848b24e6965bf0737734db1bf3fdc374a70c0"
+    },
+    {
+      "bytes": 102,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/driver.log",
+      "sha256": "556cafa59978fb770cb29ae64e2cbe3066224dd459093d6d8eb50fc57f23d523"
+    },
+    {
+      "bytes": 740696,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/campaign.json",
+      "sha256": "74b6eec251333f6df02d29c148f574afdba6b26ad9bd14caf5368f8cbf7866df"
+    },
+    {
+      "bytes": 118562,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/final.json.gz",
+      "sha256": "ef8f14e4af8399e56314a8d6d21fa85d179dcb41c81021b5aef3108201e0ae82"
+    },
+    {
+      "bytes": 2271735,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00000.gz",
+      "sha256": "6723e574a4fda27a660bb4e59d6c42659385dc8266e4b7c144157e7080414c32"
+    },
+    {
+      "bytes": 2276996,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00001.gz",
+      "sha256": "50949e1d6923bd8f33cd3efc2e91c0ffd4726de3cd3e939c1ee86f17aa6995b8"
+    },
+    {
+      "bytes": 2279960,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00002.gz",
+      "sha256": "580ad0112e7419754519a5e397898d6967082a33c6878a05d2d575f81078a661"
+    },
+    {
+      "bytes": 2281677,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00003.gz",
+      "sha256": "5be419bd61d856991776d6b2d5d721d52c885fd0f55c2c9ad835e6591015c58b"
+    },
+    {
+      "bytes": 2305651,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00004.gz",
+      "sha256": "33b56846973276d368e9c9c985d7b02e8d721032cd9da922d246f3aaae1fd7af"
+    },
+    {
+      "bytes": 2313757,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00005.gz",
+      "sha256": "5652203280f3452d117907a239b24771bffb37ceec7e311f12bb0cf1c18e8fdc"
+    },
+    {
+      "bytes": 2313157,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00006.gz",
+      "sha256": "9ab411b9801c9c9e99461119090f041829855f632d95050ab4610b311e975922"
+    },
+    {
+      "bytes": 2321675,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00007.gz",
+      "sha256": "d66b1e228437c80a069ddcf50d98d08d200f792a6e026196e744f5d8b09fd7ba"
+    },
+    {
+      "bytes": 2303205,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00008.gz",
+      "sha256": "6f74fa0472d3afbb748cfeea17412174370e85c075ad414c0c6270a251b17d26"
+    },
+    {
+      "bytes": 2265994,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00009.gz",
+      "sha256": "feb4a73b91f56dab5f27a36291909a310736aab1f2e454a4ea5d8bd1b605dbbb"
+    },
+    {
+      "bytes": 2268441,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00010.gz",
+      "sha256": "7f78013921cf59a68cb1d34885f041e5e45b00134f9263721ebb43d1d9537250"
+    },
+    {
+      "bytes": 2277847,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00011.gz",
+      "sha256": "b5ba25ff36274e873affa4d9386b9d68c90e0fd3c7a15a176c9bee8dedd8bb2b"
+    },
+    {
+      "bytes": 2261560,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00012.gz",
+      "sha256": "277c021723d6535528a644fde01713c5a57ee35f263ffb776fba75e4fffe1f89"
+    },
+    {
+      "bytes": 2277300,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00013.gz",
+      "sha256": "4f1442b43559fdc8da199181aea69f60c8f5e1ed2fdf7b5c147e06e68fbc36a2"
+    },
+    {
+      "bytes": 2271364,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00014.gz",
+      "sha256": "4c0855ab4663317ce505e14192fad6fda1b3c67a1934a07a4247c10781ce7d4b"
+    },
+    {
+      "bytes": 2274644,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00015.gz",
+      "sha256": "f04b9d9146e98cafb4a359ee7cf3b0e0be0fe8bce021d4a01ca30eb4cea02526"
+    },
+    {
+      "bytes": 2292871,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00016.gz",
+      "sha256": "5cab2c359ce79a8458b6dd0032958b53b96c090b59e9b3497708211407c72855"
+    },
+    {
+      "bytes": 2260914,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00017.gz",
+      "sha256": "eb1f9d475695d416517aec959adfcb158064e3ca70792a2a84a2916720175d1c"
+    },
+    {
+      "bytes": 2258204,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00018.gz",
+      "sha256": "be66c5054be4098458778ad6be0d79f540103a416d8a5fc2f2974be07f1cb920"
+    },
+    {
+      "bytes": 2260017,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00019.gz",
+      "sha256": "3bbd3461d264dd61ddf390bc686cc1356ba5e9c63a9b1e5819adb4275e92de50"
+    },
+    {
+      "bytes": 2267529,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00020.gz",
+      "sha256": "6e9175f1261794440a4f3238474197bbb0c8c519198a638ef5031a31e469c8fe"
+    },
+    {
+      "bytes": 2385085,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00021.gz",
+      "sha256": "0011d637540a77b6fb9e0dc23b5b985d4507699a2e93a7954497f7467ccb7bb7"
+    },
+    {
+      "bytes": 2319795,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00022.gz",
+      "sha256": "546417416163b8942cc839dd3f1111ed4d5477834c4d6eeb9f349c1270de72bc"
+    },
+    {
+      "bytes": 2322269,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00023.gz",
+      "sha256": "9cf30f2736735c9892c908c56997d341f7a439a603d178338222b4a660f30fe9"
+    },
+    {
+      "bytes": 2329885,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00024.gz",
+      "sha256": "60d9897dbb2e8344aa7be863a18acfa884d417fddb5559c0f6b5e818fa153f5b"
+    },
+    {
+      "bytes": 2328617,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00025.gz",
+      "sha256": "cc1414600227b0521d2fecf629aaa61e3fd1cc834c5ea3f5f79f0c956009a4a9"
+    },
+    {
+      "bytes": 2286798,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00026.gz",
+      "sha256": "14beb1d4745ed132396d365e70db13b72d86982f3a7db771b6b63935646f4e67"
+    },
+    {
+      "bytes": 2278343,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00027.gz",
+      "sha256": "f1283247364aca9a6c765f7544c444ccf32ba7ecd67d8f74033f21d14c4c203e"
+    },
+    {
+      "bytes": 2283663,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00028.gz",
+      "sha256": "7c9c982ef467d08d029900648b093991ef0920c610319650bd5fe307dc16fc32"
+    },
+    {
+      "bytes": 2317332,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00029.gz",
+      "sha256": "4bcbc4e050b39c011b4ddd6c3fb7f1b2438805618518420f9f7e382b48bcdbb9"
+    },
+    {
+      "bytes": 2342797,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00030.gz",
+      "sha256": "71733d181870b200c27ad0ee8cafa6a2381b3ff0ee99ebe115d0c17f42076dcc"
+    },
+    {
+      "bytes": 2356015,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00031.gz",
+      "sha256": "8d23828aa7c410539ab4f54fa2885fe5abd30faf577dba75dd853cf0cb00bd01"
+    },
+    {
+      "bytes": 2354284,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00032.gz",
+      "sha256": "bf5f80eb5dd78f12ffc0f0c44ee6c5d8f8264f6d38a3965f63d00458114b5376"
+    },
+    {
+      "bytes": 2360017,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00033.gz",
+      "sha256": "cbb05b1f5e4dd1da0f682751cb512ed060160593188ef9f150d6a4adcf3e8632"
+    },
+    {
+      "bytes": 2426180,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00034.gz",
+      "sha256": "2a26a242f43483cc756ec6112f4f71634d3baeff362e1bc19e831af0be432608"
+    },
+    {
+      "bytes": 2336996,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00035.gz",
+      "sha256": "4bd9ca9e5bd38e31b638d1869864c21570bfb9550516b17fa55f41ff752ad359"
+    },
+    {
+      "bytes": 2342867,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00036.gz",
+      "sha256": "bb743d0e480861f145b6f3500b4f15ee297cb3661933c735d56b58c609d20318"
+    },
+    {
+      "bytes": 2346492,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00037.gz",
+      "sha256": "79884b53c51e79983ba9d3871a48f7950236980c786a9f6b34f845dd62f36bab"
+    },
+    {
+      "bytes": 2359909,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00038.gz",
+      "sha256": "9f9189c0ded3039f58c2d30dd069c7d70764dd2852c76f63e6c84c5ce1a822de"
+    },
+    {
+      "bytes": 886180,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/history.jsonl.parts/part-00039.gz",
+      "sha256": "c2574e605089b872d56cced3144a73e4575e2051bbbc4f840af9786ef5b3de25"
+    },
+    {
+      "bytes": 31131,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/initial.json.gz",
+      "sha256": "4bf11a7693136c6ded58cdc2f9eb23d90821e753d3b09c61e133dd447eca5756"
+    },
+    {
+      "bytes": 988,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/offered-schedule.json",
+      "sha256": "45d49d944678805edf2a7e0465abee4c0f1dd5babbbd5133fe60c6dc51f9f03e"
+    },
+    {
+      "bytes": 176,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/postgres-statistics.json",
+      "sha256": "733e389e1082d37dcbf684855a8609f65c499128f264bbd74e5e323b8749f070"
+    },
+    {
+      "bytes": 340245,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/progress.json",
+      "sha256": "02e663451ee300e402d65a89f03bbd0f5f1cec20dc5c08e9ed009a33a2d1adb7"
+    },
+    {
+      "bytes": 429695,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/result.json",
+      "sha256": "5fc83f053bb5b23ee236264cb1588f5df230afbffeef5fd2765489ab529a7e24"
+    },
+    {
+      "bytes": 179232,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/contention-crucible-5dNGZo/service-unix-0/serial-witness.json.gz",
+      "sha256": "9b930831b7b2271c037c1c41e145a69be855a81804022605f909b1089d683f52"
+    },
+    {
+      "bytes": 490416,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/report.json",
+      "sha256": "c0e38401ed5820b1cc5e353ed68185de1f25099f5009e7c21994fd422831db15"
+    },
+    {
+      "bytes": 122,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/run.log",
+      "sha256": "7035cd4ce3d33a88d2c36a217f2653edf3d8725cc99045ecb7c8ca9ca8882a17"
+    },
+    {
+      "bytes": 533331,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/qualification/service-unix-r512-w16-s20260929-l3tjw6dn/trial.json",
+      "sha256": "59a466b34f65a7f3b5250545b20de011895ca08f3eef41e529d03c5fab5cd1a8"
+    },
+    {
+      "bytes": 18378,
+      "path": "service-prefix-512/primary/01-service-unix-prefix-full/trial.json",
+      "sha256": "ded9f984cb796920a921e17b62efabca778066056f51a10809bb32ab91d550e1"
+    },
+    {
+      "bytes": 102,
+      "path": "service-prefix-512/primary/02-service-unix-prefix-metrics/driver.log",
+      "sha256": "556cafa59978fb770cb29ae64e2cbe3066224dd459093d6d8eb50fc57f23d523"
+    },
+    {
+      "bytes": 740907,
+      "path": "service-prefix-512/primary/02-service-unix-prefix-metrics/qualification/campaign.json",
+      "sha256": "976415168eebceed53603fe96f1fe2936672dcfd5265da173fe72357b0c33975"
+    },
+    {
+      "bytes": 118562,
+      "path": "service-prefix-512/primary/02-service-unix-prefix-metrics/qualification/service-unix-r512-w16-s20260929-7u3ewydw/contention-crucible-G6mAc0/service-unix-0/final.json.gz",
+      "sha256": "ef8f14e4af8399e56314a8d6d21fa85d179dcb41c81021b5aef3108201e0ae82"
+    },
+    {
+      "bytes": 5146282,
+      "path": "service-prefix-512/primary/02-service-unix-prefix-metrics/qualification/service-unix-r512-w16-s20260929-7u3ewydw/contention-crucible-G6mAc0/service-unix-0/history.jsonl.parts/part-00000.gz",
+      "sha256": "869e305a757958f3ec919e632cf3684aacb15cb6e9febc5bcca2dd2983721360"
+    },
+    {
+      "bytes": 5136993,
+      "path": "service-prefix-512/primary/02-service-unix-prefix-metrics/qualification/service-unix-r512-w16-s20260929-7u3ewydw/contention-crucible-G6mAc0/service-unix-0/history.jsonl.parts/part-00001.gz",
+      "sha256": "bcca9a5b3a6a946f0732fde2454af83de30e3c6dd10b14f5fdab946ca6ee59f5"
+    },
+    {
+      "bytes": 2012193,
+      "path": "service-prefix-512/primary/02-service-unix-prefix-metrics/qualification/service-unix-r512-w16-s20260929-7u3ewydw/contention-crucible-G6mAc0/service-unix-0/history.jsonl.parts/part-00002.gz",
+      "sha256": "ca07cb6f2e881423aff8a54f711d82902f69e84e49cdb7f55c49512c4c0ce3c3"
+    },
+    {
+      "bytes": 31131,
+      "path": "service-prefix-512/primary/02-service-unix-prefix-metrics/qualification/service-unix-r512-w16-s20260929-7u3ewydw/contention-crucible-G6mAc0/service-unix-0/initial.json.gz",
+      "sha256": "4bf11a7693136c6ded58cdc2f9eb23d90821e753d3b09c61e133dd447eca5756"
+    },
+    {
+      "bytes": 988,
+      "path": "service-prefix-512/primary/02-service-unix-prefix-metrics/qualification/service-unix-r512-w16-s20260929-7u3ewydw/contention-crucible-G6mAc0/service-unix-0/offered-schedule.json",
+      "sha256": "3692a54f57dd4f14505aa6c8c2625aac6c8558da90de3e8f9db6b425f89e4078"
+    },
+    {
+      "bytes": 176,
+      "path": "service-prefix-512/primary/02-service-unix-prefix-metrics/qualification/service-unix-r512-w16-s20260929-7u3ewydw/contention-crucible-G6mAc0/service-unix-0/postgres-statistics.json",
+      "sha256": "733e389e1082d37dcbf684855a8609f65c499128f264bbd74e5e323b8749f070"
+    },
+    {
+      "bytes": 340231,
+      "path": "service-prefix-512/primary/02-service-unix-prefix-metrics/qualification/service-unix-r512-w16-s20260929-7u3ewydw/contention-crucible-G6mAc0/service-unix-0/progress.json",
+      "sha256": "01cef7c9699d73bfbd66f8cfdbeae58e306c8a0844ea1b300ab11ca5651d6bd4"
+    },
+    {
+      "bytes": 429636,
+      "path": "service-prefix-512/primary/02-service-unix-prefix-metrics/qualification/service-unix-r512-w16-s20260929-7u3ewydw/contention-crucible-G6mAc0/service-unix-0/result.json",
+      "sha256": "c5161f6bbea5e878210a6bc97e1834b531dd06739053faa42226742d483ba8d6"
+    },
+    {
+      "bytes": 164,
+      "path": "service-prefix-512/primary/02-service-unix-prefix-metrics/qualification/service-unix-r512-w16-s20260929-7u3ewydw/contention-crucible-G6mAc0/service-unix-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 490359,
+      "path": "service-prefix-512/primary/02-service-unix-prefix-metrics/qualification/service-unix-r512-w16-s20260929-7u3ewydw/report.json",
+      "sha256": "827571f0b8c2616a158e50ce9b2721fd588cd37c23c50c5cf71f27194832068a"
+    },
+    {
+      "bytes": 123,
+      "path": "service-prefix-512/primary/02-service-unix-prefix-metrics/qualification/service-unix-r512-w16-s20260929-7u3ewydw/run.log",
+      "sha256": "52e6d2abef0664b869542ddc540066d9bd15425c6eb5f4c79daa1e37b79ca6e2"
+    },
+    {
+      "bytes": 533278,
+      "path": "service-prefix-512/primary/02-service-unix-prefix-metrics/qualification/service-unix-r512-w16-s20260929-7u3ewydw/trial.json",
+      "sha256": "f5c53789113d731c0cd167bb999b984a3f0f4a154ac35d86dfb0f2ef33732cc0"
+    },
+    {
+      "bytes": 18775,
+      "path": "service-prefix-512/primary/02-service-unix-prefix-metrics/trial.json",
+      "sha256": "290d0fcf76f9fe06b167e8752c6455a6e142800d4567182a883d35e9805eb718"
+    },
+    {
+      "bytes": 178891,
+      "path": "service-prefix-512/primary/campaign.json",
+      "sha256": "0b3f2edd075a9ab73e1715eb38e05410a365460d8619c11e2c3afe02262ffa32"
+    },
+    {
+      "bytes": 222,
+      "path": "service-prefix-512/primary/postgres-cleanup.json",
+      "sha256": "b18a031b4c13e863e5b1a8798652810873c6aab4558c95565769761655152b93"
+    },
+    {
+      "bytes": 1318,
+      "path": "service-prefix-512/primary/postgres-start.json",
+      "sha256": "bbed3ab1f3d27763f9b5ab50a96ebea32990ed22f78fa53dbbcc17f53ff4c09d"
+    },
+    {
+      "bytes": 1599,
+      "path": "service-prefix-512/primary/postgres.log",
+      "sha256": "cf5bb573d47df7cd310196d5c0b2eed8a45f6778128d720deb88b6bc4e53325e"
+    },
+    {
+      "bytes": 232,
+      "path": "smoke-envelope-primary/child-ready.json",
+      "sha256": "17618b72612dd1a97e24d8b8eba0b50735bb2030bb55027937c921ddcf24ccf0"
+    },
+    {
+      "bytes": 105,
+      "path": "smoke-envelope-primary/child-result.json",
+      "sha256": "dba737f73b4faf08e487280701c0fd91a281c5738c53c86619ba85fdef1a2a8a"
+    },
+    {
+      "bytes": 450,
+      "path": "smoke-envelope-primary/child.log",
+      "sha256": "da545c87dd134941f72ade78be421df983bd999e30a7bccee219258ff999d7e9"
+    },
+    {
+      "bytes": 788,
+      "path": "smoke-envelope-primary/command.json",
+      "sha256": "39b26664303029b06b2103ca1fe710847e5ac3532eb839c36a3c2f80903340ce"
+    },
+    {
+      "bytes": 167,
+      "path": "smoke-envelope-primary/controller.json",
+      "sha256": "eea57265dbeadbea4bf634b949911fdb3ed941b0a5eff8d00f850d53d646df8b"
+    },
+    {
+      "bytes": 2704,
+      "path": "smoke-envelope-primary/launch.json",
+      "sha256": "df527ba11e8c1a3bdb6a8eca9dde1bb452ac3e3cd10a93fe873cdaf39337f851"
+    },
+    {
+      "bytes": 2796,
+      "path": "smoke-envelope-primary/readiness.json",
+      "sha256": "e26cbaed49576f02a7dd3e5a793a5ac77c81e24a4e63e0131d551f28c6094e34"
+    },
+    {
+      "bytes": 186,
+      "path": "smoke-envelope-primary/release.json",
+      "sha256": "b67eb2aa8f7f0197c6e3017fcff141aed4ec93089bfaaba2f2cc3d0742f70cde"
+    },
+    {
+      "bytes": 3371,
+      "path": "smoke-envelope-primary/result.json",
+      "sha256": "c4d6a047bd638b5434d18427063d551ff94f8d06f1b2e4740d11dfe7e97f2613"
+    },
+    {
+      "bytes": 69818,
+      "path": "smoke-envelope-primary/samples.jsonl",
+      "sha256": "3b1aac883dd92d399cb0c0b10375f2555ff13662cdfcfa336f928d8f86fb489d"
+    },
+    {
+      "bytes": 4498,
+      "path": "smoke-review.json",
+      "sha256": "543c6a4062ba0be74f1bc2b5553d93b464aedd16ae121cd5957cc33a20ca7b84"
+    },
+    {
+      "bytes": 92,
+      "path": "smoke/primary/01-postgres-complete-full/driver.log",
+      "sha256": "7c65a1a2a2e372bdca6fee49cf452999ef4845e6568aeb37f059189797ef8d50"
+    },
+    {
+      "bytes": 224529,
+      "path": "smoke/primary/01-postgres-complete-full/qualification/campaign.json",
+      "sha256": "eb721cb53b12f882d9c6739891cbde8fe444eb6e43333157933baf4995775cce"
+    },
+    {
+      "bytes": 430100,
+      "path": "smoke/primary/01-postgres-complete-full/qualification/postgres-r16-w1-s20260929-ew2kwtfk/contention-crucible-UisEEn/postgres-0/final.json",
+      "sha256": "efdf17d5e853fb75c7a846abd1dfecbdda38089b7e800abc2da6367cea83dfca"
+    },
+    {
+      "bytes": 84304,
+      "path": "smoke/primary/01-postgres-complete-full/qualification/postgres-r16-w1-s20260929-ew2kwtfk/contention-crucible-UisEEn/postgres-0/history.jsonl.gz",
+      "sha256": "a866b7abeef8a279cc5ddd59b98f2f17bf779ba4c790a82c3a0927b63fdc6ab7"
+    },
+    {
+      "bytes": 413565,
+      "path": "smoke/primary/01-postgres-complete-full/qualification/postgres-r16-w1-s20260929-ew2kwtfk/contention-crucible-UisEEn/postgres-0/initial.json",
+      "sha256": "d76f8434a99aa03e28588c35e125ea798c176f5608b33fd0487681ac346eefec"
+    },
+    {
+      "bytes": 715,
+      "path": "smoke/primary/01-postgres-complete-full/qualification/postgres-r16-w1-s20260929-ew2kwtfk/contention-crucible-UisEEn/postgres-0/offered-schedule.json",
+      "sha256": "13256d4ca390c6735825aeb21db1a6a0b04e2bdb85f4f9c382be107eeefc8e5e"
+    },
+    {
+      "bytes": 1150,
+      "path": "smoke/primary/01-postgres-complete-full/qualification/postgres-r16-w1-s20260929-ew2kwtfk/contention-crucible-UisEEn/postgres-0/postgres-statistics.json",
+      "sha256": "df6906432cc7646767ac26f178604654f0ba1d2efc9299786a0b7a3152f730e9"
+    },
+    {
+      "bytes": 12891,
+      "path": "smoke/primary/01-postgres-complete-full/qualification/postgres-r16-w1-s20260929-ew2kwtfk/contention-crucible-UisEEn/postgres-0/progress.json",
+      "sha256": "b9d40c47e09b96a039256783b70a038aa12166e94a074a9d3e7d44a1772aa57c"
+    },
+    {
+      "bytes": 17372,
+      "path": "smoke/primary/01-postgres-complete-full/qualification/postgres-r16-w1-s20260929-ew2kwtfk/contention-crucible-UisEEn/postgres-0/query-plan-audit.json",
+      "sha256": "ee5854592cfc0f98949f7a45d36b25cec9dcd8d2573bb87e6e3c50213e06b83f"
+    },
+    {
+      "bytes": 52482,
+      "path": "smoke/primary/01-postgres-complete-full/qualification/postgres-r16-w1-s20260929-ew2kwtfk/contention-crucible-UisEEn/postgres-0/result.json",
+      "sha256": "0d266c679e30f0bd8c2d3befc4b2c95899c8a752ee5a058376fdb6482b0b3a20"
+    },
+    {
+      "bytes": 1552,
+      "path": "smoke/primary/01-postgres-complete-full/qualification/postgres-r16-w1-s20260929-ew2kwtfk/contention-crucible-UisEEn/postgres-0/serial-witness.json",
+      "sha256": "b7b24cbd676f9840ef324c2fd4f4d6ee7847c7c633b03f3b4a75b76e28ed7642"
+    },
+    {
+      "bytes": 62683,
+      "path": "smoke/primary/01-postgres-complete-full/qualification/postgres-r16-w1-s20260929-ew2kwtfk/report.json",
+      "sha256": "2bec2c4d7509f04468f4620b504ff90637093d5ac108d0c67122f465988fcf33"
+    },
+    {
+      "bytes": 115,
+      "path": "smoke/primary/01-postgres-complete-full/qualification/postgres-r16-w1-s20260929-ew2kwtfk/run.log",
+      "sha256": "c531a11adf0edb51333d4b4a878d1d07c1b8afe09d3ea0608e99c21743eee0fb"
+    },
+    {
+      "bytes": 75314,
+      "path": "smoke/primary/01-postgres-complete-full/qualification/postgres-r16-w1-s20260929-ew2kwtfk/trial.json",
+      "sha256": "851cb6ce6fb5ee1220e3453080d94beb00b069e922a63a55efcff7984cb10f10"
+    },
+    {
+      "bytes": 13807,
+      "path": "smoke/primary/01-postgres-complete-full/trial.json",
+      "sha256": "9d8b7e75f8a93aa3b192c65023e70dcf635a38588d71f2ab1599418b379468b3"
+    },
+    {
+      "bytes": 92,
+      "path": "smoke/primary/02-postgres-prefix-full/driver.log",
+      "sha256": "7c65a1a2a2e372bdca6fee49cf452999ef4845e6568aeb37f059189797ef8d50"
+    },
+    {
+      "bytes": 229658,
+      "path": "smoke/primary/02-postgres-prefix-full/qualification/campaign.json",
+      "sha256": "0337f8ee2ec4d8883ff0d9e5c101db2792568ee870d7fc677cf6f23615ef5203"
+    },
+    {
+      "bytes": 430100,
+      "path": "smoke/primary/02-postgres-prefix-full/qualification/postgres-r16-w1-s20260929-yzqiyf7r/contention-crucible-6TNPly/postgres-0/final.json",
+      "sha256": "efdf17d5e853fb75c7a846abd1dfecbdda38089b7e800abc2da6367cea83dfca"
+    },
+    {
+      "bytes": 84293,
+      "path": "smoke/primary/02-postgres-prefix-full/qualification/postgres-r16-w1-s20260929-yzqiyf7r/contention-crucible-6TNPly/postgres-0/history.jsonl.gz",
+      "sha256": "be9335045b798ac8f45dba4147f6276b24d8aa49f3fd0f8a2dcdff8c880689f1"
+    },
+    {
+      "bytes": 413565,
+      "path": "smoke/primary/02-postgres-prefix-full/qualification/postgres-r16-w1-s20260929-yzqiyf7r/contention-crucible-6TNPly/postgres-0/initial.json",
+      "sha256": "d76f8434a99aa03e28588c35e125ea798c176f5608b33fd0487681ac346eefec"
+    },
+    {
+      "bytes": 754,
+      "path": "smoke/primary/02-postgres-prefix-full/qualification/postgres-r16-w1-s20260929-yzqiyf7r/contention-crucible-6TNPly/postgres-0/offered-schedule.json",
+      "sha256": "c22f5c8772cd22bc7a2fbe35d5a89efd0876e6ecdb9b5dce65ebd23c21b6bbfe"
+    },
+    {
+      "bytes": 1150,
+      "path": "smoke/primary/02-postgres-prefix-full/qualification/postgres-r16-w1-s20260929-yzqiyf7r/contention-crucible-6TNPly/postgres-0/postgres-statistics.json",
+      "sha256": "024d1396ddbf24ecbb72d2952361c41d6b0dc80471faaede13346ccc75732007"
+    },
+    {
+      "bytes": 12891,
+      "path": "smoke/primary/02-postgres-prefix-full/qualification/postgres-r16-w1-s20260929-yzqiyf7r/contention-crucible-6TNPly/postgres-0/progress.json",
+      "sha256": "606ae2b47fc143b45835be620c07b200e32457edc924c7d8879a8f7c25c2f8e9"
+    },
+    {
+      "bytes": 21268,
+      "path": "smoke/primary/02-postgres-prefix-full/qualification/postgres-r16-w1-s20260929-yzqiyf7r/contention-crucible-6TNPly/postgres-0/query-plan-audit.json",
+      "sha256": "0788c5aad216dc96e708bfa948160bb18024abcff829a6170e28bdec3b93d982"
+    },
+    {
+      "bytes": 56594,
+      "path": "smoke/primary/02-postgres-prefix-full/qualification/postgres-r16-w1-s20260929-yzqiyf7r/contention-crucible-6TNPly/postgres-0/result.json",
+      "sha256": "dc22685dcd1e9fed41b689510970448eaf7d6967923ed62ea3a90c8c9d62cb63"
+    },
+    {
+      "bytes": 1552,
+      "path": "smoke/primary/02-postgres-prefix-full/qualification/postgres-r16-w1-s20260929-yzqiyf7r/contention-crucible-6TNPly/postgres-0/serial-witness.json",
+      "sha256": "b7b24cbd676f9840ef324c2fd4f4d6ee7847c7c633b03f3b4a75b76e28ed7642"
+    },
+    {
+      "bytes": 67197,
+      "path": "smoke/primary/02-postgres-prefix-full/qualification/postgres-r16-w1-s20260929-yzqiyf7r/report.json",
+      "sha256": "057608811b633ba2addc505201187088022c952a07c4175f94b4d0c2a09dfa36"
+    },
+    {
+      "bytes": 115,
+      "path": "smoke/primary/02-postgres-prefix-full/qualification/postgres-r16-w1-s20260929-yzqiyf7r/run.log",
+      "sha256": "1edb1bb9d797638678f46d8367fc9bdfd80e645432d9beaf3af9d95990a962ca"
+    },
+    {
+      "bytes": 80033,
+      "path": "smoke/primary/02-postgres-prefix-full/qualification/postgres-r16-w1-s20260929-yzqiyf7r/trial.json",
+      "sha256": "66fa2d75c6a000851819ff80af3acae32214008cbe40336ef55d48b2bb930200"
+    },
+    {
+      "bytes": 13805,
+      "path": "smoke/primary/02-postgres-prefix-full/trial.json",
+      "sha256": "9008598ffc295194c60694c2afe1126cea98fe9545e766b09b766d65c2cd119e"
+    },
+    {
+      "bytes": 100,
+      "path": "smoke/primary/03-service-unix-prefix-full/driver.log",
+      "sha256": "9d33a7dc53dfe40b3c7c7ed4e5d56b6c8de3bcc047d94569869ff5e41c1d55fa"
+    },
+    {
+      "bytes": 200424,
+      "path": "smoke/primary/03-service-unix-prefix-full/qualification/campaign.json",
+      "sha256": "42804f09d1bc2ff293351adf5e9c9e2a53c960de642ca5bd1dbc71c8ef1f66c9"
+    },
+    {
+      "bytes": 430100,
+      "path": "smoke/primary/03-service-unix-prefix-full/qualification/service-unix-r16-w1-s20260929-ry4g6usk/contention-crucible-78PLKu/service-unix-0/final.json",
+      "sha256": "efdf17d5e853fb75c7a846abd1dfecbdda38089b7e800abc2da6367cea83dfca"
+    },
+    {
+      "bytes": 85096,
+      "path": "smoke/primary/03-service-unix-prefix-full/qualification/service-unix-r16-w1-s20260929-ry4g6usk/contention-crucible-78PLKu/service-unix-0/history.jsonl.gz",
+      "sha256": "9af447b335ec9a24caf1fddab957d66d5640e9b1200990cb5a3344361fe98f4b"
+    },
+    {
+      "bytes": 413565,
+      "path": "smoke/primary/03-service-unix-prefix-full/qualification/service-unix-r16-w1-s20260929-ry4g6usk/contention-crucible-78PLKu/service-unix-0/initial.json",
+      "sha256": "d76f8434a99aa03e28588c35e125ea798c176f5608b33fd0487681ac346eefec"
+    },
+    {
+      "bytes": 754,
+      "path": "smoke/primary/03-service-unix-prefix-full/qualification/service-unix-r16-w1-s20260929-ry4g6usk/contention-crucible-78PLKu/service-unix-0/offered-schedule.json",
+      "sha256": "465a8002275a3dfb06d3744f80799d1f13c9017d5a592b4f3052c5049ea6f7e8"
+    },
+    {
+      "bytes": 176,
+      "path": "smoke/primary/03-service-unix-prefix-full/qualification/service-unix-r16-w1-s20260929-ry4g6usk/contention-crucible-78PLKu/service-unix-0/postgres-statistics.json",
+      "sha256": "dbc66c2e576c216e7f825693e70bc945da044697c1451cb5dbbf369dbe016cfc"
+    },
+    {
+      "bytes": 12073,
+      "path": "smoke/primary/03-service-unix-prefix-full/qualification/service-unix-r16-w1-s20260929-ry4g6usk/contention-crucible-78PLKu/service-unix-0/progress.json",
+      "sha256": "929219301b217e975658292fc2105cf364fc26df03b171c95e9f4f0ea3f36d97"
+    },
+    {
+      "bytes": 34262,
+      "path": "smoke/primary/03-service-unix-prefix-full/qualification/service-unix-r16-w1-s20260929-ry4g6usk/contention-crucible-78PLKu/service-unix-0/result.json",
+      "sha256": "c6b4ebeb3bba3bfb7de1c936a7177354fa6482b5873cf904acdfcfcfacdbce4e"
+    },
+    {
+      "bytes": 1552,
+      "path": "smoke/primary/03-service-unix-prefix-full/qualification/service-unix-r16-w1-s20260929-ry4g6usk/contention-crucible-78PLKu/service-unix-0/serial-witness.json",
+      "sha256": "475d4efda10aa5fb2e4f57dec3ed634fa63b79308d3a5670761fa5c497b746a2"
+    },
+    {
+      "bytes": 41207,
+      "path": "smoke/primary/03-service-unix-prefix-full/qualification/service-unix-r16-w1-s20260929-ry4g6usk/report.json",
+      "sha256": "36a4a12bdff2549c5a6f844e9bb9d81024335a137a642af9779c9dfb8c29ccb6"
+    },
+    {
+      "bytes": 119,
+      "path": "smoke/primary/03-service-unix-prefix-full/qualification/service-unix-r16-w1-s20260929-ry4g6usk/run.log",
+      "sha256": "695b639904f8604c5ce0083e155013135acb434b1f91967b73f763bf7242634b"
+    },
+    {
+      "bytes": 52753,
+      "path": "smoke/primary/03-service-unix-prefix-full/qualification/service-unix-r16-w1-s20260929-ry4g6usk/trial.json",
+      "sha256": "980aed7e2c0678fc7c8ad68da839b4b6a935e42a26684bf66d3d2417e9a1ca73"
+    },
+    {
+      "bytes": 13837,
+      "path": "smoke/primary/03-service-unix-prefix-full/trial.json",
+      "sha256": "7cadbc3c87662a5a6a02155fe96e01471d92c441976bddd1ef8dd2745099bdc7"
+    },
+    {
+      "bytes": 100,
+      "path": "smoke/primary/04-service-unix-prefix-metrics/driver.log",
+      "sha256": "9d33a7dc53dfe40b3c7c7ed4e5d56b6c8de3bcc047d94569869ff5e41c1d55fa"
+    },
+    {
+      "bytes": 200680,
+      "path": "smoke/primary/04-service-unix-prefix-metrics/qualification/campaign.json",
+      "sha256": "f21e398cf118ee47f1106d98528822bb84273d89da9fdb8aa1073b3386904670"
+    },
+    {
+      "bytes": 430100,
+      "path": "smoke/primary/04-service-unix-prefix-metrics/qualification/service-unix-r16-w1-s20260929-wesfudol/contention-crucible-dS7hP5/service-unix-0/final.json",
+      "sha256": "efdf17d5e853fb75c7a846abd1dfecbdda38089b7e800abc2da6367cea83dfca"
+    },
+    {
+      "bytes": 170725,
+      "path": "smoke/primary/04-service-unix-prefix-metrics/qualification/service-unix-r16-w1-s20260929-wesfudol/contention-crucible-dS7hP5/service-unix-0/history.jsonl",
+      "sha256": "7674b1c2bf04c5aab53c4708f73dff6f5a32a923663174988ac152441ebc6eca"
+    },
+    {
+      "bytes": 413565,
+      "path": "smoke/primary/04-service-unix-prefix-metrics/qualification/service-unix-r16-w1-s20260929-wesfudol/contention-crucible-dS7hP5/service-unix-0/initial.json",
+      "sha256": "d76f8434a99aa03e28588c35e125ea798c176f5608b33fd0487681ac346eefec"
+    },
+    {
+      "bytes": 754,
+      "path": "smoke/primary/04-service-unix-prefix-metrics/qualification/service-unix-r16-w1-s20260929-wesfudol/contention-crucible-dS7hP5/service-unix-0/offered-schedule.json",
+      "sha256": "3e8f61c87b2a33be53ccf867b5a8b6dcba212971ad24b92bae3de28c850240e3"
+    },
+    {
+      "bytes": 176,
+      "path": "smoke/primary/04-service-unix-prefix-metrics/qualification/service-unix-r16-w1-s20260929-wesfudol/contention-crucible-dS7hP5/service-unix-0/postgres-statistics.json",
+      "sha256": "dbc66c2e576c216e7f825693e70bc945da044697c1451cb5dbbf369dbe016cfc"
+    },
+    {
+      "bytes": 12073,
+      "path": "smoke/primary/04-service-unix-prefix-metrics/qualification/service-unix-r16-w1-s20260929-wesfudol/contention-crucible-dS7hP5/service-unix-0/progress.json",
+      "sha256": "849f64775974eddb9360b7d395fe315734b767009e1135de6350bcbc824eb885"
+    },
+    {
+      "bytes": 34280,
+      "path": "smoke/primary/04-service-unix-prefix-metrics/qualification/service-unix-r16-w1-s20260929-wesfudol/contention-crucible-dS7hP5/service-unix-0/result.json",
+      "sha256": "b78fb15b4aae6e49db53b5967799554c76e3fbd776cb7fcc29b1bfd0594db95b"
+    },
+    {
+      "bytes": 164,
+      "path": "smoke/primary/04-service-unix-prefix-metrics/qualification/service-unix-r16-w1-s20260929-wesfudol/contention-crucible-dS7hP5/service-unix-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 41234,
+      "path": "smoke/primary/04-service-unix-prefix-metrics/qualification/service-unix-r16-w1-s20260929-wesfudol/report.json",
+      "sha256": "d570cd4b7ac4518aa26c8ffb205f2d80aa65018bb4284f8f8de6a5db4ca38230"
+    },
+    {
+      "bytes": 119,
+      "path": "smoke/primary/04-service-unix-prefix-metrics/qualification/service-unix-r16-w1-s20260929-wesfudol/run.log",
+      "sha256": "d7cd0ed796d928a7ac4619d3e5d2ce73469d4afe2a39b7c91dfb267cffd2e39c"
+    },
+    {
+      "bytes": 52773,
+      "path": "smoke/primary/04-service-unix-prefix-metrics/qualification/service-unix-r16-w1-s20260929-wesfudol/trial.json",
+      "sha256": "7176215be0111b17fd9a9f87d504bd1f22d101d749b7a5c0bab49ff7699a752c"
+    },
+    {
+      "bytes": 14194,
+      "path": "smoke/primary/04-service-unix-prefix-metrics/trial.json",
+      "sha256": "e5069ceb04e94a14b6b71b94515743b1420eaed64447396d33f995bebb2aafc1"
+    },
+    {
+      "bytes": 92,
+      "path": "smoke/primary/05-postgres-prefix-metrics/driver.log",
+      "sha256": "7c65a1a2a2e372bdca6fee49cf452999ef4845e6568aeb37f059189797ef8d50"
+    },
+    {
+      "bytes": 229920,
+      "path": "smoke/primary/05-postgres-prefix-metrics/qualification/campaign.json",
+      "sha256": "92be4555e69cd1534622792d7375692773c7b818287f081bf1576566c1756c4d"
+    },
+    {
+      "bytes": 430100,
+      "path": "smoke/primary/05-postgres-prefix-metrics/qualification/postgres-r16-w1-s20260929-r780eekn/contention-crucible-P8pJ9B/postgres-0/final.json",
+      "sha256": "efdf17d5e853fb75c7a846abd1dfecbdda38089b7e800abc2da6367cea83dfca"
+    },
+    {
+      "bytes": 170724,
+      "path": "smoke/primary/05-postgres-prefix-metrics/qualification/postgres-r16-w1-s20260929-r780eekn/contention-crucible-P8pJ9B/postgres-0/history.jsonl",
+      "sha256": "65fcf5ff533991c96abd45541e8f5781d5ed6b29006f16e0682f0b0e0ed7aef3"
+    },
+    {
+      "bytes": 413565,
+      "path": "smoke/primary/05-postgres-prefix-metrics/qualification/postgres-r16-w1-s20260929-r780eekn/contention-crucible-P8pJ9B/postgres-0/initial.json",
+      "sha256": "d76f8434a99aa03e28588c35e125ea798c176f5608b33fd0487681ac346eefec"
+    },
+    {
+      "bytes": 754,
+      "path": "smoke/primary/05-postgres-prefix-metrics/qualification/postgres-r16-w1-s20260929-r780eekn/contention-crucible-P8pJ9B/postgres-0/offered-schedule.json",
+      "sha256": "32c5136e91beb980555f4b5f72e3be6eff904922704f8d301b74c37963259482"
+    },
+    {
+      "bytes": 1150,
+      "path": "smoke/primary/05-postgres-prefix-metrics/qualification/postgres-r16-w1-s20260929-r780eekn/contention-crucible-P8pJ9B/postgres-0/postgres-statistics.json",
+      "sha256": "887a40fcb96909577c5a0f983afc6eaef15db934a374d39b7f2dbcfc1deb056f"
+    },
+    {
+      "bytes": 12891,
+      "path": "smoke/primary/05-postgres-prefix-metrics/qualification/postgres-r16-w1-s20260929-r780eekn/contention-crucible-P8pJ9B/postgres-0/progress.json",
+      "sha256": "297ef651054ad45f19786c4d3ec31b4e8e20868148d5294553b4151104ebe18e"
+    },
+    {
+      "bytes": 21268,
+      "path": "smoke/primary/05-postgres-prefix-metrics/qualification/postgres-r16-w1-s20260929-r780eekn/contention-crucible-P8pJ9B/postgres-0/query-plan-audit.json",
+      "sha256": "a60d38c767136d9ba8fbe5feb1a78f4da2238c6cf869af0b05ed1aec7600acb0"
+    },
+    {
+      "bytes": 56581,
+      "path": "smoke/primary/05-postgres-prefix-metrics/qualification/postgres-r16-w1-s20260929-r780eekn/contention-crucible-P8pJ9B/postgres-0/result.json",
+      "sha256": "611c47c853a41ed2ff434186c583676c2dc9a97dfb046ef597f48f0e1311fac3"
+    },
+    {
+      "bytes": 164,
+      "path": "smoke/primary/05-postgres-prefix-metrics/qualification/postgres-r16-w1-s20260929-r780eekn/contention-crucible-P8pJ9B/postgres-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 67189,
+      "path": "smoke/primary/05-postgres-prefix-metrics/qualification/postgres-r16-w1-s20260929-r780eekn/report.json",
+      "sha256": "c3a0030e3f0f226ea92a83473fee9a9dc4d6a9874056f35992e9db7fb1df31c8"
+    },
+    {
+      "bytes": 115,
+      "path": "smoke/primary/05-postgres-prefix-metrics/qualification/postgres-r16-w1-s20260929-r780eekn/run.log",
+      "sha256": "14d4e90f6c78abd309080e0cd8edb5926567f28b3a696014d9cc6a3314dac83f"
+    },
+    {
+      "bytes": 80041,
+      "path": "smoke/primary/05-postgres-prefix-metrics/qualification/postgres-r16-w1-s20260929-r780eekn/trial.json",
+      "sha256": "3a91caa946c81b25ae92be59dee78c3441f794eb0d6bea8fa08d97b8d9597793"
+    },
+    {
+      "bytes": 14179,
+      "path": "smoke/primary/05-postgres-prefix-metrics/trial.json",
+      "sha256": "53abc298f3dba21e6f3a677838d1d5563e4653c89216e6fd30145101ff0ad706"
+    },
+    {
+      "bytes": 92,
+      "path": "smoke/primary/06-postgres-complete-metrics/driver.log",
+      "sha256": "7c65a1a2a2e372bdca6fee49cf452999ef4845e6568aeb37f059189797ef8d50"
+    },
+    {
+      "bytes": 224854,
+      "path": "smoke/primary/06-postgres-complete-metrics/qualification/campaign.json",
+      "sha256": "5fb63bb29445f4c8f8b386801540f2a997077649028e5702180e0eab95646e6c"
+    },
+    {
+      "bytes": 430100,
+      "path": "smoke/primary/06-postgres-complete-metrics/qualification/postgres-r16-w1-s20260929-1vlti3jm/contention-crucible-ool1eF/postgres-0/final.json",
+      "sha256": "efdf17d5e853fb75c7a846abd1dfecbdda38089b7e800abc2da6367cea83dfca"
+    },
+    {
+      "bytes": 170461,
+      "path": "smoke/primary/06-postgres-complete-metrics/qualification/postgres-r16-w1-s20260929-1vlti3jm/contention-crucible-ool1eF/postgres-0/history.jsonl",
+      "sha256": "8b0865ae808f78da5338ecfdc0e77e2432032b21bffccf20d8810328255f210b"
+    },
+    {
+      "bytes": 413565,
+      "path": "smoke/primary/06-postgres-complete-metrics/qualification/postgres-r16-w1-s20260929-1vlti3jm/contention-crucible-ool1eF/postgres-0/initial.json",
+      "sha256": "d76f8434a99aa03e28588c35e125ea798c176f5608b33fd0487681ac346eefec"
+    },
+    {
+      "bytes": 715,
+      "path": "smoke/primary/06-postgres-complete-metrics/qualification/postgres-r16-w1-s20260929-1vlti3jm/contention-crucible-ool1eF/postgres-0/offered-schedule.json",
+      "sha256": "2317d391d73cb0a76c90931f1ce37fd8a38361e2fd1e7ab2b1b2e09986003105"
+    },
+    {
+      "bytes": 1150,
+      "path": "smoke/primary/06-postgres-complete-metrics/qualification/postgres-r16-w1-s20260929-1vlti3jm/contention-crucible-ool1eF/postgres-0/postgres-statistics.json",
+      "sha256": "53a99c21102b5ba35956aee0a4717acfa20837de8c7e3e0938cfa7876fed2814"
+    },
+    {
+      "bytes": 12891,
+      "path": "smoke/primary/06-postgres-complete-metrics/qualification/postgres-r16-w1-s20260929-1vlti3jm/contention-crucible-ool1eF/postgres-0/progress.json",
+      "sha256": "47a1c7ba7aed7f1775b9fb9ce492d2e4709a1ccb237b67b859dbc31f04d74177"
+    },
+    {
+      "bytes": 17372,
+      "path": "smoke/primary/06-postgres-complete-metrics/qualification/postgres-r16-w1-s20260929-1vlti3jm/contention-crucible-ool1eF/postgres-0/query-plan-audit.json",
+      "sha256": "fa871a0a48eba8486db17d30d1f649113760fe04dc743beac501002be4830129"
+    },
+    {
+      "bytes": 52486,
+      "path": "smoke/primary/06-postgres-complete-metrics/qualification/postgres-r16-w1-s20260929-1vlti3jm/contention-crucible-ool1eF/postgres-0/result.json",
+      "sha256": "f1aeaeabc63a03fe7c1d1dbeec857a69db110c1e43ca31e7fc8e5130fb2280c2"
+    },
+    {
+      "bytes": 164,
+      "path": "smoke/primary/06-postgres-complete-metrics/qualification/postgres-r16-w1-s20260929-1vlti3jm/contention-crucible-ool1eF/postgres-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 62696,
+      "path": "smoke/primary/06-postgres-complete-metrics/qualification/postgres-r16-w1-s20260929-1vlti3jm/report.json",
+      "sha256": "3e8e9071349f264505fcddad766b67ec0a8784f4aae24a54d43d817ce1671aac"
+    },
+    {
+      "bytes": 115,
+      "path": "smoke/primary/06-postgres-complete-metrics/qualification/postgres-r16-w1-s20260929-1vlti3jm/run.log",
+      "sha256": "0927902c93fcfd1c88ad1e7a639c75e7f4fe8694eac77f366746ec56ed00c966"
+    },
+    {
+      "bytes": 75359,
+      "path": "smoke/primary/06-postgres-complete-metrics/qualification/postgres-r16-w1-s20260929-1vlti3jm/trial.json",
+      "sha256": "43bec190eb941faeed469db44fc9faaf773c923d5ed4ff6762ff049de3ca52f4"
+    },
+    {
+      "bytes": 14199,
+      "path": "smoke/primary/06-postgres-complete-metrics/trial.json",
+      "sha256": "bacc8ecc0f25a31102b43d00762c2f87d70880777caa1c700e5009abbafaf1f7"
+    },
+    {
+      "bytes": 233611,
+      "path": "smoke/primary/campaign.json",
+      "sha256": "63df55088678d33d033926cf7c0b1b1785e4328e6d43bb83173749cc3013af50"
+    },
+    {
+      "bytes": 222,
+      "path": "smoke/primary/postgres-cleanup.json",
+      "sha256": "0c4904ec221425f8fff7d10a884a9fc18b57c06c4fbae5cc9903ff0e0b8b34c7"
+    },
+    {
+      "bytes": 1318,
+      "path": "smoke/primary/postgres-start.json",
+      "sha256": "387a92ee1ece66c659d9bc9962e03ae621c57c3976cdc086bbb3365d5c49971a"
+    },
+    {
+      "bytes": 18737,
+      "path": "smoke/primary/postgres.log",
+      "sha256": "de7cc50f3448728aa4a5422413703e7e8e9c86d6ccea904d3d8ff36ce21a2062"
+    },
+    {
+      "bytes": 61739,
+      "path": "source-freeze.json",
+      "sha256": "9f69c601e747986ffa22dec5d350296d756b7be4dbf15d930f94bc74eaa7fd9c"
+    },
+    {
+      "bytes": 4479,
+      "path": "summarize_reviews.py",
+      "sha256": "77b23ba7558a53e04975582a01cff1e9e431d3e9b17006f358e0b0cc3c35bda7"
+    },
+    {
+      "bytes": 383,
+      "path": "summary-helper-tests.json",
+      "sha256": "f6dbac030e198fae53fe41de93341c2066b48c714be712dcf709b6dc05658091"
+    },
+    {
+      "bytes": 583,
+      "path": "summary-helper-tests.log",
+      "sha256": "fdc9bb080a6373d1fde28a2b50f1bf907145c84d11e3f4e590ef2b7ed2b40114"
+    },
+    {
+      "bytes": 232,
+      "path": "test-build-envelope-primary/child-ready.json",
+      "sha256": "f4203067b02ea94f1ad379300aa768b3027a913834388d63b561a648ec494598"
+    },
+    {
+      "bytes": 105,
+      "path": "test-build-envelope-primary/child-result.json",
+      "sha256": "6fbdedc30e1ac7a7eac785d1f31a3ddf364c159a4632b0aa58dea9e1328d9fb4"
+    },
+    {
+      "bytes": 908,
+      "path": "test-build-envelope-primary/child.log",
+      "sha256": "83a9901cb8f0be9bec78788572f4eadd661e5df239dc36b4697a6bed039c0b65"
+    },
+    {
+      "bytes": 673,
+      "path": "test-build-envelope-primary/command.json",
+      "sha256": "8a0f7ac1e459dcc5fc5082d3b9756ab3983148083db0c3b1174ccdc90bc2a0e4"
+    },
+    {
+      "bytes": 167,
+      "path": "test-build-envelope-primary/controller.json",
+      "sha256": "3523b72fb008818453841fe892ac9ef3839bd3dd77921c832a6004b314256301"
+    },
+    {
+      "bytes": 2719,
+      "path": "test-build-envelope-primary/launch.json",
+      "sha256": "90e46d8f32a82c848c507eea52871f0575b4a6e01696c04672db6d00ce252819"
+    },
+    {
+      "bytes": 2796,
+      "path": "test-build-envelope-primary/readiness.json",
+      "sha256": "b91b4da61f282dad97272ec16a4c5b4550154830d28a31575fff68b6d72a10ce"
+    },
+    {
+      "bytes": 186,
+      "path": "test-build-envelope-primary/release.json",
+      "sha256": "11877c56902329d81c27054439409219408d336c198ee8ea601d86ad9d16f8c9"
+    },
+    {
+      "bytes": 3387,
+      "path": "test-build-envelope-primary/result.json",
+      "sha256": "dc46c1a1b17b133db832351eaee03cba1245877486e1604b984a1e6ffd861f7c"
+    },
+    {
+      "bytes": 25383,
+      "path": "test-build-envelope-primary/samples.jsonl",
+      "sha256": "3fc06f05fe5d77051f0f5b9736b8b16bc7f8fcfe6c0148612ccfbac817b3d80d"
+    },
+    {
+      "bytes": 10420,
+      "path": "test-builds/primary/build-tests-helper.py",
+      "sha256": "143e2091db14e694285c615a8706c34a92c15a469c0b0bb76ef0edbf34968e39"
+    },
+    {
+      "bytes": 197046,
+      "path": "test-builds/primary/build-tests.jsonl",
+      "sha256": "7f2a8af4609506c5ed9cfcdd1d501074c40fdd162867589b0addb200acde63c2"
+    },
+    {
+      "bytes": 142,
+      "path": "test-builds/primary/build-tests.log",
+      "sha256": "2bddb8868bc460b3f163a6648f0a79aa54948044848ed9c2f40e2f911617e46d"
+    },
+    {
+      "bytes": 164781,
+      "path": "test-builds/primary/test-build-provenance.json",
+      "sha256": "9ce48e5fc736f7923c87a763dcc4caea8dac9249f23b90f96e4080decd47b045"
+    },
+    {
+      "bytes": 232,
+      "path": "test-envelope-primary/child-ready.json",
+      "sha256": "2a18e8a2e49bda304339fd818d0291b5fee5133814f88ae5b808eccdfbf26ab0"
+    },
+    {
+      "bytes": 105,
+      "path": "test-envelope-primary/child-result.json",
+      "sha256": "81ed9bdc9065634f49677265edfed703f0a66239ba295a0e8d693136bceb99ea"
+    },
+    {
+      "bytes": 1211,
+      "path": "test-envelope-primary/child.log",
+      "sha256": "ce4d773c3b347e958eecfe7114bfe465589f6430626c56b290c7e70442a23fa3"
+    },
+    {
+      "bytes": 873,
+      "path": "test-envelope-primary/command.json",
+      "sha256": "7dfe60c1a54cdda8c08f55d47025d6aa4605e19672305454322672182086b0cf"
+    },
+    {
+      "bytes": 167,
+      "path": "test-envelope-primary/controller.json",
+      "sha256": "cdea070beedaaa8777d197bf8510e2a8d3d2782765851ef17eb0ba6c2e98ab14"
+    },
+    {
+      "bytes": 2701,
+      "path": "test-envelope-primary/launch.json",
+      "sha256": "b867a2dd7270854086535f40127de5c6af1f760a107c5f7c3809026d78addd8c"
+    },
+    {
+      "bytes": 2796,
+      "path": "test-envelope-primary/readiness.json",
+      "sha256": "5d350e59fb1ce24ba4041974959e305fb7c8112cb54cce908ccbc8be40b13fcd"
+    },
+    {
+      "bytes": 186,
+      "path": "test-envelope-primary/release.json",
+      "sha256": "564333772a6b5b3ed185b9dd45efd1a2e5b76c8934068150e27daed5600f0d10"
+    },
+    {
+      "bytes": 3383,
+      "path": "test-envelope-primary/result.json",
+      "sha256": "4c90352e0fa59835c15e7504cbc70626e3e55ed367fc00d1c47518c73909ab9f"
+    },
+    {
+      "bytes": 126780,
+      "path": "test-envelope-primary/samples.jsonl",
+      "sha256": "51a226f207fdfb7094edc568fe9cd79a669c5fb54f54d0f484310f3362d6affb"
+    },
+    {
+      "bytes": 14992,
+      "path": "test_archive_campaign.py",
+      "sha256": "58efa945bf4ccc7947763ae0aa62b0d4e535b98a278d91d2fd336b6a6013e674"
+    },
+    {
+      "bytes": 7347,
+      "path": "test_build_helper.py",
+      "sha256": "9f5a46ce34b4ca3ec29b30cda82fe100ad74f7a7cef6462337a4f978eb66cb5e"
+    },
+    {
+      "bytes": 1497,
+      "path": "test_capture_tool_runtime.py",
+      "sha256": "db57223d3eade21763d9dac57ab4183dea2312ad1e46cd56f63c319f14bf642c"
+    },
+    {
+      "bytes": 6619,
+      "path": "test_failed_maintenance_control.py",
+      "sha256": "bbfc8774eae36ab2eeaad14e2d3fd5ebc0fe764e4e8dfaf071d6a169267c6301"
+    },
+    {
+      "bytes": 3079,
+      "path": "test_finalize_cleanup.py",
+      "sha256": "5bfaaed77c398d10ec70522d644f24066240e2634ef59ac5326aa148e6a79148"
+    },
+    {
+      "bytes": 12198,
+      "path": "test_run_campaign.py",
+      "sha256": "fede31ce4d58ee8fd11e4428e0c21b68491769f333ac1fa846e6e3d495e8a7e3"
+    },
+    {
+      "bytes": 2853,
+      "path": "test_summarize_reviews.py",
+      "sha256": "6cc4a36b5b852ce88025044ec81e48933a721ed4ce3ea3df0ecb7287177a53ba"
+    },
+    {
+      "bytes": 5747,
+      "path": "tests/primary/01-contention_postgres/check.json",
+      "sha256": "e7da3bde5922abae5be20c3a3ca9861edf2686966f84cb46fe823ae87ade5274"
+    },
+    {
+      "bytes": 3397,
+      "path": "tests/primary/01-contention_postgres/check.log",
+      "sha256": "8871fd6273630c9e12aa497ec1eca99a23f8284dba3763219cb457d3c069c056"
+    },
+    {
+      "bytes": 5743,
+      "path": "tests/primary/02-contention_runner/check.json",
+      "sha256": "7c8e8f719234347c3dc1c024598803f21831a0d3a2b13f34ceb386747d5a5867"
+    },
+    {
+      "bytes": 794,
+      "path": "tests/primary/02-contention_runner/check.log",
+      "sha256": "788f2db915d361732e0d79b5e45c634e98e1ec2d4ca498c3a7a774c5b4fb41fa"
+    },
+    {
+      "bytes": 5759,
+      "path": "tests/primary/03-contention_measurement/check.json",
+      "sha256": "f856806f422fcd2269c150745ad93919f643941dd761279725f62e96c9813b14"
+    },
+    {
+      "bytes": 812,
+      "path": "tests/primary/03-contention_measurement/check.log",
+      "sha256": "ec655e34ca095ae60f88cab978dc7c1c9a33c5b6b664bb3feb7abeabffa03773"
+    },
+    {
+      "bytes": 5763,
+      "path": "tests/primary/04-contention_expiry_policy/check.json",
+      "sha256": "ae760172fc7d068573a5c3537f527d87d4f4e626c279f68414e06b123c7ba8d1"
+    },
+    {
+      "bytes": 3220,
+      "path": "tests/primary/04-contention_expiry_policy/check.log",
+      "sha256": "16fc30ee9db9b846dba8ed659c6dbd2b468e4d4fa84080ed2fdef4087148c327"
+    },
+    {
+      "bytes": 5765,
+      "path": "tests/primary/05-contention_crucible_model/check.json",
+      "sha256": "b64db932331297ecd94cc2c6148956195ef106e0444330963026debb77f5b108"
+    },
+    {
+      "bytes": 4363,
+      "path": "tests/primary/05-contention_crucible_model/check.log",
+      "sha256": "5dc5b9be94ed4fd59ed3d271a2d1b8a4d4e9f0dcea3b6eb134bf2c42a0579589"
+    },
+    {
+      "bytes": 5772,
+      "path": "tests/primary/06-calibrated_contention_model/check.json",
+      "sha256": "dcc04cd1ac480e365534d68b8c2b0ec9c128ffdf8c5834f4ae73e9331c6064db"
+    },
+    {
+      "bytes": 5582,
+      "path": "tests/primary/06-calibrated_contention_model/check.log",
+      "sha256": "16647a4fd39d3251c32df6002056e893c365f016073a32619be74c88b8b60984"
+    },
+    {
+      "bytes": 5744,
+      "path": "tests/primary/07-contention_service/check.json",
+      "sha256": "df974ea73c1bfc4e70ddfd75979a39004e1708e5639f3874b68dfffb11522927"
+    },
+    {
+      "bytes": 3087,
+      "path": "tests/primary/07-contention_service/check.log",
+      "sha256": "5c9844b5c0f9ff7545c2d56bebf0864d589dbae7815e63345e5b460d03e6f4d3"
+    },
+    {
+      "bytes": 5775,
+      "path": "tests/primary/08-contention_retry_diagnostics/check.json",
+      "sha256": "a80b75e127188a99906875b62c92c2974daeff789b3064e4cce2f93504145313"
+    },
+    {
+      "bytes": 5422,
+      "path": "tests/primary/08-contention_retry_diagnostics/check.log",
+      "sha256": "23a4edeab52220528a701fd1c9e523bc98fabafa78aecde27b760b061a339408"
+    },
+    {
+      "bytes": 5720,
+      "path": "tests/primary/09-test_contention_integration.py/check.json",
+      "sha256": "32f366dd760e95c349484ef2e877c39e4603df0f262f8247e57fd24728d0c98c"
+    },
+    {
+      "bytes": 3819,
+      "path": "tests/primary/09-test_contention_integration.py/check.log",
+      "sha256": "c79eabf53414aa34d21c2eb66d002358268d42bdd3b1ec5717bae5343a3cd179"
+    },
+    {
+      "bytes": 5715,
+      "path": "tests/primary/10-test_postgres_statistics.py/check.json",
+      "sha256": "eca5bbb43f29a5aceb2d14e6adeda2708c9e7e3e1f8c2f626bd3d3f6c80dae29"
+    },
+    {
+      "bytes": 1220,
+      "path": "tests/primary/10-test_postgres_statistics.py/check.log",
+      "sha256": "44b367729b85fdb703ace0be66b83a89b36a77a06cd7696498ce4ade3c97bc71"
+    },
+    {
+      "bytes": 5730,
+      "path": "tests/primary/11-test_postgres_candidate_query.py/check.json",
+      "sha256": "80b6735a9dabd12a79e9373b2dbdf14007c463a45cfa5a81f35ed2b44c81ab98"
+    },
+    {
+      "bytes": 1328,
+      "path": "tests/primary/11-test_postgres_candidate_query.py/check.log",
+      "sha256": "fb321b0f7cf8cca9b15a845ec398a09834d97d1e52ce5ffa51a29153d33e2bd2"
+    },
+    {
+      "bytes": 5721,
+      "path": "tests/primary/12-test_maintenance_selection.py/check.json",
+      "sha256": "d80ece0bce3a50215d2cb5049672a4eea85a46dc7df556fb47c31ddffef0c70f"
+    },
+    {
+      "bytes": 1490,
+      "path": "tests/primary/12-test_maintenance_selection.py/check.log",
+      "sha256": "554dbade1e89cf5821f6d0185e53ebbb6e2316f705109b2381d2794971ce6982"
+    },
+    {
+      "bytes": 5726,
+      "path": "tests/primary/13-test_hyperfeed_qualification.py/check.json",
+      "sha256": "719315ad2cadf62fa5568b59041c23037462a0598876a8c5aac57942e58c36d3"
+    },
+    {
+      "bytes": 13537,
+      "path": "tests/primary/13-test_hyperfeed_qualification.py/check.log",
+      "sha256": "3d7920290564c6e4b44079f2ec4a5bb9df2af0cf04f48107784e6f8b46076484"
+    },
+    {
+      "bytes": 5721,
+      "path": "tests/primary/14-test_run_remote_contention.py/check.json",
+      "sha256": "2d665690a335c69ea8ac27d716bdff18573cf2eb6d62d527c7ac6c5287b45319"
+    },
+    {
+      "bytes": 3055,
+      "path": "tests/primary/14-test_run_remote_contention.py/check.log",
+      "sha256": "eee3a28706d3968822324a2679c411aa57e9369773dc5d6cf923b8b3eb2285ee"
+    },
+    {
+      "bytes": 5721,
+      "path": "tests/primary/15-test_run_campaign.py/check.json",
+      "sha256": "7f196f8b84396a62f4c10a1e980f7f9841355a1065cc2fd3a3c38f33d3f0007f"
+    },
+    {
+      "bytes": 1004,
+      "path": "tests/primary/15-test_run_campaign.py/check.log",
+      "sha256": "720962e182e3324dba875f7f46eb4bcb79f033a5e163571ba9492e96d00aed4d"
+    },
+    {
+      "bytes": 2881,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/backlog/contention-crucible-SX3SU4/service-unix-0/failure-progress.json",
+      "sha256": "99b1a47234a65fcce61c15e6e1c2e7e1e2a4e9265e5320491b78cc3a4fc8420f"
+    },
+    {
+      "bytes": 1039,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/backlog/contention-crucible-SX3SU4/service-unix-0/history.jsonl",
+      "sha256": "5564c65efae3938f8cf25b85944ce28dc105448cfb9293dbc95aeb49351e7b4b"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/backlog/contention-crucible-SX3SU4/service-unix-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 419,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/backlog/contention-crucible-SX3SU4/service-unix-0/result.json",
+      "sha256": "226413a6bf05517e8a0e1473d2c0cf4cfb53aaa8b7848a85bfb283804fb6505d"
+    },
+    {
+      "bytes": 3172,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/backlog/report.json",
+      "sha256": "2e1869c18ba202900509cdf5675e14b8c6609a26eff080499dc04e6591a3adb8"
+    },
+    {
+      "bytes": 432,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/backlog/run.log",
+      "sha256": "76827cc038a691a16afb71d842168e15e3ca6bb0e86b6bb74c3c8bc4ae3fdec9"
+    },
+    {
+      "bytes": 413885,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-idle-foreground/contention-crucible-jx6z6y/aerostore-0/final.json",
+      "sha256": "48c1ad8d2f54e360e430666ff37cb93ae548e4ff9b2c5567641fa6ea33e483cc"
+    },
+    {
+      "bytes": 24070,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-idle-foreground/contention-crucible-jx6z6y/aerostore-0/history.jsonl",
+      "sha256": "4782cc216b47295fefb656bb5711e96575107668b134aa0cc3442e0f36b2d337"
+    },
+    {
+      "bytes": 413565,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-idle-foreground/contention-crucible-jx6z6y/aerostore-0/initial.json",
+      "sha256": "d3a91d45ddb6013ab24be7796123b03b33967d41ee11320816f3070833db9035"
+    },
+    {
+      "bytes": 665,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-idle-foreground/contention-crucible-jx6z6y/aerostore-0/offered-schedule.json",
+      "sha256": "44073ef00a7389a628d9e171ea682e483be2eaf6a72198f74627ed6683717d9b"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-idle-foreground/contention-crucible-jx6z6y/aerostore-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 7721,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-idle-foreground/contention-crucible-jx6z6y/aerostore-0/progress.json",
+      "sha256": "571e28c27f84f5105421413287b9f976fea048ac2d7d5abf033b651d7ab785d2"
+    },
+    {
+      "bytes": 23445,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-idle-foreground/contention-crucible-jx6z6y/aerostore-0/result.json",
+      "sha256": "99537e8b0aa922887b3c5811eb8c98cdf88dec62ed1ba73b05a92cd3eadf0d48"
+    },
+    {
+      "bytes": 187,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-idle-foreground/contention-crucible-jx6z6y/aerostore-0/serial-witness.json",
+      "sha256": "66fe5b22f777d2195704a75494e59ba894fe9a919685cf16148837133a9de98a"
+    },
+    {
+      "bytes": 29170,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-idle-foreground/report.json",
+      "sha256": "b411fae6eb6c83889a3f1957f9c5e6953b877603795a54bad8af88b82e94b898"
+    },
+    {
+      "bytes": 114,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-idle-foreground/run.log",
+      "sha256": "53bb162d43cb912e41607b541ad8d7f5cb83959a68384f54296fdde490bbb10f"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-maintenance-cap/contention-crucible-F6PaLH/aerostore-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 411,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-maintenance-cap/contention-crucible-F6PaLH/aerostore-0/result.json",
+      "sha256": "f7d16b025607e7eb33e4a2cdb3c79d6ea14029bb557a453474193e27e52365a3"
+    },
+    {
+      "bytes": 3189,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-maintenance-cap/report.json",
+      "sha256": "ed55e9058d8ad111ff17a7dfa24eda862dc3269bf25b5883ea6f664ed22e35a8"
+    },
+    {
+      "bytes": 328,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-maintenance-cap/run.log",
+      "sha256": "3ef974411c32aa2282edabd92642b4088e4a84fd95d4a614fa67db0a8e6b78ae"
+    },
+    {
+      "bytes": 30715,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-no-maintenance/contention-crucible-41lVM1/aerostore-0/final.json.gz",
+      "sha256": "1fd2f79761575bd7df6aad6be8dc3a1a043b0dc9aa692093283f6e43590abfea"
+    },
+    {
+      "bytes": 836084,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-no-maintenance/contention-crucible-41lVM1/aerostore-0/history.jsonl",
+      "sha256": "66dd91e7420115e067ede169d59eee9f07c00c973f8bc5574025ed579a7ddf67"
+    },
+    {
+      "bytes": 26809,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-no-maintenance/contention-crucible-41lVM1/aerostore-0/initial.json.gz",
+      "sha256": "3598c735697e6d4cba3383da957b0ec244862318207a4cdbf3eb0fe4e5c65a52"
+    },
+    {
+      "bytes": 640,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-no-maintenance/contention-crucible-41lVM1/aerostore-0/offered-schedule.json",
+      "sha256": "1741032f3a15bc92b47015bbcca56b4b3444365833364400c8e18d633cb649b4"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-no-maintenance/contention-crucible-41lVM1/aerostore-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 6165,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-no-maintenance/contention-crucible-41lVM1/aerostore-0/progress.json",
+      "sha256": "aa3eb4cef617ca6d7c8bac1723f1e24cca9d6a82372ab9e2e4f1f758ca2ca483"
+    },
+    {
+      "bytes": 22300,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-no-maintenance/contention-crucible-41lVM1/aerostore-0/result.json",
+      "sha256": "c766c40219ac3af93faa359f88ee365945b16e47351ad4e56f2c96e4e67ade56"
+    },
+    {
+      "bytes": 591,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-no-maintenance/contention-crucible-41lVM1/aerostore-0/serial-witness.json",
+      "sha256": "ae377ac4078d04c3413bdc0b4dec7b407321b911148a44aea862f64dcb5d0126"
+    },
+    {
+      "bytes": 27729,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-no-maintenance/report.json",
+      "sha256": "d98e3845401337707fe39e06774fc5d4603930b4f35ea027eec8390c65cf07ba"
+    },
+    {
+      "bytes": 115,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-no-maintenance/run.log",
+      "sha256": "58079ded2f939a77f20ec3c3128df943e2c17e72d4867024c1a66ad1377d36f4"
+    },
+    {
+      "bytes": 37181,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-full/contention-crucible-Uw98y0/aerostore-0/final.json.gz",
+      "sha256": "bc608b797b41629244712715651bf5927d8521b96b1165dfe3366e5aeaa6e053"
+    },
+    {
+      "bytes": 191504,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-full/contention-crucible-Uw98y0/aerostore-0/history.jsonl.gz",
+      "sha256": "016807f75d682b9d0b9a5f62b6e91f78e193c789cc14da4d6d6a216bc6b3c527"
+    },
+    {
+      "bytes": 26809,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-full/contention-crucible-Uw98y0/aerostore-0/initial.json.gz",
+      "sha256": "3598c735697e6d4cba3383da957b0ec244862318207a4cdbf3eb0fe4e5c65a52"
+    },
+    {
+      "bytes": 641,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-full/contention-crucible-Uw98y0/aerostore-0/offered-schedule.json",
+      "sha256": "4db091fb58408da75b87341e701c9d6a8b10eb3d865ce4bf5321681ee220ac46"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-full/contention-crucible-Uw98y0/aerostore-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 9727,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-full/contention-crucible-Uw98y0/aerostore-0/progress.json",
+      "sha256": "161b5eda920b7292e1cde4986760c07181e0f109af7306909d2ddc87603db652"
+    },
+    {
+      "bytes": 27718,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-full/contention-crucible-Uw98y0/aerostore-0/result.json",
+      "sha256": "308559a24c0ea36a0ebff6774e9a31bdd0a1f1b75707379fa28d42fd6d1121e8"
+    },
+    {
+      "bytes": 2736,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-full/contention-crucible-Uw98y0/aerostore-0/serial-witness.json",
+      "sha256": "005583471f385f9f3f0ebb9b62609d62ddac0f03959e58f1f8cfec03a62f0a48"
+    },
+    {
+      "bytes": 33849,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-full/report.json",
+      "sha256": "ebc3e789c6acec08b8474aa42e961c511aa7fd25deb26cc81d8694740e493333"
+    },
+    {
+      "bytes": 116,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-full/run.log",
+      "sha256": "293d3c529eec1f5cdbbece3016e90d9c1a94c45c6e00863c5730ebbe29bc15c3"
+    },
+    {
+      "bytes": 37181,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-metrics/contention-crucible-GEM6BM/aerostore-0/final.json.gz",
+      "sha256": "bc608b797b41629244712715651bf5927d8521b96b1165dfe3366e5aeaa6e053"
+    },
+    {
+      "bytes": 327879,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-metrics/contention-crucible-GEM6BM/aerostore-0/history.jsonl",
+      "sha256": "084eb528dc8de1641a50a91c5af41635bb123831146a306d5bcd1d7d73f6600d"
+    },
+    {
+      "bytes": 26809,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-metrics/contention-crucible-GEM6BM/aerostore-0/initial.json.gz",
+      "sha256": "3598c735697e6d4cba3383da957b0ec244862318207a4cdbf3eb0fe4e5c65a52"
+    },
+    {
+      "bytes": 641,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-metrics/contention-crucible-GEM6BM/aerostore-0/offered-schedule.json",
+      "sha256": "296be6de90e31aeb80d1f45ced3f24a24213c760d7153cc2edc6aa7e66ca5b3e"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-metrics/contention-crucible-GEM6BM/aerostore-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 9728,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-metrics/contention-crucible-GEM6BM/aerostore-0/progress.json",
+      "sha256": "b0fb7b81f6af83ccda9cdbc6f29bc7756c4812711c729d439d241fe930f252e9"
+    },
+    {
+      "bytes": 27777,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-metrics/contention-crucible-GEM6BM/aerostore-0/result.json",
+      "sha256": "50eddda42aefc3ff45ef8adc564824087daafbb8175b1c0e47bd16f06b3afa4e"
+    },
+    {
+      "bytes": 164,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-metrics/contention-crucible-GEM6BM/aerostore-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 33920,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-metrics/report.json",
+      "sha256": "74df0c7e9b651d1cd0d0c223cad58391be024ab532d4a2c4f24b50c4cc78e58b"
+    },
+    {
+      "bytes": 116,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/calibrated-timers-metrics/run.log",
+      "sha256": "6bb0d85c8cbf886c77a53f0eba2ea9c44b3216464ef5397a1d5e9a2a1e0c5ca8"
+    },
+    {
+      "bytes": 201742,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-or/contention-crucible-iZfL38/aerostore-0/final.json",
+      "sha256": "2111f99266983dd8a65ef77fffca9ff86d7d7a3b053461ae926dec636cd56168"
+    },
+    {
+      "bytes": 1033,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-or/contention-crucible-iZfL38/aerostore-0/history.jsonl",
+      "sha256": "a941584004171c9ebc48c5a8988507cfaf3d76ba8327135c68b3319480a072ab"
+    },
+    {
+      "bytes": 201620,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-or/contention-crucible-iZfL38/aerostore-0/initial.json",
+      "sha256": "dce28fc2dd0961e19d92c62855f4953da2b4ff25df43cf4c1f25382804dec375"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-or/contention-crucible-iZfL38/aerostore-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 4169,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-or/contention-crucible-iZfL38/aerostore-0/progress.json",
+      "sha256": "794abe764ed7ebd4b8f0e82318a056af861efc180c4d84035092de27931d3258"
+    },
+    {
+      "bytes": 13914,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-or/contention-crucible-iZfL38/aerostore-0/result.json",
+      "sha256": "c60c4c50e3c62aac88db6ab02b2df71601aec793c394ff661127e9a78cc1a29f"
+    },
+    {
+      "bytes": 164,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-or/contention-crucible-iZfL38/aerostore-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 18246,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-or/report.json",
+      "sha256": "b7550ee0871ce2d371e86cb6231b18fc02d850d4e0165857ee18055833f7a2da"
+    },
+    {
+      "bytes": 113,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-or/run.log",
+      "sha256": "5dd578a51d7f9df6d1115a04a49470d6936e3291cd029c09d8bd30e52eb0e989"
+    },
+    {
+      "bytes": 201742,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-split/contention-crucible-gPxSZ4/aerostore-0/final.json",
+      "sha256": "2111f99266983dd8a65ef77fffca9ff86d7d7a3b053461ae926dec636cd56168"
+    },
+    {
+      "bytes": 1033,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-split/contention-crucible-gPxSZ4/aerostore-0/history.jsonl",
+      "sha256": "b14d7320f66b7261761bc4dc6027802179cca1e6dab9db44d877e7e3cb0d1d68"
+    },
+    {
+      "bytes": 201620,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-split/contention-crucible-gPxSZ4/aerostore-0/initial.json",
+      "sha256": "dce28fc2dd0961e19d92c62855f4953da2b4ff25df43cf4c1f25382804dec375"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-split/contention-crucible-gPxSZ4/aerostore-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 4169,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-split/contention-crucible-gPxSZ4/aerostore-0/progress.json",
+      "sha256": "332ada8b9bca9c23b3bbb85b86d74b68af6ece34be0611112b4684cae73ed375"
+    },
+    {
+      "bytes": 13919,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-split/contention-crucible-gPxSZ4/aerostore-0/result.json",
+      "sha256": "ed506663b69affe4ed714791eb5d532bb201d6826fff54813f82c48935430b88"
+    },
+    {
+      "bytes": 164,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-split/contention-crucible-gPxSZ4/aerostore-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 18259,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-split/report.json",
+      "sha256": "c9d350310d3cd4a519b8fd407de40a76a3ddc38bce3137623b94e65d8829dbdc"
+    },
+    {
+      "bytes": 113,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-aerostore-split/run.log",
+      "sha256": "cbeb0bd0de705b49b796b5d445981975f8bd81fa78f00e0fc92ff8ee582d9a50"
+    },
+    {
+      "bytes": 161,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-invalid/report.json",
+      "sha256": "1c895234b93ab37ee10166dc1c0ddf0e210dce1ee46b201cf3af1a6f8efb649f"
+    },
+    {
+      "bytes": 56,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-invalid/run.log",
+      "sha256": "8664103e28879234408aac00563f33ee0f49ce6026799ef156435dbd1d47002b"
+    },
+    {
+      "bytes": 201742,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-or/contention-crucible-SFlEGo/service-unix-0/final.json",
+      "sha256": "2111f99266983dd8a65ef77fffca9ff86d7d7a3b053461ae926dec636cd56168"
+    },
+    {
+      "bytes": 1034,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-or/contention-crucible-SFlEGo/service-unix-0/history.jsonl",
+      "sha256": "b4183fd6ed28a4ce5f678a6707096147a5684f3593a8c05bae507fff2ead8fad"
+    },
+    {
+      "bytes": 201620,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-or/contention-crucible-SFlEGo/service-unix-0/initial.json",
+      "sha256": "dce28fc2dd0961e19d92c62855f4953da2b4ff25df43cf4c1f25382804dec375"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-or/contention-crucible-SFlEGo/service-unix-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 4169,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-or/contention-crucible-SFlEGo/service-unix-0/progress.json",
+      "sha256": "dd189db779a754eb4738c0ce8dc744ddb67e0da12fa409b21e26504637ca06de"
+    },
+    {
+      "bytes": 14138,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-or/contention-crucible-SFlEGo/service-unix-0/result.json",
+      "sha256": "a0ef145940264ec28abd7ac803605ac505796d134e33498a0e3ac6b9ef12233b"
+    },
+    {
+      "bytes": 164,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-or/contention-crucible-SFlEGo/service-unix-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 18515,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-or/report.json",
+      "sha256": "1c7e8b760d09b608cb2d57bcf0820b698d1f521dd966a9597db5a7b5d2152659"
+    },
+    {
+      "bytes": 117,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-or/run.log",
+      "sha256": "fd0081641bf2bb47762fcb5c7a33d7f20539399db1ecb6449bd1dad572a56e71"
+    },
+    {
+      "bytes": 201742,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-split/contention-crucible-3QFI7X/service-unix-0/final.json",
+      "sha256": "2111f99266983dd8a65ef77fffca9ff86d7d7a3b053461ae926dec636cd56168"
+    },
+    {
+      "bytes": 1035,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-split/contention-crucible-3QFI7X/service-unix-0/history.jsonl",
+      "sha256": "131c1f2bee13e121f6781152625ab2f9304198707f4ca6d3357aef8c10fd1028"
+    },
+    {
+      "bytes": 201620,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-split/contention-crucible-3QFI7X/service-unix-0/initial.json",
+      "sha256": "dce28fc2dd0961e19d92c62855f4953da2b4ff25df43cf4c1f25382804dec375"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-split/contention-crucible-3QFI7X/service-unix-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 4169,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-split/contention-crucible-3QFI7X/service-unix-0/progress.json",
+      "sha256": "97db41bf2212ef96dd22d41cc84a08df374b280c8813e975894587cda78badad"
+    },
+    {
+      "bytes": 14147,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-split/contention-crucible-3QFI7X/service-unix-0/result.json",
+      "sha256": "470cb3bd3fffe66cf0a4f5e42e3d49cf0a1fa9e26ac2ba536cbcbc5f8f45d26c"
+    },
+    {
+      "bytes": 164,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-split/contention-crucible-3QFI7X/service-unix-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 18533,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-split/report.json",
+      "sha256": "31964f90156954f6c7ac6c8f0210397097680939646cc07ca2a762d30a7402fd"
+    },
+    {
+      "bytes": 117,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/candidate-query-service-unix-split/run.log",
+      "sha256": "2a93f25bf84e0eb1c129314d25c81960f2a767845494617ca3aaa4b302baa725"
+    },
+    {
+      "bytes": 42984,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/fleet/contention-crucible-YL1FI3/aerostore-0/final.json.gz",
+      "sha256": "67ae4fa0d26a3d25f2dcf20b23c29087ee6d0d03729774026853423cb63ce68a"
+    },
+    {
+      "bytes": 255248,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/fleet/contention-crucible-YL1FI3/aerostore-0/history.jsonl.gz",
+      "sha256": "28def1baf47d1584759ed754db65062c13464a6cfac0abada84c923459cde480"
+    },
+    {
+      "bytes": 27021,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/fleet/contention-crucible-YL1FI3/aerostore-0/initial.json.gz",
+      "sha256": "928e8b321e5450b2cf80f099019c1c7a999416a62056acc020742b9490fb6b44"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/fleet/contention-crucible-YL1FI3/aerostore-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 8894,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/fleet/contention-crucible-YL1FI3/aerostore-0/progress.json",
+      "sha256": "cf8fa41ae0d6a7376eda0919b49f61effeb86b52000253415b45e951bc4675fb"
+    },
+    {
+      "bytes": 23089,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/fleet/contention-crucible-YL1FI3/aerostore-0/result.json",
+      "sha256": "8b293fc0b4151ffe583ab62fdafe3ad6c638aa5464c999d42724bfbc7a3d123e"
+    },
+    {
+      "bytes": 5168,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/fleet/contention-crucible-YL1FI3/aerostore-0/serial-witness.json",
+      "sha256": "6b315748f8e9c8900ef40521d6c1a5acee1166b4c8113e38545c1b4719206d89"
+    },
+    {
+      "bytes": 28681,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/fleet/report.json",
+      "sha256": "a620b2bb9add60a34346ad70bce2674ecb4d56ce74cae007c9f64f5a17bc49f9"
+    },
+    {
+      "bytes": 115,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/fleet/run.log",
+      "sha256": "452060f9e6b790e006eb42c2e1f7301c7eac73463000daad5e888346f115a35c"
+    },
+    {
+      "bytes": 206662,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/full-corpus/contention-crucible-FvR84s/aerostore-0/final.json",
+      "sha256": "0c4db32c908b077e5d221bdfd948c7c00e4535ffa6c25a2e9021ed0d29ec7a7f"
+    },
+    {
+      "bytes": 371148,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/full-corpus/contention-crucible-FvR84s/aerostore-0/history.jsonl",
+      "sha256": "6df07fcd92f83f4d50d6c91ba20c0d24f70c8207fd57d06c29c69ce678ab0159"
+    },
+    {
+      "bytes": 201620,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/full-corpus/contention-crucible-FvR84s/aerostore-0/initial.json",
+      "sha256": "dce28fc2dd0961e19d92c62855f4953da2b4ff25df43cf4c1f25382804dec375"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/full-corpus/contention-crucible-FvR84s/aerostore-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 4188,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/full-corpus/contention-crucible-FvR84s/aerostore-0/progress.json",
+      "sha256": "115eabd74c745c286ceed681dd8b9dbc952311d76e8d2795982448a803d6b091"
+    },
+    {
+      "bytes": 18487,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/full-corpus/contention-crucible-FvR84s/aerostore-0/result.json",
+      "sha256": "332a8c394efe21d410f4547f0f16b61dd196cf62750e832021d7b2a15b687f4e"
+    },
+    {
+      "bytes": 591,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/full-corpus/contention-crucible-FvR84s/aerostore-0/serial-witness.json",
+      "sha256": "ae377ac4078d04c3413bdc0b4dec7b407321b911148a44aea862f64dcb5d0126"
+    },
+    {
+      "bytes": 23447,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/full-corpus/report.json",
+      "sha256": "795ca8de296936bc135da0fcc616754ae227c2f81e5342f34bd7086f84962673"
+    },
+    {
+      "bytes": 114,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/full-corpus/run.log",
+      "sha256": "8d39e91a1c845847f61dae098ae936e9f6f894352d21222c6b220acf51f0d3df"
+    },
+    {
+      "bytes": 213,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/invalid-fleet/report.json",
+      "sha256": "f487ec8097549a5d0915c5e0d0519febdaaaf54223a19605d3aa0196a36309bd"
+    },
+    {
+      "bytes": 108,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/invalid-fleet/run.log",
+      "sha256": "48e24de99a2d09e8153ee5ececd9c2429e2c3cc5159d7c6b5e92433f594c0b0a"
+    },
+    {
+      "bytes": 156,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/maintenance-selection-invalid/report.json",
+      "sha256": "910c6e5d8fc1f445ba1082d3c73a6ca1d22e63b1c1309ffa47cff2b957ca7980"
+    },
+    {
+      "bytes": 51,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/maintenance-selection-invalid/run.log",
+      "sha256": "7d09cef7a75e0492bc7a6507f3d7b5ed263f9fd39ccd3401cea302f0cb69100e"
+    },
+    {
+      "bytes": 206662,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/metrics-corpus/contention-crucible-Y6rNyO/aerostore-0/final.json",
+      "sha256": "0c4db32c908b077e5d221bdfd948c7c00e4535ffa6c25a2e9021ed0d29ec7a7f"
+    },
+    {
+      "bytes": 39209,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/metrics-corpus/contention-crucible-Y6rNyO/aerostore-0/history.jsonl",
+      "sha256": "651bff233f18bd09a28a1bf35afa938ab77c274c3c3070e5c5766b9ab4e6ec55"
+    },
+    {
+      "bytes": 201620,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/metrics-corpus/contention-crucible-Y6rNyO/aerostore-0/initial.json",
+      "sha256": "dce28fc2dd0961e19d92c62855f4953da2b4ff25df43cf4c1f25382804dec375"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/metrics-corpus/contention-crucible-Y6rNyO/aerostore-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 4188,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/metrics-corpus/contention-crucible-Y6rNyO/aerostore-0/progress.json",
+      "sha256": "bba2b12d078e7518d8010f802294c6e3b5599b7debc598e640aab15a8311e497"
+    },
+    {
+      "bytes": 18501,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/metrics-corpus/contention-crucible-Y6rNyO/aerostore-0/result.json",
+      "sha256": "216a1abbfa9b658c81e058bece8360b2f3d964ce983c416c7f299a5e34b28648"
+    },
+    {
+      "bytes": 164,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/metrics-corpus/contention-crucible-Y6rNyO/aerostore-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 23470,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/metrics-corpus/report.json",
+      "sha256": "42762409425983051306b6dba15227c1943fa2f5145fa13fbcd53f477e56f85f"
+    },
+    {
+      "bytes": 114,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/metrics-corpus/run.log",
+      "sha256": "9fad3a10b6f512c8c9cb9e05893c92e682c43fa8ea286429a5aa585bf04b9d82"
+    },
+    {
+      "bytes": 42984,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-fleet-prefix/contention-crucible-MmDbcG/aerostore-0/final.json.gz",
+      "sha256": "67ae4fa0d26a3d25f2dcf20b23c29087ee6d0d03729774026853423cb63ce68a"
+    },
+    {
+      "bytes": 228575,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-fleet-prefix/contention-crucible-MmDbcG/aerostore-0/history.jsonl.gz",
+      "sha256": "314d61b864e519e1df32b389d86cb10f6f31eefdf675f5a7f3a63691a344603b"
+    },
+    {
+      "bytes": 27021,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-fleet-prefix/contention-crucible-MmDbcG/aerostore-0/initial.json.gz",
+      "sha256": "928e8b321e5450b2cf80f099019c1c7a999416a62056acc020742b9490fb6b44"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-fleet-prefix/contention-crucible-MmDbcG/aerostore-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 8894,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-fleet-prefix/contention-crucible-MmDbcG/aerostore-0/progress.json",
+      "sha256": "1b4edde640296129a31d449025d68bfd0af0210b97361b76b04605f4eb031c56"
+    },
+    {
+      "bytes": 23101,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-fleet-prefix/contention-crucible-MmDbcG/aerostore-0/result.json",
+      "sha256": "2e4b1236eff0e939ef13b53fbcaba8aff3e119034902ec1136d473e00cda0ec9"
+    },
+    {
+      "bytes": 5168,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-fleet-prefix/contention-crucible-MmDbcG/aerostore-0/serial-witness.json",
+      "sha256": "6b315748f8e9c8900ef40521d6c1a5acee1166b4c8113e38545c1b4719206d89"
+    },
+    {
+      "bytes": 28720,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-fleet-prefix/report.json",
+      "sha256": "9e62eb17c6d3e10be53f8caf95d6678950d8a6e6dcd4b9296f26a5079f55dc3f"
+    },
+    {
+      "bytes": 114,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-fleet-prefix/run.log",
+      "sha256": "2eda8550ed2e646a3c5eed9a9e0217e7160cd731690947b3e118935a0260298c"
+    },
+    {
+      "bytes": 201906,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-statistics-policy/contention-crucible-YQ10pM/aerostore-0/final.json",
+      "sha256": "a4e48c8fdfe28bb06baac476fc206d278b49b6e2c9f2071a1ff4d4a0b954b74b"
+    },
+    {
+      "bytes": 2175,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-statistics-policy/contention-crucible-YQ10pM/aerostore-0/history.jsonl",
+      "sha256": "deb6708ee130505b563ad57107e7c2d1dc0db943905de7fcb747c1c3df2e1b49"
+    },
+    {
+      "bytes": 201620,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-statistics-policy/contention-crucible-YQ10pM/aerostore-0/initial.json",
+      "sha256": "dce28fc2dd0961e19d92c62855f4953da2b4ff25df43cf4c1f25382804dec375"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-statistics-policy/contention-crucible-YQ10pM/aerostore-0/postgres-statistics.json",
+      "sha256": "dbc66c2e576c216e7f825693e70bc945da044697c1451cb5dbbf369dbe016cfc"
+    },
+    {
+      "bytes": 5925,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-statistics-policy/contention-crucible-YQ10pM/aerostore-0/progress.json",
+      "sha256": "1671a0cab606a68c6f5496cd3fa0f9b77f49d9ca605a284c53d3a328a744f57f"
+    },
+    {
+      "bytes": 16226,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-statistics-policy/contention-crucible-YQ10pM/aerostore-0/result.json",
+      "sha256": "33b14656fd5c6b78dd4a731421592331f1772f3f5cb54da1ffdc3c7949f0ce1b"
+    },
+    {
+      "bytes": 164,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-statistics-policy/contention-crucible-YQ10pM/aerostore-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 20878,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-statistics-policy/report.json",
+      "sha256": "b3410452566b6ef8064406bac644b49bc420ce5be3faaad4212ea815655d7b01"
+    },
+    {
+      "bytes": 113,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/native-statistics-policy/run.log",
+      "sha256": "f2555392c9818aab11603795e838aa9fbea2e0cd6a4f1a2e9cbfcd21e9acdcd2"
+    },
+    {
+      "bytes": 201742,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/one-arrival/contention-crucible-v0T8hE/aerostore-0/final.json",
+      "sha256": "2111f99266983dd8a65ef77fffca9ff86d7d7a3b053461ae926dec636cd56168"
+    },
+    {
+      "bytes": 1033,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/one-arrival/contention-crucible-v0T8hE/aerostore-0/history.jsonl",
+      "sha256": "b14c3c125bf1dbd9bcd4632336ee0dce6529d0cf6de2368e460d252fcafd1677"
+    },
+    {
+      "bytes": 201620,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/one-arrival/contention-crucible-v0T8hE/aerostore-0/initial.json",
+      "sha256": "dce28fc2dd0961e19d92c62855f4953da2b4ff25df43cf4c1f25382804dec375"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/one-arrival/contention-crucible-v0T8hE/aerostore-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 4169,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/one-arrival/contention-crucible-v0T8hE/aerostore-0/progress.json",
+      "sha256": "3360ed7d4e01fc83f49a53f5a47bb1508ec45b58e5e1404f534a13702f72c069"
+    },
+    {
+      "bytes": 13898,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/one-arrival/contention-crucible-v0T8hE/aerostore-0/result.json",
+      "sha256": "938a4980e9177fabdc10031cc05e3a0f0d3b1c3c32f12f817a9c143b284b3591"
+    },
+    {
+      "bytes": 164,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/one-arrival/contention-crucible-v0T8hE/aerostore-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 18196,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/one-arrival/report.json",
+      "sha256": "a2b7cee22b93b437b2aada641c8657c5316c4e8f71a3b65b059285b9f69d2255"
+    },
+    {
+      "bytes": 113,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/one-arrival/run.log",
+      "sha256": "33b634aa13ee8593bc1c6dedec310d0871874428fb77355671254234f29ec969"
+    },
+    {
+      "bytes": 204115,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-or/contention-crucible-H5TdzR/postgres-0/final.json",
+      "sha256": "845ef0efddb1406c14f3f52fd351ab7184d8cbad53083c1e1c40895ba7f5abbb"
+    },
+    {
+      "bytes": 185018,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-or/contention-crucible-H5TdzR/postgres-0/history.jsonl",
+      "sha256": "49342b89312045c933d8ca1215f5c8e9a6201d5764bf5692b6516518752c300d"
+    },
+    {
+      "bytes": 201620,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-or/contention-crucible-H5TdzR/postgres-0/initial.json",
+      "sha256": "dce28fc2dd0961e19d92c62855f4953da2b4ff25df43cf4c1f25382804dec375"
+    },
+    {
+      "bytes": 173,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-or/contention-crucible-H5TdzR/postgres-0/postgres-statistics.json",
+      "sha256": "d18b73909de1fb6645cae048a69d6eff93ec4e71aaddeed966c52effb4bd4fc2"
+    },
+    {
+      "bytes": 4462,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-or/contention-crucible-H5TdzR/postgres-0/progress.json",
+      "sha256": "9f57a851fb647e85a99925d1e4f5e16374de7eb8e451656cabcf33225c5928f2"
+    },
+    {
+      "bytes": 15133,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-or/contention-crucible-H5TdzR/postgres-0/query-plan-audit.json",
+      "sha256": "d4de61019c78fc46bd2667da72e8d3800a0c1dbb710c4c9a8527aab40fd37f7d"
+    },
+    {
+      "bytes": 33161,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-or/contention-crucible-H5TdzR/postgres-0/result.json",
+      "sha256": "5d56d37e13006cba8300681579a7dc56a1e9bd904370ad230e757e015ccbd361"
+    },
+    {
+      "bytes": 383,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-or/contention-crucible-H5TdzR/postgres-0/serial-witness.json",
+      "sha256": "9c02ffa7ba878f7be49170991069a9aa4d7778209d50950a33e3c6be26b3907d"
+    },
+    {
+      "bytes": 41181,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-or/report.json",
+      "sha256": "1c0c51f93927f15f7f92a53eb053dfd92dbc46f2ed54ec6f82086248d276445a"
+    },
+    {
+      "bytes": 114,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-or/run.log",
+      "sha256": "3ad5d00c60c058a3be83a43b515d7f465863fce07be7baff4f54a6a4ab78f202"
+    },
+    {
+      "bytes": 204115,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-split/contention-crucible-6FDgok/postgres-0/final.json",
+      "sha256": "845ef0efddb1406c14f3f52fd351ab7184d8cbad53083c1e1c40895ba7f5abbb"
+    },
+    {
+      "bytes": 185021,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-split/contention-crucible-6FDgok/postgres-0/history.jsonl",
+      "sha256": "a27ee9bef1f860dd541c0b20884f1dfc328c5d78f6c777dc9f59fc552a0c19a1"
+    },
+    {
+      "bytes": 201620,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-split/contention-crucible-6FDgok/postgres-0/initial.json",
+      "sha256": "dce28fc2dd0961e19d92c62855f4953da2b4ff25df43cf4c1f25382804dec375"
+    },
+    {
+      "bytes": 173,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-split/contention-crucible-6FDgok/postgres-0/postgres-statistics.json",
+      "sha256": "d18b73909de1fb6645cae048a69d6eff93ec4e71aaddeed966c52effb4bd4fc2"
+    },
+    {
+      "bytes": 4462,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-split/contention-crucible-6FDgok/postgres-0/progress.json",
+      "sha256": "cc3311a8d9732506becd78ba1504fe9a61fcd64215257d4f050e77ed4da90bf3"
+    },
+    {
+      "bytes": 15492,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-split/contention-crucible-6FDgok/postgres-0/query-plan-audit.json",
+      "sha256": "01d328edbdd66783e50c4ac745f32e1bab0df6edf1945f207b678edeb11c3b21"
+    },
+    {
+      "bytes": 33531,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-split/contention-crucible-6FDgok/postgres-0/result.json",
+      "sha256": "c584d0cf1208d691498f0dbd89bfe9a8948166a6397898785d43159f8e791779"
+    },
+    {
+      "bytes": 383,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-split/contention-crucible-6FDgok/postgres-0/serial-witness.json",
+      "sha256": "9c02ffa7ba878f7be49170991069a9aa4d7778209d50950a33e3c6be26b3907d"
+    },
+    {
+      "bytes": 41560,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-split/report.json",
+      "sha256": "4de1368e1ff1a1c1ec942ea43c92b8e3d4475a68e67ef5322951fb4ae31a568f"
+    },
+    {
+      "bytes": 114,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-full-split/run.log",
+      "sha256": "b37e582a4b21abd0e268019125ed99573ffcdc136e99659a94b0b784da6e125b"
+    },
+    {
+      "bytes": 204115,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-or/contention-crucible-ZCCFDX/postgres-0/final.json",
+      "sha256": "845ef0efddb1406c14f3f52fd351ab7184d8cbad53083c1e1c40895ba7f5abbb"
+    },
+    {
+      "bytes": 19628,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-or/contention-crucible-ZCCFDX/postgres-0/history.jsonl",
+      "sha256": "b02a2678c752205be80445749e862655b6b25be260dcd67ef97505b3cbdbc915"
+    },
+    {
+      "bytes": 201620,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-or/contention-crucible-ZCCFDX/postgres-0/initial.json",
+      "sha256": "dce28fc2dd0961e19d92c62855f4953da2b4ff25df43cf4c1f25382804dec375"
+    },
+    {
+      "bytes": 173,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-or/contention-crucible-ZCCFDX/postgres-0/postgres-statistics.json",
+      "sha256": "d18b73909de1fb6645cae048a69d6eff93ec4e71aaddeed966c52effb4bd4fc2"
+    },
+    {
+      "bytes": 4462,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-or/contention-crucible-ZCCFDX/postgres-0/progress.json",
+      "sha256": "5ab67bd9088d68b84183bbec11e5e843f8807ff5098705e3e8ab70408b1a8d3f"
+    },
+    {
+      "bytes": 15133,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-or/contention-crucible-ZCCFDX/postgres-0/query-plan-audit.json",
+      "sha256": "e5d2f329baccd60dca7a8bf235939d17bc899d8d943fcbe92238c711937a8edc"
+    },
+    {
+      "bytes": 33172,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-or/contention-crucible-ZCCFDX/postgres-0/result.json",
+      "sha256": "b464d62f989c03475ce8cf1c1c90b8db5631300802531a4431a4a15b795e133c"
+    },
+    {
+      "bytes": 164,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-or/contention-crucible-ZCCFDX/postgres-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 41201,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-or/report.json",
+      "sha256": "18f3d2d374dd7bf0417d98e8d0b7b0a22567a771ea41539d3ecbf6f918999c06"
+    },
+    {
+      "bytes": 114,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-or/run.log",
+      "sha256": "16daaa30e9d26fdb6f4cb7e955effa01c45a0c7d18fd9c589de608aaf4cc5e18"
+    },
+    {
+      "bytes": 204115,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-split/contention-crucible-akzHJn/postgres-0/final.json",
+      "sha256": "845ef0efddb1406c14f3f52fd351ab7184d8cbad53083c1e1c40895ba7f5abbb"
+    },
+    {
+      "bytes": 19629,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-split/contention-crucible-akzHJn/postgres-0/history.jsonl",
+      "sha256": "a4745e148269dfa77a193b2c0812cdc14fda15831a998d82fa07fa221fede7d8"
+    },
+    {
+      "bytes": 201620,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-split/contention-crucible-akzHJn/postgres-0/initial.json",
+      "sha256": "dce28fc2dd0961e19d92c62855f4953da2b4ff25df43cf4c1f25382804dec375"
+    },
+    {
+      "bytes": 173,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-split/contention-crucible-akzHJn/postgres-0/postgres-statistics.json",
+      "sha256": "d18b73909de1fb6645cae048a69d6eff93ec4e71aaddeed966c52effb4bd4fc2"
+    },
+    {
+      "bytes": 4462,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-split/contention-crucible-akzHJn/postgres-0/progress.json",
+      "sha256": "b23c64eb4ca3f89e05480debe470c887b655be138fe8fd09a394ab0594e1e1c0"
+    },
+    {
+      "bytes": 15492,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-split/contention-crucible-akzHJn/postgres-0/query-plan-audit.json",
+      "sha256": "135fd3abe6dedbc6c44d02957c410b503958dcebeab240b9c5654415a842f43e"
+    },
+    {
+      "bytes": 33543,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-split/contention-crucible-akzHJn/postgres-0/result.json",
+      "sha256": "08cfafb5bc18632f32d48f9d6774a316cc2b9f95915e619638cf9c21a60cc08c"
+    },
+    {
+      "bytes": 164,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-split/contention-crucible-akzHJn/postgres-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 41580,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-split/report.json",
+      "sha256": "314dcb4ec9e791bc97c047e1aa0247b920a26fefa970c6aa3fdbeebadb9bc966"
+    },
+    {
+      "bytes": 114,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-candidate-query-metrics-split/run.log",
+      "sha256": "13c4553e09841df54d8567817006e5a8b9e71d6bd4c607e1d71103ae084a6f6d"
+    },
+    {
+      "bytes": 422766,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-full/contention-crucible-NJov5N/postgres-0/final.json",
+      "sha256": "984b9d89edaf0f95ea6ffd336a4e2f8a22bdfb2af459dd20c86bb1d52f6f5255"
+    },
+    {
+      "bytes": 712759,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-full/contention-crucible-NJov5N/postgres-0/history.jsonl",
+      "sha256": "1294aaf4b622dada49d3aac7fa209c8f5d7e314a89a7556aa16e47b63e52924c"
+    },
+    {
+      "bytes": 413565,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-full/contention-crucible-NJov5N/postgres-0/initial.json",
+      "sha256": "1a02e504d6b2bc4cd68d6a0e64e6d02eb3b44f1491b7c430514c3424645212fb"
+    },
+    {
+      "bytes": 686,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-full/contention-crucible-NJov5N/postgres-0/offered-schedule.json",
+      "sha256": "942de43bb74014db598a3231f7adf027ed6f8ea8482450821e058d7cf00bbd55"
+    },
+    {
+      "bytes": 173,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-full/contention-crucible-NJov5N/postgres-0/postgres-statistics.json",
+      "sha256": "d18b73909de1fb6645cae048a69d6eff93ec4e71aaddeed966c52effb4bd4fc2"
+    },
+    {
+      "bytes": 7173,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-full/contention-crucible-NJov5N/postgres-0/progress.json",
+      "sha256": "c227c3c424aea8da1033b3ed1525ebc62f4ccdac9e36fc0610093361781a0052"
+    },
+    {
+      "bytes": 19715,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-full/contention-crucible-NJov5N/postgres-0/query-plan-audit.json",
+      "sha256": "6cfb56e3022c18fa0412892def9c02f6f99a557e89ac72a96009e72f20878bbc"
+    },
+    {
+      "bytes": 47688,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-full/contention-crucible-NJov5N/postgres-0/result.json",
+      "sha256": "776191f684dc992b025748b913d998982bba0730265db27e6672ef9b9f2b9d72"
+    },
+    {
+      "bytes": 615,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-full/contention-crucible-NJov5N/postgres-0/serial-witness.json",
+      "sha256": "245cab994bc761e648c71595e7058e592d8bdf3916bfc139aaa562e7162add6a"
+    },
+    {
+      "bytes": 57289,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-full/report.json",
+      "sha256": "1b3f557aec2d72a274197dcdab97fe7f917128a5325af86252775b65d194cf94"
+    },
+    {
+      "bytes": 115,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-full/run.log",
+      "sha256": "caded584fc5d5c32cab3da70a6b0fd5e217365e6122a5de0f0c7fe9081618909"
+    },
+    {
+      "bytes": 422766,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-metrics/contention-crucible-Zdj0SM/postgres-0/final.json",
+      "sha256": "984b9d89edaf0f95ea6ffd336a4e2f8a22bdfb2af459dd20c86bb1d52f6f5255"
+    },
+    {
+      "bytes": 49740,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-metrics/contention-crucible-Zdj0SM/postgres-0/history.jsonl",
+      "sha256": "84fdebb5499b89189728a72b4763df8769b7e7494e3b37db341cd4222360fb67"
+    },
+    {
+      "bytes": 413565,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-metrics/contention-crucible-Zdj0SM/postgres-0/initial.json",
+      "sha256": "1a02e504d6b2bc4cd68d6a0e64e6d02eb3b44f1491b7c430514c3424645212fb"
+    },
+    {
+      "bytes": 686,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-metrics/contention-crucible-Zdj0SM/postgres-0/offered-schedule.json",
+      "sha256": "a4291c89453b135cd4107964784275e2cff9f604ab128aac85bf86f90c76d823"
+    },
+    {
+      "bytes": 173,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-metrics/contention-crucible-Zdj0SM/postgres-0/postgres-statistics.json",
+      "sha256": "d18b73909de1fb6645cae048a69d6eff93ec4e71aaddeed966c52effb4bd4fc2"
+    },
+    {
+      "bytes": 7173,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-metrics/contention-crucible-Zdj0SM/postgres-0/progress.json",
+      "sha256": "84341913b65d91c724ba73ca26f201a7b4de36a6d0fe3e3f0c46dcd8b5636cd8"
+    },
+    {
+      "bytes": 19715,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-metrics/contention-crucible-Zdj0SM/postgres-0/query-plan-audit.json",
+      "sha256": "5b05ac00dbc37a3d18dc0b7d24ff0e0eff86c7dfcc2bba09338cafeb12797744"
+    },
+    {
+      "bytes": 47666,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-metrics/contention-crucible-Zdj0SM/postgres-0/result.json",
+      "sha256": "c052ed6bdcf3297c495ca1c383ffb1ee709cb80aede6354523674fed6daf5386"
+    },
+    {
+      "bytes": 164,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-metrics/contention-crucible-Zdj0SM/postgres-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 57272,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-metrics/report.json",
+      "sha256": "00b8b3453d6de069f215e0ca1fb48b6576efef1e9cb85e20c9b0a63feb219e10"
+    },
+    {
+      "bytes": 114,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-maintenance-prefix-metrics/run.log",
+      "sha256": "7b933117e96ec5cd62b6501cf7aca67e8f7a0eb0743957cbea99b1c39390a702"
+    },
+    {
+      "bytes": 206763,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-0/contention-crucible-RdJMvk/postgres-0/final.json",
+      "sha256": "dc6076ea14cb980e31d275c7b7f2de17d811433ba4449b194f7a3f81c1ac49be"
+    },
+    {
+      "bytes": 559121,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-0/contention-crucible-RdJMvk/postgres-0/history.jsonl",
+      "sha256": "73d5c5c6acce84539523551fbcb5fb6df2fc0822211f17756fb4579094b52e2b"
+    },
+    {
+      "bytes": 201620,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-0/contention-crucible-RdJMvk/postgres-0/initial.json",
+      "sha256": "dce28fc2dd0961e19d92c62855f4953da2b4ff25df43cf4c1f25382804dec375"
+    },
+    {
+      "bytes": 173,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-0/contention-crucible-RdJMvk/postgres-0/postgres-statistics.json",
+      "sha256": "d18b73909de1fb6645cae048a69d6eff93ec4e71aaddeed966c52effb4bd4fc2"
+    },
+    {
+      "bytes": 6365,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-0/contention-crucible-RdJMvk/postgres-0/progress.json",
+      "sha256": "fab4634eb539bb07a2943d06826778116660b56319b8dd6ae1ccaff55b911c17"
+    },
+    {
+      "bytes": 15133,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-0/contention-crucible-RdJMvk/postgres-0/query-plan-audit.json",
+      "sha256": "76d6825f86cd1d15f95fc2d38973c51a3c02ecc1690b4093be6de4b246f60b8d"
+    },
+    {
+      "bytes": 35069,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-0/contention-crucible-RdJMvk/postgres-0/result.json",
+      "sha256": "934350c4e8dd561148476aa50fd01f00a8ea704d1fe4212d4e2e7ee5829ae927"
+    },
+    {
+      "bytes": 799,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-0/contention-crucible-RdJMvk/postgres-0/serial-witness.json",
+      "sha256": "6e17a6f1276322ec5b15b8213443ab0067d025a007cbf155789cdfec50250dde"
+    },
+    {
+      "bytes": 43317,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-0/report.json",
+      "sha256": "84b7f58506c56be8b0aa70ff653499ad8c86715a2e00a6e28cc075cf29e01ad7"
+    },
+    {
+      "bytes": 114,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-0/run.log",
+      "sha256": "7cdefb95777cd418bf97501044370bc2f92413f4f63e16bba107cb7432ff20e6"
+    },
+    {
+      "bytes": 206763,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-1/contention-crucible-rXVypC/postgres-0/final.json",
+      "sha256": "dc6076ea14cb980e31d275c7b7f2de17d811433ba4449b194f7a3f81c1ac49be"
+    },
+    {
+      "bytes": 559125,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-1/contention-crucible-rXVypC/postgres-0/history.jsonl",
+      "sha256": "bfefcd9b1faf8afe5d530a1c1a437179face5de294d2eac516ac8c2a1adb060f"
+    },
+    {
+      "bytes": 201620,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-1/contention-crucible-rXVypC/postgres-0/initial.json",
+      "sha256": "dce28fc2dd0961e19d92c62855f4953da2b4ff25df43cf4c1f25382804dec375"
+    },
+    {
+      "bytes": 1149,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-1/contention-crucible-rXVypC/postgres-0/postgres-statistics.json",
+      "sha256": "fa0c35ea3a367e8fe9758efc7d22a6aed16d578de6603bf3a4041bf7b392e838"
+    },
+    {
+      "bytes": 6365,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-1/contention-crucible-rXVypC/postgres-0/progress.json",
+      "sha256": "fa8db780ab3a05e87a23e40ff5f3e9e51a81ea1e2f8d38ca752d0dd30e1f97db"
+    },
+    {
+      "bytes": 15133,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-1/contention-crucible-rXVypC/postgres-0/query-plan-audit.json",
+      "sha256": "b14374ccab1b59f92a3cbbd1f88962590790ca7db3a589d41900acad92332368"
+    },
+    {
+      "bytes": 36113,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-1/contention-crucible-rXVypC/postgres-0/result.json",
+      "sha256": "83b557351a1469a0ad9a067501757e7c5159d3573dd2df9b65e0d67b9267082c"
+    },
+    {
+      "bytes": 799,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-1/contention-crucible-rXVypC/postgres-0/serial-witness.json",
+      "sha256": "6e17a6f1276322ec5b15b8213443ab0067d025a007cbf155789cdfec50250dde"
+    },
+    {
+      "bytes": 44489,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-1/report.json",
+      "sha256": "94ce1c097e1c0d4a906dbdd30e74441546c32ed684a9af6b019c3f2f2996726c"
+    },
+    {
+      "bytes": 114,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-full-1/run.log",
+      "sha256": "6956a3e1fcbf0100f7380abd4cf40a982a76957ed56824d877d145886a1c6825"
+    },
+    {
+      "bytes": 206763,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-metrics-1/contention-crucible-oUiVQK/postgres-0/final.json",
+      "sha256": "dc6076ea14cb980e31d275c7b7f2de17d811433ba4449b194f7a3f81c1ac49be"
+    },
+    {
+      "bytes": 58897,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-metrics-1/contention-crucible-oUiVQK/postgres-0/history.jsonl",
+      "sha256": "77df25462f73062e48db413ef44e07fe2889bcb0e9e6d90ead1b43e48a8b4078"
+    },
+    {
+      "bytes": 201620,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-metrics-1/contention-crucible-oUiVQK/postgres-0/initial.json",
+      "sha256": "dce28fc2dd0961e19d92c62855f4953da2b4ff25df43cf4c1f25382804dec375"
+    },
+    {
+      "bytes": 1149,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-metrics-1/contention-crucible-oUiVQK/postgres-0/postgres-statistics.json",
+      "sha256": "b0e04d3c7aed11e5646687b0f086bd2dba809e7f86592eea617e12485bbf6354"
+    },
+    {
+      "bytes": 6365,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-metrics-1/contention-crucible-oUiVQK/postgres-0/progress.json",
+      "sha256": "eb1b46505c914cf688d07435f0217cd7dd2b67d704dd975f9bd9fb5b966ecea5"
+    },
+    {
+      "bytes": 15133,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-metrics-1/contention-crucible-oUiVQK/postgres-0/query-plan-audit.json",
+      "sha256": "74a8e9d637a9d4b3160e071375a5d9d31942a482c039cf412f82ba5d22d6d11a"
+    },
+    {
+      "bytes": 36123,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-metrics-1/contention-crucible-oUiVQK/postgres-0/result.json",
+      "sha256": "33e5bd30adc796131b802d938e37ce09e9853c721c3bd199252ab4be526b8902"
+    },
+    {
+      "bytes": 164,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-metrics-1/contention-crucible-oUiVQK/postgres-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 44508,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-metrics-1/report.json",
+      "sha256": "0fc379478039e42a6c2d2ff43d18ee0c0e0411beab773c48f897c20aa7387912"
+    },
+    {
+      "bytes": 114,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/pg-statistics-metrics-1/run.log",
+      "sha256": "287083f7e96f3979699c74d9be4708a530f4b9001a980c441b3819dbdb818ee7"
+    },
+    {
+      "bytes": 422766,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/service-calibrated-prefix/contention-crucible-zROFGQ/service-unix-0/final.json",
+      "sha256": "984b9d89edaf0f95ea6ffd336a4e2f8a22bdfb2af459dd20c86bb1d52f6f5255"
+    },
+    {
+      "bytes": 712755,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/service-calibrated-prefix/contention-crucible-zROFGQ/service-unix-0/history.jsonl",
+      "sha256": "d2dc57f419117a5751147b9ea54784654b90b825d07b70c639166b703f4e9e84"
+    },
+    {
+      "bytes": 413565,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/service-calibrated-prefix/contention-crucible-zROFGQ/service-unix-0/initial.json",
+      "sha256": "1a02e504d6b2bc4cd68d6a0e64e6d02eb3b44f1491b7c430514c3424645212fb"
+    },
+    {
+      "bytes": 686,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/service-calibrated-prefix/contention-crucible-zROFGQ/service-unix-0/offered-schedule.json",
+      "sha256": "5717573699d1f876e9ecbdd003d0736501abe0f33989404f15711e863f492212"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/service-calibrated-prefix/contention-crucible-zROFGQ/service-unix-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 6759,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/service-calibrated-prefix/contention-crucible-zROFGQ/service-unix-0/progress.json",
+      "sha256": "d51e30ceb3a5838545edeaccf452e19f884644e3f864b3b41bcd92c44d531b44"
+    },
+    {
+      "bytes": 28357,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/service-calibrated-prefix/contention-crucible-zROFGQ/service-unix-0/result.json",
+      "sha256": "c9df694c41f42349ba2d4c9626c2521adab3935d08166a23d1118314fff016f2"
+    },
+    {
+      "bytes": 615,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/service-calibrated-prefix/contention-crucible-zROFGQ/service-unix-0/serial-witness.json",
+      "sha256": "9b32fcd68ad69001992ef30251790a016a8940ce6a9c0fde802927e8a15271e2"
+    },
+    {
+      "bytes": 34521,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/service-calibrated-prefix/report.json",
+      "sha256": "9101f38108f99659f8463c23d5475a4f924740fbcd4496602b1414ed871c00a4"
+    },
+    {
+      "bytes": 118,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/service-calibrated-prefix/run.log",
+      "sha256": "625e47f3770283832165ff1ba37228fef9dfe6102d5b77d0520ea6f0fa05daca"
+    },
+    {
+      "bytes": 201742,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/slow-shutdown/contention-crucible-hSiqe2/aerostore-0/final.json",
+      "sha256": "2111f99266983dd8a65ef77fffca9ff86d7d7a3b053461ae926dec636cd56168"
+    },
+    {
+      "bytes": 1033,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/slow-shutdown/contention-crucible-hSiqe2/aerostore-0/history.jsonl",
+      "sha256": "f21bbd03f9400867efe091e6c7eec1070c223b03e7d443b6fc46cf1204f31218"
+    },
+    {
+      "bytes": 201620,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/slow-shutdown/contention-crucible-hSiqe2/aerostore-0/initial.json",
+      "sha256": "dce28fc2dd0961e19d92c62855f4953da2b4ff25df43cf4c1f25382804dec375"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/slow-shutdown/contention-crucible-hSiqe2/aerostore-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 4169,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/slow-shutdown/contention-crucible-hSiqe2/aerostore-0/progress.json",
+      "sha256": "6fa7521a44ced68ac1e1850102e38e18f17bcff3a56e8dad07eada40622e4718"
+    },
+    {
+      "bytes": 13900,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/slow-shutdown/contention-crucible-hSiqe2/aerostore-0/result.json",
+      "sha256": "fd983d12ccb0f145e032d00391343fedcfc141440a74991cdc9bb18126b20a2e"
+    },
+    {
+      "bytes": 164,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/slow-shutdown/contention-crucible-hSiqe2/aerostore-0/serial-witness.json",
+      "sha256": "2266662ba193c7ae4add5e3d0851cb81a6789cc731a978efd13f613b2f497ce7"
+    },
+    {
+      "bytes": 18202,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/slow-shutdown/report.json",
+      "sha256": "18b490c7a2ee01672449aa5cf2d48c3a5348137da6d93e4f0b7bfdc9f77d5790"
+    },
+    {
+      "bytes": 113,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/slow-shutdown/run.log",
+      "sha256": "3fc9fbf3a6efbb7171e1122711e769ff857d99fcd3cab10086515c943da28e32"
+    },
+    {
+      "bytes": 213,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/statistics-invalid-0/report.json",
+      "sha256": "f487ec8097549a5d0915c5e0d0519febdaaaf54223a19605d3aa0196a36309bd"
+    },
+    {
+      "bytes": 108,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/statistics-invalid-0/run.log",
+      "sha256": "48e24de99a2d09e8153ee5ececd9c2429e2c3cc5159d7c6b5e92433f594c0b0a"
+    },
+    {
+      "bytes": 159,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/statistics-invalid-1/report.json",
+      "sha256": "58e24288b1e7615f846209b7cb89b4f472ae1b27a11ff0dc62b4c13533692218"
+    },
+    {
+      "bytes": 54,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/statistics-invalid-1/run.log",
+      "sha256": "1801aa06be3092939531679356b3bb784ab3b3c0531753fa92aafcde231ba727"
+    },
+    {
+      "bytes": 213,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/statistics-invalid-2/report.json",
+      "sha256": "f487ec8097549a5d0915c5e0d0519febdaaaf54223a19605d3aa0196a36309bd"
+    },
+    {
+      "bytes": 108,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/statistics-invalid-2/run.log",
+      "sha256": "48e24de99a2d09e8153ee5ececd9c2429e2c3cc5159d7c6b5e92433f594c0b0a"
+    },
+    {
+      "bytes": 213,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/statistics-invalid-3/report.json",
+      "sha256": "f487ec8097549a5d0915c5e0d0519febdaaaf54223a19605d3aa0196a36309bd"
+    },
+    {
+      "bytes": 108,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/statistics-invalid-3/run.log",
+      "sha256": "48e24de99a2d09e8153ee5ececd9c2429e2c3cc5159d7c6b5e92433f594c0b0a"
+    },
+    {
+      "bytes": 176,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/truncated/contention-crucible-neDjrX/aerostore-0/postgres-statistics.json",
+      "sha256": "37bae53939a24e051ffde25aeed1dc98db928d988747e7e809006bd88c57801f"
+    },
+    {
+      "bytes": 391,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/truncated/contention-crucible-neDjrX/aerostore-0/result.json",
+      "sha256": "c4e90e3fcb5eb49c98c5a40676a4fa817c03d381ecb572a28d9790edf2cdce00"
+    },
+    {
+      "bytes": 3140,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/truncated/report.json",
+      "sha256": "21781e054d4ac3622ccdbb04573f7208634212c16f333effdad5c941c9b4624d"
+    },
+    {
+      "bytes": 311,
+      "path": "tests/primary/integration-evidence/regression-q94402rt/truncated/run.log",
+      "sha256": "50c7f35725a89110c7ed9795f0b12060bad67245c09cc612919df720fda1e7ba"
+    },
+    {
+      "bytes": 222,
+      "path": "tests/primary/postgres-cleanup.json",
+      "sha256": "fda02c796e210b20f9125f0a8070fcdddc0c1a0735ddfb37013dc91f4df71d96"
+    },
+    {
+      "bytes": 1318,
+      "path": "tests/primary/postgres-start.json",
+      "sha256": "6f20d1ca39c1b7128cea6349a4e9f52c00028b9e73ea7e19194a0745c66fa7fd"
+    },
+    {
+      "bytes": 22788,
+      "path": "tests/primary/postgres.log",
+      "sha256": "e2f60a7c7e5415ee420298f8c3d018a51e3de3007a3760f736a24392d24702fe"
+    },
+    {
+      "bytes": 257777,
+      "path": "tests/primary/receipt.json",
+      "sha256": "46a8ece8763f3e346a20ffb06cadcad0934f26976c2d8a070bfbac3b40e39ae0"
+    },
+    {
+      "bytes": 22506,
+      "path": "verify_stored_archive.py",
+      "sha256": "3be811fcc5f747efc5c15fca01a550c559427d1ae3ae7e712ac1f52d04c05cb8"
+    },
+    {
+      "bytes": 438,
+      "path": "wrapper-mode-correction.json",
+      "sha256": "6b22f87d0da36bacada53f34b6fdc7d8dba6e2e617eaa2002944a040ef28b1a6"
+    }
+  ],
+  "schema_version": 1
+}

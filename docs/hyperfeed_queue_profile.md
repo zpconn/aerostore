@@ -4,7 +4,7 @@ The accepted synthetic capacity lower bounds are now **6,400 offered incoming
 messages/s for AeroStore and 704/s for PostgreSQL**, each with **24 foreground
 workers on the same 24 logical CPU budget**. Both configurations passed two
 905-second trials, normal maintenance, resource checks and their matching
-full-history correctness companions. The [bound comparison](bench_data/hyperfeed_queue_profile_2026-09-30/evidence/workers24-accepted-comparison01.json)
+full-history correctness companions. The [bound comparison](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_queue_profile_2026-09-30/evidence/workers24-accepted-comparison01.json)
 gives **9.09× for the tested offered endpoints**. Neither maximum capacity is
 established, so this is not a ratio of maximum capacities or the 10× target.
 
@@ -105,17 +105,17 @@ and killed-client coverage. These are transport and service checks, not a new
 formal refinement proof or full-history correctness qualification. The original
 source and executable remain the working implementation.
 
-The retained [nonblocking screen](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/write-fast-path-burst/screen.json.gz)
-and [decision](bench_data/hyperfeed_queue_profile_2026-09-30/evidence/write-fast-path-decision.json),
-[vectored screen](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/vectored-write-burst/screen.json.gz)
-and [decision](bench_data/hyperfeed_queue_profile_2026-09-30/evidence/vectored-write-decision.json)
+The retained [nonblocking screen](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/write-fast-path-burst/screen.json.gz)
+and [decision](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_queue_profile_2026-09-30/evidence/write-fast-path-decision.json),
+[vectored screen](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/vectored-write-burst/screen.json.gz)
+and [decision](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_queue_profile_2026-09-30/evidence/vectored-write-decision.json)
 bind the paired results. The
-[43-test receipt](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/service-tests/tests/receipt.json.gz)
-and [42-test receipt](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/vectored-service-tests/tests/receipt.json.gz)
+[43-test receipt](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/service-tests/tests/receipt.json.gz)
+and [42-test receipt](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/vectored-service-tests/tests/receipt.json.gz)
 retain the executed test source, binaries and logs. Candidate source and
 executables remain in the respective
-[nonblocking capture](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/write-fast-path/capture/capture.json.gz)
-and [vectored capture](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/vectored-write/capture/capture.json.gz).
+[nonblocking capture](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/write-fast-path/capture/capture.json.gz)
+and [vectored capture](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/vectored-write/capture/capture.json.gz).
 
 ## More workers with the unchanged executable
 
@@ -154,13 +154,13 @@ long-term memory retention, full-history correctness or a ratio against the
 historical 16-worker PostgreSQL baseline. A comparable PostgreSQL configuration
 and the existing durability caveats remain necessary for an updated comparison.
 
-The [predeclared plan](bench_data/hyperfeed_queue_profile_2026-09-30/evidence/workers24-probe-plan.json),
-[seed 20260929 receipt](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/workers24-s29/cell.json.gz)
-and [seed 20260930 receipt](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/workers24-s30/cell.json.gz)
+The [predeclared plan](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_queue_profile_2026-09-30/evidence/workers24-probe-plan.json),
+[seed 20260929 receipt](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/workers24-s29/cell.json.gz)
+and [seed 20260930 receipt](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/workers24-s30/cell.json.gz)
 preserve the fixed settings, changed worker/backlog scope, corpus checks,
 per-trial commands and resource evidence.
 
-The subsequent [40-second maintenance screen](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/workers24-maintenance-s29/cell.json.gz)
+The subsequent [40-second maintenance screen](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/workers24-maintenance-s29/cell.json.gz)
 used the same executable and 24-worker configuration, with both maintenance
 timers deliberately shortened to five seconds. It completed 255,974 incoming
 messages during admission (**6,399.35/s**) and all 256,000 after drain, with
@@ -170,7 +170,7 @@ positive work, with no jobs late or unfinished. Resource and storage checks
 passed. This checks overlap with frequent maintenance; it is still a short
 screen and does not establish sustained capacity or full-history correctness.
 
-The [first 905-second trial, seed 20260929](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/workers24-long-s29/cell.json.gz),
+The [first 905-second trial, seed 20260929](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/workers24-long-s29/cell.json.gz),
 then passed its operational requirements with the realistic 300-second
 maintenance cadence. It completed **5,791,975 messages during admission**
 (**6,399.97/s**) and all 5,792,000 after drain, with **9.01 ms end-to-end p99**.
@@ -185,7 +185,7 @@ high-water reached **77,860,296 bytes**, with retired index postings drained
 to zero. These are observed retention results over this run, not evidence of
 indefinitely flat memory use.
 
-The [second 905-second trial, seed 20260930](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/workers24-long-s30/cell.json.gz),
+The [second 905-second trial, seed 20260930](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/workers24-long-s30/cell.json.gz),
 also passed: **5,791,971 messages during admission**, **6,399.97/s** and
 **9.17 ms p99**, with all 5,792,000 inputs completed after drain. All three
 housekeeping and all three projection jobs completed on time and performed
@@ -196,9 +196,9 @@ and retired postings drained to zero.
 Both original cell records retain
 `operational_pass_pending_companion_and_repeat`, with capacity eligibility
 false. Those historical records were not rewritten. The subsequent
-[bound acceptance receipt](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/workers24-capacity-accepted01/binding.json.gz)
+[bound acceptance receipt](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/workers24-capacity-accepted01/binding.json.gz)
 is complete with `capacity_accepted=true`, and the
-[unchanged capacity assessor](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/workers24-capacity-accepted01/assessment.json.gz)
+[unchanged capacity assessor](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/workers24-capacity-accepted01/assessment.json.gz)
 classifies both trials as passed after binding the matching full-history
 companion and independent resource evidence. It establishes the conditional
 synthetic lower bound of 6,400/s for this configuration. No higher repeated
@@ -207,7 +207,7 @@ bound is established. No PostgreSQL ratio follows from this result alone.
 
 ## Correctness companion and its instrumentation cost
 
-The [full-history companion](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/workers24-full6400/guard.json.gz)
+The [full-history companion](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/workers24-full6400/guard.json.gz)
 passed with the same captured executable, 24 foreground workers, 6,400 offered
 messages/s, 40-second admission and five-second maintenance timers. It
 completed all **256,000 foreground inputs and 14 scheduled maintenance jobs**.
@@ -259,7 +259,7 @@ failure is a completed policy failure, not a resource interruption or proof of
 a repeatable capacity ceiling. These short screens do not establish a new
 capacity comparison or speedup ratio.
 
-The [first PostgreSQL 905-second trial at 704/s](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-long-r704-s29/cell.json.gz)
+The [first PostgreSQL 905-second trial at 704/s](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-long-r704-s29/cell.json.gz)
 passed its operational requirements: 637,112 of 637,120 foreground messages
 completed during arrivals, or **703.9912/s**, with **41.827283 ms p99**; all
 messages completed after drain. All three housekeeping and three projection
@@ -270,7 +270,7 @@ completed-message count. Whole owned memory peaked at 6,604,128,256 bytes,
 with no resource failure; table-and-index size grew from 61,202,432 to
 132,890,624 bytes.
 
-The [second 905-second trial](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-long-r704-s30/cell.json.gz)
+The [second 905-second trial](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-long-r704-s30/cell.json.gz)
 also passed operationally: 637,113 messages completed during arrivals, or
 **703.9923/s**, with **42.431067 ms p99**; all 637,120 completed after drain.
 All three jobs of each maintenance class again had positive effects and
@@ -279,7 +279,7 @@ completed on time. Sampled queue depth peaked at 92; retry causes were
 during queries. Whole owned memory peaked at 6,606,602,240 bytes, and
 table-and-index size reached 133,111,808 bytes, with resource checks passing.
 
-PostgreSQL's [matching full-history companion](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-full-r704-s29/cell.json.gz)
+PostgreSQL's [matching full-history companion](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-full-r704-s29/cell.json.gz)
 passed correctness and resource checks. It completed 28,160 foreground inputs
 and 14 maintenance jobs; the oracle found a valid serial witness for all
 29,463 transactions, exploring 29,463 states in 168.31 seconds. All seven jobs
@@ -290,10 +290,10 @@ messages during admission, or 703.85/s, and completed all inputs after drain.
 As with AeroStore's instrumented companion, this trace qualifies correctness
 only; the separate repeated metrics trials establish the operational result.
 
-The [final PostgreSQL binding](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-capacity-accepted02/binding.json.gz)
-and [assessment](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-capacity-accepted02/assessment.json.gz)
+The [final PostgreSQL binding](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-capacity-accepted02/binding.json.gz)
+and [assessment](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-capacity-accepted02/assessment.json.gz)
 now accept the repeated 704/s lower bound. The earlier
-[failed analysis receipt](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-capacity-accepted01/binding.json.gz)
+[failed analysis receipt](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-capacity-accepted01/binding.json.gz)
 remains unchanged: an overbroad directory glob included a launch log, so its
 inventory check failed before assessment. That was an analysis-tool failure,
 not a database failure; the corrected helper used a fresh output directory and
@@ -301,22 +301,22 @@ preserved both analysis envelopes. The accepted endpoint ratio is **9.09×**,
 with the scope stated above. The older 4.8× result remains specific to the
 historical 16-worker configuration.
 
-The [704/s burst](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-burst-r704-s29/cell.json.gz),
-[768/s burst](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-burst-r768-s29/cell.json.gz)
-and [704/s maintenance screen](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-maintenance-r704-s29/cell.json.gz)
+The [704/s burst](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-burst-r704-s29/cell.json.gz),
+[768/s burst](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-burst-r768-s29/cell.json.gz)
+and [704/s maintenance screen](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-maintenance-r704-s29/cell.json.gz)
 retain their accounting, retry causes, resource results and original verdicts.
 
 The original wrapper incorrectly demanded a completed maintenance sweep even
-though this short screen scheduled zero jobs. Its [original incomplete assessment](bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-burst-r640-s29/cell.json.gz)
-remains unchanged; the [replacement assessment](bench_data/hyperfeed_queue_profile_2026-09-30/evidence/pg24-burst-r640-s29-reclassified02.json)
+though this short screen scheduled zero jobs. Its [original incomplete assessment](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/evidence/pg24-burst-r640-s29/cell.json.gz)
+remains unchanged; the [replacement assessment](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_queue_profile_2026-09-30/evidence/pg24-burst-r640-s29-reclassified02.json)
 audits the zero-job case, source and launch bindings, resource results and
 message accounting before recording the screen pass. An earlier
-[reclassification attempt](bench_data/hyperfeed_queue_profile_2026-09-30/evidence/pg24-burst-r640-s29-reclassified01.json)
+[reclassification attempt](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_queue_profile_2026-09-30/evidence/pg24-burst-r640-s29-reclassified01.json)
 rejected a redacted PostgreSQL command comparison and is also retained.
 These were assessment-tool errors, not failed database executions. No workload
 was rerun or original result rewritten to obtain the replacement assessment.
 
-The [read-only baseline review](bench_data/hyperfeed_queue_profile_2026-09-30/evidence/pg24-fairness-review.json)
+The [read-only baseline review](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_queue_profile_2026-09-30/evidence/pg24-fairness-review.json)
 also records limits of the existing PostgreSQL configuration. The fixture has
 262,144 reserved record slots, including inactive records, for its 1,024 logical
 identities. Historical PostgreSQL table-and-index size grew from 61.2 MB to
@@ -333,7 +333,7 @@ their baseline remains interpretable. Any resulting ratio describes those
 tested configurations; it does not establish a fully tuned PostgreSQL limit,
 equivalent crash durability, or production HyperFeed performance.
 
-The [completed-log review](bench_data/hyperfeed_queue_profile_2026-09-30/evidence/pg24-logging-review.json)
+The [completed-log review](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_queue_profile_2026-09-30/evidence/pg24-logging-review.json)
 found a concrete configuration difference worth testing after these baselines:
 PostgreSQL records expected serialization retries with error details and long
 SQL statement text, while the native conflict path counts and retries them
@@ -348,7 +348,7 @@ would belong to a separately qualified PostgreSQL configuration.
 
 ## Reducing future qualification cost
 
-The [reference-checker review](bench_data/hyperfeed_queue_profile_2026-09-30/evidence/oracle-cost-review.json)
+The [reference-checker review](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_queue_profile_2026-09-30/evidence/oracle-cost-review.json)
 identifies a source-level explanation for expensive full-history checking:
 ordinary messages replay three queries, and each reference query scans all
 262,144 reserved rows. A straightforward replay of 256,000 inputs therefore
@@ -357,7 +357,7 @@ search branches. This is a complexity estimate, not a measured CPU hotspot.
 The completed check explored 257,320 states for 257,303 transactions, a ratio
 of about 1.00007. That near-linear count does not suggest extensive backtracking
 in this trace; it does not independently measure the CPU cost of row scans.
-The [final observation](bench_data/hyperfeed_queue_profile_2026-09-30/evidence/oracle-final-observation.json)
+The [final observation](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_queue_profile_2026-09-30/evidence/oracle-final-observation.json)
 is retained separately from the original source review.
 
 After capacity baselines, a useful verification task would be proving that an
@@ -373,9 +373,9 @@ this experiment.
 
 ## What this diagnostic measured
 
-The [findings](bench_data/hyperfeed_queue_profile_2026-09-30/evidence/findings.json) bind the
-completed [analysis](bench_data/hyperfeed_queue_profile_2026-09-30/evidence/diagnostic-01/analysis-01/summary.json.gz),
-[control receipt](bench_data/hyperfeed_queue_profile_2026-09-30/evidence/diagnostic-01/control.json),
+The [findings](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_queue_profile_2026-09-30/evidence/findings.json) bind the
+completed [analysis](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_queue_profile_2026-09-30/evidence/diagnostic-01/analysis-01/summary.json.gz),
+[control receipt](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_queue_profile_2026-09-30/evidence/diagnostic-01/control.json),
 captured source and executable. The source is `a4e898c32e0b0722…`; the executable
 is `62a98297d18e68f5…`. These local evidence paths are retained independently of
 ordinary compiler intermediates.
@@ -465,7 +465,7 @@ Over the capture, raw-monotonic elapsed time was **1.004702×** monotonic elapse
 time. Bracketed clock readings preserve this discrepancy; they do not provide
 independent physical-time calibration. Throughput retains `CLOCK_MONOTONIC`
 without correction, and clock behavior is not assigned as the cause of database
-stalls. The [clock analysis](bench_data/hyperfeed_queue_profile_2026-09-30/evidence/diagnostic-01/analysis-01/clock-analysis.json.gz)
+stalls. The [clock analysis](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_queue_profile_2026-09-30/evidence/diagnostic-01/analysis-01/clock-analysis.json.gz)
 retains the bounds and offset changes.
 
 ## Next experiments
@@ -504,10 +504,10 @@ independent closeout covers 31 resource envelopes, including the stopped failed
 analysis attempt. The original captures, binaries, runtime dependencies, raw
 histories and logs remain at their recorded local paths.
 
-The [profile archive validation](bench_data/hyperfeed_queue_profile_2026-09-30/archive-validation.json)
-and [results archive validation](bench_data/hyperfeed_socket_write_2026-09-30-v2/archive-validation.json)
+The [profile archive validation](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_queue_profile_2026-09-30/archive-validation.json)
+and [results archive validation](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30-v2/archive-validation.json)
 record compact-copy integrity. Together with the preserved
-[incomplete-archive receipt](bench_data/hyperfeed_socket_write_2026-09-30/archive-incomplete.json),
+[incomplete-archive receipt](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_socket_write_2026-09-30/archive-incomplete.json),
 the committed archive payload is below 16 MiB. The incomplete payload remains
 local at its original path and is excluded from Git. Large raw profile artifacts
 received the explicitly recorded stat checks, not a fresh full-content hash

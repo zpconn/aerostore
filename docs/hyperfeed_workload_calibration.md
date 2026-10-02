@@ -155,6 +155,6 @@ behavior are also unconfirmed. Until those are calibrated,
 parameter sweeps are sensitivity experiments with declared assumptions. Daily
 flight counts alone cannot supply these missing quantities.
 
-The [previous validation archive](bench_data/calibrated_2026-09-25/README.md)
+The [previous validation archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/calibrated_2026-09-25/README.md)
 remains unchanged. This additional calibration does not retroactively enlarge
 its coverage or qualify a throughput claim.

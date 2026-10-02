@@ -48,7 +48,7 @@ separate; counters were never apportioned across overlapping CPU intervals.
 | Approximate mean hold observation | 30.68 µs | 156.34 µs |
 | Hold timing samples | 17,407 | 329 |
 
-A separate [commit-set reduction](../target/hyperfeed-predicate-locks-20260929-v1/diagnostic-01-commit-set-summary.json)
+A separate commit-set reduction — `../target/hyperfeed-predicate-locks-20260929-v1/diagnostic-01-commit-set-summary.json` (local-only evidence)
 finds mean duration **after all predicate guards are acquired** rises from
 30.04 to 160.31 µs (5.34×; 11,140 versus 215 samples). Acquiring the complete set
 rises from 6.72 to 81.57 µs. Later predicate acquisition alone cannot explain this.
@@ -127,15 +127,15 @@ has 4,093 fixed interior intervals followed by a shared tail bucket: one-second
 width covers about 68 minutes, while one-millisecond width covers only about
 four seconds. A short precision experiment must not hide later saturation.
 
-The [compact evidence manifest](bench_data/hyperfeed_predicate_locks_2026-09-29/artifact-manifest.json)
-and [archive validation](bench_data/hyperfeed_predicate_locks_2026-09-29/archive-validation.json)
+The [compact evidence manifest](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_predicate_locks_2026-09-29/artifact-manifest.json)
+and [archive validation](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_predicate_locks_2026-09-29/archive-validation.json)
 preserve summaries, source patches, helpers and test receipts. Raw evidence is
 retained locally under `target/hyperfeed-predicate-locks-20260929-v1/`:
 
-- [Capture and exact executable](../target/hyperfeed-predicate-locks-20260929-v1/instrumented/capture/capture.json), [instrumentation manifest](../target/hyperfeed-predicate-locks-20260929-v1/instrumentation-manifest.json), [patch](../target/hyperfeed-predicate-locks-20260929-v1/instrumentation.patch), and [restoration receipt](../target/hyperfeed-predicate-locks-20260929-v1/restoration.json).
-- [Completed run/control and resource checks](../target/hyperfeed-predicate-locks-20260929-v1/diagnostic-01/control.json), [raw sidecars](../target/hyperfeed-predicate-locks-20260929-v1/diagnostic-01/lock-telemetry/), and [CPU/stack analysis](../target/hyperfeed-predicate-locks-20260929-v1/diagnostic-01-analysis/summary.json).
-- [Compact lock findings](../target/hyperfeed-predicate-locks-20260929-v1/diagnostic-01-lock-summary.json), [full bound analysis](../target/hyperfeed-predicate-locks-20260929-v1/diagnostic-01-lock-analysis.json), [analyzer](../target/hyperfeed-predicate-locks-20260929-v1/analyze_locks.py), and [31-test receipt](../target/hyperfeed-predicate-locks-20260929-v1/analyzer-tests-02.log).
-- [Passing Rust test receipt](../target/hyperfeed-predicate-locks-20260929-v1/focused-checks-02/tests/receipt.json), [earlier failed tests](../target/hyperfeed-predicate-locks-20260929-v1/focused-checks/), and [resource budget](../target/hyperfeed-predicate-locks-20260929-v1/resource-baseline.json).
+- Capture and exact executable — `../target/hyperfeed-predicate-locks-20260929-v1/instrumented/capture/capture.json` (local-only evidence), instrumentation manifest — `../target/hyperfeed-predicate-locks-20260929-v1/instrumentation-manifest.json` (local-only evidence), patch — `../target/hyperfeed-predicate-locks-20260929-v1/instrumentation.patch` (local-only evidence), and restoration receipt — `../target/hyperfeed-predicate-locks-20260929-v1/restoration.json` (local-only evidence).
+- Completed run/control and resource checks — `../target/hyperfeed-predicate-locks-20260929-v1/diagnostic-01/control.json` (local-only evidence), raw sidecars — `../target/hyperfeed-predicate-locks-20260929-v1/diagnostic-01/lock-telemetry/` (local-only evidence), and CPU/stack analysis — `../target/hyperfeed-predicate-locks-20260929-v1/diagnostic-01-analysis/summary.json` (local-only evidence).
+- Compact lock findings — `../target/hyperfeed-predicate-locks-20260929-v1/diagnostic-01-lock-summary.json` (local-only evidence), full bound analysis — `../target/hyperfeed-predicate-locks-20260929-v1/diagnostic-01-lock-analysis.json` (local-only evidence), analyzer — `../target/hyperfeed-predicate-locks-20260929-v1/analyze_locks.py` (local-only evidence), and 31-test receipt — `../target/hyperfeed-predicate-locks-20260929-v1/analyzer-tests-02.log` (local-only evidence).
+- Passing Rust test receipt — `../target/hyperfeed-predicate-locks-20260929-v1/focused-checks-02/tests/receipt.json` (local-only evidence), earlier failed tests — `../target/hyperfeed-predicate-locks-20260929-v1/focused-checks/` (local-only evidence), and resource budget — `../target/hyperfeed-predicate-locks-20260929-v1/resource-baseline.json` (local-only evidence).
 
 Raw profiles, sidecars and executables remain local; they are not a large Git
 archive. Their manifests and analysis bind the original bytes and paths.

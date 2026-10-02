@@ -1,0 +1,46 @@
+{
+  "campaign_id": "worker-failure-2026-09-24",
+  "files": [
+    {
+      "bytes": 160,
+      "path": "idle.json",
+      "sha256": "2895d1ecaadee1eeb7e33df7a040d2094cf9dc21f9ad728a948ed1d23ed57b0c"
+    },
+    {
+      "bytes": 271,
+      "path": "indexed_update_guard.json",
+      "sha256": "a3ef197a51628bbfebf2393bc96ddc36c9bc5a47d59fef23d3d951c48b8e5c3b"
+    },
+    {
+      "bytes": 2975,
+      "path": "manifest.json",
+      "sha256": "ea4b36310444ecbcdc58b5f21356094216475a352c0b1e52dea403a0d1f4fe23"
+    },
+    {
+      "bytes": 621,
+      "path": "native_commit_before_wal_acceptance.json",
+      "sha256": "51943956b98e7024aabf7e5afd50c860b8088709b5ff104c383c855a31f223a6"
+    },
+    {
+      "bytes": 348,
+      "path": "private_write.json",
+      "sha256": "2d759b0c1d6760ec0effc5774312850d646cd7f5db73255a6b49767d65ea0963"
+    },
+    {
+      "bytes": 191,
+      "path": "row_lock.json",
+      "sha256": "cc083ffd13ad940ae6f3d2a1845aa38a8970773380322be37a3a6bc3966ec97f"
+    },
+    {
+      "bytes": 5851,
+      "path": "survivor_availability.json",
+      "sha256": "b977b58f84428e03424097e413a75ae8dca9f5e5fa6a5c3ffcd7d4b610e143ff"
+    },
+    {
+      "bytes": 6526,
+      "path": "test.log",
+      "sha256": "2dc48e4222b9c37419ab2131112d57f619feb5047acc8b2635cc40ebd25b48f9"
+    }
+  ],
+  "schema_version": 1
+}

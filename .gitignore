@@ -2,8 +2,10 @@ target/
 __pycache__/
 .lake/
 
-# Preserve the stopped first capacity archive locally; publish the validated retry.
-/docs/bench_data/sustained_capacity_2026-09-28/
-# Retain the incomplete September 30 archive payload locally; its failure
-# receipt and complete replacement archive are versioned separately.
-/docs/bench_data/hyperfeed_socket_write_2026-09-30/evidence/
+/runs/
+/.tools/
+
+# Bulk campaign evidence is catalogued under evidence/ and retained externally.
+/docs/bench_data/
+/docs/verification_data/
+/docs/worker_failure_data/

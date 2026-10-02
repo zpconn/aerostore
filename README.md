@@ -2,54 +2,87 @@
 
 <img width="600" height="600" alt="Aerostore Logo" src="https://github.com/user-attachments/assets/7d64557f-9733-40b7-8f40-d251a48a5205" />
 
+[![CI](https://github.com/zpconn/aerostore/actions/workflows/ci.yml/badge.svg)](https://github.com/zpconn/aerostore/actions/workflows/ci.yml)
+[![Verify](https://github.com/zpconn/aerostore/actions/workflows/verify.yml/badge.svg)](https://github.com/zpconn/aerostore/actions/workflows/verify.yml)
+
 A Rust database engine for high-ingest, frequently updated data shared between processes on a single host. Aerostore combines shared-memory storage, indexed queries, transactions, and write-ahead logging. It includes a Tcl extension with a flight-tracking example for batch ingestion and search.
 
 The goal is to replace PostgreSQL's transactional state store in both single-machine and multi-machine FlightAware HyperFeed, with at least 10× the sustainable message throughput under matched semantics and resource budgets. That target has not been demonstrated. The repository uses synthetic flight-tracking scenarios informed by published HyperFeed descriptions; it does not include HyperFeed's application code. Multi-machine HyperFeed still uses one central database host.
 
 **Status:** Experimental and under active development. APIs and storage formats can change. The project targets Linux, including WSL2, and is intended for development and workload evaluation.
 
-## Features
+## Results at a glance
 
-- **Shared-memory storage:** multiple processes can access mapped rows and indexes through relative pointers.
-- **Transactions:** optimistic concurrency control, versioned rows, savepoints, predicate conflict detection, and atomic row/index publication.
-- **Indexes and queries:** skiplist secondary indexes, bounded range scans, and a rule-based query planner.
-- **Durability and restart:** synchronous or asynchronous WAL commits, delta-encoded updates, checkpoints, replay, and warm attachment to compatible shared mappings.
-- **Memory reuse:** background vacuum and index garbage collection reclaim storage during sustained updates.
-- **Tcl integration:** batch TSV ingestion and field-based search through the included `FlightState` bridge.
+These are synthetic workloads with different scopes. The service comparison counts fully processed incoming messages while arrivals continue; Crucible counts storage operations.
 
-Aerostore is a Rust library and Tcl extension. SQL compatibility, distributed replication, and production authentication are outside the current scope.
+| Workload and configuration | Aerostore | PostgreSQL | Ratio | Latency and scope |
+| --- | ---: | ---: | ---: | --- |
+| 24-worker service, two 905-second trials per engine | 6,400 offered messages/s | 704 offered messages/s | **9.09×** | p99 9.0–9.2 ms vs 41.8–42.4 ms; matching correctness companions |
+| Historical 16-worker service, repeated sustained trials | 3,072 offered messages/s | 640 offered messages/s | **4.8×** | Both meet the 50 ms p99 budget and queue, maintenance, resource and correctness guards |
+| Historical Crucible, 2 GiB, 120 seconds | 315,881 ops/s | 51,098 ops/s | **6.18×** | Exact table/index agreement, ownership and reclamation checks pass |
+| Historical Crucible, 2 GiB, 240 seconds | 309,568 ops/s | 50,592 ops/s | **6.12×** | 98.0% of the shorter run's aggregate throughput |
 
-## Getting started
+**Caveats:**
 
-### Prerequisites
+- The service rates are the highest repeatably passing tested endpoints: capacity lower bounds, not measured maxima. Their ratio does not establish a ratio of maximum capacities or the 10× target. The 24-worker trials completed about 6,399.97 vs 703.99 messages/s during arrivals under the same 24-logical-CPU and 36 GiB total-memory budget, with normal maintenance. Both instrumented correctness companions exceeded the latency requirement; the repeated metrics trials supply the capacity result.
+- The service comparison uses PostgreSQL 16.13 with 128 MiB shared buffers, nine indexes and serialization-error SQL logging; Aerostore has five secondary indexes and direct row-ID access. It does not establish optimal PostgreSQL tuning. Transport, index maintenance and logging differ; physical multi-machine performance is unmeasured.
+- Both service configurations acknowledge asynchronous WAL. Aerostore uses a volatile memfd arena and file WAL with periodic `fdatasync`; PostgreSQL keeps `fsync` and `full_page_writes` enabled. The ten-second write intervals do not establish equal crash-loss windows, recovery behavior or durable exactly-once delivery.
+- Historical Crucible used PostgreSQL 16 and asynchronous commit on an Intel Core Ultra 9 285K under WSL2. Direct shared-memory access and client/server overhead differ. **Aerostore's update-only p99 was worse.** Historical percentile values were power-of-two bucket lower bounds; their ratios cannot establish precise tail-latency margins. Current reporting uses narrower integer intervals and conservative bounds; throughput is independent of that reporting defect.
+- Failed and inconclusive results remain part of the record. Neither socket-write candidate established a repeatable gain or was promoted; the original service implementation was restored. Earlier frame-writing experiments also found no consistent gain. A prior engine performance repair passed correctness checks, but its automatic performance gate remained inconclusive because reference p99 noise exceeded the limit.
 
-- Linux or WSL2. The implementation and process tests use Unix facilities such as `fork`, shared mappings, and signals.
-- Rust and Cargo. The current validation used Rust **1.93.1**; a minimum supported Rust version has not been declared.
-- Tcl and development tools to build the Tcl extension.
-- Python 3 for benchmark scripts. PostgreSQL comparisons need a disposable server; the original Crucible can manage one through Docker, while the architecture harness accepts an explicit database URL. Aerostore-only runs do not require Docker.
+The [queue and worker-count report](docs/hyperfeed_queue_profile.md) explains the current result and rejected candidates; its [comparison summary](evidence/hyperfeed_queue_profile_2026-09-30/workers24-accepted-comparison01.json) binds the accepted trials. The historical 16-worker report is `docs/hyperfeed_sustained_capacity.md`; the [Crucible archive](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/transactional_indexes_2026-09-22/README.md) retains the earlier storage comparison.
 
-On Debian or Ubuntu, install the native build dependencies:
+## How it works
+
+```mermaid
+flowchart LR
+    A["Rust / Tcl processes"] -->|direct access| E["Shared rows, indexes and transactions"]
+    B["Benchmark clients"] -->|Unix socket or TCP| S["Experimental database-owned service"]
+    S --> E
+    E --> W["WAL and checkpoints"]
+```
+
+The direct interface maps rows and indexes into multiple processes using relative pointers. Optimistic transactions provide versioned rows, savepoints, predicate conflict detection and atomic row/index publication. Secondary skiplist indexes support bounded range scans and a rule-based query planner.
+
+WAL supports synchronous and asynchronous commits, delta updates, checkpoints and replay; compatible shared mappings support warm attachment. Background vacuum and index garbage collection reclaim storage during sustained updates.
+
+The experimental database-owned service carries the 9.09× result and explores isolation from client-worker failures. It is a benchmark path, and does not establish production availability or recovery equivalence. The direct interface avoids SQL protocol and server round trips; service clients still pay RPC costs. Workload-specific indexed access, delta WAL records and storage recycling reduce scanning, serialized data and allocation churn. These design choices explain where gains can come from; their benefit depends on the workload and configuration.
+
+## How it was built
+
+Aerostore was built with AI coding agents. Systems code written this way earns trust through checks. Three kinds of guardrails grew alongside the engine: proofs bound to production source; tests and oracles for serializability, reference-model replay against PostgreSQL and deterministic fault injection; and benchmark sandboxes with paired screens, sustained trials, retained failures and evidence manifests.
+
+Those checks reproduced and helped repair transactional-index failures, a public vacuum-horizon bug, WAL/checkpoint ordering bugs and a primary-key insertion race. The [fast iteration loop](docs/hyperfeed_iteration.md) now compares preserved baseline and candidate executables in short alternating screens, reserving full-history checks and sustained qualification for finalists. Passing a screen alone does not qualify a performance change.
+
+## Correctness and verification
+
+- **Proved components:** Verus checks production bucket kernels and conditional native commit, predicate, snapshot and indexed-read operations; Lean has a separate Rust extraction/proof chain. Physical storage, coherent-history, ownership, compiler and weak-memory assumptions remain explicit. The verified bucket implementations are opt-in; the default retains standard sort/dedup.
+- **Models and tests:** TLA+ explores protocol, recovery and resource models. Seven bounded Loom cases exercise the production mutex, including a deliberately broken acquire-ordering control. Native regressions and Extended Crucible check reference-model replay, all six concurrency contracts and failure cases. A bounded replay never overrides a failed native contract.
+- **Current boundary:** the October 2 component pilot passes all 72 checks with source and native-executable bindings. The public API contract audit is complete for its declared scope, while six engine obligations remain open. The complete concurrent P1 slice and whole-engine verification are unfinished; the `full` verification profile deliberately fails, and pilot success is not promotion approval.
+
+See the [verification workspace](verification/README.md) for proved, assumed and tested scopes and setup commands. Independent-base checks are described in `docs/ci.md`. **Aerostore is not yet a formally verified database.**
+
+## Status and limits
+
+**Current availability gap:** the requirement is that other workers keep running after a worker is killed. The [failure probes](docs/worker_failure_contract.md) show that abandoned native guards can prevent surviving work from completing, and abandoned registrations can pin retention. Exclusive restart is not an acceptable substitute for that requirement. The current milestone is to evaluate contention and failure isolation before investing heavily in proofs of architectural choices that may change.
+
+Aerostore is a Rust library and Tcl extension. SQL compatibility, distributed replication, and production authentication are outside the current scope. Ordered index policies remain optional and have a fixed time window; short latency and overload experiments do not establish realistic sustained capacity.
+
+The current shared-memory layout is **version 5**, with boot metadata **version 7**. Older mappings require a cold rebuild using the appropriate durable recovery inputs; preserve WAL and checkpoints. A table binds to one WAL stream, and live changes to its commit mode, file or ring are rejected. Process death while holding shared locks and poisoned storage still require recovery. The [durability contract](verification/contracts/durability.md) records the remaining limits.
+
+## Quick start: Rust and Tcl
+
+Use Linux or WSL2, Rust **1.93.1** and Cargo; no minimum supported Rust version is declared. The process tests use Unix facilities including `fork`, shared mappings and signals. Install Tcl and native dependencies on Debian or Ubuntu:
 
 ```bash
 sudo apt-get update
 sudo apt-get install -y build-essential pkg-config tcl tcl-dev clang libclang-dev python3
+cargo build --release --workspace --locked
 ```
 
-From a checkout of this repository:
+For only the Rust engine, use `cargo build --release -p aerostore_core --locked`. Start integration with the public API in `aerostore_core/src/lib.rs` and the [transactional-index guide](docs/transactional_indexes.md): bind secondary indexes before transactions, query through `index_lookup`, and let commit maintain rows and indexes together. Raw posting operations are for initialization and diagnostics.
 
-```bash
-cargo build --release --workspace
-```
-
-To build only the Rust engine:
-
-```bash
-cargo build --release -p aerostore_core
-```
-
-### Try the Tcl bridge
-
-Run this from the repository root after building the workspace. It creates a fresh temporary data directory and a dedicated shared mapping:
+After the workspace build, run this from the repository root. It creates a fresh temporary data directory and dedicated shared mapping:
 
 ```bash
 export AEROSTORE_DEMO_DIR="$(mktemp -d)"
@@ -67,68 +100,19 @@ puts [FlightState search -compare {{= flight_id UAL123}} -limit 10]
 TCL
 ```
 
-Expected output: `1`. `FlightState search` returns the number of matching rows. The six TSV columns are flight ID, latitude, longitude, altitude, ground speed, and update timestamp.
+Expected output: `1`, the number of matching rows. The six TSV fields are flight ID, latitude, longitude, altitude, ground speed and update timestamp. The Tcl bridge has a fixed flight schema, a 32,768-row capacity and one database instance per process. Give each database a dedicated mapping; `AEROSTORE_SHM_PATH` is separate from the data-directory argument and defaults to `/dev/shm/aerostore.mmap`. More examples are in `aerostore_tcl/test.tcl`.
 
-The Tcl bridge currently uses a fixed flight schema, a 32,768-row capacity, and one database instance per process. Keep a dedicated mapping path for each database; `AEROSTORE_SHM_PATH` is separate from the data-directory argument. The default mapping path is `/dev/shm/aerostore.mmap`.
-
-See [the Tcl example](aerostore_tcl/test.tcl) for more ingestion and query examples. For Rust integration, start with the [public API](aerostore_core/src/lib.rs) and [transactional index guide](docs/transactional_indexes.md).
-
-## Tests and verification
-
-Before large builds or campaigns, follow the [disk-space runbook](docs/disk-space.md).
-It covers capacity checks and cleanup of compiler intermediates while preserving
-the histories, executables, and receipts needed to validate results.
-
-Run the release workspace suite with serial test scheduling for the process-heavy tests:
+Before substantial builds or campaigns, follow the [disk-space runbook](docs/disk-space.md). Recorded binaries and evidence may live under `target/`; preserve them. Run the release workspace suite serially for process-heavy tests:
 
 ```bash
-cargo test --workspace --release -- --test-threads=1
+cargo test --workspace --release --locked -- --test-threads=1
 ```
 
-Run the focused Loom concurrency campaign, including its deliberately broken
-acquire-ordering control, with the pinned verification toolchain:
+## Reproduce the results
 
-```bash
-source target/verification-tools/environment.sh
-python3 scripts/check_lock_models.py
-```
+Python benchmark scripts require Python 3. PostgreSQL comparisons need a disposable server: original Crucible can manage one through Docker; the architecture harness accepts an explicit database URL. Aerostore-only runs do not need Docker. The reports above retain the exact configurations, commands, failed trials and correctness companions; the [evidence catalog](evidence/README.md) describes archive access, hashes and remaining local-only payloads.
 
-See the [verification setup](verification/README.md) to install the pinned tools.
-The campaign checks seven bounded cases against the actual mutex, with fresh,
-separate builds for the real implementation and its negative control. These
-checks cover specific concurrency invariants, not all native memory behavior or
-unbounded progress. The [correctness report](docs/sustained_churn_correctness.md)
-describes the earlier five-case validation.
-
-The [verification workspace](verification/README.md) contains Verus proofs of production bucket kernels, conditional proofs of native commit, predicate and snapshot operations, a Rust-to-Lean extraction/proof bridge, and TLA+ protocol and resource models. Checked composition now covers an indexed-read/validation slice: guard acquisition, dependency and candidate capture, release before MVCC materialization, and later conflict validation. Separate proofs model interference while acquiring locks and derive candidate completeness from coherent histories. Physical storage, weak-memory and general concurrent-history assumptions remain explicit. Its experiment gate ties evidence to the current source and freezes the unproved engine boundary. This is a component pilot; Aerostore is not yet a formally verified database. The [full verification plan](docs/formal_verification_plan.md) tracks the remaining implementation, recovery, memory, and performance obligations.
-
-The [P0 API audit](verification/contracts/p0_audit.md) is complete for the declared scope: public success/error contracts, explicit exclusions and a reviewed lock graph. Current Verus work connects native final-write selection, key planning and current-base validation to row/index publication, deregistration and shared-clock stamping. Native tests cover competing creations, key moves, repeated writes, rollback and stale-base rejection. The complete concurrent P1 slice and whole-engine verification remain open; the [current proof boundary](verification/planned_commit/README.md) explains the one-row/index scope and remaining assumptions.
-
-The [planned-commit verification checkpoint](docs/verification_data/planned_commit_2026-09-23/README.md) retains the passing 71-check pilot, planning and admission proofs, semantic mutation controls, 266 core regressions and Extended Crucible smoke results for all three bucket configurations. This checkpoint adds proofs and tests without changing production execution paths. The previous [publication/completion checkpoint](docs/verification_data/commit_completion_2026-09-23/README.md) retains the preceding 63-check pilot.
-
-Earlier checkpoints retain [indexed-read evidence](docs/verification_data/indexed_lookup_2026-09-23/README.md) and [row retention evidence](docs/verification_data/row_retention_2026-09-23/README.md), including the reproduced and repaired public vacuum-horizon bug.
-
-The [initial verification evidence](docs/bench_data/verification_pilot_2026-09-23/README.md) includes the passing composed campaign, extended Crucible results for all three bucket configurations, and component timing/allocation measurements.
-
-The [next verification phase](docs/bench_data/verified_engine_2026-09-23/README.md)
-reproduced and repaired WAL/checkpoint ordering bugs and a primary-key insertion
-race. The [performance repair](docs/bench_data/performance_repair_2026-09-23/README.md)
-reuses the skiplist's protected removal search to recover the subsequent 7.0%
-throughput regression. Three fixed-seed, 120-second pairs measured a median
-throughput improvement of 1.23% over the original engine, with lower p99 in
-every pair. All 26 full-campaign runs passed correctness/resource checks; the
-four-minute candidate retained 97.9% of first-half throughput. The automatic
-performance gate remains **inconclusive** because the original reference's p99
-variation exceeded the fixed noise limit. On 2026-09-23, the implementation was
-explicitly accepted as an engineering improvement, with that measurement
-limitation retained. That checkpoint passed 441 native tests and all 19
-component-verification checks; native skiplist refinement remains open.
-
-## The Crucible benchmark
-
-Crucible exercises 50,000 rows with 16 workers: 80% keyed upserts and 20% indexed range probes, with 5% of upserts targeting hot keys. Writes publish rows and indexes transactionally; the range probes count raw postings to stress storage churn. Extended Crucible separately checks transactional indexed-query semantics. The original test checks exact table/index agreement, allocation ownership, reclamation, operation failures, memory growth, and sustained throughput.
-
-Run a 30-second Aerostore-only check with a 128 MiB arena:
+For a 30-second Aerostore-only Crucible check over 50,000 rows, with 16 workers, 80% keyed upserts and 20% raw-posting range probes, with 5% of upserts targeting hot keys:
 
 ```bash
 AEROSTORE_CRUCIBLE_AEROSTORE_ONLY=1 \
@@ -137,153 +121,27 @@ AEROSTORE_CRUCIBLE_DURATION_SECS=30 \
 cargo bench -p aerostore_core --bench hyperfeed_crucible -- --noplot
 ```
 
-Set `AEROSTORE_CRUCIBLE_SEED=2026092301` to repeat each worker's row-choice
-sequence. The run prints the seed and generator version. Scheduling, transaction
-ordering, and the number of completed operations remain nondeterministic.
+Set `AEROSTORE_CRUCIBLE_SEED=2026092301` to repeat each worker's row-choice sequence; scheduling, transaction order and completed-operation counts remain nondeterministic. With Docker running, `./scripts/check_crucible_2g_120_vs_240.sh` reproduces the historical comparison procedure. Extended Crucible adds query-discovered writes, multirow updates, savepoints, duplicate delivery and lifecycle turnover; contention runs require a complete serial witness and report checker-budget exhaustion as inconclusive.
 
-Run the 120- and 240-second 2 GiB comparison against PostgreSQL, with Docker running:
+## Workload context and documentation
 
-```bash
-./scripts/check_crucible_2g_120_vs_240.sh
-```
-
-### Sustained validation
-
-The 2026-09-23 comparison with native transactional indexes (shared layout 4) produced these historical 2 GiB results on an Intel Core Ultra 9 285K host running WSL2, with PostgreSQL 16 and asynchronous commit in both engines:
-
-| Duration | Aerostore ops/s | PostgreSQL ops/s | Throughput ratio | Reported p99 bucket ratio |
-| --- | ---: | ---: | ---: | ---: |
-| 120 seconds | 315,881 | 51,098 | 6.18× | 0.50× |
-| 240 seconds | 309,568 | 50,592 | 6.12× | 0.25× |
-
-Both runs passed exact index agreement, allocation ownership, reclamation, and memory-growth checks. The 128 MiB Aerostore-only runs also passed at both durations. The longer run retained 98.0% of aggregate throughput. These are workload-wide results: Aerostore's update-only p99 was higher than PostgreSQL's in these runs. Direct shared-memory access, client/server overhead, and durability paths also differ.
-
-The historical latency values were power-of-two bucket lower bounds, not exact percentiles; their ratios cannot establish precise tail-latency margins. The current benchmark reports much narrower integer intervals and uses conservative ratio bounds. Throughput measurements are independent of that earlier reporting defect.
-
-See the [archived results and reproduction commands](docs/bench_data/transactional_indexes_2026-09-22/README.md), [earlier layout-3 baseline](docs/bench_data/crucible_fixed_2026-09-22/README.md), [current engine verification and comparison](docs/bench_data/verified_engine_2026-09-23/README.md), and [performance runbook](docs/nightly_perf.md) for the full scope.
-
-## Extended HyperFeed Crucible
-
-The extended benchmark adds complete simulated message transactions: candidate matching, provenance forks, multirow updates, savepoints, duplicate delivery, deferred projection, and family expiration/recreation. Separate local worker processes replay identical inputs through Aerostore and PostgreSQL, checking full state and emitted output against a reference model.
-
-```bash
-cargo bench -p aerostore_core --bench hyperfeed_extended_crucible -- \
-  --engine both --families 32 --cycles 2 --workers 4 \
-  --output target/extended-crucible.json
-```
-
-The native contracts cover predicate conflicts, atomic row/index publication, historical indexed reads, rollback, and snapshot consistency. Their initial three failures drove the [transactional-index repairs](docs/transactional_indexes.md). A passing bounded replay never overrides a failed native contract. The original sustained-churn result remains a separate, narrower regression.
-
-The [repaired validation](docs/bench_data/transactional_indexes_2026-09-22/README.md) passes all six contracts on both engines, 3,840 deliveries per engine, and an additional 30,720-delivery Aerostore run.
-
-See the [extended benchmark runbook](docs/extended_crucible.md) for modes, assumptions, and reproduction commands, and the [research specification](docs/extended_crucible_research.md) for the public sources behind its design.
-
-## HyperFeed contention and worker failure
-
-The [contention Crucible](docs/contention_crucible.md) adds transactions that discover their write sets through queries, different concurrent messages on overlapping identities, competing creation after empty searches, and matching alongside projection and housekeeping. It preserves the deterministic Extended Crucible. Successful histories need a complete serial witness; an exhausted checker budget fails as inconclusive.
-
-```bash
-cargo bench -p aerostore_core --bench hyperfeed_contention_crucible -- \
-  --engine aerostore --mode all --seconds 60 --workers 4 --families 16
-```
-
-The [first investigation](docs/bench_data/contention_2026-09-24/README.md) preserves two broad-query retry-limit failures alongside passing family-scoped runs. This is an instrumented architectural diagnostic, not a peak-throughput ranking. Reports include retries, whole-message p99 including retries, useful work counts, and storage retention. PostgreSQL runs require an explicit disposable database URL. See the runbook for transaction and durability differences.
-
-**Current availability gap:** the requirement is that other workers keep running after a worker is killed. The [failure probes](docs/worker_failure_contract.md) show that abandoned native guards can prevent surviving work from completing, and abandoned registrations can pin retention. Exclusive restart is not an acceptable substitute for that requirement. The current milestone is to evaluate contention and failure isolation before investing heavily in proofs of architectural choices that may change.
-
-The [architecture qualification harness](docs/hyperfeed_qualification.md) adds a populated fleet with staggered lifecycle turnover, global background transactions, fixed offered arrivals, a buffered PostgreSQL adapter, and an interactive database-owned service over Unix sockets or TCP. It separates complete-history correctness runs from lighter measurement runs, retains failed trials, and provides a two-host runner. The [architecture investigation](docs/bench_data/architecture_2026-09-25/README.md) retains the measurements and their limits, including the earlier workload simplification. The service is an experimental benchmark path; it does not change the production engine or establish production availability, recovery equivalence, or a 10× result.
-
-The separate [cadence and ordering profile](docs/hyperfeed_calibrated.md) adds per-flight foreground ordering and independent projection/housekeeping timers using the architect's 5–10-minute cadence. Its [validation checkpoint](docs/bench_data/calibrated_2026-09-25/README.md) includes full-history runs across two real five-minute maintenance intervals. Optional [complete maintenance sweeps](docs/hyperfeed_maintenance.md) now commit configurable batches until an empty query establishes completion, with latency and throughput counted per scheduled job. The fixed synthetic population and uncalibrated mix still make these diagnostic results rather than qualified capacity evidence. The optional [temporary signature dispatcher](docs/hyperfeed_affinity.md) now reproduces the affinity policy confirmed for both HyperFeed deployments, including alias changes and expiry that can send one flight to multiple workers. Its identity control uses the same input messages. The frequent-maintenance workload remains stress coverage. [Paired two-host commands](docs/hyperfeed_two_host.md) prepare a later AeroStore/PostgreSQL comparison on separate worker and database hosts.
-
-Optional [retry diagnostics and expiry-index controls](docs/hyperfeed_retry_diagnostics.md) preserve failed-worker counters and identify native rejection branches. Following the [90-trial investigation](docs/bench_data/retry_2026-09-26/README.md), an [ordered due-range experiment](docs/hyperfeed_ordered_range.md) reduced paired foreground p99 in short synthetic runs, while exposing expiry contention at overload. The [66-trial results](docs/bench_data/ordered_range_2026-09-27/README.md) retain failures and stale-work exclusions. Hashed publication buckets remain the default; the ordered policy has a fixed time window and is not promoted. Shared index header v3 requires rebuilding older mappings. The 10× target remains unqualified.
-
-A subsequent [query dependency capture optimization](docs/hyperfeed_capture_prefix.md) removes quadratic work within fresh broad queries while preserving prior-query dependencies and conflict checks. In the [90-cell comparison](docs/bench_data/capture_prefix_2026-09-27/README.md), all 36 candidate runs completed usefully; in metrics runs, default hashed-index foreground p99 fell about 81% at 512 messages/second versus the previous engine. The source-bound proof adapters and native regressions were updated with the change. These are short synthetic latency and overload results; realistic sustained capacity and worker-death availability remain open.
+The separate [cadence and ordering profile](docs/hyperfeed_calibrated.md) adds per-flight foreground ordering and independent projection/housekeeping timers using the architect's 5–10-minute cadence. Its [validation checkpoint](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/calibrated_2026-09-25/README.md) includes full-history runs across two real five-minute maintenance intervals. Optional [complete maintenance sweeps](docs/hyperfeed_maintenance.md) now commit configurable batches until an empty query establishes completion, with latency and throughput counted per scheduled job. The fixed synthetic population and uncalibrated mix still make these diagnostic results rather than qualified capacity evidence. The optional [temporary signature dispatcher](docs/hyperfeed_affinity.md) now reproduces the affinity policy confirmed for both HyperFeed deployments, including alias changes and expiry that can send one flight to multiple workers. Its identity control uses the same input messages. The frequent-maintenance workload remains stress coverage. [Paired two-host commands](docs/hyperfeed_two_host.md) prepare a later AeroStore/PostgreSQL comparison on separate worker and database hosts.
 
 The optional [rolling lifecycle workload](docs/hyperfeed_rolling.md) starts empty and repeatedly creates flights, grows forks, processes arrivals, expires history, and reuses retired families. Its [first investigation](docs/hyperfeed_rolling_findings.md) exposed housekeeping retry exhaustion in the central service. The subsequent [expiry-range experiment](docs/hyperfeed_expiry_range.md) tests narrower publication dependencies, with native phantom/conflict regressions, exact correctness companions, and retained failures. The [resumed experiments](docs/hyperfeed_expiry_resume.md) completed another ordered-expiry full/metrics pair and an overflow control, while preserving both VM interruptions. A separate PostgreSQL control completed after an early statistics update, exposing a baseline issue that must be handled before comparing capacity. The ordered policy remains optional and has a fixed time window; these experiments do not establish the 10× capacity target. The [resource review](docs/hyperfeed_capacity_resources.md) records the remaining limits before testing the historical 100–300-worker deployments.
 
-The [statistics and higher-load checkpoint](docs/hyperfeed_statistics.md) makes
-that PostgreSQL treatment a tested benchmark option. Fresh full-history and
-measurement runs pass for both engines at 256 inputs/second and for the service
-at 512 inputs/second. PostgreSQL exhausts foreground retries at the higher rate
-despite a successful statistics refresh; the checkpoint preserves that failure
-and investigates its query plans and serialization conflicts. These small,
-accelerated-maintenance runs remain diagnostic evidence, with capacity gates
-closed.
-
-The [candidate-query investigation](docs/hyperfeed_candidate_queries.md) adds an
-optional split PostgreSQL lookup and confirms that executed prepared plans now
-use flight identities in index conditions. Both query forms still exhaust
-housekeeping retries in the harder workload. This motivated the
-[ordered maintenance experiment](docs/hyperfeed_maintenance_prefix.md), which
-adds an explicit prefix-query contract with independent serial-oracle checks.
-PostgreSQL's prefix query and composite-index treatment completes both 185-second
-runs at 512 inputs/second while the complete-query control reproduces its
-housekeeping failure. AeroStore initially preserves complete native predicate
-capture before selecting the prefix. These results do not establish a capacity
-ratio.
-
-The [population-scaling checkpoint](docs/hyperfeed_population_scaling.md) reuses
-that engine at 256 and 1,024 synthetic flight identities. Larger sweeps reproduce
-native projection retry exhaustion; the existing ordered-due policy restores
-completion. A separate expiry-eligibility treatment leaves a substantial
-housekeeping latency gap. The
-[historical 16-worker sustained-capacity baseline](docs/hyperfeed_sustained_capacity.md) records
-repeated passing rates of **3,072 incoming messages/s for AeroStore and 640/s for
-PostgreSQL (4.8×)** under a 50 ms end-to-end p99 budget, with queue, maintenance,
-resource and correctness guardrails. Higher tested rates fail the latency
-requirement. This is a bounded synthetic comparison with stated configuration
-and asynchronous-durability differences, not a 10× production HyperFeed claim.
-Two [frame-writing experiments](docs/hyperfeed_frame_write_experiment.md) did
-not show a consistent gain, so the baseline remains unchanged. Subsequent
-[stack profiling](docs/hyperfeed_burst_profile.md) identified elevated waiting
-in index predicate-lock acquisition during recurring service CPU bursts.
-The [commit-phase and arena-placement experiment](docs/hyperfeed_commit_phases.md)
-then found large recurring page-fault spikes. Moving only the benchmark arena
-to memory-backed storage reduced p99 by 40–53% in two short paired comparisons.
-WAL stayed on disk; completed throughput was capped by the offered rate.
-The subsequent [queue and worker-count investigation](docs/hyperfeed_queue_profile.md)
-qualified **6,400 incoming messages/s** with the unchanged executable, a memfd
-arena and 24 foreground workers under the same 24 logical CPU budget. Two
-905-second trials achieved 9.01 and 9.17 ms p99 and completed normal maintenance.
-A separate run of the same build at that rate passed the full-history correctness
-guard. This is a synthetic capacity lower bound with asynchronous durability
-limitations. Fresh 24-worker PostgreSQL trials twice sustained 704 offered/s
-with 41.83 and 42.43 ms p99 and normal maintenance; its correctness companion
-and final assessment also passed. These highest repeatably passing tested
-endpoints give **9.09×**, with about **6,399.97 versus 703.99 fully processed
-incoming messages/s while arrivals continue**. Neither maximum capacity nor
-the 10× target is established. Both instrumented correctness companions
-exceeded the latency requirement and serve only as correctness guards; the
-repeated metrics trials supply the capacity results. Durability, transport and
-conflict logging differences remain explicit. The historical 16-worker 4.8×
-comparison is unchanged.
-
-The [fast iteration loop](docs/hyperfeed_iteration.md) compares preserved baseline
-and candidate executables with short, alternating workload screens. Full-history
-checks and sustained capacity trials remain promotion checks for finalists.
-
-## Project layout
-
-| Path | Contents |
+| Start here | Contents |
 | --- | --- |
-| [`aerostore_core/`](aerostore_core/) | Storage, transactions, indexes, queries, WAL, recovery, tests, and benchmarks |
-| [`aerostore_tcl/`](aerostore_tcl/) | Tcl extension and flight-data example |
-| [`aerostore_macros/`](aerostore_macros/) | Procedural macros for row metadata |
-| [`docs/`](docs/) | Verification reports, benchmark data, and runbooks |
-| [`scripts/`](scripts/) | Sustained benchmark checks |
+| [Extended Crucible](docs/extended_crucible.md) | Message transactions, reference-model checks, modes and reproduction |
+| [Architecture qualification](docs/hyperfeed_qualification.md) | Service/direct modes, resource budgets, complete histories and lighter measurements |
+| [Performance runbook](docs/nightly_perf.md) | Focused and stress suites, configurations and reporting |
+| [Pre-rewrite README](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/README.md) | Full investigation chronology, proof checkpoints, repaired bugs, retained failures and historical measurement caveats |
 
-## Compatibility and recovery
+The chronological record includes broad-query and maintenance retry exhaustion, higher-load PostgreSQL failures despite statistics refresh, mixed ordered-range results, stale-work exclusions, VM interruptions and the inconclusive performance gate. The earlier architecture and March benchmark tables remain in `docs/archive/README-2026-09-22.md`; use current reports to evaluate current behavior.
 
-The current shared-memory layout is **version 5**, with boot metadata **version 7**. Older mappings require a cold rebuild using the appropriate durable recovery inputs. Preserve WAL and checkpoint data when upgrading. A table binds to one WAL stream; live changes between synchronous/asynchronous modes, files or rings after binding are rejected. See the [durability contract and current limitations](verification/contracts/durability.md).
+## Layout
 
-Applications using `OccTable` should bind their secondary indexes before starting transactions and query through `index_lookup`; commit then maintains rows and indexes together. Raw posting operations are for initialization and diagnostics. Process death while holding a shared lock and poisoned storage still require recovery. The [transactional-index guide](docs/transactional_indexes.md) describes the API, retry behavior, and limits.
+`aerostore_core/` contains storage, transactions, indexes, queries, WAL, recovery, tests and benchmarks. `aerostore_tcl/` provides the Tcl bridge; `aerostore_macros/` provides row-metadata macros. `aerostore_verified/` and `verification/` hold verified kernels and proof/model tooling. `scripts/` holds campaign tools, `docs/` holds guides and reports, and `evidence/` indexes retained campaigns and small summaries.
 
-## Contributing
+## Contributing and license
 
-Bug reports, reproducible workloads, and focused pull requests are welcome. For correctness or performance changes, include the failing case, the commands used to verify the change, and any relevant workload or host details. Keep the correctness and allocation checks enabled when comparing performance.
-
-The [performance runbook](docs/nightly_perf.md) lists additional focused and stress suites. Earlier architecture notes and benchmark tables are preserved in the [archived README](docs/archive/README-2026-09-22.md); use the current reports when evaluating the current implementation.
-
-## License
-
-[MIT](LICENSE).
+Bug reports, reproducible workloads and focused pull requests are welcome. Include the failing case, verification commands and relevant workload or host details. Keep correctness and allocation checks enabled when comparing performance. Licensed under [MIT](LICENSE).

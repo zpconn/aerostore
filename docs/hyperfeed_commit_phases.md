@@ -82,7 +82,7 @@ with one during partition acquisition. These are attempt counts, not failed
 incoming messages. Failed-attempt cleanup belongs to its terminal phase and is
 not mixed into the successful-phase means above.
 
-The [existing resource-counter reduction](../target/hyperfeed-commit-phases-20260929-v1/diagnostic-01-pagefault-analysis.json)
+The existing resource-counter reduction — `../target/hyperfeed-commit-phases-20260929-v1/diagnostic-01-pagefault-analysis.json` (local-only evidence)
 adds a temporal clue. All three CPU-burst episodes, near 29–31, 61–63 and
 94–96 seconds, overlap large whole-cgroup page-fault increases and nonzero
 file-writeback samples. The largest overlapping one-second counter deltas are
@@ -126,10 +126,10 @@ establish long-term memory retention or completion of the wider campaign.
 
 Evidence remains under `target/hyperfeed-commit-phases-20260929-v1/`:
 
-- [Compact phase summary](../target/hyperfeed-commit-phases-20260929-v1/diagnostic-01-phase-summary.json) and [full phase analysis](../target/hyperfeed-commit-phases-20260929-v1/diagnostic-01-phase-analysis.json). The compact summary binds its inputs and rechecked all 27 direct input bindings of the full analysis.
-- [Independent CPU, stack and workload assessment](../target/hyperfeed-commit-phases-20260929-v1/diagnostic-01-analysis/summary.json), [run control](../target/hyperfeed-commit-phases-20260929-v1/diagnostic-01/control.json), and [raw telemetry](../target/hyperfeed-commit-phases-20260929-v1/diagnostic-01/phase-telemetry/).
-- [Capture](../target/hyperfeed-commit-phases-20260929-v1/instrumented/capture/capture.json), [instrumentation manifest](../target/hyperfeed-commit-phases-20260929-v1/instrumentation-manifest.json), [source patch](../target/hyperfeed-commit-phases-20260929-v1/instrumentation.patch), and [restoration receipt](../target/hyperfeed-commit-phases-20260929-v1/restoration.json).
-- [Passing Rust test receipt](../target/hyperfeed-commit-phases-20260929-v1/focused-checks-02/tests/receipt.json), [earlier compile failure](../target/hyperfeed-commit-phases-20260929-v1/focused-checks/), [analyzer](../target/hyperfeed-commit-phases-20260929-v1/analyze_phases.py), and [36-test log](../target/hyperfeed-commit-phases-20260929-v1/analyze-phases-tests-v2.log).
+- Compact phase summary — `../target/hyperfeed-commit-phases-20260929-v1/diagnostic-01-phase-summary.json` (local-only evidence) and full phase analysis — `../target/hyperfeed-commit-phases-20260929-v1/diagnostic-01-phase-analysis.json` (local-only evidence). The compact summary binds its inputs and rechecked all 27 direct input bindings of the full analysis.
+- Independent CPU, stack and workload assessment — `../target/hyperfeed-commit-phases-20260929-v1/diagnostic-01-analysis/summary.json` (local-only evidence), run control — `../target/hyperfeed-commit-phases-20260929-v1/diagnostic-01/control.json` (local-only evidence), and raw telemetry — `../target/hyperfeed-commit-phases-20260929-v1/diagnostic-01/phase-telemetry/` (local-only evidence).
+- Capture — `../target/hyperfeed-commit-phases-20260929-v1/instrumented/capture/capture.json` (local-only evidence), instrumentation manifest — `../target/hyperfeed-commit-phases-20260929-v1/instrumentation-manifest.json` (local-only evidence), source patch — `../target/hyperfeed-commit-phases-20260929-v1/instrumentation.patch` (local-only evidence), and restoration receipt — `../target/hyperfeed-commit-phases-20260929-v1/restoration.json` (local-only evidence).
+- Passing Rust test receipt — `../target/hyperfeed-commit-phases-20260929-v1/focused-checks-02/tests/receipt.json` (local-only evidence), earlier compile failure — `../target/hyperfeed-commit-phases-20260929-v1/focused-checks/` (local-only evidence), analyzer — `../target/hyperfeed-commit-phases-20260929-v1/analyze_phases.py` (local-only evidence), and 36-test log — `../target/hyperfeed-commit-phases-20260929-v1/analyze-phases-tests-v2.log` (local-only evidence).
 
 The follow-on storage-placement experiment used one uninstrumented captured
 binary in all four cells. The order was file/memfd for seed 20260929, then
@@ -212,9 +212,9 @@ treatment still requires its retained experiment harness; current binaries
 reject that override and bind storage observations through ordinary qualifier
 metadata.
 
-- [Storage experiment and four assessments](../target/hyperfeed-commit-phases-20260929-v1/arena-burst-4032/experiment.json), [source-bound placement analysis](../target/hyperfeed-commit-phases-20260929-v1/arena-burst-4032-analysis.json), and [captured executable/source](../target/hyperfeed-commit-phases-20260929-v1/arena-config/capture/capture.json).
-- [Placement harness](../target/hyperfeed-commit-phases-20260929-v1/arena_placement.py), [final analyzer](../target/hyperfeed-commit-phases-20260929-v1/analyze_arena_placement_v2.py), [26-test log](../target/hyperfeed-commit-phases-20260929-v1/analyze-arena-placement-tests-v2.log), and [preserved first-analysis refusal](../target/hyperfeed-commit-phases-20260929-v1/analyze-arena-placement-first-attempt.log).
-- [Fixture test receipt](../target/hyperfeed-commit-phases-20260929-v1/arena-tests/tests/receipt.json) and [default-source gate](../target/hyperfeed-commit-phases-20260929-v1/final-default-source-gate.log).
+- Storage experiment and four assessments — `../target/hyperfeed-commit-phases-20260929-v1/arena-burst-4032/experiment.json` (local-only evidence), source-bound placement analysis — `../target/hyperfeed-commit-phases-20260929-v1/arena-burst-4032-analysis.json` (local-only evidence), and captured executable/source — `../target/hyperfeed-commit-phases-20260929-v1/arena-config/capture/capture.json` (local-only evidence).
+- Placement harness — `../target/hyperfeed-commit-phases-20260929-v1/arena_placement.py` (local-only evidence), final analyzer — `../target/hyperfeed-commit-phases-20260929-v1/analyze_arena_placement_v2.py` (local-only evidence), 26-test log — `../target/hyperfeed-commit-phases-20260929-v1/analyze-arena-placement-tests-v2.log` (local-only evidence), and preserved first-analysis refusal — `../target/hyperfeed-commit-phases-20260929-v1/analyze-arena-placement-first-attempt.log` (local-only evidence).
+- Fixture test receipt — `../target/hyperfeed-commit-phases-20260929-v1/arena-tests/tests/receipt.json` (local-only evidence) and default-source gate — `../target/hyperfeed-commit-phases-20260929-v1/final-default-source-gate.log` (local-only evidence).
 
 To repeat the paired storage control without rebuilding, review the
 [disk runbook](disk-space.md) and choose a fresh output:
@@ -230,10 +230,10 @@ The harness needs the host permissions used by the systemd memory envelope and
 rechecks its disk/memory reserves. This optional repeat is not the next
 prioritized step; explicit backing metadata and sustained qualification are.
 
-The [final audit](../target/hyperfeed-commit-phases-20260929-v1/final-audit.json)
+The final audit — `../target/hyperfeed-commit-phases-20260929-v1/final-audit.json` (local-only evidence)
 validated 1,712 referenced files and confirmed that all ten owned resource
-envelopes stopped. The [compact evidence manifest](bench_data/hyperfeed_commit_phases_2026-09-29/artifact-manifest.json)
-and [archive validation](bench_data/hyperfeed_commit_phases_2026-09-29/archive-validation.json)
+envelopes stopped. The [compact evidence manifest](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_commit_phases_2026-09-29/artifact-manifest.json)
+and [archive validation](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/hyperfeed_commit_phases_2026-09-29/archive-validation.json)
 preserve approximately 1.19 MiB of summaries, helpers, source patches and
 receipts. Raw profiles, histories, full analyses and executables remain at
 their original local paths.

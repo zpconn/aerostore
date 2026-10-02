@@ -116,7 +116,7 @@ The current shared arena layout is version **4** and boot metadata is version **
 
 ## Historical validation results (before transactional indexes)
 
-Validated on 2026-09-22 using Rust 1.93.1 on WSL2, Intel Core Ultra 9 285K with 24 visible CPUs, Docker 29.8.0, and PostgreSQL 16. The tested working tree is based on `c96fd38ad048ab3ade095d22151341bf5e7ab0bd`. [Raw logs, CSVs, commands, source fingerprints, and machine-readable results](bench_data/crucible_fixed_2026-09-22/README.md) accompany this report.
+Validated on 2026-09-22 using Rust 1.93.1 on WSL2, Intel Core Ultra 9 285K with 24 visible CPUs, Docker 29.8.0, and PostgreSQL 16. The tested working tree is based on `c96fd38ad048ab3ade095d22151341bf5e7ab0bd`. [Raw logs, CSVs, commands, source fingerprints, and machine-readable results](https://github.com/zpconn/aerostore-archive/blob/archive/pre-rewrite/docs/bench_data/crucible_fixed_2026-09-22/README.md) accompany this report.
 
 The complete `cargo test --offline --workspace --release -- --test-threads=1` suite passed. All five Loom checks passed with the bounds above, including the two counterexample controls. Existing explicitly ignored tests remain outside the default workspace run.
 
