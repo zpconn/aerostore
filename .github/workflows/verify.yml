@@ -1,0 +1,414 @@
+name: Verify
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+    paths:
+      - 'aerostore_core/src/**'
+      - 'aerostore_verified/src/**'
+      - 'aerostore_macros/src/**'
+      - 'aerostore_tcl/src/lib.rs'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'build.rs'
+      - 'rust-toolchain'
+      - 'rust-toolchain.toml'
+      - '*/Cargo.toml'
+      - '*/Cargo.lock'
+      - '*/build.rs'
+      - '*/rust-toolchain'
+      - '*/rust-toolchain.toml'
+      - '*/.cargo/**'
+      - '.cargo/**'
+      - 'verification/**/*.rs'
+      - 'verification/**/*.py'
+      - 'verification/**/*.sh'
+      - 'verification/**/*.lean'
+      - 'verification/**/*.tla'
+      - 'verification/**/*.cfg'
+      - 'verification/**/*.json'
+      - 'verification/**/*.toml'
+      - 'verification/lean/lean-toolchain'
+      - 'verification/contracts/**'
+      - '!verification/**/evidence/**'
+      - '!verification/**/generated/**'
+      - '!verification/**/target/**'
+      - '!verification/**/.lake/**'
+      - '!verification/**/__pycache__/**'
+      - '!verification/**/*.verus.rs'
+      - '!verification/lean/AerostoreProofs/translation.json'
+      # These documents are proof contracts cited by verification/claims.toml.
+      - 'verification/commit_completion/README.md'
+      - 'verification/commit_data/README.md'
+      - 'verification/concurrent/README.md'
+      - 'verification/guard_ownership/README.md'
+      - 'verification/guards/README.md'
+      - 'verification/indexed_slice/README.md'
+      - 'verification/lean/query_completeness.md'
+      - 'verification/lifecycle/README.md'
+      - 'verification/lifecycle_interference/README.md'
+      - 'verification/lifecycle_scenario/README.md'
+      - 'verification/lookup/README.md'
+      - 'verification/p1_native/README.md'
+      - 'verification/planned_commit/README.md'
+      - 'verification/planning_native/README.md'
+      - 'verification/postings/README.md'
+      - 'verification/predicate/README.md'
+      - 'verification/predicate_capture/README.md'
+      - 'verification/predicate_composition/README.md'
+      - 'verification/publication_slice/README.md'
+      - 'verification/row_initialization/README.md'
+      - 'verification/row_publication/README.md'
+      - 'verification/row_retention/README.md'
+      - 'verification/skiplist_detach/README.md'
+      - 'verification/storage_slice/README.md'
+      - 'verification/write_admission/README.md'
+      - 'verification/write_plan/README.md'
+      - 'aerostore_core/tests/occ_transactional_index.rs'
+      - 'aerostore_core/tests/shm_mutation_model.rs'
+      - 'aerostore_core/tests/shm_shared_memory.rs'
+      - 'aerostore_core/tests/wal_protocol_regressions.rs'
+      # New script/package paths must reach the import-shadow guard. Only known
+      # benchmark orchestration and unrelated unit helpers are excluded.
+      - 'scripts/**'
+      - '!scripts/assess_hyperfeed_capacity.py'
+      - '!scripts/check_crucible_2g_120_vs_240.sh'
+      - '!scripts/compare_engine_performance.py'
+      - '!scripts/hyperfeed_proof_impact.py'
+      - '!scripts/hyperfeed_screen_assessment.py'
+      - '!scripts/hyperfeed_screen_capture.py'
+      - '!scripts/hyperfeed_screen_resources.py'
+      - '!scripts/iterate_hyperfeed.py'
+      - '!scripts/predicate_capture_microbench.rs'
+      - '!scripts/qualify_hyperfeed.py'
+      - '!scripts/run_memory_envelope.py'
+      - '!scripts/run_python_unit_tests.py'
+      - '!scripts/run_remote_contention.py'
+      - '!scripts/test_affinity_dispatch.py'
+      - '!scripts/test_arena_backing.py'
+      - '!scripts/test_calibrated_worker_pause.py'
+      - '!scripts/test_compare_engine_performance.py'
+      - '!scripts/test_contention_integration.py'
+      - '!scripts/test_hyperfeed_qualification.py'
+      - '!scripts/test_maintenance_selection.py'
+      - '!scripts/test_maintenance_sweeps.py'
+      - '!scripts/test_postgres_candidate_query.py'
+      - '!scripts/test_postgres_statistics.py'
+      - '!scripts/test_retry_diagnostics_process.py'
+      - '!scripts/test_rolling_workload.py'
+      - '!scripts/test_run_remote_contention.py'
+      - '!scripts/tests/test_hyperfeed_capacity.py'
+      - '!scripts/tests/test_hyperfeed_proof_impact.py'
+      - '!scripts/tests/test_hyperfeed_screen_assessment.py'
+      - '!scripts/tests/test_hyperfeed_screen_capture.py'
+      - '!scripts/tests/test_hyperfeed_screen_resources.py'
+      - '!scripts/tests/test_iterate_hyperfeed.py'
+      - '!scripts/tests/test_run_python_unit_tests.py'
+      - 'scripts/check_formal_coverage.py'
+      - 'scripts/check_lean.py'
+      - 'scripts/check_lock_models.py'
+      - 'scripts/check_p0_contracts.py'
+      - 'scripts/check_p1_native_evidence.py'
+      - 'scripts/check_planning_native_evidence.py'
+      - 'scripts/check_refinement_evidence.py'
+      - 'scripts/check_tla.py'
+      - 'scripts/setup_verification.py'
+      - 'scripts/run_verified_experiment.py'
+      - 'scripts/verify_formal.py'
+      - 'scripts/verify_formal.sh'
+      - 'scripts/test_formal_gate.py'
+      - 'scripts/test_p0_contracts.py'
+      - 'scripts/test_tla_runner.py'
+      - 'scripts/ci_formal_anchor.py'
+      - 'scripts/ci_formal_pilot.py'
+      - 'scripts/ci_formal_status.py'
+      - 'scripts/test_ci_formal.py'
+      - 'scripts/tests/test_formal_coverage.py'
+      - '.github/workflows/formal.yml'
+      - '.github/workflows/verify.yml'
+      - '.github/CODEOWNERS'
+  push:
+    branches: [master]
+  schedule:
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+    inputs:
+      baseline_ref:
+        description: Independently reviewed base commit SHA (empty means unanchored bootstrap)
+        required: false
+        type: string
+      mode:
+        description: Reviewed input changes or a strict experiment comparison
+        required: true
+        default: review
+        type: choice
+        options: [review, experiment]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_BUILD_JOBS: 2
+  CARGO_TERM_COLOR: always
+  FORMAL_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || inputs.baseline_ref }}
+  FORMAL_MODE: ${{ (startsWith(github.head_ref, 'exp/') || contains(github.event.pull_request.labels.*.name, 'perf-experiment') || inputs.mode == 'experiment') && 'experiment' || 'review' }}
+
+# No pull_request_target or write token. CODEOWNERS and branch protection must
+# protect the workflow and lock; this workflow cannot grant that protection.
+jobs:
+  boundary:
+    name: Boundary
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      anchored: ${{ steps.anchor.outputs.anchored }}
+      baseline_ref: ${{ steps.anchor.outputs.baseline_ref }}
+      status: ${{ steps.anchor.outputs.status }}
+      mode: ${{ steps.anchor.outputs.mode }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+          filter: blob:none
+          persist-credentials: false
+          clean: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/docs/bench_data/
+            !/docs/verification_data/
+
+      - name: Fetch the independent base
+        shell: bash
+        run: |
+          if [[ -n "$FORMAL_BASE_SHA" && "$FORMAL_BASE_SHA" != 0000000000000000000000000000000000000000 ]]; then
+            [[ "$FORMAL_BASE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo 'Invalid base SHA'; exit 1; }
+            if [[ "$FORMAL_BASE_SHA" != "$(git rev-parse HEAD)" ]]; then
+              git fetch --no-tags --depth=1 --filter=blob:none origin "$FORMAL_BASE_SHA"
+            fi
+            git cat-file -e "$FORMAL_BASE_SHA^{commit}"
+          fi
+
+      - name: Check with the independent base helper and checker
+        id: anchor
+        continue-on-error: true
+        shell: bash
+        run: |
+          helper="$RUNNER_TEMP/aerostore-base-anchor.py"
+          entry=
+          if [[ "$FORMAL_BASE_SHA" =~ ^[0-9a-f]{40}$ && "$FORMAL_BASE_SHA" != 0000000000000000000000000000000000000000 && "$FORMAL_BASE_SHA" != "$(git rev-parse HEAD)" ]]; then
+            git cat-file -e "$FORMAL_BASE_SHA^{commit}"
+            entry=$(git ls-tree "$FORMAL_BASE_SHA" -- scripts/ci_formal_anchor.py)
+          fi
+          if [[ -n "$entry" ]]; then
+            IFS=$'\t' read -r metadata path <<< "$entry"
+            [[ "$path" == scripts/ci_formal_anchor.py && "$metadata" =~ ^100(644|755)\ blob\ [0-9a-f]{40}$ ]] || { echo 'Invalid base anchor entry'; exit 1; }
+            git show "$FORMAL_BASE_SHA:scripts/ci_formal_anchor.py" > "$helper"
+            python3 -I "$helper" --root "$GITHUB_WORKSPACE" --baseline-ref="$FORMAL_BASE_SHA" --mode "$FORMAL_MODE"
+          else
+            code=0
+            python3 -I scripts/ci_formal_anchor.py --root "$GITHUB_WORKSPACE" --baseline-ref="$FORMAL_BASE_SHA" --mode "$FORMAL_MODE" --bootstrap || code=$?
+            # A candidate fallback cannot claim an independent anchor. Preserve
+            # legacy_base_gate_failed when the old base rejects this migration.
+            echo 'anchored=false' >> "$GITHUB_OUTPUT"
+            echo 'baseline_ref=' >> "$GITHUB_OUTPUT"
+            if [[ "$FORMAL_MODE" == experiment ]]; then
+              code=1
+            elif [[ "$code" == 0 ]]; then
+              echo 'status=bootstrap_unanchored' >> "$GITHUB_OUTPUT"
+            fi
+            exit "$code"
+          fi
+
+      - name: Retain boundary evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: verify-boundary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: target/verification/ci/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Enforce the boundary result
+        if: always()
+        env:
+          ANCHOR_RESULT: ${{ steps.anchor.outcome }}
+        run: test "$ANCHOR_RESULT" = success
+
+  verify:
+    name: verify
+    needs: boundary
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+          filter: blob:none
+          persist-credentials: false
+          clean: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/docs/bench_data/
+            !/docs/verification_data/
+
+      - name: Admit the pilot
+        env:
+          BOUNDARY_RESULT: ${{ needs.boundary.result }}
+          ANCHOR_STATUS: ${{ needs.boundary.outputs.status }}
+        run: |
+          if [[ "$BOUNDARY_RESULT" == success ]]; then
+            exit 0
+          fi
+          # Produce candidate pilot evidence for Checkpoint 1 without hiding
+          # the legacy judge's expected rejection of this boundary migration.
+          test "$FORMAL_MODE" = review
+          test "$ANCHOR_STATUS" = legacy_base_gate_failed
+
+      - name: Fetch the independent base
+        shell: bash
+        run: |
+          if [[ -n "$FORMAL_BASE_SHA" && "$FORMAL_BASE_SHA" != 0000000000000000000000000000000000000000 ]]; then
+            [[ "$FORMAL_BASE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo 'Invalid base SHA'; exit 1; }
+            if [[ "$FORMAL_BASE_SHA" != "$(git rev-parse HEAD)" ]]; then
+              git fetch --no-tags --depth=1 --filter=blob:none origin "$FORMAL_BASE_SHA"
+            fi
+            git cat-file -e "$FORMAL_BASE_SHA^{commit}"
+          fi
+
+      - name: Extract the independent pilot and status helpers
+        shell: bash
+        run: |
+          for kind in pilot status; do
+            path="scripts/ci_formal_${kind}.py"
+            helper="$RUNNER_TEMP/aerostore-base-${kind}.py"
+            entry=
+            if [[ "$FORMAL_BASE_SHA" =~ ^[0-9a-f]{40}$ && "$FORMAL_BASE_SHA" != 0000000000000000000000000000000000000000 && "$FORMAL_BASE_SHA" != "$(git rev-parse HEAD)" ]]; then
+              git cat-file -e "$FORMAL_BASE_SHA^{commit}"
+              entry=$(git ls-tree "$FORMAL_BASE_SHA" -- "$path")
+            fi
+            if [[ -n "$entry" ]]; then
+              IFS=$'\t' read -r metadata entry_path <<< "$entry"
+              [[ "$entry_path" == "$path" && "$metadata" =~ ^100(644|755)\ blob\ [0-9a-f]{40}$ ]] || { echo "Invalid base $kind entry"; exit 1; }
+              git show "$FORMAL_BASE_SHA:$path" > "$helper"
+            else
+              cp "$path" "$helper"
+            fi
+          done
+
+      - name: Check candidate lock consistency
+        run: python3 -I scripts/check_formal_coverage.py
+
+      - name: Prepare fresh hosted-runner disk space
+        run: |
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          df -h .
+          # These unused preinstalled SDKs are outside the checkout. Never run
+          # this preparation on a self-hosted runner or prune project evidence.
+          for sdk in /usr/local/lib/android /usr/share/dotnet /opt/ghc; do
+            if [[ -d "$sdk" ]]; then
+              sudo du -sh "$sdk"
+              sudo rm -rf -- "$sdk"
+            fi
+          done
+          df -h .
+          available=$(df --output=avail -B1 . | tail -n 1)
+          required=$((48 * 1024 * 1024 * 1024))
+          echo "Pilot budget: 10 GiB tool provisioning, 30 GiB isolated builds, 8 GiB reserve; available bytes: $available"
+          test "$available" -ge "$required"
+
+      - name: Install Java
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install host prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes zstd tcl-dev clang libclang-dev pkg-config libssl-dev
+
+      - name: Cache pinned verification toolchains
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            target/verification-tools
+            verification/lean/.lake
+          key: ${{ runner.os }}-verify-tools-${{ hashFiles('verification/**/toolchain.json', 'verification/lean/lean-toolchain', 'verification/lean/lake-manifest.json', 'scripts/setup_verification.py', 'Cargo.lock') }}
+
+      - name: Provision pinned toolchains and dependencies
+        run: python3 scripts/setup_verification.py
+
+      - name: Restore the two small unit-test fixtures
+        run: |
+          mkdir -p docs/bench_data/transactional_indexes_2026-09-22/churn_128m
+          git show HEAD:docs/bench_data/transactional_indexes_2026-09-22/churn_128m/crucible_profile_2g_120s.log > docs/bench_data/transactional_indexes_2026-09-22/churn_128m/crucible_profile_2g_120s.log
+          git show HEAD:docs/bench_data/transactional_indexes_2026-09-22/aerostore_64f_16c_8w_128m.json > docs/bench_data/transactional_indexes_2026-09-22/aerostore_64f_16c_8w_128m.json
+
+      - name: Recheck the isolated-build budget
+        run: |
+          df -h .
+          du -xhd1 target
+          available=$(df --output=avail -B1 . | tail -n 1)
+          required=$((38 * 1024 * 1024 * 1024))
+          echo "Remaining pilot budget: 30 GiB isolated builds, 8 GiB reserve; available bytes: $available"
+          test "$available" -ge "$required"
+
+      - name: Run the component pilot
+        id: pilot
+        env:
+          STRICT_BASE_SHA: ${{ needs.boundary.outputs.baseline_ref }}
+        shell: bash
+        run: |
+          ulimit -c 0
+          source target/verification-tools/environment.sh
+          # The unchanged pilot rejects ambient CARGO_BUILD_* overrides.
+          unset CARGO_BUILD_JOBS
+          helper="$RUNNER_TEMP/aerostore-base-pilot.py"
+          python3 -I "$helper" --root "$GITHUB_WORKSPACE" --baseline-ref="$STRICT_BASE_SHA" --mode "$FORMAL_MODE"
+
+      - name: Retain pilot and setup evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: verify-pilot-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            target/verification/ci/
+            target/verification-tools/setup.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Report and enforce verification results
+        if: always()
+        env:
+          PILOT_RESULT: ${{ steps.pilot.outcome }}
+          BOUNDARY_RESULT: ${{ needs.boundary.result }}
+          BASE_ANCHORED: ${{ needs.boundary.outputs.anchored }}
+          ANCHOR_STATUS: ${{ needs.boundary.outputs.status }}
+        shell: bash
+        run: |
+          helper="$RUNNER_TEMP/aerostore-base-status.py"
+          code=0
+          python3 -I "$helper" || code=$?
+          # A candidate fallback must not suppress a failed/skipped pilot or
+          # an independent boundary failure, even if its report is altered.
+          test "$PILOT_RESULT" = success || exit 1
+          test "$BOUNDARY_RESULT" = success || exit 1
+          if [[ "$FORMAL_MODE" == experiment ]]; then
+            test "$BASE_ANCHORED" = true || exit 1
+          fi
+          exit "$code"
+
+      - name: Record final disk usage
+        if: always()
+        run: |
+          df -h .
+          if [[ -d target ]]; then du -xhd1 target; fi
