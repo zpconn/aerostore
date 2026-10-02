@@ -66,17 +66,26 @@ failure. This is the explicit Checkpoint 1 transition in
 
 A genuine bootstrap without an independent base is informational and never
 promotion-eligible. Malformed or unavailable requested bases, failed base
-checks, and failed pilots remain failures. Once the new gate is merged, a fresh
-manual bootstrap can establish the new master pilot result without claiming an
-independent baseline comparison.
+checks, and failed pilots remain failures. After the approved gate migration,
+master validation dispatches Verify with `mode=review` and `baseline_ref` set to
+the approved PR head. Check that this head is a merge parent and that protected
+input hashes are unchanged. The approved head supplies the helper and checker
+for this anchored review; the result remains promotion-ineligible. Preserve the
+initial master push's legacy rejection or cancellation separately.
 
 `CODEOWNERS` names the owner for the lock, workflows, and verification tooling.
-It is effective as a required review only when repository protection is enabled.
-Protection settings require the owner's separate checkpoint approval. The
-current automation uses the owner's GitHub account, so GitHub cannot record that
-same account approving its own PR. An independent automation/reviewer identity
-or an explicitly approved owner-admin merge procedure is needed to resolve that
-limitation; the workflow does not invent an independent reviewer.
+Master uses the interim protection approved at Checkpoint 1 until the Phase 6 review:
+up-to-date `ci`, one approval including code-owner review, dismissal of stale
+approvals, conversation resolution, and disabled force pushes and branch deletion.
+Administrator enforcement is disabled (`enforce_admins: false`), so administrators
+can bypass these rules. Each protected merge still requires explicit owner
+approval in the current conversation. The automation uses the owner's account,
+which cannot approve its own PR; this interim procedure does not provide
+independently enforced owner review.
+
+Verify is path-filtered, so it is not a globally required status check. Owner
+review must also check the current Verify result on proof-input PRs. A separate
+docs-only PR should run ordinary CI and skip Verify.
 
 ## Resources and evidence
 
