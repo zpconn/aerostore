@@ -1,9 +1,21 @@
 # Checkpoint 2: archive and launch the smaller repository
 
-Status: **prepared; awaiting owner approval**. The owner's Checkpoint 1 approval
-covered PR #1 and the interim protection procedure through Phase 6. It did not
-approve these repository operations. This packet implements the next checkpoint
-in [the overhaul plan](../OVERHAUL_PLAN.md#phase-2-history-rewrite-and-evidence-externalization-d1).
+Status: **approved by the owner on October 2, 2026; publication qualification in progress**.
+The original approved packet is retained in source commit `ab57181a` in the local
+backup and as rewritten commit `6c1e3417` in the new repository. Checkpoint 2
+approved the operations below and the exact packaging boundary; it did not
+approve the follow-up PR merge, original-object cleanup, archive read-only status
+or evidence releases. See [the execution log](../OVERHAUL_PLAN.md#appendix-c-execution-log).
+
+The original repository is now `zpconn/aerostore-archive` (ID `1167197125`), with
+`archive/pre-rewrite` pinned to `c22acd41`. New `zpconn/aerostore` (ID `1402200979`)
+publishes master `6c1e3417`, whose tree matches the approved prepared source.
+The fresh public clone is 23.7 MB allocated; three canonical archive fetches
+verified 330 files, and five documented historical commits resolve in the archive.
+Fresh [CI](https://github.com/zpconn/aerostore/actions/runs/37047817537) passed.
+[Verify](https://github.com/zpconn/aerostore/actions/runs/37047821217) is running.
+Verify uses the approved mapped baseline `57b32d33`; these local checks do not
+replace its full hosted pilot.
 
 ## Reviewed local result
 

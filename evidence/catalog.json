@@ -2100,6 +2100,6 @@
     "scope": "Phase 0 inventory; manifests below freshly bind tracked archive payloads.",
     "sha256": "9358b61fea3f54c48178c064c315c5b33675bc3ca531ad37de9d95e20ba9a577"
   },
-  "publication_status": "planned-pending-checkpoint-2",
+  "publication_status": "published",
   "schema_version": 1
 }
