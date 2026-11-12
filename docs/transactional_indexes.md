@@ -48,7 +48,7 @@ Transaction registration, deregistration, and snapshot capture use a separate sh
 
 Each active reader pins the snapshot horizon captured at its start, including an older writer that was still active. Vacuum uses those pinned horizons, so that writer's later commit cannot cause the reader's required old row to be recycled. New snapshots use current active transaction identifiers rather than inheriting other readers' retained horizons; reclamation therefore advances when the readers that actually need an old version finish. Vacuum also retains a version while a `RowLockGuard` still refers to it, preventing a stale guard from unlocking a different owner after storage reuse.
 
-An unexpected source-removal, rollback, or partial-publication failure poisons the shared table and its indexes. Further transactional access fails explicitly until recovery; the engine does not present a partially maintained index as healthy. Successful row/index publication precedes WAL encoding/output in the existing `OccCommitter` design. A subsequent WAL error is fatal and must not replay an already committed input. This change establishes atomic row/index visibility, not a new crash-durability guarantee.
+An unexpected source-removal, rollback, or partial-publication failure poisons the shared table and its indexes. Further transactional access fails explicitly until recovery; the engine does not present a partially maintained index as healthy. With a WAL bound, commit encodes the payload before acquiring guards and accepts it after validation, before removing source postings or publishing rows. A publication failure after WAL acceptance poisons the table and reports an indeterminate outcome. The [durability contract](../verification/contracts/durability.md) describes this ordering; the index change itself establishes atomic row/index visibility, not a crash-durability guarantee.
 
 ## Tests and compatibility
 
@@ -62,6 +62,6 @@ cargo bench --offline -p aerostore_core --bench hyperfeed_extended_crucible -- \
   --engine both --mode all --output target/extended-crucible.json
 ```
 
-Shared arena layout **4** replaces layout 3; boot metadata remains version 6. The index wrapper is version **2**, rejecting the smaller bucket layout used during initial development of these repairs. Existing mappings require a cold rebuild from preserved recovery inputs. Do not alter version fields to force attachment. The index wrapper header and shared table registry are persistent layout changes.
+This change introduced shared arena layout 4 (boot metadata 6); later changes raised them to layout **5** and boot metadata **7**. The index wrapper header is now version **3**; it rejects the smaller bucket layout used during initial development of these repairs. Existing mappings require a cold rebuild from preserved recovery inputs. Do not alter version fields to force attachment. The index wrapper header and shared table registry are persistent layout changes.
 
 Abrupt process death while holding a shared lock still requires arena recovery. Finite tests and the publication argument above do not constitute a formal proof of the full engine or production HyperFeed compatibility.

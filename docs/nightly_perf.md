@@ -106,7 +106,7 @@ CARGO_TARGET_DIR=/tmp/aerostore-loom-target \
 cargo test -p aerostore_core --test shm_mutation_model --release
 ```
 
-The five-model suite includes negative controls for the detached predecessor race and missing row guard. It has a preemption bound of 2 and a maximum of 10,000 branches, without time/permutation cutoffs. Use the `aerostore_loom` flag exactly; generic `loom` also changes dependency configurations. See [sustained churn correctness](sustained_churn_correctness.md) for invariants, regression commands, model limits, and shared-memory compatibility.
+The seven-case suite includes negative controls for the detached predecessor race and missing row guard, and a weakened-acquire mutant must fail separately; see the [production-lock campaign](../verification/contracts/lock_models.md). It has a preemption bound of 2 and a maximum of 10,000 branches, without time/permutation cutoffs. Use the `aerostore_loom` flag exactly; generic `loom` also changes dependency configurations. See [sustained churn correctness](sustained_churn_correctness.md) for invariants, regression commands, model limits, and shared-memory compatibility.
 
 ## Benchmark-Style Test Suites (Release)
 
