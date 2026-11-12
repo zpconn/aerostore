@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use Aerostore or its benchmark and verification methodology in your work, please cite it as below."
+type: software
+title: "Aerostore: a shared-memory transactional database engine in Rust"
+abstract: >-
+  Aerostore is an experimental Rust database engine for high-ingest,
+  frequently updated state shared between processes on one host. It combines
+  process-shared storage, serializable optimistic transactions with
+  transactional secondary indexes, and write-ahead logging. The engine was
+  built with AI coding agents and is checked by component proofs (Verus and
+  Lean), TLA+ and Loom models, reference-model oracles, and benchmark sandboxes
+  that retain failed and inconclusive results.
+authors:
+  - given-names: Zach
+    family-names: Conn
+repository-code: "https://github.com/zpconn/aerostore"
+license: MIT
+keywords:
+  - database
+  - storage engine
+  - shared memory
+  - MVCC
+  - optimistic concurrency control
+  - formal verification
+  - Verus
+  - Lean
+  - TLA+
+  - AI-assisted software engineering

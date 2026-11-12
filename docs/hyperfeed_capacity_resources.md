@@ -56,7 +56,7 @@ total resident memory. Service executors attach the same shared mapping, so
 summing mapping sizes or RSS can double-count shared pages. A capacity campaign
 needs a recorded process/cgroup boundary, CPU time and resident-memory accounting
 for owner, workers, WAL/GC helpers and PostgreSQL children, with harness overhead
-identified. The existing `--cpu-budget` is a declaration, not enforcement.
+identified. The existing `--cpu-budget` is a declaration, not enforcement. (Later sustained campaigns enforce the CPU budget with a fixed CPU affinity and a cgroup memory limit for every cell; see [sustained capacity](hyperfeed_sustained_capacity.md).)
 
 Start with a bounded central-service experiment: `service-unix` versus native
 PostgreSQL over a local socket, 16 then 32 foreground workers, and one population
